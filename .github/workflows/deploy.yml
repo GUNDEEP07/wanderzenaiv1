@@ -1,0 +1,220 @@
+name: Deploy WanderZenAI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  AWS_REGION: ap-southeast-2
+  STACK_NAME: wanderzenai-prod
+
+jobs:
+  # ─── Test & Lint ────────────────────────────────────────────────────────────
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package.json
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci
+
+      - name: Lint frontend
+        working-directory: frontend
+        run: npm run lint --if-present
+
+  # ─── Deploy Backend (AWS SAM) ───────────────────────────────────────────────
+  deploy-backend:
+    name: Deploy Backend
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    outputs:
+      api-url: ${{ steps.get-outputs.outputs.api-url }}
+      cloudfront-url: ${{ steps.get-outputs.outputs.cloudfront-url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup SAM CLI
+        uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+
+      - name: Setup Node.js for Lambda deps
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install shared layer dependencies
+        working-directory: backend/layers/shared/nodejs
+        run: npm ci
+
+      - name: Install function dependencies
+        run: |
+          for dir in backend/functions/*/; do
+            if [ -f "$dir/package.json" ]; then
+              echo "Installing deps for $dir"
+              cd "$dir" && npm ci && cd -
+            fi
+          done
+
+      - name: SAM build
+        working-directory: infra
+        run: sam build --template template.yaml
+
+      - name: SAM deploy
+        working-directory: infra
+        run: |
+          sam deploy \
+            --stack-name ${{ env.STACK_NAME }} \
+            --region ${{ env.AWS_REGION }} \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset \
+            --capabilities CAPABILITY_IAM \
+            --parameter-overrides \
+              Stage=prod \
+              DBHost=${{ secrets.DB_HOST }} \
+              DBName=${{ secrets.DB_NAME }} \
+              DBUser=${{ secrets.DB_USER }} \
+              DBPassword=${{ secrets.DB_PASSWORD }} \
+              ClaudeApiKey=${{ secrets.CLAUDE_API_KEY }} \
+              FromEmail=${{ secrets.FROM_EMAIL }} \
+              StripeSecretKey=${{ secrets.STRIPE_SECRET_KEY }} \
+              StripeWebhookSecret=${{ secrets.STRIPE_WEBHOOK_SECRET }} \
+              FrontendUrl=${{ secrets.FRONTEND_URL }}
+
+      - name: Get stack outputs
+        id: get-outputs
+        run: |
+          API_URL=$(aws cloudformation describe-stacks \
+            --stack-name ${{ env.STACK_NAME }} \
+            --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
+            --output text)
+          CF_URL=$(aws cloudformation describe-stacks \
+            --stack-name ${{ env.STACK_NAME }} \
+            --query "Stacks[0].Outputs[?OutputKey=='CloudFrontUrl'].OutputValue" \
+            --output text)
+          echo "api-url=$API_URL" >> $GITHUB_OUTPUT
+          echo "cloudfront-url=$CF_URL" >> $GITHUB_OUTPUT
+          echo "API URL: $API_URL"
+          echo "CloudFront URL: $CF_URL"
+
+  # ─── Deploy Frontend (S3 + CloudFront) ─────────────────────────────────────
+  deploy-frontend:
+    name: Deploy Frontend
+    runs-on: ubuntu-latest
+    needs: deploy-backend
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build React app
+        working-directory: frontend
+        env:
+          VITE_API_URL: ${{ needs.deploy-backend.outputs.api-url }}
+        run: npm run build
+
+      - name: Get S3 bucket name from stack
+        id: get-bucket
+        run: |
+          BUCKET=$(aws cloudformation describe-stacks \
+            --stack-name ${{ env.STACK_NAME }} \
+            --query "Stacks[0].Outputs[?OutputKey=='FrontendBucket'].OutputValue" \
+            --output text 2>/dev/null || echo "${{ secrets.FRONTEND_BUCKET }}")
+          echo "bucket=$BUCKET" >> $GITHUB_OUTPUT
+
+      - name: Sync to S3
+        working-directory: frontend
+        run: |
+          # Upload assets with long cache (they have hashed filenames)
+          aws s3 sync dist/ s3://${{ steps.get-bucket.outputs.bucket }}/ \
+            --delete \
+            --cache-control "public, max-age=31536000, immutable" \
+            --exclude "index.html"
+
+          # Upload index.html with no cache (always fresh)
+          aws s3 cp dist/index.html s3://${{ steps.get-bucket.outputs.bucket }}/index.html \
+            --cache-control "no-cache, no-store, must-revalidate" \
+            --content-type "text/html"
+
+      - name: Invalidate CloudFront cache
+        run: |
+          CF_ID=$(aws cloudformation describe-stacks \
+            --stack-name ${{ env.STACK_NAME }} \
+            --query "Stacks[0].Resources[?LogicalResourceId=='CloudFrontDistribution'].PhysicalResourceId" \
+            --output text 2>/dev/null || echo "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}")
+
+          aws cloudfront create-invalidation \
+            --distribution-id $CF_ID \
+            --paths "/*"
+
+          echo "Cache invalidated for $CF_ID"
+
+      - name: Deployment summary
+        run: |
+          echo "## Deployment Complete ✓" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Resource | URL |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend | ${{ needs.deploy-backend.outputs.cloudfront-url }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| API | ${{ needs.deploy-backend.outputs.api-url }} |" >> $GITHUB_STEP_SUMMARY
+
+  # ─── PR Preview (backend skip, frontend only) ───────────────────────────────
+  preview:
+    name: PR Preview Check
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package.json
+
+      - name: Install and build (preview check)
+        working-directory: frontend
+        env:
+          VITE_API_URL: https://preview.wanderzenai.com
+        run: |
+          npm ci
+          npm run build
+          echo "Build succeeded — ready to merge"

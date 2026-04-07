@@ -1,0 +1,106 @@
+-- WanderZenAI Database Schema
+-- Run this on your RDS Postgres instance after provisioning
+-- psql -h <DB_HOST> -U wanderzen_admin -d wanderzenai -f schema.sql
+
+-- ─── Users table ─────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS users (
+  id                  UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  email               VARCHAR(255) UNIQUE NOT NULL,
+  plan                VARCHAR(50) DEFAULT 'free' CHECK (plan IN ('free', 'paid_once', 'subscriber')),
+  itineraries_remaining INTEGER DEFAULT 0,
+  stripe_customer_id  VARCHAR(255),
+  stripe_subscription_id VARCHAR(255),
+  created_at          TIMESTAMPTZ DEFAULT NOW(),
+  updated_at          TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_stripe_customer ON users(stripe_customer_id);
+
+-- ─── Submissions table ────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS submissions (
+  id                  VARCHAR(50) PRIMARY KEY,
+  email               VARCHAR(255) NOT NULL,
+  destination         VARCHAR(255) NOT NULL,
+  days                INTEGER NOT NULL CHECK (days BETWEEN 1 AND 30),
+  budget              DECIMAL(12, 2) NOT NULL,
+  currency            VARCHAR(10) NOT NULL DEFAULT 'USD',
+  traveler_type       VARCHAR(100) NOT NULL,
+  travel_style        JSONB DEFAULT '[]',
+  interests           TEXT,
+  travel_date         DATE,
+  travel_pace         VARCHAR(50) DEFAULT 'balanced',
+  wants_hotel_recs    BOOLEAN DEFAULT true,
+  plan                VARCHAR(50) DEFAULT 'free',
+  status              VARCHAR(50) DEFAULT 'pending' CHECK (
+    status IN ('pending', 'processing', 'itinerary_ready', 'pdf_ready', 'email_sent', 'failed')
+  ),
+  itinerary_id        VARCHAR(50),
+  error_message       TEXT,
+  email_sent_at       TIMESTAMPTZ,
+  created_at          TIMESTAMPTZ DEFAULT NOW(),
+  updated_at          TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_submissions_email ON submissions(email);
+CREATE INDEX IF NOT EXISTS idx_submissions_status ON submissions(status);
+CREATE INDEX IF NOT EXISTS idx_submissions_created ON submissions(created_at DESC);
+
+-- ─── Itineraries table ────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS itineraries (
+  id                    VARCHAR(50) PRIMARY KEY,
+  submission_id         VARCHAR(50) REFERENCES submissions(id),
+  email                 VARCHAR(255) NOT NULL,
+  destination           VARCHAR(255) NOT NULL,
+  itinerary_data        JSONB NOT NULL,
+  total_cost            DECIMAL(12, 2),
+  currency              VARCHAR(10) DEFAULT 'USD',
+  pdf_s3_key            VARCHAR(500),
+  pdf_generated_at      TIMESTAMPTZ,
+  claude_input_tokens   INTEGER DEFAULT 0,
+  claude_output_tokens  INTEGER DEFAULT 0,
+  created_at            TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_itineraries_email ON itineraries(email);
+CREATE INDEX IF NOT EXISTS idx_itineraries_submission ON itineraries(submission_id);
+
+-- ─── Email log table ──────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS email_log (
+  id                    UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  submission_id         VARCHAR(50) REFERENCES submissions(id),
+  itinerary_id          VARCHAR(50) REFERENCES itineraries(id),
+  email                 VARCHAR(255) NOT NULL,
+  sent_at               TIMESTAMPTZ DEFAULT NOW(),
+  signed_url_expires_at TIMESTAMPTZ
+);
+
+-- ─── Analytics view (useful for monitoring costs) ─────────────────────────────
+CREATE OR REPLACE VIEW daily_stats AS
+SELECT
+  DATE(created_at) AS date,
+  COUNT(*) AS total_submissions,
+  SUM(CASE WHEN plan = 'paid' THEN 1 ELSE 0 END) AS paid_submissions,
+  SUM(CASE WHEN status = 'email_sent' THEN 1 ELSE 0 END) AS completed,
+  SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed,
+  SUM(claude_input_tokens) AS total_input_tokens,
+  SUM(claude_output_tokens) AS total_output_tokens
+FROM submissions s
+LEFT JOIN itineraries i ON i.submission_id = s.id
+GROUP BY DATE(created_at)
+ORDER BY date DESC;
+
+-- ─── Cost tracking view ───────────────────────────────────────────────────────
+CREATE OR REPLACE VIEW monthly_costs AS
+SELECT
+  DATE_TRUNC('month', created_at) AS month,
+  COUNT(*) AS itineraries_generated,
+  SUM(claude_input_tokens) AS input_tokens,
+  SUM(claude_output_tokens) AS output_tokens,
+  -- Claude Sonnet pricing: $3/M input, $15/M output
+  ROUND(SUM(claude_input_tokens) * 3.0 / 1000000, 4) AS claude_input_cost_usd,
+  ROUND(SUM(claude_output_tokens) * 15.0 / 1000000, 4) AS claude_output_cost_usd,
+  ROUND((SUM(claude_input_tokens) * 3.0 + SUM(claude_output_tokens) * 15.0) / 1000000, 4) AS total_claude_cost_usd
+FROM itineraries
+GROUP BY DATE_TRUNC('month', created_at)
+ORDER BY month DESC;

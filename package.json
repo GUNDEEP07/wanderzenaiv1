@@ -1,0 +1,17 @@
+{
+  "name": "wanderzenai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "WanderZenAI — AI-powered slow travel itinerary platform on AWS",
+  "scripts": {
+    "dev": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "install:all": "cd frontend && npm install && cd ../backend/layers/shared/nodejs && npm install",
+    "deploy": "cd infra && sam build && sam deploy",
+    "db:migrate": "psql $DATABASE_URL -f infra/schema.sql",
+    "logs:form": "aws logs tail /aws/lambda/wanderzenai-form-handler-prod --follow",
+    "logs:gen": "aws logs tail /aws/lambda/wanderzenai-itinerary-gen-prod --follow",
+    "logs:pdf": "aws logs tail /aws/lambda/wanderzenai-pdf-builder-prod --follow",
+    "logs:email": "aws logs tail /aws/lambda/wanderzenai-email-sender-prod --follow"
+  }
+}

@@ -1,0 +1,308 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: WanderZenAI - AI-powered slow travel itinerary platform
+
+Globals:
+  Function:
+    Runtime: nodejs20.x
+    Timeout: 60
+    MemorySize: 512
+    Environment:
+      Variables:
+        STAGE: !Ref Stage
+        PDF_BUCKET: !Ref PDFBucket
+        DB_HOST: !Ref DBHost
+        DB_NAME: !Ref DBName
+        DB_USER: !Ref DBUser
+        DB_PASSWORD: !Ref DBPassword
+        CLAUDE_API_KEY: !Ref ClaudeApiKey
+        FROM_EMAIL: !Ref FromEmail
+        STRIPE_SECRET_KEY: !Ref StripeSecretKey
+        STRIPE_WEBHOOK_SECRET: !Ref StripeWebhookSecret
+        FRONTEND_URL: !Ref FrontendUrl
+    Layers:
+      - !Ref SharedLayer
+
+Parameters:
+  Stage:
+    Type: String
+    Default: prod
+    AllowedValues: [dev, staging, prod]
+  DBHost:
+    Type: String
+    Description: RDS Postgres host endpoint
+  DBName:
+    Type: String
+    Default: wanderzenai
+  DBUser:
+    Type: String
+    Default: wanderzen_admin
+  DBPassword:
+    Type: String
+    NoEcho: true
+  ClaudeApiKey:
+    Type: String
+    NoEcho: true
+    Description: Anthropic Claude API key
+  FromEmail:
+    Type: String
+    Description: SES verified sender email (e.g. hello@wanderzenai.com)
+  StripeSecretKey:
+    Type: String
+    NoEcho: true
+  StripeWebhookSecret:
+    Type: String
+    NoEcho: true
+  FrontendUrl:
+    Type: String
+    Description: CloudFront distribution URL for CORS
+
+Resources:
+
+  # ─── API Gateway ───────────────────────────────────────────────────────────
+  WanderZenApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub wanderzenai-api-${Stage}
+      StageName: !Ref Stage
+      Cors:
+        AllowMethods: "'POST,GET,OPTIONS'"
+        AllowHeaders: "'Content-Type,Authorization,X-Stripe-Signature'"
+        AllowOrigin: !Sub "'${FrontendUrl}'"
+      Auth:
+        DefaultAuthorizer: NONE
+      GatewayResponses:
+        DEFAULT_4XX:
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: !Sub "'${FrontendUrl}'"
+        DEFAULT_5XX:
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: !Sub "'${FrontendUrl}'"
+
+  # ─── Lambda Layer (shared utilities) ───────────────────────────────────────
+  SharedLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: !Sub wanderzenai-shared-${Stage}
+      ContentUri: ../backend/layers/shared
+      CompatibleRuntimes: [nodejs20.x]
+      RetentionPolicy: Delete
+
+  # ─── Form Handler Lambda ───────────────────────────────────────────────────
+  FormHandlerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub wanderzenai-form-handler-${Stage}
+      CodeUri: ../backend/functions/form-handler
+      Handler: index.handler
+      Description: Receives form submissions, validates, stores to DB, triggers itinerary generation
+      Events:
+        FormSubmit:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /submit
+            Method: POST
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action: [lambda:InvokeFunction]
+              Resource: !GetAtt ItineraryGenFunction.Arn
+
+  # ─── Itinerary Generator Lambda ────────────────────────────────────────────
+  ItineraryGenFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub wanderzenai-itinerary-gen-${Stage}
+      CodeUri: ../backend/functions/itinerary-gen
+      Handler: index.handler
+      Timeout: 120
+      MemorySize: 1024
+      Description: Calls Claude API with slow-travel prompt, parses structured JSON, stores itinerary
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action: [lambda:InvokeFunction]
+              Resource: !GetAtt PDFBuilderFunction.Arn
+
+  # ─── PDF Builder Lambda ────────────────────────────────────────────────────
+  PDFBuilderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub wanderzenai-pdf-builder-${Stage}
+      CodeUri: ../backend/functions/pdf-builder
+      Handler: index.handler
+      Timeout: 120
+      MemorySize: 2048
+      Description: Renders itinerary HTML template to PDF via Puppeteer, uploads to S3
+      Policies:
+        - S3WritePolicy:
+            BucketName: !Ref PDFBucket
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action: [lambda:InvokeFunction]
+              Resource: !GetAtt EmailSenderFunction.Arn
+
+  # ─── Email Sender Lambda ───────────────────────────────────────────────────
+  EmailSenderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub wanderzenai-email-sender-${Stage}
+      CodeUri: ../backend/functions/email-sender
+      Handler: index.handler
+      Description: Sends branded email with signed S3 PDF download link via SES
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action: [ses:SendEmail, ses:SendRawEmail]
+              Resource: '*'
+            - Effect: Allow
+              Action: [s3:GetObject]
+              Resource: !Sub arn:aws:s3:::${PDFBucket}/*
+
+  # ─── Stripe Webhook Lambda ─────────────────────────────────────────────────
+  StripeWebhookFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub wanderzenai-stripe-webhook-${Stage}
+      CodeUri: ../backend/functions/form-handler
+      Handler: stripe-webhook.handler
+      Description: Confirms Stripe payments, unlocks itinerary generation for paid users
+      Events:
+        StripeWebhook:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /webhook/stripe
+            Method: POST
+
+  # ─── Get Itinerary Lambda (dashboard) ─────────────────────────────────────
+  GetItineraryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub wanderzenai-get-itinerary-${Stage}
+      CodeUri: ../backend/functions/form-handler
+      Handler: get-itinerary.handler
+      Description: Returns stored itinerary data for user dashboard
+      Events:
+        GetItinerary:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /itinerary/{id}
+            Method: GET
+
+  # ─── S3 Bucket for PDFs ────────────────────────────────────────────────────
+  PDFBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub wanderzenai-pdfs-${Stage}-${AWS::AccountId}
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldFreePDFs
+            Status: Enabled
+            ExpirationInDays: 90
+            TagFilters:
+              - Key: plan
+                Value: free
+          - Id: DeleteOldPaidPDFs
+            Status: Enabled
+            ExpirationInDays: 365
+            TagFilters:
+              - Key: plan
+                Value: paid
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: [GET]
+            AllowedOrigins: [!Ref FrontendUrl]
+            MaxAge: 3600
+
+  # ─── S3 Bucket for Frontend ────────────────────────────────────────────────
+  FrontendBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub wanderzenai-frontend-${Stage}-${AWS::AccountId}
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: index.html
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+
+  FrontendBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref FrontendBucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              CanonicalUser: !GetAtt CloudFrontOAI.S3CanonicalUserId
+            Action: s3:GetObject
+            Resource: !Sub arn:aws:s3:::${FrontendBucket}/*
+
+  # ─── CloudFront Distribution ───────────────────────────────────────────────
+  CloudFrontOAI:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: WanderZenAI Frontend OAI
+
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        DefaultRootObject: index.html
+        HttpVersion: http2
+        PriceClass: PriceClass_All
+        Origins:
+          - Id: S3Frontend
+            DomainName: !GetAtt FrontendBucket.RegionalDomainName
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub origin-access-identity/cloudfront/${CloudFrontOAI}
+        DefaultCacheBehavior:
+          TargetOriginId: S3Frontend
+          ViewerProtocolPolicy: redirect-to-https
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6  # CachingOptimized
+          Compress: true
+        CustomErrorResponses:
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint
+    Value: !Sub https://${WanderZenApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}
+    Export:
+      Name: !Sub ${AWS::StackName}-ApiUrl
+
+  CloudFrontUrl:
+    Description: CloudFront distribution URL
+    Value: !Sub https://${CloudFrontDistribution.DomainName}
+    Export:
+      Name: !Sub ${AWS::StackName}-CloudFrontUrl
+
+  PDFBucketName:
+    Description: S3 bucket for PDF storage
+    Value: !Ref PDFBucket
+    Export:
+      Name: !Sub ${AWS::StackName}-PDFBucket
