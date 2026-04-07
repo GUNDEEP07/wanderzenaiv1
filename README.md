@@ -286,3 +286,4 @@ psql $DATABASE_URL -c "SELECT * FROM daily_stats LIMIT 14;"
 
 © 2025 WanderZenAI · Built for slow travellers
 # WanderZenAI
+# WanderZenAI
