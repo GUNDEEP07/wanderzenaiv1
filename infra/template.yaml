@@ -306,3 +306,13 @@ Outputs:
     Value: !Ref PDFBucket
     Export:
       Name: !Sub ${AWS::StackName}-PDFBucket
+
+  FrontendBucketName:
+    Description: S3 bucket name for frontend hosting
+    Value: !Ref FrontendBucket
+    Export:
+      Name: !Sub ${AWS::StackName}-FrontendBucket
+
+  FrontendBucketUrl:
+    Description: S3 website URL
+    Value: !GetAtt FrontendBucket.WebsiteURL

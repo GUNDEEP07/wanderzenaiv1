@@ -150,13 +150,21 @@ jobs:
           VITE_API_URL: ${{ needs.deploy-backend.outputs.api-url }}
         run: npm run build
 
-      - name: Get S3 bucket name from stack
+       - name: Get S3 bucket name from stack
         id: get-bucket
         run: |
           BUCKET=$(aws cloudformation describe-stacks \
             --stack-name ${{ env.STACK_NAME }} \
-            --query "Stacks[0].Outputs[?OutputKey=='FrontendBucket'].OutputValue" \
-            --output text 2>/dev/null || echo "${{ secrets.FRONTEND_BUCKET }}")
+            --query "Stacks[0].Outputs[?OutputKey=='FrontendBucketName'].OutputValue" \
+            --output text --region ${{ env.AWS_REGION }} 2>/dev/null || echo "")
+          
+          if [ -z "$BUCKET" ] || [ "$BUCKET" = "None" ]; then
+            BUCKET="${{ secrets.FRONTEND_BUCKET }}"
+            echo "Using secret fallback bucket: $BUCKET"
+          else
+            echo "Using stack output bucket: $BUCKET"
+          fi
+          
           echo "bucket=$BUCKET" >> $GITHUB_OUTPUT
 
       - name: Sync to S3
