@@ -70,13 +70,18 @@ exports.handler = async (event) => {
     await db.query(
       `INSERT INTO submissions
        (id, email, destination, days, budget, currency, traveler_type,
-        travel_style, interests, travel_date, travel_pace, wants_hotel_recs, plan, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'pending')`,
+        travel_style, interests, travel_date, travel_pace, wants_hotel_recs,
+        language, user_age, user_location, plan, status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,'pending')`,
       [
         submissionId, email, destination, parseInt(days, 10),
         parseFloat(budget), currency, travelerType,
         JSON.stringify(travelStyle), interests, travelDate,
-        travelPace, wantsHotelRecs, isPaid ? 'paid' : 'free',
+        travelPace, wantsHotelRecs,
+        language || 'English',
+        userAge ? parseInt(userAge, 10) : null,
+        userLocation || null,
+        isPaid ? 'paid' : 'free',
       ]
     );
 

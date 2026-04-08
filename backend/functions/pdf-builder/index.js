@@ -9,7 +9,6 @@ const { getDB, getCurrencySymbol, log } = require('/opt/nodejs/index');
 const s3 = new S3Client({ region: process.env.AWS_REGION || 'ap-southeast-2' });
 const lambda = new LambdaClient({ region: process.env.AWS_REGION || 'ap-southeast-2' });
 
-// ─── HTML → PDF Template ─────────────────────────────────────────────────────
 const buildHTML = (itinerary, submission, currencySymbol) => `
 <!DOCTYPE html>
 <html lang="en">
@@ -17,281 +16,383 @@ const buildHTML = (itinerary, submission, currencySymbol) => `
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Source+Serif+4:wght@300;400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,700;1,9..144,300;1,9..144,400&family=Noto+Sans:wght@400;600&family=Noto+Sans+JP:wght@400;600&family=Noto+Sans+Devanagari:wght@400;600&family=Noto+Sans+Arabic:wght@400;600&display=swap');
 
-  :root {
-    --deep-forest: #1a2e20;
-    --sage: #4a7c59;
-    --warm-stone: #c8b89a;
-    --cream: #faf7f2;
-    --ink: #2c2416;
-    --mist: #e8f0ea;
-  }
+:root {
+  --navy:    #0a0f1e;
+  --navy-2:  #111827;
+  --navy-3:  #141d33;
+  --teal:    #00d4aa;
+  --teal-bg: rgba(0,212,170,0.08);
+  --teal-br: rgba(0,212,170,0.2);
+  --coral:   #ff6b6b;
+  --gold:    #ffd93d;
+  --white:   #ffffff;
+  --w90:     rgba(255,255,255,0.9);
+  --w60:     rgba(255,255,255,0.6);
+  --w30:     rgba(255,255,255,0.3);
+  --w10:     rgba(255,255,255,0.08);
+  --border:  rgba(255,255,255,0.08);
+}
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
-  body {
-    font-family: 'Source Serif 4', Georgia, serif;
-    background: var(--cream);
-    color: var(--ink);
-    font-size: 11px;
-    line-height: 1.7;
-  }
+body {
+  font-family: 'Plus Jakarta Sans', 'Noto Sans', 'Noto Sans JP', 'Noto Sans Devanagari', 'Noto Sans Arabic', sans-serif;
+  background: var(--navy);
+  color: var(--white);
+  font-size: 11px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
 
-  .page {
-    width: 210mm;
-    min-height: 297mm;
-    padding: 16mm 18mm;
-    background: var(--cream);
-  }
+.page {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 14mm 16mm;
+  background: var(--navy);
+}
 
-  /* ── Header ── */
-  .header {
-    border-bottom: 2px solid var(--deep-forest);
-    padding-bottom: 10mm;
-    margin-bottom: 8mm;
-  }
-  .brand {
-    font-family: 'Playfair Display', serif;
-    font-size: 9px;
-    letter-spacing: 0.25em;
-    text-transform: uppercase;
-    color: var(--sage);
-    margin-bottom: 4mm;
-  }
-  .trip-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 28px;
-    font-weight: 700;
-    color: var(--deep-forest);
-    line-height: 1.2;
-    margin-bottom: 3mm;
-  }
-  .trip-summary {
-    font-size: 11px;
-    color: #5a5040;
-    line-height: 1.7;
-    max-width: 160mm;
-    font-style: italic;
-  }
+/* ── Header ── */
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-bottom: 8mm;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 8mm;
+}
 
-  /* ── Trip Meta Bar ── */
-  .meta-bar {
-    display: flex;
-    gap: 0;
-    background: var(--deep-forest);
-    border-radius: 4px;
-    margin: 6mm 0;
-    overflow: hidden;
-  }
-  .meta-item {
-    flex: 1;
-    padding: 4mm 5mm;
-    text-align: center;
-    border-right: 1px solid rgba(255,255,255,0.1);
-  }
-  .meta-item:last-child { border-right: none; }
-  .meta-label {
-    font-size: 7px;
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
-    color: var(--warm-stone);
-    margin-bottom: 1mm;
-  }
-  .meta-value {
-    font-family: 'Playfair Display', serif;
-    font-size: 13px;
-    color: white;
-    font-weight: 700;
-  }
+.logo-area { display: flex; align-items: center; gap: 8px; }
 
-  /* ── Accommodation Box ── */
-  .accom-box {
-    background: var(--mist);
-    border-left: 3px solid var(--sage);
-    padding: 5mm 6mm;
-    margin-bottom: 6mm;
-    border-radius: 0 4px 4px 0;
-  }
-  .accom-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 13px;
-    color: var(--deep-forest);
-    margin-bottom: 2mm;
-  }
-  .accom-rec { font-weight: 600; color: var(--sage); }
-  .accom-why { color: #5a5040; font-style: italic; font-size: 10px; margin-top: 1mm; }
-  .search-pills { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3mm; }
-  .pill {
-    background: white;
-    border: 1px solid var(--sage);
-    color: var(--sage);
-    font-size: 8px;
-    padding: 1mm 3mm;
-    border-radius: 20px;
-    font-weight: 600;
-  }
+.logo-mark {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--teal);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 800; color: var(--navy);
+  flex-shrink: 0;
+}
 
-  /* ── Day Card ── */
-  .day-card {
-    background: white;
-    border-radius: 6px;
-    margin-bottom: 5mm;
-    overflow: hidden;
-    border: 1px solid rgba(74, 124, 89, 0.15);
-    page-break-inside: avoid;
-  }
-  .day-header {
-    background: var(--deep-forest);
-    padding: 4mm 6mm;
-    display: flex;
-    align-items: baseline;
-    gap: 4mm;
-  }
-  .day-number {
-    font-family: 'Playfair Display', serif;
-    font-size: 28px;
-    color: var(--warm-stone);
-    font-weight: 700;
-    line-height: 1;
-  }
-  .day-info { flex: 1; }
-  .day-theme {
-    font-family: 'Playfair Display', serif;
-    font-size: 14px;
-    color: white;
-    line-height: 1.2;
-  }
-  .day-budget {
-    font-size: 9px;
-    color: var(--warm-stone);
-    margin-top: 1mm;
-  }
-  .day-body { padding: 5mm 6mm; }
+.logo-text {
+  font-size: 16px; font-weight: 700;
+  color: var(--white); letter-spacing: -0.02em;
+}
 
-  /* ── Activity ── */
-  .activity { margin-bottom: 4mm; padding-bottom: 4mm; border-bottom: 1px dashed rgba(74,124,89,0.2); }
-  .activity:last-of-type { border-bottom: none; margin-bottom: 0; }
-  .activity-time-row { display: flex; align-items: center; gap: 3mm; margin-bottom: 1mm; }
-  .activity-time {
-    font-size: 8px;
-    font-weight: 700;
-    color: var(--sage);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    min-width: 20mm;
-  }
-  .activity-period {
-    font-size: 8px;
-    color: #9a8c78;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-  }
-  .activity-name {
-    font-family: 'Playfair Display', serif;
-    font-size: 12px;
-    color: var(--deep-forest);
-    margin-bottom: 1mm;
-  }
-  .activity-location { font-size: 9px; color: var(--sage); font-weight: 600; margin-bottom: 1mm; }
-  .activity-why { font-size: 10px; color: #5a5040; line-height: 1.6; margin-bottom: 1mm; }
-  .activity-cost {
-    font-size: 9px;
-    font-weight: 700;
-    color: var(--deep-forest);
-    display: inline-block;
-    background: var(--mist);
-    padding: 0.5mm 2mm;
-    border-radius: 3px;
-    margin-bottom: 1mm;
-  }
-  .insider-tip {
-    background: #fff9f0;
-    border-left: 2px solid var(--warm-stone);
-    padding: 2mm 3mm;
-    font-size: 9px;
-    color: #7a6a50;
-    font-style: italic;
-    margin-top: 1.5mm;
-    border-radius: 0 3px 3px 0;
-  }
+.logo-text span { color: var(--teal); }
 
-  /* ── Hidden Gem ── */
-  .hidden-gem {
-    background: linear-gradient(135deg, var(--deep-forest) 0%, #2d4a35 100%);
-    border-radius: 4px;
-    padding: 4mm 5mm;
-    margin-top: 4mm;
-  }
-  .gem-label {
-    font-size: 7px;
-    text-transform: uppercase;
-    letter-spacing: 0.2em;
-    color: var(--warm-stone);
-    margin-bottom: 1mm;
-  }
-  .gem-text { font-size: 10px; color: white; line-height: 1.6; font-style: italic; }
+.logo-sub {
+  font-size: 8px; color: var(--w30);
+  letter-spacing: 0.15em; text-transform: uppercase;
+  margin-top: 1px;
+}
 
-  /* ── Local Eats ── */
-  .local-eats {
-    background: var(--mist);
-    border-radius: 4px;
-    padding: 3mm 4mm;
-    margin-top: 3mm;
-    display: flex;
-    align-items: flex-start;
-    gap: 3mm;
-  }
-  .eats-icon { font-size: 14px; }
-  .eats-name { font-weight: 700; font-size: 10px; color: var(--deep-forest); }
-  .eats-dish { font-size: 9px; color: var(--sage); }
-  .eats-vibe { font-size: 9px; color: #7a6a50; font-style: italic; }
+.header-right { text-align: right; }
 
-  /* ── Practical Tips ── */
-  .tips-section { margin-top: 6mm; page-break-inside: avoid; }
-  .section-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 16px;
-    color: var(--deep-forest);
-    border-bottom: 1px solid var(--warm-stone);
-    padding-bottom: 2mm;
-    margin-bottom: 4mm;
-  }
-  .tip-item {
-    display: flex;
-    gap: 3mm;
-    margin-bottom: 2mm;
-    font-size: 10px;
-    line-height: 1.6;
-  }
-  .tip-bullet { color: var(--sage); font-weight: 700; flex-shrink: 0; }
+.trip-title {
+  font-family: 'Fraunces', serif;
+  font-size: 18px; font-weight: 700;
+  color: var(--white); line-height: 1.2;
+  letter-spacing: -0.02em; max-width: 120mm;
+  text-align: right;
+}
 
-  /* ── Avoid List ── */
-  .avoid-item {
-    display: flex; gap: 3mm; margin-bottom: 2mm;
-    font-size: 10px; line-height: 1.6;
-    color: #7a5a50;
-  }
-  .avoid-bullet { color: #c0604a; font-weight: 700; flex-shrink: 0; }
+.trip-summary {
+  font-size: 9px; color: var(--w60);
+  margin-top: 3px; max-width: 120mm;
+  text-align: right; line-height: 1.6;
+  font-style: italic;
+}
 
-  /* ── Footer ── */
-  .footer {
-    margin-top: 8mm;
-    padding-top: 4mm;
-    border-top: 1px solid var(--warm-stone);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 8px;
-    color: #9a8c78;
-  }
-  .footer-brand {
-    font-family: 'Playfair Display', serif;
-    font-size: 11px;
-    color: var(--sage);
-    font-weight: 700;
-  }
-  .affiliate-note { font-size: 7px; color: #b0a090; font-style: italic; max-width: 80mm; }
+/* ── Meta bar ── */
+.meta-bar {
+  display: flex; gap: 0;
+  background: var(--navy-3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 6mm;
+  overflow: hidden;
+}
+
+.meta-item {
+  flex: 1; padding: 3.5mm 4mm;
+  text-align: center;
+  border-right: 1px solid var(--border);
+}
+
+.meta-item:last-child { border-right: none; }
+
+.meta-label {
+  font-size: 7px; font-weight: 700;
+  letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--teal); margin-bottom: 2px;
+}
+
+.meta-value {
+  font-family: 'Fraunces', serif;
+  font-size: 13px; font-weight: 700;
+  color: var(--white); letter-spacing: -0.02em;
+}
+
+/* ── Accommodation box ── */
+.accom-box {
+  background: var(--teal-bg);
+  border: 1px solid var(--teal-br);
+  border-radius: 10px;
+  padding: 4mm 5mm;
+  margin-bottom: 5mm;
+}
+
+.accom-header {
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 2mm;
+}
+
+.accom-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--teal); flex-shrink: 0;
+}
+
+.accom-title {
+  font-size: 7px; font-weight: 700;
+  letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--teal);
+}
+
+.accom-rec {
+  font-size: 10px; font-weight: 700;
+  color: var(--white); margin-bottom: 1.5mm;
+}
+
+.accom-why { font-size: 9px; color: var(--w60); font-style: italic; line-height: 1.6; }
+
+.search-pills {
+  display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3mm;
+}
+
+.search-pill {
+  font-size: 8px; padding: 2px 8px;
+  border: 1px solid var(--teal-br);
+  border-radius: 100px; color: var(--teal);
+  background: rgba(0,212,170,0.05);
+  font-weight: 600;
+}
+
+/* ── Day card ── */
+.day-card {
+  background: var(--navy-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 4mm;
+  overflow: hidden;
+  page-break-inside: avoid;
+}
+
+.day-header {
+  background: var(--navy-3);
+  padding: 3.5mm 5mm;
+  display: flex; align-items: center; gap: 4mm;
+  border-bottom: 1px solid var(--border);
+}
+
+.day-num {
+  font-family: 'Fraunces', serif;
+  font-size: 26px; font-weight: 700;
+  color: var(--teal); line-height: 1;
+  letter-spacing: -0.03em; flex-shrink: 0;
+}
+
+.day-info { flex: 1; }
+
+.day-theme {
+  font-size: 12px; font-weight: 700;
+  color: var(--white); letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.day-budget {
+  font-size: 8px; color: var(--w30);
+  margin-top: 2px; font-weight: 500;
+}
+
+.day-body { padding: 4mm 5mm; }
+
+/* ── Activity ── */
+.activity {
+  padding-bottom: 3.5mm;
+  margin-bottom: 3.5mm;
+  border-bottom: 1px solid var(--border);
+}
+
+.activity:last-of-type { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+.activity-header {
+  display: flex; align-items: center; gap: 3mm;
+  margin-bottom: 1.5mm;
+}
+
+.activity-time {
+  font-size: 8px; font-weight: 700;
+  color: var(--teal); letter-spacing: 0.05em;
+  min-width: 18mm;
+}
+
+.activity-period {
+  font-size: 7px; font-weight: 700;
+  letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--w30);
+}
+
+.activity-cost {
+  margin-left: auto;
+  font-size: 8px; font-weight: 700;
+  color: var(--navy); background: var(--teal);
+  padding: 1.5px 6px; border-radius: 4px;
+}
+
+.activity-cost.free {
+  background: rgba(0,212,170,0.15);
+  color: var(--teal);
+}
+
+.activity-name {
+  font-size: 11px; font-weight: 700;
+  color: var(--white); margin-bottom: 1mm;
+  letter-spacing: -0.01em; line-height: 1.3;
+}
+
+.activity-location {
+  font-size: 9px; color: var(--teal);
+  font-weight: 600; margin-bottom: 1.5mm;
+}
+
+.activity-why {
+  font-size: 9.5px; color: var(--w60);
+  line-height: 1.6; margin-bottom: 1.5mm;
+}
+
+.insider-tip {
+  background: rgba(255,217,61,0.06);
+  border-left: 2px solid var(--gold);
+  padding: 2mm 3mm;
+  font-size: 8.5px; color: rgba(255,217,61,0.8);
+  font-style: italic; line-height: 1.5;
+  border-radius: 0 4px 4px 0;
+}
+
+/* ── Local eats ── */
+.local-eats {
+  background: rgba(255,107,107,0.06);
+  border: 1px solid rgba(255,107,107,0.15);
+  border-radius: 8px;
+  padding: 3mm 4mm;
+  margin-top: 3mm;
+  display: flex; gap: 3mm; align-items: flex-start;
+}
+
+.eats-icon {
+  width: 24px; height: 24px; border-radius: 6px;
+  background: rgba(255,107,107,0.15);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; flex-shrink: 0;
+}
+
+.eats-name {
+  font-size: 10px; font-weight: 700;
+  color: var(--white); margin-bottom: 1px;
+}
+
+.eats-dish {
+  font-size: 8.5px; color: rgba(255,107,107,0.8);
+  margin-bottom: 1px;
+}
+
+.eats-vibe { font-size: 8px; color: var(--w60); font-style: italic; }
+
+/* ── Hidden gem ── */
+.hidden-gem {
+  background: linear-gradient(135deg, rgba(0,212,170,0.1) 0%, rgba(0,212,170,0.04) 100%);
+  border: 1px solid var(--teal-br);
+  border-radius: 8px;
+  padding: 3mm 4mm;
+  margin-top: 3mm;
+}
+
+.gem-label {
+  font-size: 7px; font-weight: 700;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--teal); margin-bottom: 1.5mm;
+  display: flex; align-items: center; gap: 5px;
+}
+
+.gem-label::before {
+  content: '';
+  display: inline-block; width: 12px; height: 1px;
+  background: var(--teal);
+}
+
+.gem-text { font-size: 9.5px; color: var(--w90); line-height: 1.6; font-style: italic; }
+
+/* ── Tips section ── */
+.tips-section {
+  background: var(--navy-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4mm 5mm;
+  margin-top: 5mm;
+  page-break-inside: avoid;
+}
+
+.section-heading {
+  font-size: 7px; font-weight: 700;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--teal); margin-bottom: 3mm;
+  display: flex; align-items: center; gap: 8px;
+}
+
+.section-heading::after {
+  content: ''; flex: 1; height: 1px;
+  background: var(--border);
+}
+
+.tip-item {
+  display: flex; gap: 3mm; margin-bottom: 2mm;
+  font-size: 9.5px; line-height: 1.6; color: var(--w60);
+}
+
+.tip-arrow { color: var(--teal); flex-shrink: 0; font-weight: 700; }
+
+/* ── Avoid list ── */
+.avoid-item {
+  display: flex; gap: 3mm; margin-bottom: 2mm;
+  font-size: 9.5px; line-height: 1.6; color: rgba(255,107,107,0.7);
+}
+
+.avoid-x { color: var(--coral); flex-shrink: 0; font-weight: 700; }
+
+/* ── Footer ── */
+.pdf-footer {
+  margin-top: 6mm;
+  padding-top: 4mm;
+  border-top: 1px solid var(--border);
+  display: flex; justify-content: space-between;
+  align-items: center;
+}
+
+.footer-left { display: flex; align-items: center; gap: 6px; }
+.footer-logo-mark { width: 20px; height: 20px; border-radius: 5px; background: var(--teal); display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800; color: var(--navy); }
+.footer-brand { font-size: 10px; font-weight: 700; color: var(--w60); }
+.footer-brand span { color: var(--teal); }
+.footer-url { font-size: 8px; color: var(--w30); margin-top: 1px; }
+.footer-note { font-size: 7.5px; color: var(--w30); font-style: italic; max-width: 90mm; text-align: right; line-height: 1.5; }
+
+/* ── Language indicator ── */
+.lang-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 7px; padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 100px; color: var(--w30);
+  margin-left: 8px; font-weight: 500;
+}
 </style>
 </head>
 <body>
@@ -299,12 +400,20 @@ const buildHTML = (itinerary, submission, currencySymbol) => `
 
   <!-- Header -->
   <div class="header">
-    <div class="brand">WanderZenAI · Slow Travel Itineraries</div>
-    <div class="trip-title">${itinerary.title}</div>
-    <div class="trip-summary">${itinerary.summary}</div>
+    <div class="logo-area">
+      <div class="logo-mark">W</div>
+      <div>
+        <div class="logo-text">Wander<span>Zen</span>AI</div>
+        <div class="logo-sub">Slow travel · Off the beaten path</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="trip-title">${itinerary.title || `${submission.destination} Travel Plan`}</div>
+      <div class="trip-summary">${itinerary.summary || 'A personalised slow travel itinerary crafted just for you.'}</div>
+    </div>
   </div>
 
-  <!-- Meta Bar -->
+  <!-- Meta bar -->
   <div class="meta-bar">
     <div class="meta-item">
       <div class="meta-label">Destination</div>
@@ -320,32 +429,41 @@ const buildHTML = (itinerary, submission, currencySymbol) => `
     </div>
     <div class="meta-item">
       <div class="meta-label">Traveller</div>
-      <div class="meta-value">${submission.travelerType}</div>
+      <div class="meta-value">${submission.travelerType || 'Solo'}</div>
     </div>
     <div class="meta-item">
-      <div class="meta-label">Est. Total</div>
-      <div class="meta-value">${currencySymbol}${itinerary.totalEstimatedCost}</div>
+      <div class="meta-label">Est. total</div>
+      <div class="meta-value">${currencySymbol}${itinerary.totalEstimatedCost || '—'}</div>
     </div>
-  </div>
-
-  <!-- Accommodation -->
-  <div class="accom-box">
-    <div class="accom-title">Where to Stay</div>
-    <div class="accom-rec">${itinerary.accommodation?.recommendation || 'Local guesthouse or boutique homestay'}</div>
-    <div class="accom-why">${itinerary.accommodation?.why || 'Away from tourist crowds, close to local life'}</div>
-    ${itinerary.accommodation?.searchTerms?.length ? `
-    <div class="search-pills">
-      ${itinerary.accommodation.searchTerms.map(t => `<span class="pill">${t}</span>`).join('')}
+    ${submission.language && submission.language !== 'English' ? `
+    <div class="meta-item">
+      <div class="meta-label">Language</div>
+      <div class="meta-value" style="font-size:10px">${submission.language}</div>
     </div>` : ''}
   </div>
 
-  <!-- Day Cards -->
+  <!-- Accommodation -->
+  ${itinerary.accommodation ? `
+  <div class="accom-box">
+    <div class="accom-header">
+      <div class="accom-dot"></div>
+      <div class="accom-title">Where to stay</div>
+    </div>
+    <div class="accom-rec">${itinerary.accommodation.recommendation || ''}</div>
+    <div class="accom-why">${itinerary.accommodation.why || ''}</div>
+    ${itinerary.accommodation.searchTerms?.length ? `
+    <div class="search-pills">
+      ${itinerary.accommodation.searchTerms.map(t => `<span class="search-pill">${t}</span>`).join('')}
+    </div>` : ''}
+  </div>` : ''}
+
+  <!-- Day cards -->
   ${(itinerary.days || []).map(day => `
   <div class="day-card">
     <div class="day-header">
-      <div class="day-number">${day.dayNumber}</div>
+      <div class="day-num">${String(day.dayNumber).padStart(2, '0')}</div>
       <div class="day-info">
-        <div class="day-theme">${day.theme}</div>
+        <div class="day-theme">${day.theme || `Day ${day.dayNumber}`}</div>
         <div class="day-budget">Daily budget: ${currencySymbol}${day.dailyCost || 0}</div>
       </div>
     </div>
@@ -357,10 +475,10 @@ const buildHTML = (itinerary, submission, currencySymbol) => `
         const periodLabel = period.replace('Activity', '').toUpperCase();
         return `
         <div class="activity">
-          <div class="activity-time-row">
+          <div class="activity-header">
             <span class="activity-time">${act.time || ''}</span>
             <span class="activity-period">${periodLabel}</span>
-            <span class="activity-cost">${act.isFree ? 'Free' : `${currencySymbol}${act.cost || 0}`}</span>
+            <span class="activity-cost ${act.isFree ? 'free' : ''}">${act.isFree ? 'Free' : `${currencySymbol}${act.cost || 0}`}</span>
           </div>
           <div class="activity-name">${act.activity || ''}</div>
           <div class="activity-location">${act.location || ''}</div>
@@ -371,53 +489,52 @@ const buildHTML = (itinerary, submission, currencySymbol) => `
 
       ${day.localEats ? `
       <div class="local-eats">
-        <span class="eats-icon">🍜</span>
+        <div class="eats-icon">🍜</div>
         <div>
-          <div class="eats-name">${day.localEats.name}</div>
-          <div class="eats-dish">Order: ${day.localEats.dish} · ${currencySymbol}${day.localEats.cost}</div>
-          <div class="eats-vibe">${day.localEats.vibe}</div>
+          <div class="eats-name">${day.localEats.name || ''}</div>
+          <div class="eats-dish">Order: ${day.localEats.dish || ''} · ${currencySymbol}${day.localEats.cost || 0}</div>
+          <div class="eats-vibe">${day.localEats.vibe || ''}</div>
         </div>
       </div>` : ''}
 
       ${day.hiddenGem ? `
       <div class="hidden-gem">
-        <div class="gem-label">Hidden Gem</div>
+        <div class="gem-label">Hidden gem</div>
         <div class="gem-text">${day.hiddenGem}</div>
       </div>` : ''}
+
     </div>
   </div>
   `).join('')}
 
-  <!-- Practical Tips -->
-  ${itinerary.practicalTips?.length ? `
-  <div class="tips-section">
-    <div class="section-title">Slow Travel Tips for ${submission.destination}</div>
-    ${itinerary.practicalTips.map(tip => `
-    <div class="tip-item">
-      <span class="tip-bullet">→</span>
-      <span>${tip}</span>
-    </div>`).join('')}
-  </div>` : ''}
+  <!-- Tips + Avoid -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:4mm;margin-top:5mm">
+    ${itinerary.practicalTips?.length ? `
+    <div class="tips-section">
+      <div class="section-heading">Slow travel tips</div>
+      ${itinerary.practicalTips.map(tip => `
+      <div class="tip-item"><span class="tip-arrow">→</span><span>${tip}</span></div>`).join('')}
+    </div>` : ''}
 
-  <!-- Avoid List -->
-  ${itinerary.avoidList?.length ? `
-  <div class="tips-section" style="margin-top:4mm">
-    <div class="section-title">Skip These Tourist Traps</div>
-    ${itinerary.avoidList.map(item => `
-    <div class="avoid-item">
-      <span class="avoid-bullet">✕</span>
-      <span>${item}</span>
-    </div>`).join('')}
-  </div>` : ''}
+    ${itinerary.avoidList?.length ? `
+    <div class="tips-section">
+      <div class="section-heading" style="color:rgba(255,107,107,0.7)">Skip these tourist traps</div>
+      ${itinerary.avoidList.map(item => `
+      <div class="avoid-item"><span class="avoid-x">✕</span><span>${item}</span></div>`).join('')}
+    </div>` : ''}
+  </div>
 
   <!-- Footer -->
-  <div class="footer">
-    <div>
-      <div class="footer-brand">WanderZenAI</div>
-      <div>wanderzenai.com · Crafted for slow travellers</div>
+  <div class="pdf-footer">
+    <div class="footer-left">
+      <div class="footer-logo-mark">W</div>
+      <div>
+        <div class="footer-brand">Wander<span>Zen</span>AI</div>
+        <div class="footer-url">wanderzenai.com</div>
+      </div>
     </div>
-    <div class="affiliate-note">
-      Booking links may contain affiliate codes. WanderZenAI earns a small commission at no extra cost to you.
+    <div class="footer-note">
+      Booking links may contain affiliate codes. WanderZenAI earns a small commission at no extra cost to you. Travel safely and slowly.
     </div>
   </div>
 
@@ -433,7 +550,6 @@ exports.handler = async (event) => {
   let browser;
 
   try {
-    // ─── Fetch itinerary from DB ─────────────────────────────────────────────
     const result = await db.query(
       `SELECT itinerary_data, currency FROM itineraries WHERE id = $1`,
       [itineraryId]
@@ -445,7 +561,6 @@ exports.handler = async (event) => {
     const currency = result.rows[0].currency;
     const currencySymbol = getCurrencySymbol(currency);
 
-    // ─── Launch Puppeteer ──────────────────────────────────────────────────
     browser = await puppeteer.launch({
       args: chromium.args,
       defaultViewport: chromium.defaultViewport,
@@ -469,7 +584,6 @@ exports.handler = async (event) => {
 
     log.info('PDF generated', { itineraryId, size: pdfBuffer.length });
 
-    // ─── Upload to S3 ──────────────────────────────────────────────────────
     const s3Key = `itineraries/${email}/${itineraryId}.pdf`;
 
     await s3.send(new PutObjectCommand({
@@ -478,16 +592,9 @@ exports.handler = async (event) => {
       Body: pdfBuffer,
       ContentType: 'application/pdf',
       ContentDisposition: `attachment; filename="WanderZen-${submission.destination.replace(/\s+/g, '-')}-${submission.days}days.pdf"`,
-      Metadata: {
-        itineraryId,
-        email,
-        destination: submission.destination,
-        plan: isPaid ? 'paid' : 'free',
-      },
-
+      Metadata: { itineraryId, email, destination: submission.destination },
     }));
 
-    // ─── Store S3 key in DB ────────────────────────────────────────────────
     await db.query(
       `UPDATE itineraries SET pdf_s3_key = $1, pdf_generated_at = NOW() WHERE id = $2`,
       [s3Key, itineraryId]
@@ -500,7 +607,6 @@ exports.handler = async (event) => {
 
     log.info('PDF uploaded to S3', { itineraryId, s3Key });
 
-    // ─── Trigger email sender ──────────────────────────────────────────────
     await lambda.send(new InvokeCommand({
       FunctionName: `wanderzenai-email-sender-${process.env.STAGE}`,
       InvocationType: 'Event',
@@ -516,7 +622,6 @@ exports.handler = async (event) => {
   } catch (err) {
     log.error('PDF build failed', { itineraryId, error: err.message });
     if (browser) await browser.close().catch(() => {});
-
     await db.query(
       `UPDATE submissions SET status = 'failed', error_message = $1, updated_at = NOW() WHERE id = $2`,
       [err.message, submissionId]

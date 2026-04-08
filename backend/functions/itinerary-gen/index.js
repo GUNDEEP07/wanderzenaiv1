@@ -65,7 +65,8 @@ Output format: You MUST respond with ONLY a raw JSON object. No markdown. No bac
 const buildUserPrompt = (submission) => {
   const {
     destination, days, budget, currency, travelerType,
-    travelStyle, interests, travelDate, travelPace, wantsHotelRecs
+    travelStyle, interests, travelDate, travelPace, wantsHotelRecs,
+    language, userAge, userLocation,
   } = submission;
 
   const currencySymbol = getCurrencySymbol(currency);
@@ -81,6 +82,9 @@ Traveller details:
 - Travel date: ${travelDate || 'flexible'}
 - Pace preference: ${travelPace}
 - Wants accommodation & activity recommendations: ${wantsHotelRecs ? 'yes' : 'no'}
+- Output language: Write the ENTIRE itinerary in ${language || 'English'}. Every word — activity names, descriptions, tips, food picks, accommodation suggestions — must be in ${language || 'English'}.
+${userAge ? `- Traveller age: ${userAge} years old. Tailor energy levels, accommodation comfort, nightlife vs early mornings, and food adventurousness accordingly.` : ''}
+${userLocation ? `- Traveller is from: ${userLocation}. Personalise by considering what feels exotic vs familiar to someone from ${userLocation}. Reference local comparisons where relevant. Consider flight connections from ${userLocation} if mentioning logistics.` : ''}
 
 Remember: avoid tourist traps. Find the real ${destination} that locals love. All costs in ${currency} (${currencySymbol}).`;
 };
@@ -114,6 +118,9 @@ exports.handler = async (event) => {
       travelDate: result.rows[0].travel_date,
       travelPace: result.rows[0].travel_pace,
       wantsHotelRecs: result.rows[0].wants_hotel_recs,
+      language: result.rows[0].language || 'English',
+      userAge: result.rows[0].user_age || null,
+      userLocation: result.rows[0].user_location || '',
       email: result.rows[0].email,
     };
 

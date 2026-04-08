@@ -101,7 +101,7 @@ const initial = {
   destination: '', days: 5, budget: '', currency: 'USD',
   travelerType: '', travelStyle: [], interests: '',
   travelDate: '', travelPace: 'balanced', wantsHotelRecs: true,
-  language: 'English', email: '',
+  language: 'English', userAge: '', userLocation: '', email: '',
 };
 
 export default function PlanTrip() {
@@ -319,6 +319,28 @@ export default function PlanTrip() {
               </div>
 
               <div style={s.fieldWrap}>
+                <label style={s.label}>Your age <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontSize: '0.7rem' }}>(optional)</span></label>
+                <input
+                  style={s.input}
+                  type="number" min="16" max="99"
+                  placeholder="e.g. 28"
+                  value={form.userAge}
+                  onChange={e => set('userAge', e.target.value)}
+                />
+              </div>
+
+              <div style={s.fieldWrap}>
+                <label style={s.label}>Where are you based? <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontSize: '0.7rem' }}>(optional)</span></label>
+                <input
+                  style={s.input}
+                  type="text"
+                  placeholder="e.g. Sydney, Australia · Mumbai, India · London, UK"
+                  value={form.userLocation}
+                  onChange={e => set('userLocation', e.target.value)}
+                />
+              </div>
+
+              <div style={s.fieldWrap}>
                 <label style={s.label}>Itinerary language</label>
                 <select style={s.select} value={form.language} onChange={e => set('language', e.target.value)}>
                   {LANGUAGES.map(l => (
@@ -359,6 +381,8 @@ export default function PlanTrip() {
                   ['Traveller', form.travelerType || '—'],
                   ['Pace', form.travelPace],
                   ['Language', form.language],
+                  ...(form.userAge ? [['Your age', `${form.userAge} yrs`]] : []),
+                  ...(form.userLocation ? [['Based in', form.userLocation]] : []),
                 ].map(([k, v]) => (
                   <div key={k} style={s.summaryRow}>
                     <span style={{ color: 'rgba(255,255,255,0.4)' }}>{k}</span>
