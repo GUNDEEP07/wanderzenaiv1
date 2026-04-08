@@ -27,7 +27,11 @@ exports.handler = async (event) => {
   const {
     destination, days, budget, currency, travelerType,
     travelStyle = [], interests = '', travelDate = null,
-    travelPace = 'balanced', wantsHotelRecs = true, email,
+    travelPace = 'balanced', wantsHotelRecs = true,
+    language = 'English',
+    userAge = null,
+    userLocation = '',
+    email,
   } = body;
 
   const db = getDB();
