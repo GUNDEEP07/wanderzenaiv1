@@ -75,11 +75,11 @@ Resources:
         DEFAULT_4XX:
           ResponseParameters:
             Headers:
-              Access-Control-Allow-Origin: !Sub "'${FrontendUrl}'"
+              gatewayresponse.header.Access-Control-Allow-Origin: !Sub "'${FrontendUrl}'"
         DEFAULT_5XX:
           ResponseParameters:
             Headers:
-              Access-Control-Allow-Origin: !Sub "'${FrontendUrl}'"
+              gatewayresponse.header.Access-Control-Allow-Origin: !Sub "'${FrontendUrl}'"
 
   # ─── Lambda Layer (shared utilities) ───────────────────────────────────────
   SharedLayer:
