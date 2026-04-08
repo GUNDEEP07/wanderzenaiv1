@@ -135,7 +135,7 @@ exports.handler = async (event) => {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 4096,
+        max_tokens: 6000,
         system: SYSTEM_PROMPT,
         messages: [{ role: 'user', content: buildUserPrompt(submission) }],
       }),
@@ -160,9 +160,8 @@ exports.handler = async (event) => {
     try {
       // Strip any markdown code fences
       let cleaned = rawContent
-        .replace(/^```json\s*/im, '')
-        .replace(/^```\s*/im, '')
-        .replace(/```\s*$/im, '')
+        .replace(/```json/gi, '')
+        .replace(/```/g, '')
         .trim();
       
       // Extract JSON object if there's text around it
