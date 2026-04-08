@@ -147,6 +147,8 @@ Resources:
             - Effect: Allow
               Action: [lambda:InvokeFunction]
               Resource: !GetAtt EmailSenderFunction.Arn
+    Metadata:
+      BuildMethod: nodejs20.x
 
   # ─── Email Sender Lambda ───────────────────────────────────────────────────
   EmailSenderFunction:
