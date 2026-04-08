@@ -11,7 +11,6 @@ env:
   STACK_NAME: wanderzenai-prod
 
 jobs:
-  # ─── Test & Lint ────────────────────────────────────────────────────────────
   test:
     name: Test
     runs-on: ubuntu-latest
@@ -33,7 +32,6 @@ jobs:
         working-directory: frontend
         run: npm run lint --if-present
 
-  # ─── Deploy Backend (AWS SAM) ───────────────────────────────────────────────
   deploy-backend:
     name: Deploy Backend
     runs-on: ubuntu-latest
@@ -77,10 +75,20 @@ jobs:
 
       - name: SAM build
         working-directory: infra
-        run: sam build --template template.yaml --use-container
+        run: sam build --template template.yaml
 
       - name: SAM deploy
         working-directory: infra
+        env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
         run: |
           sam deploy \
             --stack-name ${{ env.STACK_NAME }} \
@@ -90,16 +98,16 @@ jobs:
             --capabilities CAPABILITY_IAM \
             --resolve-s3 \
             --parameter-overrides \
-              Stage=prod \
-              DBHost=${{ secrets.DB_HOST }} \
-              DBName=${{ secrets.DB_NAME }} \
-              DBUser=${{ secrets.DB_USER }} \
-              DBPassword=${{ secrets.DB_PASSWORD }} \
-              ClaudeApiKey=${{ secrets.CLAUDE_API_KEY }} \
-              FromEmail=${{ secrets.FROM_EMAIL }} \
-              StripeSecretKey=${{ secrets.STRIPE_SECRET_KEY }} \
-              StripeWebhookSecret=${{ secrets.STRIPE_WEBHOOK_SECRET }} \
-              FrontendUrl=${{ secrets.FRONTEND_URL }}
+              "Stage=prod" \
+              "DBHost=${DB_HOST}" \
+              "DBName=${DB_NAME}" \
+              "DBUser=${DB_USER}" \
+              "DBPassword=${DB_PASSWORD}" \
+              "ClaudeApiKey=${CLAUDE_API_KEY}" \
+              "FromEmail=${FROM_EMAIL}" \
+              "StripeSecretKey=${STRIPE_SECRET_KEY}" \
+              "StripeWebhookSecret=${STRIPE_WEBHOOK_SECRET}" \
+              "FrontendUrl=${FRONTEND_URL}"
 
       - name: Get stack outputs
         id: get-outputs
@@ -107,17 +115,16 @@ jobs:
           API_URL=$(aws cloudformation describe-stacks \
             --stack-name ${{ env.STACK_NAME }} \
             --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
-            --output text)
+            --output text --region ${{ env.AWS_REGION }})
           CF_URL=$(aws cloudformation describe-stacks \
             --stack-name ${{ env.STACK_NAME }} \
             --query "Stacks[0].Outputs[?OutputKey=='CloudFrontUrl'].OutputValue" \
-            --output text)
+            --output text --region ${{ env.AWS_REGION }})
           echo "api-url=$API_URL" >> $GITHUB_OUTPUT
           echo "cloudfront-url=$CF_URL" >> $GITHUB_OUTPUT
           echo "API URL: $API_URL"
           echo "CloudFront URL: $CF_URL"
 
-  # ─── Deploy Frontend (S3 + CloudFront) ─────────────────────────────────────
   deploy-frontend:
     name: Deploy Frontend
     runs-on: ubuntu-latest
@@ -150,33 +157,26 @@ jobs:
           VITE_API_URL: ${{ needs.deploy-backend.outputs.api-url }}
         run: npm run build
 
-       - name: Get S3 bucket name from stack
+      - name: Get S3 bucket name
         id: get-bucket
         run: |
           BUCKET=$(aws cloudformation describe-stacks \
             --stack-name ${{ env.STACK_NAME }} \
             --query "Stacks[0].Outputs[?OutputKey=='FrontendBucketName'].OutputValue" \
             --output text --region ${{ env.AWS_REGION }} 2>/dev/null || echo "")
-          
           if [ -z "$BUCKET" ] || [ "$BUCKET" = "None" ]; then
             BUCKET="${{ secrets.FRONTEND_BUCKET }}"
-            echo "Using secret fallback bucket: $BUCKET"
-          else
-            echo "Using stack output bucket: $BUCKET"
           fi
-          
           echo "bucket=$BUCKET" >> $GITHUB_OUTPUT
+          echo "Using bucket: $BUCKET"
 
       - name: Sync to S3
         working-directory: frontend
         run: |
-          # Upload assets with long cache (they have hashed filenames)
           aws s3 sync dist/ s3://${{ steps.get-bucket.outputs.bucket }}/ \
             --delete \
             --cache-control "public, max-age=31536000, immutable" \
             --exclude "index.html"
-
-          # Upload index.html with no cache (always fresh)
           aws s3 cp dist/index.html s3://${{ steps.get-bucket.outputs.bucket }}/index.html \
             --cache-control "no-cache, no-store, must-revalidate" \
             --content-type "text/html"
@@ -185,25 +185,20 @@ jobs:
         run: |
           CF_ID=$(aws cloudformation describe-stacks \
             --stack-name ${{ env.STACK_NAME }} \
-            --query "Stacks[0].Resources[?LogicalResourceId=='CloudFrontDistribution'].PhysicalResourceId" \
-            --output text 2>/dev/null || echo "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}")
-
+            --query "Stacks[0].Outputs[?OutputKey=='CloudFrontUrl'].OutputValue" \
+            --output text --region ${{ env.AWS_REGION }} 2>/dev/null || echo "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}")
           aws cloudfront create-invalidation \
             --distribution-id $CF_ID \
             --paths "/*"
 
-          echo "Cache invalidated for $CF_ID"
-
       - name: Deployment summary
         run: |
-          echo "## Deployment Complete ✓" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Deployment Complete" >> $GITHUB_STEP_SUMMARY
           echo "| Resource | URL |" >> $GITHUB_STEP_SUMMARY
           echo "|---|---|" >> $GITHUB_STEP_SUMMARY
           echo "| Frontend | ${{ needs.deploy-backend.outputs.cloudfront-url }} |" >> $GITHUB_STEP_SUMMARY
           echo "| API | ${{ needs.deploy-backend.outputs.api-url }} |" >> $GITHUB_STEP_SUMMARY
 
-  # ─── PR Preview (backend skip, frontend only) ───────────────────────────────
   preview:
     name: PR Preview Check
     runs-on: ubuntu-latest
@@ -219,11 +214,11 @@ jobs:
           cache: 'npm'
           cache-dependency-path: frontend/package.json
 
-      - name: Install and build (preview check)
+      - name: Install and build
         working-directory: frontend
         env:
           VITE_API_URL: https://preview.wanderzenai.com
         run: |
           npm ci
           npm run build
-          echo "Build succeeded — ready to merge"
+          echo "Build succeeded"
