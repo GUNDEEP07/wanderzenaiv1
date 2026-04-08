@@ -20,7 +20,7 @@ Your travel philosophy:
 
 Accommodation philosophy: Suggest stays that are OUTSIDE the tourist centre — a farmhouse on the edge of town, a converted heritage home in a quiet street, a guesthouse near a nature reserve. Always note that these are suggestions and users should book via Airbnb, Booking.com, or direct.
 
-Output format: You MUST respond with ONLY valid JSON — no markdown, no commentary, no backticks. Follow this exact schema:
+Output format: You MUST respond with ONLY a raw JSON object. No markdown. No backticks. No code fences. No explanation before or after. Start your response with { and end with }. Follow this exact schema:
 
 {
   "title": "string — evocative trip title e.g. 'Quiet Japan: Mountains, Markets & Morning Mist'",
@@ -158,8 +158,17 @@ exports.handler = async (event) => {
     // ─── Parse JSON response ───────────────────────────────────────────────
     let itinerary;
     try {
-      // Claude sometimes wraps in ```json ... ``` even when told not to
-      const cleaned = rawContent.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
+      // Strip any markdown code fences
+      let cleaned = rawContent
+        .replace(/^```json\s*/im, '')
+        .replace(/^```\s*/im, '')
+        .replace(/```\s*$/im, '')
+        .trim();
+      
+      // Extract JSON object if there's text around it
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      if (jsonMatch) cleaned = jsonMatch[0];
+      
       itinerary = JSON.parse(cleaned);
     } catch (parseErr) {
       log.error('Failed to parse Claude JSON response', { submissionId, rawContent: rawContent.substring(0, 500) });
