@@ -183,13 +183,10 @@ jobs:
 
       - name: Invalidate CloudFront cache
         run: |
-          CF_ID=$(aws cloudformation describe-stacks \
-            --stack-name ${{ env.STACK_NAME }} \
-            --query "Stacks[0].Outputs[?OutputKey=='CloudFrontUrl'].OutputValue" \
-            --output text --region ${{ env.AWS_REGION }} 2>/dev/null || echo "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}")
           aws cloudfront create-invalidation \
-            --distribution-id $CF_ID \
+            --distribution-id d1ih6p0pojm6z4 \
             --paths "/*"
+          echo "Cache invalidated"
 
       - name: Deployment summary
         run: |
