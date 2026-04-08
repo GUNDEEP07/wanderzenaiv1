@@ -168,6 +168,9 @@ exports.handler = async (event) => {
       // Extract JSON object if there's text around it
       const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
       if (jsonMatch) cleaned = jsonMatch[0];
+
+      // Fix common Haiku issues - trailing commas
+      cleaned = cleaned.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
       
       itinerary = JSON.parse(cleaned);
     } catch (parseErr) {
