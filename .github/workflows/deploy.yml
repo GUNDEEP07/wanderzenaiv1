@@ -88,6 +88,8 @@ jobs:
           FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          STRIPE_SINGLE_PLAN_LINK: ${{ secrets.STRIPE_SINGLE_PLAN_LINK }}
+          STRIPE_WANDERER_LINK: ${{ secrets.STRIPE_WANDERER_LINK }}
           FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
         run: |
           sam deploy \
@@ -107,6 +109,8 @@ jobs:
               "FromEmail=${FROM_EMAIL}" \
               "StripeSecretKey=${STRIPE_SECRET_KEY}" \
               "StripeWebhookSecret=${STRIPE_WEBHOOK_SECRET}" \
+              "StripeSinglePlanLink=${STRIPE_SINGLE_PLAN_LINK}" \
+              "StripeWandererLink=${STRIPE_WANDERER_LINK}" \
               "FrontendUrl=${FRONTEND_URL}"
 
       - name: Get stack outputs
@@ -155,6 +159,9 @@ jobs:
         working-directory: frontend
         env:
           VITE_API_URL: ${{ needs.deploy-backend.outputs.api-url }}
+          VITE_STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
+          VITE_STRIPE_SINGLE_PLAN_LINK: ${{ secrets.STRIPE_SINGLE_PLAN_LINK }}
+          VITE_STRIPE_WANDERER_LINK: ${{ secrets.STRIPE_WANDERER_LINK }}
         run: npm run build
 
       - name: Get S3 bucket name

@@ -19,6 +19,8 @@ Globals:
         FROM_EMAIL: !Ref FromEmail
         STRIPE_SECRET_KEY: !Ref StripeSecretKey
         STRIPE_WEBHOOK_SECRET: !Ref StripeWebhookSecret
+        STRIPE_SINGLE_PLAN_LINK: !Ref StripeSinglePlanLink
+        STRIPE_WANDERER_LINK: !Ref StripeWandererLink
         FRONTEND_URL: !Ref FrontendUrl
     Layers:
       - !Ref SharedLayer
@@ -53,6 +55,12 @@ Parameters:
   StripeWebhookSecret:
     Type: String
     NoEcho: true
+  StripeSinglePlanLink:
+    Type: String
+    Description: Stripe payment link for single plan
+  StripeWandererLink:
+    Type: String
+    Description: Stripe payment link for wanderer subscription
   FrontendUrl:
     Type: String
     Description: CloudFront distribution URL for CORS
