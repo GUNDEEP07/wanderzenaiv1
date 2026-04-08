@@ -119,7 +119,7 @@ Resources:
       FunctionName: !Sub wanderzenai-itinerary-gen-${Stage}
       CodeUri: ../backend/functions/itinerary-gen
       Handler: index.handler
-      Timeout: 120
+      Timeout: 300
       MemorySize: 1024
       Description: Calls Claude API with slow-travel prompt, parses structured JSON, stores itinerary
       Policies:
