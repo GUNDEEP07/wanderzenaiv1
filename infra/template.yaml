@@ -68,7 +68,7 @@ Resources:
       Cors:
         AllowMethods: "'POST,GET,OPTIONS'"
         AllowHeaders: "'Content-Type,Authorization,X-Stripe-Signature'"
-        AllowOrigin: !Sub "'${FrontendUrl}'"
+        AllowOrigin: "'*'"
       Auth:
         DefaultAuthorizer: NONE
       GatewayResponses:
