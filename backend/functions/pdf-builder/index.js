@@ -484,7 +484,7 @@ exports.handler = async (event) => {
         destination: submission.destination,
         plan: isPaid ? 'paid' : 'free',
       },
-      Tagging: `plan=${isPaid ? 'paid' : 'free'}`,
+
     }));
 
     // ─── Store S3 key in DB ────────────────────────────────────────────────
