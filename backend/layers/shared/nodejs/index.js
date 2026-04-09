@@ -132,43 +132,29 @@ const fetchFoursquareVenues = async (destination) => {
   } catch { return []; }
 };
 
-// ─── Amadeus — quality scoring ────────────────────────────────────────────────
-let amadeusToken = null;
-let amadeusTokenExpiry = 0;
-
-const getAmadeusToken = async () => {
-  if (amadeusToken && Date.now() < amadeusTokenExpiry) return amadeusToken;
-  const key = process.env.AMADEUS_API_KEY;
-  const secret = process.env.AMADEUS_API_SECRET;
-  if (!key || !secret) return null;
-  try {
-    const res = await fetch('https://test.api.amadeus.com/v1/security/oauth2/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `grant_type=client_credentials&client_id=${key}&client_secret=${secret}`,
-    });
-    const data = await res.json();
-    amadeusToken = data.access_token;
-    amadeusTokenExpiry = Date.now() + (data.expires_in - 60) * 1000;
-    return amadeusToken;
-  } catch { return null; }
-};
-
+// ─── OpenTripMap — quality scoring (replaces Amadeus POI API) ────────────────
+// Amadeus POI API no longer available to independent developers.
+// OpenTripMap: free, 5000 calls/day, equivalent POI scoring.
+// Sign up at: opentripmap.io
 const fetchAmadeusScore = async (lat, lng) => {
-  const token = await getAmadeusToken();
-  if (!token) return 50;
+  const key = process.env.OPENTRIPMAP_API_KEY;
+  if (!key) return 50;
   try {
     const res = await fetch(
-      `https://test.api.amadeus.com/v1/reference-data/locations/pois?latitude=${lat}&longitude=${lng}&radius=20&page[limit]=10`,
-      { headers: { Authorization: `Bearer ${token}` } }
+      `https://api.opentripmap.com/0.1/en/places/radius?radius=10000&lon=${lng}&lat=${lat}&kinds=cultural,natural,historic&limit=20&apikey=${key}`
     );
     const data = await res.json();
-    if (!data.data?.length) return 50;
-    const scores = data.data.filter(p => p.rank).map(p => p.rank);
+    if (!data.features?.length) return 50;
+    const scores = data.features
+      .filter(f => f.properties?.rate)
+      .map(f => f.properties.rate);
     if (!scores.length) return 50;
-    return Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10);
+    return Math.min(100, Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 14));
   } catch { return 50; }
 };
+
+// Kept for backward compatibility — not used with OpenTripMap
+const getAmadeusToken = async () => null;
 
 module.exports = {
   getDB, ok, created, badRequest, unauthorized, notFound, serverError,

@@ -111,7 +111,9 @@ jobs:
               "StripeWebhookSecret=${STRIPE_WEBHOOK_SECRET}" \
               "StripeSinglePlanLink=${STRIPE_SINGLE_PLAN_LINK}" \
               "StripeWandererLink=${STRIPE_WANDERER_LINK}" \
-              "FrontendUrl=${FRONTEND_URL}"
+              "FrontendUrl=${FRONTEND_URL}" \
+              "FoursquareApiKey=${FOURSQUARE_API_KEY}" \
+              "OpenTripMapApiKey=${OPENTRIPMAP_API_KEY}"
 
       - name: Get stack outputs
         id: get-outputs

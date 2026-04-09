@@ -23,8 +23,7 @@ Globals:
         STRIPE_WANDERER_LINK: !Ref StripeWandererLink
         FRONTEND_URL: !Ref FrontendUrl
         FOURSQUARE_API_KEY: !Ref FoursquareApiKey
-        AMADEUS_API_KEY: !Ref AmadeusApiKey
-        AMADEUS_API_SECRET: !Ref AmadeusApiSecret
+        OPENTRIPMAP_API_KEY: !Ref OpenTripMapApiKey
     Layers:
       - !Ref SharedLayer
 
@@ -72,16 +71,11 @@ Parameters:
     NoEcho: true
     Default: ''
     Description: Foursquare Places API key for local venue enrichment
-  AmadeusApiKey:
+  OpenTripMapApiKey:
     Type: String
     NoEcho: true
     Default: ''
-    Description: Amadeus POI API key for destination scoring
-  AmadeusApiSecret:
-    Type: String
-    NoEcho: true
-    Default: ''
-    Description: Amadeus API secret
+    Description: OpenTripMap API key for destination POI scoring — opentripmap.io
 
 Resources:
 
