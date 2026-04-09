@@ -17,37 +17,41 @@ const DESTINATIONS = [
   { name: 'Georgia mountains', color: '#ff6b6b' },
 ];
 
+// Curated Unsplash images — slow travel, nature, hidden places aesthetic
+const PHOTO_STRIP = [
+  { url: 'https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=400&h=560&fit=crop&auto=format', alt: 'Kyoto temple path at dawn', label: 'Kyoto' },
+  { url: 'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=400&h=560&fit=crop&auto=format', alt: 'Patagonia mountain trail', label: 'Patagonia' },
+  { url: 'https://images.unsplash.com/photo-1539635278303-d4002c07eae3?w=400&h=560&fit=crop&auto=format', alt: 'Bali rice terraces', label: 'Bali' },
+  { url: 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=400&h=560&fit=crop&auto=format', alt: 'European village street', label: 'Puglia' },
+  { url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=560&fit=crop&auto=format', alt: 'Tropical beach hidden cove', label: 'Sri Lanka' },
+  { url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400&h=560&fit=crop&auto=format', alt: 'Mountain landscape trail', label: 'Faroe Islands' },
+];
+
+const SAMPLE_IMAGES = [
+  'https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=600&h=300&fit=crop&auto=format',
+  'https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=600&h=300&fit=crop&auto=format',
+  'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=600&h=300&fit=crop&auto=format',
+];
+
 const FEATURES = [
-  { icon: '◈', title: 'Zero tourist traps', body: 'Every itinerary is built to avoid the top-10 lists. We find the spots locals keep to themselves.' },
-  { icon: '◈', title: 'Slow travel by design', body: 'Breathing room is built in. Hidden cafes, morning trails, village markets — not 8 sights before noon.' },
-  { icon: '◈', title: 'Nature-first stays', body: 'We suggest farmhouses, forest retreats and residential homestays — never city-centre chain hotels.' },
-  { icon: '◈', title: 'One hidden gem daily', body: 'Every single day includes something most tourists never find. That\'s not a feature — it\'s a promise.' },
-  { icon: '◈', title: 'Your language', body: 'Receive your itinerary in English, Hindi, Spanish, French, Japanese and 6 more languages.' },
-  { icon: '◈', title: 'Beautiful PDF, forever', body: 'A print-ready PDF with day cards, local eats, insider tips and cost breakdown. Yours to keep.' },
+  { icon: '◈', title: 'Zero tourist traps', body: 'Every itinerary avoids the top-10 lists. We find the spots locals keep to themselves.' },
+  { icon: '◈', title: 'Slow travel by design', body: 'Hidden cafes, morning trails, village markets — not 8 sights before noon.' },
+  { icon: '◈', title: 'Nature-first stays', body: 'Farmhouses, forest retreats and residential homestays — never city-centre chain hotels.' },
+  { icon: '◈', title: 'One hidden gem daily', body: 'Every single day includes something most tourists never find. That\'s a promise.' },
+  { icon: '◈', title: 'Your language', body: 'English, Hindi, Spanish, French, Japanese and 6 more languages supported.' },
+  { icon: '◈', title: 'Beautiful PDF, forever', body: 'Print-ready PDF with day cards, local eats, insider tips and cost breakdown.' },
 ];
 
 const STEPS = [
-  { icon: '✦', num: '01', title: 'Tell us your trip', body: 'Destination, budget, travel style, pace and interests. Two minutes, no account needed.' },
-  { icon: '✦', num: '02', title: 'AI crafts your plan', body: 'Built on slow-travel philosophy — hidden cafes, local guesthouses, scenic walks away from crowds.' },
-  { icon: '✦', num: '03', title: 'Itinerary in your inbox', body: 'A beautifully designed PDF lands in your email within 3 minutes. Yours forever.' },
+  { num: '01', title: 'Tell us your trip', body: 'Destination, budget, travel style, pace and interests. Two minutes, no account needed.' },
+  { num: '02', title: 'AI crafts your plan', body: 'Built on slow-travel philosophy — hidden cafes, local guesthouses, scenic walks away from crowds.' },
+  { num: '03', title: 'Itinerary in your inbox', body: 'A beautifully designed PDF lands in your email within 3 minutes. Yours forever.' },
 ];
 
 const SAMPLES = [
-  {
-    day: 1, theme: 'Dawn temples & whispered gardens',
-    gem: 'Nanzenji\'s back north gate at 6:30 AM — monks walking, mist on the canal, zero crowds',
-    food: 'Okutan Kappa Zushi at 5:30 PM (opening) — locals dine here, tourists arrive at 7 PM',
-  },
-  {
-    day: 2, theme: 'Mountain paths & artisan markets',
-    gem: 'Fushimi Inari back trails via Inariyama Park — forested, quiet, maybe 3 other people',
-    food: 'Demachi Masugata Shotengai — residential market where locals actually shop for lunch',
-  },
-  {
-    day: 3, theme: 'Slow mornings & neighbourhood life',
-    gem: 'Kiyomizu-dera back lanes going LEFT — family homes, tiny shrines, no souvenir shops',
-    food: 'Yudofu Sagano — hot pot tofu in a wooden room, owner remembers regulars by name',
-  },
+  { day: 1, theme: 'Dawn temples & whispered gardens', gem: 'Nanzenji\'s back north gate at 6:30 AM — monks walking, mist on the canal, zero crowds', food: 'Okutan Kappa Zushi at 5:30 PM (opening) — locals dine here, tourists arrive at 7 PM' },
+  { day: 2, theme: 'Mountain paths & artisan markets', gem: 'Fushimi Inari back trails via Inariyama Park — forested, quiet, maybe 3 other people', food: 'Demachi Masugata Shotengai — residential market where locals actually shop for lunch' },
+  { day: 3, theme: 'Slow mornings & neighbourhood life', gem: 'Kiyomizu-dera back lanes going LEFT — family homes, tiny shrines, no souvenir shops', food: 'Yudofu Sagano — hot pot tofu in a wooden room, owner remembers regulars by name' },
 ];
 
 export default function Landing() {
@@ -86,6 +90,13 @@ export default function Landing() {
       {/* ── Hero ── */}
       <section className="hero">
         <div className="hero-bg">
+          {/* Subtle background image with dark overlay */}
+          <div style={{
+            position: 'absolute', inset: 0, zIndex: 0,
+            backgroundImage: 'url(https://images.unsplash.com/photo-1506929562872-bb421503ef21?w=1600&h=900&fit=crop&auto=format)',
+            backgroundSize: 'cover', backgroundPosition: 'center',
+            opacity: 0.08,
+          }} />
           <div className="hero-grid" />
           <div className="hero-glow-1" />
           <div className="hero-glow-2" />
@@ -108,8 +119,7 @@ export default function Landing() {
 
         <div className="hero-actions">
           <button className="btn-primary" onClick={() => navigate('/plan')}>
-            Plan my trip — free
-            <span>→</span>
+            Plan my trip — free <span>→</span>
           </button>
           <button className="btn-ghost" onClick={() => document.getElementById('sample').scrollIntoView({ behavior: 'smooth' })}>
             See a sample plan
@@ -118,11 +128,7 @@ export default function Landing() {
 
         <div className="hero-tags">
           {DESTINATIONS.map((d, i) => (
-            <div
-              key={d.name}
-              className="dest-tag"
-              style={{ animationDelay: `${i * 0.08}s` }}
-            >
+            <div key={d.name} className="dest-tag" style={{ animationDelay: `${i * 0.08}s` }}>
               <div className="dest-tag-dot" style={{ background: d.color }} />
               {d.name}
             </div>
@@ -130,21 +136,56 @@ export default function Landing() {
         </div>
 
         <div className="hero-proof reveal" ref={addRef}>
-          <div className="proof-item">
-            <div className="proof-num">3 min</div>
-            <div className="proof-label">avg delivery time</div>
+          <div className="proof-item"><div className="proof-num">3 min</div><div className="proof-label">avg delivery time</div></div>
+          <div className="proof-item"><div className="proof-num">0</div><div className="proof-label">tourist traps included</div></div>
+          <div className="proof-item"><div className="proof-num">10+</div><div className="proof-label">languages supported</div></div>
+          <div className="proof-item"><div className="proof-num">$0</div><div className="proof-label">to get started</div></div>
+        </div>
+      </section>
+
+      {/* ── Photo strip ── */}
+      <section style={{ background: '#0a0f1e', padding: '0 0 5rem', overflow: 'hidden' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 2rem' }}>
+          <div className="reveal" ref={addRef} style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+            <div className="section-tag">Real destinations</div>
+            <h2 className="section-title" style={{ fontSize: 'clamp(1.5rem,3vw,2.5rem)' }}>The places we actually send you to</h2>
           </div>
-          <div className="proof-item">
-            <div className="proof-num">0</div>
-            <div className="proof-label">tourist traps included</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0,1fr))', gap: 8 }} className="reveal" ref={addRef}>
+            {PHOTO_STRIP.map((photo, i) => (
+              <div key={photo.label} style={{
+                position: 'relative', borderRadius: 12, overflow: 'hidden',
+                aspectRatio: '9/16', animationDelay: `${i * 0.1}s`,
+              }}>
+                <img
+                  src={photo.url}
+                  alt={photo.alt}
+                  loading="lazy"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 0.5s ease' }}
+                  onMouseEnter={e => e.target.style.transform = 'scale(1.05)'}
+                  onMouseLeave={e => e.target.style.transform = 'scale(1)'}
+                />
+                {/* Dark gradient overlay */}
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  background: 'linear-gradient(to top, rgba(10,15,30,0.85) 0%, rgba(10,15,30,0.1) 50%, transparent 100%)',
+                }} />
+                {/* Label */}
+                <div style={{
+                  position: 'absolute', bottom: 12, left: 12,
+                  fontSize: '0.75rem', fontWeight: 700, color: '#fff',
+                  letterSpacing: '0.08em', textTransform: 'uppercase',
+                }}>{photo.label}</div>
+                {/* Teal accent line */}
+                <div style={{
+                  position: 'absolute', bottom: 0, left: 0, right: 0,
+                  height: 2, background: '#00d4aa', transform: 'scaleX(0)',
+                  transition: 'transform 0.3s', transformOrigin: 'left',
+                }} className="photo-accent" />
+              </div>
+            ))}
           </div>
-          <div className="proof-item">
-            <div className="proof-num">10+</div>
-            <div className="proof-label">languages supported</div>
-          </div>
-          <div className="proof-item">
-            <div className="proof-num">$0</div>
-            <div className="proof-label">to get started</div>
+          <div style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.25)', fontStyle: 'italic' }}>
+            Photos via Unsplash
           </div>
         </div>
       </section>
@@ -158,10 +199,10 @@ export default function Landing() {
           </div>
 
           <div className="steps reveal" ref={addRef}>
-            {STEPS.map((s, i) => (
+            {STEPS.map(s => (
               <div key={s.num} className="step">
                 <div className="step-num">{s.num}</div>
-                <div className="step-icon">{s.icon}</div>
+                <div className="step-icon">✦</div>
                 <div className="step-title">{s.title}</div>
                 <div className="step-body">{s.body}</div>
               </div>
@@ -179,18 +220,34 @@ export default function Landing() {
       {/* ── Features ── */}
       <section className="section" style={{ background: '#0a0f1e' }}>
         <div className="section-inner">
-          <div className="reveal" ref={addRef}>
-            <div className="section-tag">Why WanderZenAI</div>
-            <h2 className="section-title">Not another<br />generic travel app.</h2>
-            <p className="section-sub">
-              Built on a slow-travel philosophy. Every feature exists to get you off the tourist trail and into the real destination.
-            </p>
+          {/* Feature image banner */}
+          <div className="reveal" ref={addRef} style={{ borderRadius: 16, overflow: 'hidden', marginBottom: '4rem', position: 'relative', height: 280 }}>
+            <img
+              src="https://images.unsplash.com/photo-1501854140801-50d01698950b?w=1200&h=400&fit=crop&auto=format"
+              alt="Patagonia mountain trail slow travel"
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            />
+            <div style={{
+              position: 'absolute', inset: 0,
+              background: 'linear-gradient(135deg, rgba(10,15,30,0.9) 0%, rgba(10,15,30,0.4) 60%, rgba(10,15,30,0.1) 100%)',
+              display: 'flex', alignItems: 'center', padding: '0 3rem',
+            }}>
+              <div>
+                <div className="section-tag">Why WanderZenAI</div>
+                <h2 className="section-title" style={{ fontSize: 'clamp(1.75rem,4vw,3rem)', marginBottom: '0.75rem' }}>
+                  Not another<br />generic travel app.
+                </h2>
+                <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '1rem', maxWidth: 400, lineHeight: 1.7 }}>
+                  Built on a slow-travel philosophy. Every feature exists to get you off the tourist trail and into the real destination.
+                </p>
+              </div>
+            </div>
           </div>
 
-          <div className="features-grid" style={{ marginTop: '4rem' }}>
+          <div className="features-grid">
             {FEATURES.map((f, i) => (
               <div key={f.title} className={`feature reveal reveal-delay-${(i % 4) + 1}`} ref={addRef}>
-                <span className="feature-icon" style={{ color: '#00d4aa', fontSize: '16px' }}>{f.icon}</span>
+                <span className="feature-icon" style={{ color: '#00d4aa', fontSize: 16 }}>{f.icon}</span>
                 <div className="feature-title">{f.title}</div>
                 <div className="feature-body">{f.body}</div>
               </div>
@@ -207,21 +264,30 @@ export default function Landing() {
               <div className="section-tag">Sample plan</div>
               <h2 className="section-title">Quiet Kyoto:<br />Temples, Trails & Morning Mist</h2>
             </div>
-            <p className="section-sub" style={{ maxWidth: '320px' }}>
-              A real WanderZenAI itinerary excerpt. Notice what's missing — no Senso-ji crowds, no Shibuya crossing.
+            <p className="section-sub" style={{ maxWidth: 320 }}>
+              A real WanderZenAI excerpt. Notice what's missing — no Senso-ji crowds, no Shibuya crossing.
             </p>
           </div>
 
           <div className="sample-cards">
             {SAMPLES.map((s, i) => (
               <div key={s.day} className={`sample-card reveal reveal-delay-${i + 1}`} ref={addRef}>
-                <div className="sample-card-header">
-                  <div>
+                {/* Photo header */}
+                <div style={{ position: 'relative', height: 160, overflow: 'hidden' }}>
+                  <img
+                    src={SAMPLE_IMAGES[i]}
+                    alt={s.theme}
+                    loading="lazy"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  />
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(20,29,51,1) 0%, rgba(20,29,51,0.3) 60%, transparent 100%)' }} />
+                  <div style={{ position: 'absolute', bottom: 14, left: 16 }}>
                     <div className="sample-day-badge">Day {s.day}</div>
-                    <div className="sample-card-theme">{s.theme}</div>
                   </div>
                 </div>
-                <div className="sample-card-body">
+
+                <div className="sample-card-body" style={{ padding: '1.25rem 1.5rem' }}>
+                  <div className="sample-card-theme" style={{ marginBottom: '1rem' }}>{s.theme}</div>
                   <div className="sample-gem-label">Hidden gem</div>
                   <div className="sample-gem">{s.gem}</div>
                   <div className="sample-food-label">Where to eat</div>
@@ -283,11 +349,23 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── Final CTA ── */}
-      <section className="cta-section">
-        <div className="cta-inner reveal" ref={addRef}>
+      {/* ── Final CTA with background image ── */}
+      <section style={{ position: 'relative', overflow: 'hidden', padding: '8rem 2rem', textAlign: 'center' }}>
+        {/* Background image */}
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 0,
+          backgroundImage: 'url(https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1600&h=800&fit=crop&auto=format)',
+          backgroundSize: 'cover', backgroundPosition: 'center',
+        }} />
+        {/* Dark overlay */}
+        <div style={{ position: 'absolute', inset: 0, zIndex: 1, background: 'rgba(10,15,30,0.82)' }} />
+        {/* Teal glow */}
+        <div style={{ position: 'absolute', inset: 0, zIndex: 1, background: 'radial-gradient(ellipse at center, rgba(0,212,170,0.08) 0%, transparent 70%)' }} />
+
+        <div style={{ position: 'relative', zIndex: 2, maxWidth: 700, margin: '0 auto' }} className="reveal" ref={addRef}>
+          <div className="section-tag" style={{ justifyContent: 'center', display: 'flex', marginBottom: '1.5rem' }}>Your next adventure</div>
           <h2 className="cta-title">
-            Your next adventure<br />starts <em>here.</em>
+            Your next adventure<br />starts <em style={{ color: '#00d4aa', fontStyle: 'italic' }}>here.</em>
           </h2>
           <p className="cta-sub">
             No tourist traps. No crowded itineraries. Just you and the real destination.
@@ -295,6 +373,9 @@ export default function Landing() {
           <button className="btn-primary" style={{ fontSize: '1.1rem', padding: '1.1rem 3rem' }} onClick={() => navigate('/plan')}>
             Plan my trip — free →
           </button>
+          <div style={{ marginTop: '1.5rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.3)' }}>
+            No credit card · Delivered in 3 minutes · PDF yours forever
+          </div>
         </div>
       </section>
 
@@ -307,6 +388,7 @@ export default function Landing() {
           </div>
           <div className="footer-links">
             <a href="/pricing">Pricing</a>
+            <a href="/agency">For agencies</a>
             <a href="/privacy">Privacy</a>
             <a href="/terms">Terms</a>
             <a href="https://instagram.com/wanderzenai">Instagram</a>
