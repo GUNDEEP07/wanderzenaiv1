@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -106,8 +106,10 @@ const initial = {
 
 export default function PlanTrip() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const prefill = location.state?.prefill || {};
   const [step, setStep] = useState(0);
-  const [form, setForm] = useState(initial);
+  const [form, setForm] = useState({ ...initial, ...prefill });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');

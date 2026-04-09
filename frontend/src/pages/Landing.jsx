@@ -191,6 +191,9 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ── Explore section ── */}
+      <ExploreSection />
+
       {/* ── How it works ── */}
       <section className="section how" id="how">
         <div className="section-inner">
@@ -299,9 +302,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
-      {/* ── Explore section ── */}
-      <ExploreSection />
 
       {/* ── Pricing ── */}
       <section className="section" style={{ background: '#0a0f1e' }}>

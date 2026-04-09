@@ -151,7 +151,7 @@ const callClaude = async (systemPrompt, userPrompt, maxTokens, submissionId, att
 };
 
 // ─── GENERATE META (title, summary, accommodation, tips) ────────────────────
-const generateMeta = async (submission, currencySymbol, submissionId) => {
+const generateMeta = async (submission, currencySymbol, submissionId, fsTips = null) => {
   const { destination, days, budget, currency, travelerType, travelStyle, travelPace, interests, userAge, userLocation, language } = submission;
   const styleList = Array.isArray(travelStyle) ? travelStyle.join(', ') : travelStyle;
 
@@ -161,7 +161,8 @@ Traveller: ${travelerType}, budget ${currencySymbol}${budget} ${currency}, style
 ${interests ? `Interests: ${interests}` : ''}
 ${userAge ? `Age: ${userAge}` : ''}
 ${userLocation ? `From: ${userLocation}` : ''}
-Language: Write ENTIRELY in ${language || 'English'}.${fsBlock}
+Language: Write ENTIRELY in ${language || 'English'}.
+${fsTips ? `\n\nReal local spots verified by locals (use these to inspire hidden gem recommendations):\n${fsTips}` : ''}
 
 Return ONLY this JSON (no extra text):
 ${META_SCHEMA}`;
@@ -188,7 +189,7 @@ ${META_SCHEMA}`;
 };
 
 // ─── GENERATE A BATCH OF DAYS ────────────────────────────────────────────────
-const generateDaysBatch = async (submission, dayNumbers, currencySymbol, submissionId) => {
+const generateDaysBatch = async (submission, dayNumbers, currencySymbol, submissionId, fsTips = null) => {
   const { destination, budget, currency, travelerType, travelStyle, travelPace, interests, userAge, userLocation, language, days: totalDays } = submission;
   const styleList = Array.isArray(travelStyle) ? travelStyle.join(', ') : travelStyle;
   const dailyBudget = Math.round(budget / totalDays);
@@ -206,6 +207,7 @@ Rules:
 - One completely free hidden gem per day
 - Specific place names, not generic descriptions
 - Costs in ${currency} (${currencySymbol})
+${fsTips ? `\nVerified local spots from Foursquare — reference these where relevant:\n${fsTips}` : ''}
 
 Return ONLY a JSON object with a "days" array containing ${dayNumbers.length} day object(s):
 {
@@ -303,9 +305,18 @@ exports.handler = async (event) => {
 
     await db.query(`UPDATE submissions SET status = 'processing', updated_at = NOW() WHERE id = $1`, [submissionId]);
 
+    // ── Fetch Foursquare tips once upfront ───────────────────────────────
+    log.info('Fetching Foursquare tips', { submissionId, destination: submission.destination });
+    const fsTips = await fetchFoursquareTips(submission.destination);
+    if (fsTips) {
+      log.info('Foursquare tips fetched', { submissionId, tipCount: fsTips.split('\n').length });
+    } else {
+      log.info('Foursquare tips unavailable', { submissionId });
+    }
+
     // ── Generate meta (title, summary, accommodation, tips) ───────────────
     log.info('Generating meta', { submissionId, destination: submission.destination });
-    const { data: meta, usage: metaUsage } = await generateMeta(submission, currencySymbol, submissionId);
+    const { data: meta, usage: metaUsage } = await generateMeta(submission, currencySymbol, submissionId, fsTips);
     totalInputTokens += metaUsage?.input_tokens || 0;
     totalOutputTokens += metaUsage?.output_tokens || 0;
 
@@ -319,7 +330,7 @@ exports.handler = async (event) => {
       for (let j = i; j < i + batchSize && j <= totalDays; j++) batchNums.push(j);
 
       log.info('Generating batch', { submissionId, days: batchNums });
-      const { days: batchDays, usage: batchUsage } = await generateDaysBatch(submission, batchNums, currencySymbol, submissionId);
+      const { days: batchDays, usage: batchUsage } = await generateDaysBatch(submission, batchNums, currencySymbol, submissionId, fsTips);
 
       // Ensure day numbers are correct
       batchDays.forEach((day, idx) => { day.dayNumber = batchNums[idx] || batchNums[0] + idx; });
