@@ -307,10 +307,11 @@ export default function ExplorePage() {
         </div>
       </section>
     </div>
-
-    {/* Footer */}
+    </div>
+    </div>
+    </div>
     <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', padding: '2rem 2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-      <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.25)' }}>© 2025 WanderZenAI · Built for slow travellers</div>
+      <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.25)' }}>© 2025 WanderZenAI</div>
       <div style={{ display: 'flex', gap: '1.5rem' }}>
         <a href="/" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.35)', textDecoration: 'none' }}>Home</a>
         <a href="/pricing" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.35)', textDecoration: 'none' }}>Pricing</a>
