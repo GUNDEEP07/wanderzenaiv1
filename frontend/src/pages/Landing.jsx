@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Landing.css';
+import ExploreSection from './ExploreSection';
 
 const DESTINATIONS = [
   { name: 'Kyoto backstreets', color: '#00d4aa' },
@@ -298,6 +299,9 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      {/* ── Explore section ── */}
+      <ExploreSection />
 
       {/* ── Pricing ── */}
       <section className="section" style={{ background: '#0a0f1e' }}>
