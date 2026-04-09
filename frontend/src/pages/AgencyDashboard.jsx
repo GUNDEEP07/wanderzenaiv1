@@ -552,7 +552,7 @@ function Portal() {
             </div>
             <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>Sarah Mitchell</div>
           </div>
-          <div style={{ fontSize: 12, fontWeight: 500, color: "rgba(255,255,255,0.6)", marginBottom: 12, letterSpacing: "0.08em", textTransform: "uppercase", fontSize: 10 }}>Your itineraries</div>
+          <div style={{ fontSize: 10, fontWeight: 500, color: "rgba(255,255,255,0.6)", marginBottom: 12, letterSpacing: "0.08em", textTransform: "uppercase" }}>Your itineraries</div>
           {[
             { dest: "Kyoto, Japan", days: 7, date: "Apr 8, 2025" },
             { dest: "Bali, Indonesia", days: 10, date: "Jan 12, 2025" },
