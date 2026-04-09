@@ -1,12 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const css = `
-  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,400&display=swap');
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #0a0f1e; }
-`;
-
 const CONTINENTS = [
   { id: 'asia', name: 'Asia', emoji: '🏯', tagline: 'Ancient temples, mountain villages, street food' },
   { id: 'europe', name: 'Europe', emoji: '🏰', tagline: 'Countryside lanes, hilltop towns, hidden trattorias' },
@@ -27,26 +21,26 @@ const COUNTRIES = {
   ],
   europe: [
     { name: 'Italy', img: 'https://images.unsplash.com/photo-1516483638261-f4dbaf036963?w=400&h=280&fit=crop', tag: 'Slow travel icon', desc: 'Puglia farmhouses, Dolomite villages, Sicilian markets', places: ['Matera', 'Alberobello', 'Orvieto', 'Noto', 'Civita di Bagnoregio'] },
-    { name: 'Portugal', img: 'https://images.unsplash.com/photo-1555881400-74d7acaacd8b?w=400&h=280&fit=crop', tag: 'Crowd free', desc: 'Alentejo plains, fishing villages, azulejo-tiled towns', places: ['Évora', 'Óbidos', 'Monsanto', 'Tavira', 'Peneda-Gerês'] },
-    { name: 'Slovenia', img: 'https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?w=400&h=280&fit=crop', tag: 'Hidden gem', desc: 'Alpine lakes, karst caves, wine villages', places: ['Lake Bled', 'Piran', 'Soča Valley', 'Škocjan', 'Ptuj'] },
+    { name: 'Portugal', img: 'https://images.unsplash.com/photo-1555881400-74d7acaacd8b?w=400&h=280&fit=crop', tag: 'Crowd free', desc: 'Alentejo plains, fishing villages, azulejo-tiled towns', places: ['Evora', 'Obidos', 'Monsanto', 'Tavira', 'Peneda-Geres'] },
+    { name: 'Slovenia', img: 'https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?w=400&h=280&fit=crop', tag: 'Hidden gem', desc: 'Alpine lakes, karst caves, wine villages', places: ['Lake Bled', 'Piran', 'Soca Valley', 'Skocjan', 'Ptuj'] },
     { name: 'Greece', img: 'https://images.unsplash.com/photo-1533105079780-92b9be482077?w=400&h=280&fit=crop', tag: 'Beyond the islands', desc: 'Mainland villages, Zagori trails, off-island life', places: ['Meteora', 'Zagori', 'Monemvasia', 'Pelion', 'Naxos'] },
-    { name: 'Croatia', img: 'https://images.unsplash.com/photo-1555990793-da11153b2473?w=400&h=280&fit=crop', tag: 'Coastal magic', desc: 'Dalmatian islands, walled towns, olive grove trails', places: ['Hvar', 'Vis', 'Plitvice', 'Rovinj', 'Korčula'] },
-    { name: 'Albania', img: 'https://images.unsplash.com/photo-1598300058816-b7cef6d4c90c?w=400&h=280&fit=crop', tag: 'Undiscovered', desc: 'Ottoman bazaars, Riviera bays, mountain villages', places: ['Berat', 'Gjirokastër', 'Theth', 'Ksamil', 'Valbona'] },
+    { name: 'Croatia', img: 'https://images.unsplash.com/photo-1555990793-da11153b2473?w=400&h=280&fit=crop', tag: 'Coastal magic', desc: 'Dalmatian islands, walled towns, olive grove trails', places: ['Hvar', 'Vis', 'Plitvice', 'Rovinj', 'Korcula'] },
+    { name: 'Albania', img: 'https://images.unsplash.com/photo-1598300058816-b7cef6d4c90c?w=400&h=280&fit=crop', tag: 'Undiscovered', desc: 'Ottoman bazaars, Riviera bays, mountain villages', places: ['Berat', 'Gjirokaster', 'Theth', 'Ksamil', 'Valbona'] },
   ],
   africa: [
-    { name: 'Morocco', img: 'https://images.unsplash.com/photo-1539020140153-e479b8c22e70?w=400&h=280&fit=crop', tag: 'Sensory overload', desc: 'Mountain Berber villages, Sahara camps, blue medinas', places: ['Chefchaouen', 'Merzouga', 'Essaouira', 'Aït Benhaddou', 'Imlil'] },
+    { name: 'Morocco', img: 'https://images.unsplash.com/photo-1539020140153-e479b8c22e70?w=400&h=280&fit=crop', tag: 'Sensory overload', desc: 'Mountain Berber villages, Sahara camps, blue medinas', places: ['Chefchaouen', 'Merzouga', 'Essaouira', 'Ait Benhaddou', 'Imlil'] },
     { name: 'Ethiopia', img: 'https://images.unsplash.com/photo-1523805009345-7448845a9e53?w=400&h=280&fit=crop', tag: 'Ancient world', desc: 'Rock-hewn churches, tribal cultures, coffee origins', places: ['Lalibela', 'Omo Valley', 'Simien Mountains', 'Axum', 'Harar'] },
     { name: 'Tanzania', img: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400&h=280&fit=crop', tag: 'Wildlife + culture', desc: 'Maasai villages, spice islands, remote beaches', places: ['Zanzibar', 'Ngorongoro', 'Pemba Island', 'Usambara', 'Stone Town'] },
     { name: 'Rwanda', img: 'https://images.unsplash.com/photo-1611348524140-53c9a25263d6?w=400&h=280&fit=crop', tag: 'Rising star', desc: 'Gorilla trekking, tea plantations, Lake Kivu villages', places: ['Volcanoes NP', 'Lake Kivu', 'Nyungwe', 'Musanze', 'Akagera'] },
   ],
   americas: [
-    { name: 'Mexico', img: 'https://images.unsplash.com/photo-1518638150340-f706e86654de?w=400&h=280&fit=crop', tag: 'Beyond the resorts', desc: 'Colonial highland towns, cenote villages, Pacific coast', places: ['Oaxaca', 'San Cristóbal', 'Guanajuato', 'Bacalar', 'Mérida'] },
+    { name: 'Mexico', img: 'https://images.unsplash.com/photo-1518638150340-f706e86654de?w=400&h=280&fit=crop', tag: 'Beyond the resorts', desc: 'Colonial highland towns, cenote villages, Pacific coast', places: ['Oaxaca', 'San Cristobal', 'Guanajuato', 'Bacalar', 'Merida'] },
     { name: 'Colombia', img: 'https://images.unsplash.com/photo-1576019280693-5a56c25d8dc6?w=400&h=280&fit=crop', tag: 'Transformation story', desc: 'Coffee region fincas, Caribbean coast, flower towns', places: ['Salento', 'Cartagena', 'Barichara', 'Palomino', 'Villa de Leyva'] },
     { name: 'Peru', img: 'https://images.unsplash.com/photo-1526392060635-9d6019884377?w=400&h=280&fit=crop', tag: 'Beyond Machu Picchu', desc: 'Amazon villages, Lake Titicaca islands, Sacred Valley', places: ['Cusco', 'Huaraz', 'Chachapoyas', 'Colca Canyon', 'Pisac'] },
-    { name: 'Chile', img: 'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=400&h=280&fit=crop', tag: 'End of the world', desc: 'Patagonia trails, lake district towns, Atacama villages', places: ['Torres del Paine', 'Chiloé', 'Pucón', 'Valle de Elqui', 'Punta Arenas'] },
+    { name: 'Chile', img: 'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=400&h=280&fit=crop', tag: 'End of the world', desc: 'Patagonia trails, lake district towns, Atacama villages', places: ['Torres del Paine', 'Chiloe', 'Pucon', 'Valle de Elqui', 'Punta Arenas'] },
   ],
   oceania: [
-    { name: 'New Zealand', img: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=400&h=280&fit=crop', tag: 'Nature paradise', desc: 'Fiordland walks, Māori culture, remote farmstays', places: ['Queenstown', 'Abel Tasman', 'Rotorua', 'Coromandel', 'Milford Sound'] },
+    { name: 'New Zealand', img: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=400&h=280&fit=crop', tag: 'Nature paradise', desc: 'Fiordland walks, Maori culture, remote farmstays', places: ['Queenstown', 'Abel Tasman', 'Rotorua', 'Coromandel', 'Milford Sound'] },
     { name: 'Australia', img: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=280&fit=crop', tag: 'Beyond the cities', desc: 'Outback stations, Cape York, Kimberley gorges', places: ['Blue Mountains', 'Margaret River', 'Daintree', 'Flinders Ranges', 'Byron Bay'] },
     { name: 'Fiji', img: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=280&fit=crop', tag: 'Village life', desc: 'Off-grid island villages, coral reefs, local kava ceremonies', places: ['Yasawa Islands', 'Taveuni', 'Kadavu', 'Vanua Levu', 'Beqa'] },
   ],
@@ -65,165 +59,159 @@ const TRENDING = [
   { dest: 'Chefchaouen, Morocco', img: 'https://images.unsplash.com/photo-1539020140153-e479b8c22e70?w=300&h=200&fit=crop', trend: '+31% this month' },
 ];
 
-const v = {
-  navy: '#0a0f1e', navy2: '#111827', navy3: '#141d33',
-  teal: '#00d4aa', tealGlow: 'rgba(0,212,170,0.12)', tealBorder: 'rgba(0,212,170,0.25)',
-  coral: '#ff6b6b', gold: '#ffd93d',
-  border: 'rgba(255,255,255,0.08)', border2: 'rgba(255,255,255,0.12)',
-  w90: 'rgba(255,255,255,0.9)', w60: 'rgba(255,255,255,0.6)',
-  w40: 'rgba(255,255,255,0.4)', w08: 'rgba(255,255,255,0.06)',
-};
+const navy = '#0a0f1e';
+const navy2 = '#111827';
+const navy3 = '#141d33';
+const teal = '#00d4aa';
+const tealGlow = 'rgba(0,212,170,0.12)';
+const tealBorder = 'rgba(0,212,170,0.25)';
+const border = 'rgba(255,255,255,0.08)';
+const border2 = 'rgba(255,255,255,0.12)';
+const w60 = 'rgba(255,255,255,0.6)';
+const w40 = 'rgba(255,255,255,0.4)';
+const w08 = 'rgba(255,255,255,0.06)';
 
 export default function ExplorePage() {
   const navigate = useNavigate();
   const [activeContinent, setActiveContinent] = useState('asia');
   const [activeCountry, setActiveCountry] = useState(null);
-  const countries = COUNTRIES[activeContinent] || [];
-  const country = activeCountry && countries.find(c => c.name === activeCountry);
 
-  const handleContinentChange = (id) => {
+  const countries = COUNTRIES[activeContinent] || [];
+  const country = activeCountry ? countries.find(c => c.name === activeCountry) : null;
+
+  const handleContinent = (id) => {
     setActiveContinent(id);
     setActiveCountry(null);
   };
 
   const startPlan = (dest) => {
     navigate('/plan', { state: { prefill: { destination: dest } } });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
-    <div style={{ background: v.navy, minHeight: '100vh', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-      <style>{css}</style>
+    <div style={{ background: navy, minHeight: '100vh', fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#fff' }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,400&display=swap');
+        * { box-sizing: border-box; }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+      `}</style>
 
       {/* Nav */}
-      <nav style={{ height: 58, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2.5rem', background: v.navy2, borderBottom: `1px solid ${v.border}`, position: 'sticky', top: 0, zIndex: 100 }}>
+      <nav style={{ height: 58, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2.5rem', background: navy2, borderBottom: `1px solid ${border}`, position: 'sticky', top: 0, zIndex: 100 }}>
         <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
-          <div style={{ width: 28, height: 28, borderRadius: 7, background: v.teal, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, color: v.navy }}>W</div>
+          <div style={{ width: 28, height: 28, borderRadius: 7, background: teal, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, color: navy }}>W</div>
           <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em' }}>WanderZenAI</span>
         </a>
         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-          <a href="/" style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', textDecoration: 'none' }}>Home</a>
-          <a href="/pricing" style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', textDecoration: 'none' }}>Pricing</a>
-          <button onClick={() => navigate('/plan')} style={{ background: v.teal, color: v.navy, border: 'none', padding: '7px 18px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+          <a href="/" style={{ fontSize: 12, color: w40, textDecoration: 'none' }}>Home</a>
+          <a href="/pricing" style={{ fontSize: 12, color: w40, textDecoration: 'none' }}>Pricing</a>
+          <button onClick={() => navigate('/plan')} style={{ background: teal, color: navy, border: 'none', padding: '7px 18px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
             Plan my trip
           </button>
         </div>
       </nav>
 
-      {/* Hero bar */}
-      <div style={{ padding: '3rem 2rem 0', maxWidth: 1200, margin: '0 auto' }}>
-        <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: v.teal, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-          <span style={{ width: 24, height: 1, background: v.teal, display: 'inline-block' }} />
+      {/* Page hero */}
+      <div style={{ padding: '3rem 2rem 2rem', maxWidth: 1200, margin: '0 auto' }}>
+        <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: teal, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+          <span style={{ width: 24, height: 1, background: teal, display: 'inline-block' }} />
           Explore destinations
         </div>
-        <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(2rem,5vw,3.5rem)', fontWeight: 700, color: '#fff', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: '1rem' }}>
-          Find your next<br /><span style={{ color: v.teal, fontStyle: 'italic' }}>slow travel</span> destination
+        <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(2rem,5vw,3.5rem)', fontWeight: 700, color: '#fff', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: '0.75rem' }}>
+          Find your next <span style={{ color: teal, fontStyle: 'italic' }}>slow travel</span> destination
         </h1>
-        <p style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.7, maxWidth: 560, marginBottom: '2rem' }}>
+        <p style={{ fontSize: '1rem', color: w40, lineHeight: 1.7, maxWidth: 560, marginBottom: '2rem' }}>
           Browse trending destinations and hidden gems across every continent. Click any place to instantly generate your personalised itinerary.
         </p>
       </div>
 
-      <div style={{ background: v.navy2, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-
-      {/* ── Trending now ── */}
-      <section style={{ padding: '5rem 2rem 3rem', borderBottom: `1px solid ${v.border}` }}>
+      {/* Trending */}
+      <div style={{ padding: '0 2rem 4rem', borderBottom: `1px solid ${border}` }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
-              <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: v.teal, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                <span style={{ width: 24, height: 1, background: v.teal, display: 'inline-block' }} />
+              <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: teal, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <span style={{ width: 24, height: 1, background: teal, display: 'inline-block' }} />
                 Trending now
               </div>
-              <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(1.75rem,4vw,2.75rem)', fontWeight: 700, color: '#fff', letterSpacing: '-0.03em', lineHeight: 1.1 }}>
-                Where slow travellers<br />are going right now
+              <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(1.5rem,3vw,2.25rem)', fontWeight: 700, color: '#fff', letterSpacing: '-0.03em', lineHeight: 1.1 }}>
+                Where slow travellers are going right now
               </h2>
             </div>
-            <div style={{ fontSize: '0.875rem', color: v.w40, fontStyle: 'italic' }}>Updated weekly based on itinerary requests</div>
+            <div style={{ fontSize: '0.8rem', color: w40, fontStyle: 'italic' }}>Updated weekly</div>
           </div>
-
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
-            {TRENDING.map((t) => (
+            {TRENDING.map(t => (
               <div
                 key={t.dest}
                 onClick={() => startPlan(t.dest)}
                 style={{ borderRadius: 12, overflow: 'hidden', cursor: 'pointer', position: 'relative', aspectRatio: '3/2', transition: 'transform 0.3s' }}
-                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-4px)'}
-                onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
               >
                 <img src={t.img} alt={t.dest} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} loading="lazy" />
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(10,15,30,0.95) 0%, rgba(10,15,30,0.2) 60%, transparent 100%)' }} />
                 <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px 14px' }}>
                   <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff', marginBottom: 3 }}>{t.dest}</div>
-                  <div style={{ fontSize: '0.7rem', color: v.teal, fontWeight: 600 }}>{t.trend}</div>
+                  <div style={{ fontSize: '0.7rem', color: teal, fontWeight: 600 }}>{t.trend}</div>
                 </div>
-                <div style={{ position: 'absolute', top: 10, right: 10, background: v.tealGlow, border: `1px solid ${v.tealBorder}`, borderRadius: 6, padding: '3px 8px', fontSize: '0.65rem', fontWeight: 700, color: v.teal, backdropFilter: 'blur(8px)' }}>
-                  Plan this →
+                <div style={{ position: 'absolute', top: 10, right: 10, background: tealGlow, border: `1px solid ${tealBorder}`, borderRadius: 6, padding: '3px 8px', fontSize: '0.65rem', fontWeight: 700, color: teal }}>
+                  Plan this
                 </div>
               </div>
             ))}
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* ── Explore by continent ── */}
-      <section style={{ padding: '5rem 2rem' }}>
+      {/* Continent browser */}
+      <div style={{ padding: '4rem 2rem' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <div style={{ marginBottom: '2.5rem' }}>
-            <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: v.teal, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-              <span style={{ width: 24, height: 1, background: v.teal, display: 'inline-block' }} />
+          <div style={{ marginBottom: '2rem' }}>
+            <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: teal, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <span style={{ width: 24, height: 1, background: teal, display: 'inline-block' }} />
               Explore the world
             </div>
-            <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(1.75rem,4vw,2.75rem)', fontWeight: 700, color: '#fff', letterSpacing: '-0.03em', marginBottom: '0.5rem', lineHeight: 1.1 }}>
-              Where do you want<br />to <span style={{ color: v.teal, fontStyle: 'italic' }}>wander</span>?
+            <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(1.5rem,3vw,2.25rem)', fontWeight: 700, color: '#fff', letterSpacing: '-0.03em', marginBottom: '0.5rem', lineHeight: 1.1 }}>
+              Where do you want to <span style={{ color: teal, fontStyle: 'italic' }}>wander</span>?
             </h2>
-            <p style={{ fontSize: '1rem', color: v.w40, lineHeight: 1.7 }}>Pick a region — we'll show you where locals actually go, not where the guidebooks send you.</p>
+            <p style={{ fontSize: '0.95rem', color: w40, lineHeight: 1.7 }}>Pick a region to see where locals actually go.</p>
           </div>
 
           {/* Continent tabs */}
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: '2.5rem' }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: '2rem' }}>
             {CONTINENTS.map(c => (
               <button
                 key={c.id}
-                onClick={() => handleContinentChange(c.id)}
-                style={{
-                  padding: '8px 18px', borderRadius: 100, border: `1px solid ${activeContinent === c.id ? v.teal : v.border}`,
-                  background: activeContinent === c.id ? v.tealGlow : 'transparent',
-                  color: activeContinent === c.id ? v.teal : v.w60,
-                  fontSize: '0.875rem', fontWeight: activeContinent === c.id ? 700 : 400,
-                  cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif",
-                  transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 6,
-                }}
+                onClick={() => handleContinent(c.id)}
+                style={{ padding: '8px 18px', borderRadius: 100, border: `1px solid ${activeContinent === c.id ? teal : border}`, background: activeContinent === c.id ? tealGlow : 'transparent', color: activeContinent === c.id ? teal : w60, fontSize: '0.875rem', fontWeight: activeContinent === c.id ? 700 : 400, cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif", transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 6 }}
               >
-                <span style={{ fontSize: 14 }}>{c.emoji}</span>
+                <span>{c.emoji}</span>
                 {c.name}
               </button>
             ))}
           </div>
 
-          {/* Continent tagline */}
-          <div style={{ fontSize: '0.9rem', color: v.w40, fontStyle: 'italic', marginBottom: '1.75rem' }}>
+          <div style={{ fontSize: '0.875rem', color: w40, fontStyle: 'italic', marginBottom: '1.5rem' }}>
             {CONTINENTS.find(c => c.id === activeContinent)?.tagline}
           </div>
 
           {/* Country grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16, marginBottom: '2rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16, marginBottom: '1.5rem' }}>
             {countries.map(c => (
               <div
                 key={c.name}
                 onClick={() => setActiveCountry(activeCountry === c.name ? null : c.name)}
-                style={{
-                  borderRadius: 14, overflow: 'hidden', cursor: 'pointer',
-                  border: `1px solid ${activeCountry === c.name ? v.teal : v.border}`,
-                  background: v.navy3, transition: 'all 0.25s',
-                }}
-                onMouseEnter={e => { if (activeCountry !== c.name) e.currentTarget.style.borderColor = v.border2; }}
-                onMouseLeave={e => { if (activeCountry !== c.name) e.currentTarget.style.borderColor = v.border; }}
+                style={{ borderRadius: 14, overflow: 'hidden', cursor: 'pointer', border: `1px solid ${activeCountry === c.name ? teal : border}`, background: navy3, transition: 'all 0.25s' }}
+                onMouseEnter={e => { if (activeCountry !== c.name) e.currentTarget.style.borderColor = border2; }}
+                onMouseLeave={e => { if (activeCountry !== c.name) e.currentTarget.style.borderColor = border; }}
               >
                 <div style={{ position: 'relative', height: 160 }}>
                   <img src={c.img} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} loading="lazy" />
                   <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(20,29,51,1) 0%, rgba(20,29,51,0.1) 60%, transparent 100%)' }} />
                   <div style={{ position: 'absolute', top: 10, left: 12 }}>
-                    <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: 'rgba(0,212,170,0.15)', color: v.teal, border: `1px solid ${v.tealBorder}`, letterSpacing: '0.08em' }}>
+                    <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: 'rgba(0,212,170,0.15)', color: teal, border: `1px solid ${tealBorder}`, letterSpacing: '0.08em' }}>
                       {c.tag}
                     </span>
                   </div>
@@ -232,9 +220,9 @@ export default function ExplorePage() {
                   </div>
                 </div>
                 <div style={{ padding: '12px 14px' }}>
-                  <div style={{ fontSize: '0.85rem', color: v.w60, lineHeight: 1.6, marginBottom: 8 }}>{c.desc}</div>
-                  <div style={{ fontSize: '0.75rem', color: v.w40 }}>
-                    {c.places.slice(0, 3).join(' · ')} {c.places.length > 3 && `+${c.places.length - 3} more`}
+                  <div style={{ fontSize: '0.85rem', color: w60, lineHeight: 1.6, marginBottom: 6 }}>{c.desc}</div>
+                  <div style={{ fontSize: '0.75rem', color: w40 }}>
+                    {c.places.slice(0, 3).join(' · ')}{c.places.length > 3 ? ` +${c.places.length - 3} more` : ''}
                   </div>
                 </div>
               </div>
@@ -243,48 +231,38 @@ export default function ExplorePage() {
 
           {/* Expanded country detail */}
           {country && (
-            <div style={{
-              background: v.navy3, border: `1px solid ${v.teal}`, borderRadius: 16,
-              padding: '1.75rem 2rem', marginBottom: '2rem',
-              animation: 'fadeIn 0.3s ease',
-            }}>
-              <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }`}</style>
+            <div style={{ background: navy3, border: `1px solid ${teal}`, borderRadius: 16, padding: '1.75rem 2rem', marginBottom: '2rem', animation: 'fadeIn 0.3s ease' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
                 <div>
                   <div style={{ fontFamily: "'Fraunces', serif", fontSize: '1.5rem', fontWeight: 700, color: '#fff', marginBottom: 6, letterSpacing: '-0.02em' }}>
                     Top places in {country.name}
                   </div>
-                  <div style={{ fontSize: '0.9rem', color: v.w40, fontStyle: 'italic' }}>
+                  <div style={{ fontSize: '0.9rem', color: w40, fontStyle: 'italic' }}>
                     Our top slow-travel picks — hidden from the usual guidebooks
                   </div>
                 </div>
                 <button
                   onClick={() => startPlan(country.name)}
-                  style={{ background: v.teal, color: v.navy, border: 'none', padding: '10px 22px', borderRadius: 10, fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif", whiteSpace: 'nowrap' }}
+                  style={{ background: teal, color: navy, border: 'none', padding: '10px 22px', borderRadius: 10, fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif", whiteSpace: 'nowrap' }}
                 >
-                  Plan {country.name} trip →
+                  Plan {country.name} trip
                 </button>
               </div>
-
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
                 {country.places.map((place, i) => (
                   <div
                     key={place}
                     onClick={() => startPlan(`${place}, ${country.name}`)}
-                    style={{
-                      background: v.w08, border: `1px solid ${v.border}`,
-                      borderRadius: 10, padding: '12px 14px', cursor: 'pointer',
-                      transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 10,
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = v.tealBorder; e.currentTarget.style.background = v.tealGlow; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = v.border; e.currentTarget.style.background = v.w08; }}
+                    style={{ background: w08, border: `1px solid ${border}`, borderRadius: 10, padding: '12px 14px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 10 }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = tealBorder; e.currentTarget.style.background = tealGlow; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = border; e.currentTarget.style.background = w08; }}
                   >
-                    <div style={{ width: 24, height: 24, borderRadius: '50%', background: v.tealGlow, border: `1px solid ${v.tealBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 800, color: v.teal, flexShrink: 0 }}>
+                    <div style={{ width: 24, height: 24, borderRadius: '50%', background: tealGlow, border: `1px solid ${tealBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 800, color: teal, flexShrink: 0 }}>
                       {i + 1}
                     </div>
                     <div>
                       <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#fff', marginBottom: 2 }}>{place}</div>
-                      <div style={{ fontSize: '0.7rem', color: v.teal }}>Plan this →</div>
+                      <div style={{ fontSize: '0.7rem', color: teal }}>Plan this</div>
                     </div>
                   </div>
                 ))}
@@ -293,30 +271,29 @@ export default function ExplorePage() {
           )}
 
           {/* Bottom CTA */}
-          <div style={{ textAlign: 'center', padding: '2rem 0 1rem', borderTop: `1px solid ${v.border}`, marginTop: '1rem' }}>
-            <div style={{ fontSize: '0.875rem', color: v.w40, marginBottom: '1.25rem', fontStyle: 'italic' }}>
+          <div style={{ textAlign: 'center', padding: '2rem 0 1rem', borderTop: `1px solid ${border}` }}>
+            <div style={{ fontSize: '0.875rem', color: w40, marginBottom: '1.25rem', fontStyle: 'italic' }}>
               Don't see your destination? We cover every country in the world.
             </div>
             <button
               onClick={() => navigate('/plan')}
-              style={{ background: v.teal, color: v.navy, border: 'none', padding: '12px 28px', borderRadius: 12, fontSize: '1rem', fontWeight: 700, cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif' " }}
+              style={{ background: teal, color: navy, border: 'none', padding: '12px 28px', borderRadius: 12, fontSize: '1rem', fontWeight: 700, cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif" }}
             >
-              Plan any destination — free →
+              Plan any destination — free
             </button>
           </div>
         </div>
-      </section>
-    </div>
-    </div>
-    </div>
-    </div>
-    <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', padding: '2rem 2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-      <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.25)' }}>© 2025 WanderZenAI</div>
-      <div style={{ display: 'flex', gap: '1.5rem' }}>
-        <a href="/" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.35)', textDecoration: 'none' }}>Home</a>
-        <a href="/pricing" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.35)', textDecoration: 'none' }}>Pricing</a>
-        <a href="/agency" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.35)', textDecoration: 'none' }}>For agencies</a>
-        <a href="mailto:travel@wanderzenai.com" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.35)', textDecoration: 'none' }}>Contact</a>
+      </div>
+
+      {/* Footer */}
+      <div style={{ borderTop: `1px solid ${border}`, padding: '2rem 2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+        <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.25)' }}>© 2025 WanderZenAI · Built for slow travellers</div>
+        <div style={{ display: 'flex', gap: '1.5rem' }}>
+          <a href="/" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.35)', textDecoration: 'none' }}>Home</a>
+          <a href="/pricing" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.35)', textDecoration: 'none' }}>Pricing</a>
+          <a href="/agency" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.35)', textDecoration: 'none' }}>For agencies</a>
+          <a href="mailto:travel@wanderzenai.com" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.35)', textDecoration: 'none' }}>Contact</a>
+        </div>
       </div>
     </div>
   );
