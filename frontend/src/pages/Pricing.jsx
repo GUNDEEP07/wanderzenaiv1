@@ -104,7 +104,7 @@ export default function Pricing() {
   };
 
   return (
-    <div style={s.page}>
+    <div style={{...s.page, margin: 0, padding: 0, minHeight: '100vh', background: '#0a0f1e'}}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,700;1,9..144,400&display=swap');
         * { box-sizing: border-box; }

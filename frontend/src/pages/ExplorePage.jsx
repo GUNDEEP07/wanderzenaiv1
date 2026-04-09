@@ -90,7 +90,7 @@ export default function ExplorePage() {
   };
 
   return (
-    <div style={{ background: navy, minHeight: '100vh', fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#fff' }}>
+    <div style={{ background: navy, minHeight: '100vh', fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#fff', margin: 0, padding: 0 }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,400&display=swap');
         * { box-sizing: border-box; }
