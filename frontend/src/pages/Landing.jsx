@@ -144,6 +144,9 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ── Explore section ── */}
+      <ExploreSection />
+
       {/* ── Photo strip ── */}
       <section style={{ background: '#0a0f1e', padding: '0 0 5rem', overflow: 'hidden' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 2rem' }}>
@@ -190,9 +193,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
-      {/* ── Explore section ── */}
-      <ExploreSection />
 
       {/* ── How it works ── */}
       <section className="section how" id="how">
