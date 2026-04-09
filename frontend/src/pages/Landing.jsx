@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Landing.css';
-import ExploreSection from './ExploreSection';
 
 const DESTINATIONS = [
   { name: 'Kyoto backstreets', color: '#00d4aa' },
@@ -80,6 +79,7 @@ export default function Landing() {
             <div className="nav-logo-mark">W</div>
             <span className="nav-logo-text">Wander<span>Zen</span>AI</span>
           </a>
+          <a href="/explore" className="nav-link">Explore</a>
           <a href="#how" className="nav-link">How it works</a>
           <a href="#sample" className="nav-link">Sample plan</a>
           <a href="/pricing" className="nav-link">Pricing</a>
@@ -144,8 +144,14 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── Explore section ── */}
-      <ExploreSection />
+      {/* ── Explore teaser ── */}
+      <div style={{ textAlign: 'center', padding: '1rem 2rem 3rem', background: '#0a0f1e' }}>
+        <a href="/explore" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '12px 24px', borderRadius: 100, border: '1px solid rgba(0,212,170,0.25)', background: 'rgba(0,212,170,0.06)', color: '#00d4aa', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 600, transition: 'all 0.2s' }}>
+          <span>✦</span>
+          Browse 50+ destinations across 6 continents
+          <span>→</span>
+        </a>
+      </div>
 
       {/* ── Photo strip ── */}
       <section style={{ background: '#0a0f1e', padding: '0 0 5rem', overflow: 'hidden' }}>

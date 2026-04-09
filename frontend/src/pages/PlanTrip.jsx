@@ -219,6 +219,9 @@ export default function PlanTrip() {
                   autoFocus
                 />
                 {errors.destination && <div style={s.error}>{errors.destination}</div>}
+                <a href="/explore" style={{ fontSize: '0.8rem', color: 'rgba(0,212,170,0.7)', textDecoration: 'none', marginTop: '0.5rem', display: 'inline-block' }}>
+                  Not sure where to go? Browse destinations →
+                </a>
               </div>
 
               <div style={s.fieldWrap}>
