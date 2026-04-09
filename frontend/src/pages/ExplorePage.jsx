@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+
+const API_URL = import.meta.env.VITE_API_URL;
 import { useNavigate } from 'react-router-dom';
 
 const CONTINENTS = [
@@ -75,6 +77,35 @@ export default function ExplorePage() {
   const navigate = useNavigate();
   const [activeContinent, setActiveContinent] = useState('asia');
   const [activeCountry, setActiveCountry] = useState(null);
+  const [apiTrending, setApiTrending]   = useState([]);
+  const [apiCountries, setApiCountries] = useState({});
+
+  // Fetch recommendations from API — falls back to hardcoded data if unavailable
+  useEffect(() => {
+    const fetchAll = async () => {
+      try {
+        const res  = await fetch(`${API_URL}/recommendations?limit=6`);
+        const data = await res.json();
+        if (data.data?.destinations?.length) {
+          setApiTrending(data.data.destinations.slice(0, 6));
+        }
+      } catch { /* use hardcoded fallback */ }
+    };
+    fetchAll();
+  }, []);
+
+  useEffect(() => {
+    const fetchContinent = async () => {
+      try {
+        const res  = await fetch(`${API_URL}/recommendations?continent=${activeContinent}&limit=12`);
+        const data = await res.json();
+        if (data.data?.destinations?.length) {
+          setApiCountries(prev => ({ ...prev, [activeContinent]: data.data.destinations }));
+        }
+      } catch { /* use hardcoded fallback */ }
+    };
+    if (!apiCountries[activeContinent]) fetchContinent();
+  }, [activeContinent]);
 
   const countries = COUNTRIES[activeContinent] || [];
   const country = activeCountry ? countries.find(c => c.name === activeCountry) : null;
@@ -142,7 +173,7 @@ export default function ExplorePage() {
             <div style={{ fontSize: '0.8rem', color: w40, fontStyle: 'italic' }}>Updated weekly</div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
-            {TRENDING.map(t => (
+            {(apiTrending.length ? apiTrending.map(t => ({ dest: t.destination + ', ' + t.country, img: t.image_url, trend: t.amadeus_score > 80 ? `Score ${t.amadeus_score}/100` : 'Recommended' })) : TRENDING).map(t => (
               <div
                 key={t.dest}
                 onClick={() => startPlan(t.dest)}

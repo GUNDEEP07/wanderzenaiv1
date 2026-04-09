@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const API_URL = import.meta.env.VITE_API_URL;
+import RecommendationQuiz from '../components/RecommendationQuiz';
 
 const s = {
   page: { minHeight: '100vh', background: '#0a0f1e', fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#fff' },
@@ -219,9 +220,7 @@ export default function PlanTrip() {
                   autoFocus
                 />
                 {errors.destination && <div style={s.error}>{errors.destination}</div>}
-                <a href="/explore" style={{ fontSize: '0.8rem', color: 'rgba(0,212,170,0.7)', textDecoration: 'none', marginTop: '0.5rem', display: 'inline-block' }}>
-                  Not sure where to go? Browse destinations →
-                </a>
+                <RecommendationQuiz onSelect={(dest) => { set('destination', dest); }} />
               </div>
 
               <div style={s.fieldWrap}>
