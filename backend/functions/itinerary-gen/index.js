@@ -5,186 +5,310 @@ const { getDB, generateId, getCurrencySymbol, log } = require('/opt/nodejs/index
 
 const lambda = new LambdaClient({ region: process.env.AWS_REGION || 'ap-southeast-2' });
 
-// ─── THE CORE SLOW-TRAVEL SYSTEM PROMPT ─────────────────────────────────────
-// This is the IP of WanderZenAI. Baked in at function level, versioned in DB.
-const SYSTEM_PROMPT = `You are WanderZen — an experienced slow traveller and travel advisor who has spent 20+ years exploring the world off the beaten path.
+// ─── SYSTEM PROMPT ───────────────────────────────────────────────────────────
+const SYSTEM_PROMPT = `You are WanderZen — a slow travel expert with 20+ years off the beaten path.
 
-Your travel philosophy:
-- You AVOID tourist traps, overcrowded attractions, and top-10 lists. Never recommend the Eiffel Tower, Times Square, or equivalent obvious picks.
-- You SEEK small towns, village markets, local family-run guesthouses, nature trails, and hidden neighbourhoods that locals actually use.
-- You LOVE finding hidden cafes tucked down side streets, morning markets before the crowds arrive, scenic walks with no entrance fee, and local food that costs $3 not $30.
-- You PREFER homestays, small boutique guesthouses, family-run B&Bs, and Airbnbs in residential neighbourhoods — NOT city-centre chain hotels.
-- You believe the best travel moments happen when you slow down — sitting at a teahouse watching village life, not rushing between 8 sights in a day.
-- You always include one completely free hidden gem per day.
-- You note the BEST TIME to visit each location (early morning for quiet, late afternoon for light, etc.).
+Philosophy:
+- AVOID tourist traps, top-10 lists, overcrowded attractions
+- SEEK village markets, hidden cafes, local guesthouses, nature trails
+- PREFER homestays, boutique guesthouses, Airbnbs in residential neighbourhoods
+- One free hidden gem per day, always
+- Best times to visit each spot (early morning, late afternoon, etc.)
 
-Accommodation philosophy: Suggest stays that are OUTSIDE the tourist centre — a farmhouse on the edge of town, a converted heritage home in a quiet street, a guesthouse near a nature reserve. Always note that these are suggestions and users should book via Airbnb, Booking.com, or direct.
+CRITICAL OUTPUT RULES:
+- Respond with ONLY a raw JSON object
+- No markdown, no backticks, no code fences, no explanation
+- Start with { and end with }
+- Never truncate — complete every field fully`;
 
-Output format: You MUST respond with ONLY a raw JSON object. No markdown. No backticks. No code fences. No explanation before or after. Start your response with { and end with }. Follow this exact schema:
-
-{
-  "title": "string — evocative trip title e.g. 'Quiet Japan: Mountains, Markets & Morning Mist'",
-  "summary": "string — 2-3 sentences capturing the spirit of this trip",
-  "accommodation": {
-    "recommendation": "string — specific type and neighbourhood to stay in",
-    "why": "string — why this location beats the city centre",
-    "searchTerms": ["string — Airbnb/Booking.com search terms"]
-  },
-  "days": [
-    {
-      "dayNumber": 1,
-      "theme": "string — evocative day theme e.g. 'Arrival & First Wander'",
-      "morningActivity": {
-        "time": "string e.g. '7:00 AM'",
-        "activity": "string — specific activity",
-        "location": "string — specific place name",
-        "why": "string — why this, not the tourist version",
-        "cost": number,
-        "isFree": boolean,
-        "insiderTip": "string — something only a local would know",
-        "bestTimeToVisit": "string"
-      },
-      "afternoonActivity": { same structure },
-      "eveningActivity": { same structure },
-      "hiddenGem": "string — one secret spot, cafe, trail or experience most tourists never find",
-      "dailyCost": number,
-      "localEats": {
-        "name": "string — specific restaurant or food stall",
-        "dish": "string — what to order",
-        "cost": number,
-        "vibe": "string"
-      }
-    }
-  ],
-  "practicalTips": ["string — 4-6 practical slow travel tips for this destination"],
-  "totalEstimatedCost": number,
-  "bestMonthsToVisit": ["string"],
-  "avoidList": ["string — 3-5 tourist traps to skip and why"]
+// ─── SLIM DAY SCHEMA (minimises tokens per call) ─────────────────────────────
+const DAY_SCHEMA = `{
+  "dayNumber": number,
+  "theme": "string",
+  "morningActivity": {"time":"string","activity":"string","location":"string","why":"string","cost":number,"isFree":boolean,"insiderTip":"string"},
+  "afternoonActivity": {"time":"string","activity":"string","location":"string","why":"string","cost":number,"isFree":boolean,"insiderTip":"string"},
+  "eveningActivity": {"time":"string","activity":"string","location":"string","why":"string","cost":number,"isFree":boolean,"insiderTip":"string"},
+  "hiddenGem": "string",
+  "dailyCost": number,
+  "localEats": {"name":"string","dish":"string","cost":number,"vibe":"string"}
 }`;
 
-const buildUserPrompt = (submission) => {
-  const {
-    destination, days, budget, currency, travelerType,
-    travelStyle, interests, travelDate, travelPace, wantsHotelRecs,
-    language, userAge, userLocation,
-  } = submission;
+// ─── META SCHEMA (cover + tips, one call) ────────────────────────────────────
+const META_SCHEMA = `{
+  "title": "string",
+  "summary": "string",
+  "accommodation": {"recommendation":"string","why":"string","searchTerms":["string"]},
+  "practicalTips": ["string"],
+  "totalEstimatedCost": number,
+  "avoidList": ["string"]
+}`;
 
-  const currencySymbol = getCurrencySymbol(currency);
-  const styleList = Array.isArray(travelStyle) ? travelStyle.join(', ') : travelStyle;
+// ─── PARSE JSON ROBUSTLY ─────────────────────────────────────────────────────
+const parseJSON = (raw) => {
+  // Strip fences
+  let cleaned = raw
+    .replace(/```json/gi, '')
+    .replace(/```/g, '')
+    .replace(/^[\s\S]*?(\{)/, '$1') // strip anything before first {
+    .trim();
 
-  return `Create a ${days}-day slow travel itinerary for ${destination}.
+  // Extract outermost JSON object
+  const start = cleaned.indexOf('{');
+  const end = cleaned.lastIndexOf('}');
+  if (start === -1 || end === -1) throw new Error('No JSON object found');
+  cleaned = cleaned.slice(start, end + 1);
 
-Traveller details:
-- Type: ${travelerType}
-- Total budget: ${currencySymbol}${budget} ${currency}
-- Travel style preferences: ${styleList || 'balanced, nature, cultural'}
-- Specific interests: ${interests || 'local culture, food, nature walks'}
-- Travel date: ${travelDate || 'flexible'}
-- Pace preference: ${travelPace}
-- Wants accommodation & activity recommendations: ${wantsHotelRecs ? 'yes' : 'no'}
-- Output language: Write the ENTIRE itinerary in ${language || 'English'}. Every word — activity names, descriptions, tips, food picks, accommodation suggestions — must be in ${language || 'English'}.
-${userAge ? `- Traveller age: ${userAge} years old. Tailor energy levels, accommodation comfort, nightlife vs early mornings, and food adventurousness accordingly.` : ''}
-${userLocation ? `- Traveller is from: ${userLocation}. Personalise by considering what feels exotic vs familiar to someone from ${userLocation}. Reference local comparisons where relevant. Consider flight connections from ${userLocation} if mentioning logistics.` : ''}
+  // Fix trailing commas
+  cleaned = cleaned
+    .replace(/,(\s*[}\]])/g, '$1')
+    .replace(/([^\\])"(\s*):(\s*)"([^"]*$)/gm, '$1"$2":"$4"'); // fix unclosed strings at end
 
-Remember: avoid tourist traps. Find the real ${destination} that locals love. All costs in ${currency} (${currencySymbol}).`;
+  return JSON.parse(cleaned);
 };
 
+// ─── CALL CLAUDE WITH RETRY ──────────────────────────────────────────────────
+const callClaude = async (systemPrompt, userPrompt, maxTokens, submissionId, attempt = 1) => {
+  log.info('Claude API call', { submissionId, maxTokens, attempt });
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.CLAUDE_API_KEY,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: maxTokens,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }],
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Claude API ${response.status}: ${err}`);
+  }
+
+  const data = await response.json();
+  const raw = data.content[0].text;
+
+  log.info('Claude response', {
+    submissionId,
+    attempt,
+    inputTokens: data.usage?.input_tokens,
+    outputTokens: data.usage?.output_tokens,
+    stopReason: data.stop_reason,
+  });
+
+  // If stop_reason is max_tokens, response was cut off — retry with more tokens
+  if (data.stop_reason === 'max_tokens' && attempt === 1) {
+    log.warn('Response truncated, retrying with higher token limit', { submissionId });
+    return callClaude(systemPrompt, userPrompt, Math.min(maxTokens + 2000, 8000), submissionId, 2);
+  }
+
+  return { raw, usage: data.usage };
+};
+
+// ─── GENERATE META (title, summary, accommodation, tips) ────────────────────
+const generateMeta = async (submission, currencySymbol, submissionId) => {
+  const { destination, days, budget, currency, travelerType, travelStyle, travelPace, interests, userAge, userLocation, language } = submission;
+  const styleList = Array.isArray(travelStyle) ? travelStyle.join(', ') : travelStyle;
+
+  const prompt = `Create the overview section for a ${days}-day slow travel itinerary for ${destination}.
+
+Traveller: ${travelerType}, budget ${currencySymbol}${budget} ${currency}, style: ${styleList || 'balanced'}, pace: ${travelPace}
+${interests ? `Interests: ${interests}` : ''}
+${userAge ? `Age: ${userAge}` : ''}
+${userLocation ? `From: ${userLocation}` : ''}
+Language: Write ENTIRELY in ${language || 'English'}.
+
+Return ONLY this JSON (no extra text):
+${META_SCHEMA}`;
+
+  const { raw, usage } = await callClaude(SYSTEM_PROMPT, prompt, 1500, submissionId);
+
+  try {
+    return { data: parseJSON(raw), usage };
+  } catch (e) {
+    log.error('Meta parse failed', { submissionId, raw: raw.substring(0, 300) });
+    // Return minimal fallback meta rather than failing entire generation
+    return {
+      data: {
+        title: `${destination}: A Slow Travel Guide`,
+        summary: `A carefully curated ${days}-day slow travel experience in ${destination}, designed to take you off the tourist trail and into the real local life.`,
+        accommodation: { recommendation: `Guesthouse or homestay outside the city centre`, why: 'Quieter, cheaper, more authentic than tourist areas', searchTerms: [`${destination} guesthouse`, `${destination} homestay`, `${destination} local neighbourhood`] },
+        practicalTips: ['Rise early to see places before the crowds', 'Eat where locals eat — follow the lunch queues', 'Walk instead of taking taxis when under 2km', 'Ask your host for their personal recommendations'],
+        totalEstimatedCost: budget,
+        avoidList: ['Tourist-trap restaurants near main attractions', 'Overpriced guided tours — self-guide instead', 'Chain hotels in the city centre'],
+      },
+      usage,
+    };
+  }
+};
+
+// ─── GENERATE A BATCH OF DAYS ────────────────────────────────────────────────
+const generateDaysBatch = async (submission, dayNumbers, currencySymbol, submissionId) => {
+  const { destination, budget, currency, travelerType, travelStyle, travelPace, interests, userAge, userLocation, language, days: totalDays } = submission;
+  const styleList = Array.isArray(travelStyle) ? travelStyle.join(', ') : travelStyle;
+  const dailyBudget = Math.round(budget / totalDays);
+
+  const prompt = `Create days ${dayNumbers.join(', ')} of ${totalDays} for a slow travel itinerary in ${destination}.
+
+Traveller: ${travelerType}, daily budget ~${currencySymbol}${dailyBudget} ${currency}, style: ${styleList || 'balanced'}, pace: ${travelPace}
+${interests ? `Interests: ${interests}` : ''}
+${userAge ? `Age: ${userAge}` : ''}
+${userLocation ? `From: ${userLocation}` : ''}
+Language: Write ENTIRELY in ${language || 'English'}.
+
+Rules:
+- Avoid tourist traps — find what locals actually do
+- One completely free hidden gem per day
+- Specific place names, not generic descriptions
+- Costs in ${currency} (${currencySymbol})
+
+Return ONLY a JSON object with a "days" array containing ${dayNumbers.length} day object(s):
+{
+  "days": [
+    ${DAY_SCHEMA}
+  ]
+}`;
+
+  // 1800 tokens per day is comfortable for 3 days
+  const maxTokens = Math.min(1800 * dayNumbers.length + 400, 6000);
+  const { raw, usage } = await callClaude(SYSTEM_PROMPT, prompt, maxTokens, submissionId);
+
+  try {
+    const parsed = parseJSON(raw);
+    if (!parsed.days || !Array.isArray(parsed.days)) {
+      throw new Error('No days array in response');
+    }
+    return { days: parsed.days, usage };
+  } catch (e) {
+    log.error('Days batch parse failed', { submissionId, dayNumbers, raw: raw.substring(0, 400) });
+
+    // Retry this batch once with Sonnet for better reliability
+    log.info('Retrying batch with Sonnet', { submissionId, dayNumbers });
+    try {
+      const retryResp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.CLAUDE_API_KEY, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: maxTokens + 1000,
+          system: SYSTEM_PROMPT,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+      const retryData = await retryResp.json();
+      const retryRaw = retryData.content[0].text;
+      const retryParsed = parseJSON(retryRaw);
+      if (retryParsed.days && Array.isArray(retryParsed.days)) {
+        return { days: retryParsed.days, usage: retryData.usage };
+      }
+    } catch (retryErr) {
+      log.error('Retry also failed', { submissionId, dayNumbers, error: retryErr.message });
+    }
+
+    // Fallback: generate minimal day objects rather than failing
+    return {
+      days: dayNumbers.map(n => ({
+        dayNumber: n,
+        theme: `Day ${n} — Local Exploration`,
+        morningActivity: { time: '8:00 AM', activity: `Morning walk through local neighbourhood`, location: destination, why: 'The best way to feel the pulse of a place', cost: 0, isFree: true, insiderTip: 'Go before 9am for the quietest experience' },
+        afternoonActivity: { time: '1:00 PM', activity: `Visit a local market`, location: `${destination} market`, why: 'Where locals actually shop and eat', cost: Math.round(dailyBudget * 0.3), isFree: false, insiderTip: 'Prices are lower away from the main entrance' },
+        eveningActivity: { time: '7:00 PM', activity: `Dinner at a local restaurant`, location: `${destination}`, why: 'Eat where the locals eat', cost: Math.round(dailyBudget * 0.4), isFree: false, insiderTip: 'Ask your guesthouse host for their favourite spot' },
+        hiddenGem: `Ask your accommodation host about their favourite local secret — they always know something special`,
+        dailyCost: dailyBudget,
+        localEats: { name: 'Ask locally', dish: 'The daily special', cost: Math.round(dailyBudget * 0.2), vibe: 'Wherever locals are eating' },
+      })),
+      usage: { input_tokens: 0, output_tokens: 0 },
+    };
+  }
+};
+
+// ─── MAIN HANDLER ────────────────────────────────────────────────────────────
 exports.handler = async (event) => {
   const { submissionId, isPaid } = event;
   log.info('Itinerary generation started', { submissionId });
 
   const db = getDB();
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
 
   try {
-    // ─── Fetch submission ──────────────────────────────────────────────────
-    const result = await db.query(
-      `SELECT * FROM submissions WHERE id = $1`,
-      [submissionId]
-    );
+    // ── Fetch submission ──────────────────────────────────────────────────
+    const result = await db.query(`SELECT * FROM submissions WHERE id = $1`, [submissionId]);
+    if (!result.rows.length) { log.error('Submission not found', { submissionId }); return; }
 
-    if (!result.rows.length) {
-      log.error('Submission not found', { submissionId });
-      return;
-    }
-
+    const row = result.rows[0];
     const submission = {
-      destination: result.rows[0].destination,
-      days: result.rows[0].days,
-      budget: result.rows[0].budget,
-      currency: result.rows[0].currency,
-      travelerType: result.rows[0].traveler_type,
-      travelStyle: result.rows[0].travel_style,
-      interests: result.rows[0].interests,
-      travelDate: result.rows[0].travel_date,
-      travelPace: result.rows[0].travel_pace,
-      wantsHotelRecs: result.rows[0].wants_hotel_recs,
-      language: result.rows[0].language || 'English',
-      userAge: result.rows[0].user_age || null,
-      userLocation: result.rows[0].user_location || '',
-      email: result.rows[0].email,
+      destination: row.destination,
+      days: row.days,
+      budget: row.budget,
+      currency: row.currency,
+      travelerType: row.traveler_type,
+      travelStyle: row.travel_style,
+      interests: row.interests,
+      travelDate: row.travel_date,
+      travelPace: row.travel_pace,
+      wantsHotelRecs: row.wants_hotel_recs,
+      language: row.language || 'English',
+      userAge: row.user_age || null,
+      userLocation: row.user_location || '',
+      email: row.email,
     };
 
-    // ─── Update status to processing ──────────────────────────────────────
-    await db.query(
-      `UPDATE submissions SET status = 'processing', updated_at = NOW() WHERE id = $1`,
-      [submissionId]
-    );
+    const currencySymbol = getCurrencySymbol(submission.currency);
 
-    // ─── Call Claude API ───────────────────────────────────────────────────
-    log.info('Calling Claude API', { submissionId, destination: submission.destination });
+    await db.query(`UPDATE submissions SET status = 'processing', updated_at = NOW() WHERE id = $1`, [submissionId]);
 
-    const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.CLAUDE_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 6000,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: buildUserPrompt(submission) }],
-      }),
-    });
+    // ── Generate meta (title, summary, accommodation, tips) ───────────────
+    log.info('Generating meta', { submissionId, destination: submission.destination });
+    const { data: meta, usage: metaUsage } = await generateMeta(submission, currencySymbol, submissionId);
+    totalInputTokens += metaUsage?.input_tokens || 0;
+    totalOutputTokens += metaUsage?.output_tokens || 0;
 
-    if (!claudeResponse.ok) {
-      const errorText = await claudeResponse.text();
-      throw new Error(`Claude API error ${claudeResponse.status}: ${errorText}`);
+    // ── Generate days in batches of 3 ────────────────────────────────────
+    const totalDays = submission.days;
+    const batchSize = 3;
+    const allDays = [];
+
+    for (let i = 1; i <= totalDays; i += batchSize) {
+      const batchNums = [];
+      for (let j = i; j < i + batchSize && j <= totalDays; j++) batchNums.push(j);
+
+      log.info('Generating batch', { submissionId, days: batchNums });
+      const { days: batchDays, usage: batchUsage } = await generateDaysBatch(submission, batchNums, currencySymbol, submissionId);
+
+      // Ensure day numbers are correct
+      batchDays.forEach((day, idx) => { day.dayNumber = batchNums[idx] || batchNums[0] + idx; });
+      allDays.push(...batchDays);
+
+      totalInputTokens += batchUsage?.input_tokens || 0;
+      totalOutputTokens += batchUsage?.output_tokens || 0;
+
+      // Small delay between batches to avoid rate limits
+      if (i + batchSize <= totalDays) {
+        await new Promise(r => setTimeout(r, 500));
+      }
     }
 
-    const claudeData = await claudeResponse.json();
-    const rawContent = claudeData.content[0].text;
+    // ── Merge everything ──────────────────────────────────────────────────
+    const itinerary = {
+      ...meta,
+      days: allDays.sort((a, b) => a.dayNumber - b.dayNumber),
+      totalEstimatedCost: meta.totalEstimatedCost || submission.budget,
+    };
 
-    log.info('Claude response received', {
+    log.info('Itinerary assembled', {
       submissionId,
-      inputTokens: claudeData.usage?.input_tokens,
-      outputTokens: claudeData.usage?.output_tokens,
+      totalDays: allDays.length,
+      totalInputTokens,
+      totalOutputTokens,
     });
 
-    // ─── Parse JSON response ───────────────────────────────────────────────
-    let itinerary;
-    try {
-      // Strip any markdown code fences
-      let cleaned = rawContent
-        .replace(/```json/gi, '')
-        .replace(/```/g, '')
-        .trim();
-      
-      // Extract JSON object if there's text around it
-      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-      if (jsonMatch) cleaned = jsonMatch[0];
-
-      // Fix common Haiku issues - trailing commas
-      cleaned = cleaned.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
-      
-      itinerary = JSON.parse(cleaned);
-    } catch (parseErr) {
-      log.error('Failed to parse Claude JSON response', { submissionId, rawContent: rawContent.substring(0, 500) });
-      throw new Error('Claude returned invalid JSON');
-    }
-
-    // ─── Store itinerary ───────────────────────────────────────────────────
+    // ── Store itinerary ───────────────────────────────────────────────────
     const itineraryId = generateId();
     await db.query(
       `INSERT INTO itineraries
@@ -194,7 +318,7 @@ exports.handler = async (event) => {
       [
         itineraryId, submissionId, submission.email, submission.destination,
         JSON.stringify(itinerary), itinerary.totalEstimatedCost, submission.currency,
-        claudeData.usage?.input_tokens || 0, claudeData.usage?.output_tokens || 0,
+        totalInputTokens, totalOutputTokens,
       ]
     );
 
@@ -205,24 +329,17 @@ exports.handler = async (event) => {
 
     log.info('Itinerary stored', { itineraryId, submissionId });
 
-    // ─── Invoke PDF builder async ──────────────────────────────────────────
+    // ── Trigger PDF builder ───────────────────────────────────────────────
     await lambda.send(new InvokeCommand({
       FunctionName: `wanderzenai-pdf-builder-${process.env.STAGE}`,
       InvocationType: 'Event',
-      Payload: Buffer.from(JSON.stringify({
-        itineraryId,
-        submissionId,
-        email: submission.email,
-        isPaid,
-        submission,
-      })),
+      Payload: Buffer.from(JSON.stringify({ itineraryId, submissionId, email: submission.email, isPaid, submission })),
     }));
 
     log.info('PDF builder triggered', { itineraryId });
 
   } catch (err) {
     log.error('Itinerary generation failed', { submissionId, error: err.message });
-
     await db.query(
       `UPDATE submissions SET status = 'failed', error_message = $1, updated_at = NOW() WHERE id = $2`,
       [err.message, submissionId]

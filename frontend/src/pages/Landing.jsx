@@ -78,6 +78,7 @@ export default function Landing() {
           <a href="#how" className="nav-link">How it works</a>
           <a href="#sample" className="nav-link">Sample plan</a>
           <a href="/pricing" className="nav-link">Pricing</a>
+          <a href="/agency" className="nav-link">For agencies</a>
           <button className="nav-cta" onClick={() => navigate('/plan')}>Plan my trip</button>
         </div>
       </nav>
