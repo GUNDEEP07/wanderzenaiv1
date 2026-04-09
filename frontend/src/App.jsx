@@ -6,6 +6,7 @@ const PlanTrip = lazy(() => import('./pages/PlanTrip'));
 const Confirmation = lazy(() => import('./pages/Confirmation'));
 const Pricing = lazy(() => import('./pages/Pricing'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
+const AgencyDashboard = lazy(() => import('./pages/AgencyDashboard'));
 
 const Spinner = () => (
   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
@@ -23,6 +24,7 @@ export default function App() {
           <Route path="/confirmation" element={<Confirmation />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/agency" element={<AgencyDashboard />} />
         </Routes>
       </Suspense>
     </BrowserRouter>
