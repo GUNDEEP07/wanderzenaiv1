@@ -1,7 +1,7 @@
 'use strict';
 
 const { LambdaClient, InvokeCommand } = require('@aws-sdk/client-lambda');
-const { getDB, generateId, getCurrencySymbol, log } = require('/opt/nodejs/index');
+const { getDB, generateId, getCurrencySymbol, log, fetchFoursquareTips } = require('/opt/nodejs/index');
 
 const lambda = new LambdaClient({ region: process.env.AWS_REGION || 'ap-southeast-2' });
 
@@ -9,41 +9,7 @@ const lambda = new LambdaClient({ region: process.env.AWS_REGION || 'ap-southeas
 const FOURSQUARE_KEY = process.env.FOURSQUARE_API_KEY;
 const FS_CATEGORIES = '13032,12061,16032,16020,12096,16009,13065';
 
-const fetchFoursquareTips = async (destination) => {
-  if (!FOURSQUARE_KEY) return null;
-  try {
-    const geoRes = await fetch(
-      `https://api.foursquare.com/v3/places/search?query=${encodeURIComponent(destination)}&limit=1`,
-      { headers: { Authorization: FOURSQUARE_KEY, Accept: 'application/json' } }
-    );
-    const geoData = await geoRes.json();
-    if (!geoData.results?.length) return null;
-    const { lat, lng } = geoData.results[0].geocodes.main;
-
-    const spotsRes = await fetch(
-      `https://api.foursquare.com/v3/places/search?ll=${lat},${lng}&categories=${FS_CATEGORIES}&limit=15&sort=POPULARITY&fields=name,location,tips,categories,description`,
-      { headers: { Authorization: FOURSQUARE_KEY, Accept: 'application/json' } }
-    );
-    const spotsData = await spotsRes.json();
-    if (!spotsData.results?.length) return null;
-
-    const gems = spotsData.results
-      .filter(p => p.tips?.length || p.description)
-      .slice(0, 10)
-      .map(p => ({
-        name: p.name,
-        cat: p.categories?.[0]?.name || 'Local spot',
-        tip: p.tips?.[0]?.text || p.description || '',
-        area: p.location?.neighborhood || p.location?.locality || '',
-      }))
-      .filter(p => p.tip.length > 20);
-
-    if (!gems.length) return null;
-    return gems.map(g => `- ${g.name} (${g.cat}${g.area ? `, ${g.area}` : ''}): "${g.tip}"`).join('\n');
-  } catch (err) {
-    return null;
-  }
-};
+// fetchFoursquareTips imported from shared layer
 
 // ─── SYSTEM PROMPT ───────────────────────────────────────────────────────────
 const SYSTEM_PROMPT = `You are WanderZen — a slow travel expert with 20+ years off the beaten path.

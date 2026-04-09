@@ -22,6 +22,9 @@ Globals:
         STRIPE_SINGLE_PLAN_LINK: !Ref StripeSinglePlanLink
         STRIPE_WANDERER_LINK: !Ref StripeWandererLink
         FRONTEND_URL: !Ref FrontendUrl
+        FOURSQUARE_API_KEY: !Ref FoursquareApiKey
+        AMADEUS_API_KEY: !Ref AmadeusApiKey
+        AMADEUS_API_SECRET: !Ref AmadeusApiSecret
     Layers:
       - !Ref SharedLayer
 
@@ -64,6 +67,21 @@ Parameters:
   FrontendUrl:
     Type: String
     Description: CloudFront distribution URL for CORS
+  FoursquareApiKey:
+    Type: String
+    NoEcho: true
+    Default: ''
+    Description: Foursquare Places API key for local venue enrichment
+  AmadeusApiKey:
+    Type: String
+    NoEcho: true
+    Default: ''
+    Description: Amadeus POI API key for destination scoring
+  AmadeusApiSecret:
+    Type: String
+    NoEcho: true
+    Default: ''
+    Description: Amadeus API secret
 
 Resources:
 
@@ -206,6 +224,43 @@ Resources:
           Properties:
             RestApiId: !Ref WanderZenApi
             Path: /itinerary/{id}
+            Method: GET
+
+  # ─── Weekly Cache Refresh Lambda (cron) ──────────────────────────────────────
+  WeeklyCacheFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub wanderzenai-weekly-cache-${Stage}
+      CodeUri: ../backend/functions/weekly-cache
+      Handler: index.handler
+      Timeout: 900
+      MemorySize: 512
+      Description: Runs every Sunday — fetches Foursquare + Amadeus data and populates recommendations_cache
+      Events:
+        WeeklyCronJob:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 14 ? * SUN *)
+            Name: !Sub wanderzenai-weekly-cache-${Stage}
+            Description: Weekly destination cache refresh — Sunday midnight AEST
+            Enabled: true
+
+  # ─── Recommendations Lambda ────────────────────────────────────────────────
+  RecommendationsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub wanderzenai-recommendations-${Stage}
+      CodeUri: ../backend/functions/recommendations
+      Handler: index.handler
+      Timeout: 10
+      MemorySize: 256
+      Description: Reads recommendations_cache and returns filtered destination list for explore and plan pages
+      Events:
+        GetRecommendations:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /recommendations
             Method: GET
 
   # ─── S3 Bucket for PDFs ────────────────────────────────────────────────────
