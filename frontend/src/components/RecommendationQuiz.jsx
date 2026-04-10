@@ -44,15 +44,26 @@ export default function RecommendationQuiz({ onSelect }) {
   };
 
   const fetchRecs = async () => {
+    if (!API_URL) {
+      console.error('RecommendationQuiz: VITE_API_URL is not defined');
+      setResults([]);
+      setLoading(false);
+      setShown(true);
+      return;
+    }
     setLoading(true);
     try {
       const params = new URLSearchParams({ limit: '3' });
       if (selectedStyles.length) params.set('style', selectedStyles.join(','));
       if (selectedBudget) params.set('budget', selectedBudget);
-      const res  = await fetch(`${API_URL}/recommendations?${params}`);
+      const url = `${API_URL}/recommendations?${params}`;
+      console.log('RecommendationQuiz: fetching', url);
+      const res  = await fetch(url);
       const data = await res.json();
+      console.log('RecommendationQuiz: response', data);
       setResults(data.data?.destinations || []);
-    } catch {
+    } catch (err) {
+      console.error('RecommendationQuiz: fetch failed', err);
       setResults([]);
     } finally {
       setLoading(false);
