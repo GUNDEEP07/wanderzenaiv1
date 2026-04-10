@@ -91,6 +91,8 @@ jobs:
           STRIPE_SINGLE_PLAN_LINK: ${{ secrets.STRIPE_SINGLE_PLAN_LINK }}
           STRIPE_WANDERER_LINK: ${{ secrets.STRIPE_WANDERER_LINK }}
           FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+          FOURSQUARE_API_KEY: ${{ secrets.FOURSQUARE_API_KEY }}
+          OPENTRIPMAP_API_KEY: ${{ secrets.OPENTRIPMAP_API_KEY }}
         run: |
           sam deploy \
             --stack-name ${{ env.STACK_NAME }} \
