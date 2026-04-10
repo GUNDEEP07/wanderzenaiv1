@@ -23,7 +23,7 @@ Globals:
         STRIPE_WANDERER_LINK: !Ref StripeWandererLink
         FRONTEND_URL: !Ref FrontendUrl
         FOURSQUARE_API_KEY: !Ref FoursquareApiKey
-        OPENTRIPMAP_API_KEY: !Ref OpenTripMapApiKey
+
     Layers:
       - !Ref SharedLayer
 
@@ -71,11 +71,7 @@ Parameters:
     NoEcho: true
     Default: ''
     Description: Foursquare Places API key for local venue enrichment
-  OpenTripMapApiKey:
-    Type: String
-    NoEcho: true
-    Default: ''
-    Description: OpenTripMap API key for destination POI scoring — opentripmap.io
+
 
 Resources:
 
