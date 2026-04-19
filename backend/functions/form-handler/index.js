@@ -43,7 +43,57 @@ exports.handler = async (event) => {
   const submissionId = generateId();
 
   try {
-    // ─── Check free tier usage ───────────────────────────────────────────────
+  
+  // ─── POST /preview ─────────────────────────────────────────────────────────
+  if (event.path === '/preview' || event.path?.endsWith('/preview')) {
+    let previewBody;
+    try { previewBody = JSON.parse(event.body || '{}'); } catch { return badRequest('Invalid JSON'); }
+
+    const { destination, days, travelerType, travelStyle = [], travelPace = 'balanced', startTime = '09:00', userMustDos = '' } = previewBody;
+    if (!destination || !days) return badRequest('destination and days are required');
+
+    const styleList = Array.isArray(travelStyle) ? travelStyle.join(', ') : travelStyle;
+
+    const previewPrompt = `Return ONLY a valid JSON array. No markdown, no explanation, no code fences.
+Each item must have exactly: { "day": number, "theme": "short title max 4 words", "vibe": "one evocative line max 10 words" }
+
+Create a ${days}-day slow travel day outline for ${destination}.
+Traveller: ${travelerType || 'Couple'} | Style: ${styleList || 'balanced'} | Pace: ${travelPace}
+${startTime !== '09:00' ? `Day starts around ${startTime}.` : ''}
+${userMustDos ? `User must-dos to weave in: ${userMustDos}` : ''}
+No activity detail. Titles and atmosphere only. Exactly ${days} items.`;
+
+    try {
+      const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.CLAUDE_API_KEY,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5',
+          max_tokens: 1024,
+          messages: [{ role: 'user', content: previewPrompt }],
+        }),
+      });
+
+      if (!claudeRes.ok) throw new Error(`Claude ${claudeRes.status}`);
+      const claudeData = await claudeRes.json();
+      let raw = claudeData.content[0].text.trim();
+
+      // Strip any accidental markdown fences
+      raw = raw.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/i, '').trim();
+
+      const days_preview = JSON.parse(raw);
+      return ok({ days: days_preview });
+    } catch (err) {
+      log.error('Preview generation failed', { error: err.message });
+      return serverError('Preview failed');
+    }
+  }
+
+  // ─── Check free tier usage ───────────────────────────────────────────────
     const usageResult = await db.query(
       `SELECT COUNT(*) as count FROM submissions
        WHERE email = $1

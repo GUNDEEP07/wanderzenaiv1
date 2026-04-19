@@ -118,13 +118,17 @@ const callClaude = async (systemPrompt, userPrompt, maxTokens, submissionId, att
 
 // ─── GENERATE META (title, summary, accommodation, tips) ────────────────────
 const generateMeta = async (submission, currencySymbol, submissionId, fsTips = null) => {
-  const { destination, days, budget, currency, travelerType, travelStyle, travelPace, interests, userAge, userLocation, language } = submission;
+  const { destination, days, budget, currency, travelerType, travelStyle, travelPace, interests, startTime, userMustDos, userAge, userLocation, language } = submission;
   const styleList = Array.isArray(travelStyle) ? travelStyle.join(', ') : travelStyle;
 
   const prompt = `Create the overview section for a ${days}-day slow travel itinerary for ${destination}.
 
 Traveller: ${travelerType}, budget ${currencySymbol}${budget} ${currency}, style: ${styleList || 'balanced'}, pace: ${travelPace}
 ${interests ? `Interests: ${interests}` : ''}
+${startTime && startTime !== '09:00' ? `Day starts: ${startTime} — do not schedule anything before this time` : ''}
+${userMustDos ? `Must include: ${userMustDos}` : ''}
+${startTime && startTime !== '09:00' ? `Day starts: ${startTime} — schedule nothing before this time` : ''}
+${userMustDos ? `Must include: ${userMustDos}` : ''}
 ${userAge ? `Age: ${userAge}` : ''}
 ${userLocation ? `From: ${userLocation}` : ''}
 Language: Write ENTIRELY in ${language || 'English'}.
@@ -156,7 +160,7 @@ ${META_SCHEMA}`;
 
 // ─── GENERATE A BATCH OF DAYS ────────────────────────────────────────────────
 const generateDaysBatch = async (submission, dayNumbers, currencySymbol, submissionId, fsTips = null) => {
-  const { destination, budget, currency, travelerType, travelStyle, travelPace, interests, userAge, userLocation, language, days: totalDays } = submission;
+  const { destination, budget, currency, travelerType, travelStyle, travelPace, interests, startTime, userMustDos, userAge, userLocation, language, days: totalDays } = submission;
   const styleList = Array.isArray(travelStyle) ? travelStyle.join(', ') : travelStyle;
   const dailyBudget = Math.round(budget / totalDays);
 
@@ -164,6 +168,10 @@ const generateDaysBatch = async (submission, dayNumbers, currencySymbol, submiss
 
 Traveller: ${travelerType}, daily budget ~${currencySymbol}${dailyBudget} ${currency}, style: ${styleList || 'balanced'}, pace: ${travelPace}
 ${interests ? `Interests: ${interests}` : ''}
+${startTime && startTime !== '09:00' ? `Day starts: ${startTime} — do not schedule anything before this time` : ''}
+${userMustDos ? `Must include: ${userMustDos}` : ''}
+${startTime && startTime !== '09:00' ? `Day starts: ${startTime} — schedule nothing before this time` : ''}
+${userMustDos ? `Must include: ${userMustDos}` : ''}
 ${userAge ? `Age: ${userAge}` : ''}
 ${userLocation ? `From: ${userLocation}` : ''}
 Language: Write ENTIRELY in ${language || 'English'}.
@@ -269,7 +277,9 @@ exports.handler = async (event) => {
       travelerType: row.traveler_type,
       travelStyle: row.travel_style,
       interests: row.interests,
-      travelDate: row.travel_date,
+      travelDate: row.travel_date || null,
+      startTime: row.start_time || '09:00',
+      userMustDos: row.user_must_dos || null,
       travelPace: row.travel_pace,
       wantsHotelRecs: row.wants_hotel_recs,
       language: row.language || 'English',

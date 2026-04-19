@@ -96,12 +96,12 @@ const LANGUAGES = [
   { code: 'Dutch', label: 'Nederlands (Dutch)' },
 ];
 
-const STEPS = ['Destination', 'Budget & dates', 'Travel style', 'Your details'];
+const STEPS = ['Destination', 'Budget & dates', 'Travel style', 'Your details', 'Review'];
 
 const initial = {
   destination: '', days: 5, budget: '', currency: 'USD',
   travelerType: '', travelStyle: [], interests: '',
-  travelDate: '', travelPace: 'balanced', wantsHotelRecs: true,
+  travelDate: '', travelPace: 'balanced', wantsHotelRecs: true, startTime: '09:00', userMustDos: '',
   language: 'English', userAge: '', userLocation: '', email: '',
 };
 
@@ -114,6 +114,10 @@ export default function PlanTrip() {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [preview, setPreview] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [preview, setPreview] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const set = (key, val) => {
     setForm(f => ({ ...f, [key]: val }));
@@ -129,6 +133,34 @@ export default function PlanTrip() {
     }));
   };
 
+
+
+  const fetchPreview = async (formData) => {
+    setPreviewLoading(true);
+    setPreview(null);
+    try {
+      const res = await fetch(`${API_URL}/preview`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          destination: formData.destination,
+          days: +formData.days,
+          travelerType: formData.travelerType,
+          travelStyle: formData.travelStyle,
+          travelPace: formData.travelPace,
+          startTime: formData.startTime || '09:00',
+          userMustDos: formData.userMustDos || '',
+        }),
+      });
+      const data = await res.json();
+      if (data.days) setPreview(data.days);
+    } catch (e) {
+      console.error('Preview failed', e);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
   const validate = () => {
     const errs = {};
     if (step === 0 && !form.destination.trim()) errs.destination = 'Where are you headed?';
@@ -142,7 +174,13 @@ export default function PlanTrip() {
     return Object.keys(errs).length === 0;
   };
 
-  const next = () => { if (validate()) setStep(s => s + 1); };
+  const next = () => {
+    if (validate()) {
+      const nextStep = step + 1;
+      setStep(nextStep);
+      if (nextStep === 4) fetchPreview(form);
+    }
+  };
   const back = () => setStep(s => s - 1);
 
   const submit = async () => {
@@ -153,7 +191,14 @@ export default function PlanTrip() {
       const res = await fetch(`${API_URL}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, days: +form.days, budget: +form.budget, travelDate: form.travelDate && form.travelDate.trim() !== '' ? form.travelDate : null }),
+        body: JSON.stringify({
+          ...form,
+          days: +form.days,
+          budget: +form.budget,
+          travelDate: form.travelDate && form.travelDate.trim() !== '' ? form.travelDate : null,
+          startTime: form.startTime || '09:00',
+          userMustDos: form.userMustDos && form.userMustDos.trim() !== '' ? form.userMustDos.trim() : null,
+        }),
       });
       const data = await res.json();
       if (res.status === 402) { navigate('/pricing', { state: { reason: 'free_limit' } }); return; }
@@ -411,7 +456,339 @@ export default function PlanTrip() {
 
               {submitError && <div style={s.submitError}>{submitError}</div>}
             </div>
+          )
+
+          {/* Step 4 — Review & Preview */}
+          {step === 4 && (
+            <div>
+              <div style={s.stepLabel}>Step 5 of 5 — Almost there</div>
+              <h2 style={s.stepTitle}>Review your trip</h2>
+              <p style={s.stepSub}>Tweak anything before we generate your full itinerary.</p>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+
+                {/* Left — editable preferences */}
+                <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: '1.25rem' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#00d4aa', marginBottom: '1rem' }}>Your preferences</div>
+
+                  {/* Destination summary */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>Destination & duration</div>
+                    <div style={{ color: '#fff', fontWeight: 600 }}>{form.destination} — {form.days} days</div>
+                  </div>
+
+                  <div style={{ marginBottom: '1rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>Budget</div>
+                    <div style={{ color: '#fff', fontWeight: 600 }}>{form.currency} {(+form.budget).toLocaleString()}</div>
+                  </div>
+
+                  {/* Travel style chips */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: 6 }}>Travel style</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {['Nature', 'Cultural', 'Food & Markets', 'Wellness', 'Adventure', 'Off-grid'].map(style => {
+                        const active = form.travelStyle.includes(style);
+                        return (
+                          <button key={style} onClick={() => {
+                            const updated = active
+                              ? form.travelStyle.filter(s => s !== style)
+                              : [...form.travelStyle, style];
+                            set('travelStyle', updated);
+                            fetchPreview({ ...form, travelStyle: updated });
+                          }} style={{
+                            fontSize: '0.72rem', padding: '4px 10px', borderRadius: 20,
+                            border: active ? '1px solid #00d4aa' : '1px solid rgba(255,255,255,0.2)',
+                            background: active ? 'rgba(0,212,170,0.15)' : 'transparent',
+                            color: active ? '#00d4aa' : 'rgba(255,255,255,0.5)',
+                            cursor: 'pointer', transition: 'all 0.15s',
+                          }}>{style}</button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Pace */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: 6 }}>Pace</div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {['relaxed', 'balanced', 'fast-paced'].map(p => {
+                        const active = form.travelPace === p;
+                        return (
+                          <button key={p} onClick={() => { set('travelPace', p); fetchPreview({ ...form, travelPace: p }); }} style={{
+                            flex: 1, fontSize: '0.72rem', padding: '6px 4px', borderRadius: 8,
+                            border: active ? '1px solid #00d4aa' : '1px solid rgba(255,255,255,0.2)',
+                            background: active ? 'rgba(0,212,170,0.15)' : 'transparent',
+                            color: active ? '#00d4aa' : 'rgba(255,255,255,0.5)',
+                            cursor: 'pointer', textTransform: 'capitalize',
+                          }}>{p}</button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Start time */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: 6 }}>When do you start your day?</div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {[{ label: '🌅 Early — 7am', value: '07:00' }, { label: '☕ Morning — 9am', value: '09:00' }, { label: '🌞 Late — 11am', value: '11:00' }].map(opt => {
+                        const active = (form.startTime || '09:00') === opt.value;
+                        return (
+                          <button key={opt.value} onClick={() => { set('startTime', opt.value); fetchPreview({ ...form, startTime: opt.value }); }} style={{
+                            flex: 1, fontSize: '0.68rem', padding: '6px 4px', borderRadius: 8,
+                            border: active ? '1px solid #00d4aa' : '1px solid rgba(255,255,255,0.2)',
+                            background: active ? 'rgba(0,212,170,0.15)' : 'transparent',
+                            color: active ? '#00d4aa' : 'rgba(255,255,255,0.5)',
+                            cursor: 'pointer',
+                          }}>{opt.label}</button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Must-dos */}
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: 6 }}>Anything you want included?</div>
+                    <textarea
+                      value={form.userMustDos || ''}
+                      onChange={e => set('userMustDos', e.target.value)}
+                      onBlur={() => fetchPreview(form)}
+                      placeholder={'e.g. Already booked dinner at Noma on Day 3\nWant to visit Senso-ji at dawn\nMy friend recommended Cafe X'}
+                      maxLength={300}
+                      rows={4}
+                      style={{
+                        width: '100%', background: 'rgba(255,255,255,0.05)',
+                        border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8,
+                        color: '#fff', fontSize: '0.8rem', padding: '10px 12px',
+                        resize: 'none', outline: 'none', fontFamily: 'inherit',
+                        lineHeight: 1.5,
+                      }}
+                    />
+                    <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.3)', textAlign: 'right', marginTop: 3 }}>
+                      {(form.userMustDos || '').length} / 300
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right — AI day outline */}
+                <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '1.25rem' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#00d4aa', marginBottom: '1rem' }}>Day outline preview</div>
+
+                  {previewLoading && (
+                    <div>
+                      {Array.from({ length: +form.days > 7 ? 7 : +form.days }).map((_, i) => (
+                        <div key={i} style={{ display: 'flex', gap: 10, padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                          <div style={{ width: 36, height: 12, background: 'rgba(255,255,255,0.08)', borderRadius: 4, flexShrink: 0, marginTop: 3 }} />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ width: '60%', height: 12, background: 'rgba(255,255,255,0.08)', borderRadius: 4, marginBottom: 5 }} />
+                            <div style={{ width: '85%', height: 10, background: 'rgba(255,255,255,0.05)', borderRadius: 4 }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {!previewLoading && preview && (
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                      {preview.map((d, i) => (
+                        <li key={i} style={{ display: 'flex', gap: 10, padding: '8px 0', borderBottom: i < preview.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+                          <span style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.3)', minWidth: 36, paddingTop: 2, flexShrink: 0 }}>Day {d.day}</span>
+                          <div>
+                            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#fff', marginBottom: 2 }}>{d.theme}</div>
+                            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', fontStyle: 'italic' }}>{d.vibe}</div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {!previewLoading && !preview && (
+                    <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.85rem', fontStyle: 'italic', paddingTop: '0.5rem' }}>
+                      Preview will appear here…
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {submitError && <p style={{ color: '#ff6b6b', marginBottom: '1rem', fontSize: '0.9rem' }}>{submitError}</p>}
+
+              <div style={{ display: 'flex', gap: 12 }}>
+                <button onClick={back} style={{ padding: '14px 24px', background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 10, color: 'rgba(255,255,255,0.6)', fontSize: '0.95rem', cursor: 'pointer' }}>
+                  ← Edit
+                </button>
+                <button onClick={handleSubmit} disabled={submitting} style={{ flex: 1, padding: '14px 24px', background: submitting ? 'rgba(0,212,170,0.4)' : '#00d4aa', border: 'none', borderRadius: 10, color: '#0a1628', fontWeight: 700, fontSize: '1rem', cursor: submitting ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}>
+                  {submitting ? 'Generating…' : 'Generate full itinerary →'}
+                </button>
+              </div>
+              <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.78rem', textAlign: 'center', marginTop: '0.75rem' }}>Takes 2–3 minutes · PDF delivered by email</p>
+            </div>
           )}
+
+
+          {/* Step 4 — Review & Preview */}
+          {step === 4 && (
+            <div>
+              <div style={s.stepLabel}>Step 5 of 5 — Almost there</div>
+              <h2 style={s.stepTitle}>Review your trip</h2>
+              <p style={s.stepSub}>Tweak anything before we generate your full itinerary.</p>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+
+                {/* Left — editable preferences */}
+                <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: '1.25rem' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#00d4aa', marginBottom: '1rem' }}>Your preferences</div>
+
+                  {/* Destination summary */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>Destination & duration</div>
+                    <div style={{ color: '#fff', fontWeight: 600 }}>{form.destination} — {form.days} days</div>
+                  </div>
+
+                  <div style={{ marginBottom: '1rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>Budget</div>
+                    <div style={{ color: '#fff', fontWeight: 600 }}>{form.currency} {(+form.budget).toLocaleString()}</div>
+                  </div>
+
+                  {/* Travel style chips */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: 6 }}>Travel style</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {['Nature', 'Cultural', 'Food & Markets', 'Wellness', 'Adventure', 'Off-grid'].map(style => {
+                        const active = form.travelStyle.includes(style);
+                        return (
+                          <button key={style} onClick={() => {
+                            const updated = active
+                              ? form.travelStyle.filter(s => s !== style)
+                              : [...form.travelStyle, style];
+                            set('travelStyle', updated);
+                            fetchPreview({ ...form, travelStyle: updated });
+                          }} style={{
+                            fontSize: '0.72rem', padding: '4px 10px', borderRadius: 20,
+                            border: active ? '1px solid #00d4aa' : '1px solid rgba(255,255,255,0.2)',
+                            background: active ? 'rgba(0,212,170,0.15)' : 'transparent',
+                            color: active ? '#00d4aa' : 'rgba(255,255,255,0.5)',
+                            cursor: 'pointer', transition: 'all 0.15s',
+                          }}>{style}</button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Pace */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: 6 }}>Pace</div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {['relaxed', 'balanced', 'fast-paced'].map(p => {
+                        const active = form.travelPace === p;
+                        return (
+                          <button key={p} onClick={() => { set('travelPace', p); fetchPreview({ ...form, travelPace: p }); }} style={{
+                            flex: 1, fontSize: '0.72rem', padding: '6px 4px', borderRadius: 8,
+                            border: active ? '1px solid #00d4aa' : '1px solid rgba(255,255,255,0.2)',
+                            background: active ? 'rgba(0,212,170,0.15)' : 'transparent',
+                            color: active ? '#00d4aa' : 'rgba(255,255,255,0.5)',
+                            cursor: 'pointer', textTransform: 'capitalize',
+                          }}>{p}</button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Start time */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: 6 }}>When do you start your day?</div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {[{ label: '🌅 Early — 7am', value: '07:00' }, { label: '☕ Morning — 9am', value: '09:00' }, { label: '🌞 Late — 11am', value: '11:00' }].map(opt => {
+                        const active = (form.startTime || '09:00') === opt.value;
+                        return (
+                          <button key={opt.value} onClick={() => { set('startTime', opt.value); fetchPreview({ ...form, startTime: opt.value }); }} style={{
+                            flex: 1, fontSize: '0.68rem', padding: '6px 4px', borderRadius: 8,
+                            border: active ? '1px solid #00d4aa' : '1px solid rgba(255,255,255,0.2)',
+                            background: active ? 'rgba(0,212,170,0.15)' : 'transparent',
+                            color: active ? '#00d4aa' : 'rgba(255,255,255,0.5)',
+                            cursor: 'pointer',
+                          }}>{opt.label}</button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Must-dos */}
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: 6 }}>Anything you want included?</div>
+                    <textarea
+                      value={form.userMustDos || ''}
+                      onChange={e => set('userMustDos', e.target.value)}
+                      onBlur={() => fetchPreview(form)}
+                      placeholder={'e.g. Already booked dinner at Noma on Day 3\nWant to visit Senso-ji at dawn\nMy friend recommended Cafe X'}
+                      maxLength={300}
+                      rows={4}
+                      style={{
+                        width: '100%', background: 'rgba(255,255,255,0.05)',
+                        border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8,
+                        color: '#fff', fontSize: '0.8rem', padding: '10px 12px',
+                        resize: 'none', outline: 'none', fontFamily: 'inherit',
+                        lineHeight: 1.5,
+                      }}
+                    />
+                    <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.3)', textAlign: 'right', marginTop: 3 }}>
+                      {(form.userMustDos || '').length} / 300
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right — AI day outline */}
+                <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '1.25rem' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#00d4aa', marginBottom: '1rem' }}>Day outline preview</div>
+
+                  {previewLoading && (
+                    <div>
+                      {Array.from({ length: +form.days > 7 ? 7 : +form.days }).map((_, i) => (
+                        <div key={i} style={{ display: 'flex', gap: 10, padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                          <div style={{ width: 36, height: 12, background: 'rgba(255,255,255,0.08)', borderRadius: 4, flexShrink: 0, marginTop: 3 }} />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ width: '60%', height: 12, background: 'rgba(255,255,255,0.08)', borderRadius: 4, marginBottom: 5 }} />
+                            <div style={{ width: '85%', height: 10, background: 'rgba(255,255,255,0.05)', borderRadius: 4 }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {!previewLoading && preview && (
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                      {preview.map((d, i) => (
+                        <li key={i} style={{ display: 'flex', gap: 10, padding: '8px 0', borderBottom: i < preview.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+                          <span style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.3)', minWidth: 36, paddingTop: 2, flexShrink: 0 }}>Day {d.day}</span>
+                          <div>
+                            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#fff', marginBottom: 2 }}>{d.theme}</div>
+                            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', fontStyle: 'italic' }}>{d.vibe}</div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {!previewLoading && !preview && (
+                    <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.85rem', fontStyle: 'italic', paddingTop: '0.5rem' }}>
+                      Preview will appear here…
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {submitError && <p style={{ color: '#ff6b6b', marginBottom: '1rem', fontSize: '0.9rem' }}>{submitError}</p>}
+
+              <div style={{ display: 'flex', gap: 12 }}>
+                <button onClick={back} style={{ padding: '14px 24px', background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 10, color: 'rgba(255,255,255,0.6)', fontSize: '0.95rem', cursor: 'pointer' }}>
+                  ← Edit
+                </button>
+                <button onClick={handleSubmit} disabled={submitting} style={{ flex: 1, padding: '14px 24px', background: submitting ? 'rgba(0,212,170,0.4)' : '#00d4aa', border: 'none', borderRadius: 10, color: '#0a1628', fontWeight: 700, fontSize: '1rem', cursor: submitting ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}>
+                  {submitting ? 'Generating…' : 'Generate full itinerary →'}
+                </button>
+              </div>
+              <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.78rem', textAlign: 'center', marginTop: '0.75rem' }}>Takes 2–3 minutes · PDF delivered by email</p>
+            </div>
+          )}
+}
 
           {/* Nav buttons */}
           <div style={s.navBtns}>
