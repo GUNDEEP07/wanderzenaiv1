@@ -153,7 +153,7 @@ export default function PlanTrip() {
       const res = await fetch(`${API_URL}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, days: +form.days, budget: +form.budget }),
+        body: JSON.stringify({ ...form, days: +form.days, budget: +form.budget, travelDate: form.travelDate && form.travelDate.trim() !== '' ? form.travelDate : null }),
       });
       const data = await res.json();
       if (res.status === 402) { navigate('/pricing', { state: { reason: 'free_limit' } }); return; }

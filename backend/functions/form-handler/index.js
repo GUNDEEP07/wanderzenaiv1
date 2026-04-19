@@ -26,13 +26,19 @@ exports.handler = async (event) => {
 
   const {
     destination, days, budget, currency, travelerType,
-    travelStyle = [], interests = '', travelDate = null,
+    travelStyle = [], interests = '', travelDate: rawTravelDate = null,
     travelPace = 'balanced', wantsHotelRecs = true,
     language = 'English',
     userAge = null,
     userLocation = '',
     email,
   } = body;
+
+  // Normalize travelDate — frontend sends '' when date left blank, null is safe for DB
+  const travelDate = rawTravelDate && String(rawTravelDate).trim() !== '' ? rawTravelDate : null;
+
+  // Normalize date — HTML date input sends '' when blank, which crashes new Date()
+  const travelDate = rawTravelDate && rawTravelDate.trim() !== '' ? rawTravelDate.trim() : null;
 
   const db = getDB();
   const submissionId = generateId();

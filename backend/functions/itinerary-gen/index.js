@@ -236,6 +236,17 @@ Return ONLY a JSON object with a "days" array containing ${dayNumbers.length} da
 };
 
 // ─── MAIN HANDLER ────────────────────────────────────────────────────────────
+// Safe day label — travelDate is optional, empty string or null both handled
+function buildDayLabel(travelDate, dayIndex) {
+  if (!travelDate || travelDate.trim() === '') return `Day ${dayIndex + 1}`;
+  const d = new Date(travelDate);
+  if (isNaN(d.getTime())) return `Day ${dayIndex + 1}`;
+  d.setDate(d.getDate() + dayIndex);
+  return d.toLocaleDateString('en-AU', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+}
+
 exports.handler = async (event) => {
   const { submissionId, isPaid } = event;
   log.info('Itinerary generation started', { submissionId });
