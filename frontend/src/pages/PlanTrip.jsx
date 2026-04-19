@@ -659,7 +659,6 @@ const [previewLoading, setPreviewLoading] = useState(false);
               <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.78rem', textAlign: 'center', marginTop: '0.75rem' }}>Takes 2–3 minutes · PDF delivered by email</p>
             </div>
           )}
-}
 
           {/* Nav buttons */}
           <div style={s.navBtns}>
