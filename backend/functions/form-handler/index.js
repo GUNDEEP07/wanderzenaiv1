@@ -38,7 +38,6 @@ exports.handler = async (event) => {
   const travelDate = rawTravelDate && String(rawTravelDate).trim() !== '' ? rawTravelDate : null;
 
   // Normalize date — HTML date input sends '' when blank, which crashes new Date()
-  const travelDate = rawTravelDate && rawTravelDate.trim() !== '' ? rawTravelDate.trim() : null;
 
   const db = getDB();
   const submissionId = generateId();
