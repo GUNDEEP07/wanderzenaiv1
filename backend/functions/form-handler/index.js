@@ -54,6 +54,13 @@ exports.handler = async (event) => {
     );
     const freeTierUsage = parseInt(usageResult.rows[0].count, 10);
 
+    // Check if test account — bypass free tier limit entirely
+    const testResult = await db.query(
+      `SELECT 1 FROM test_accounts WHERE email = $1`,
+      [email]
+    );
+    const isTestAccount = testResult.rows.length > 0;
+
     // Check if paid user
     const paidResult = await db.query(
       `SELECT id, plan, itineraries_remaining FROM users WHERE email = $1`,
@@ -63,7 +70,7 @@ exports.handler = async (event) => {
     const isPaid = user && (user.plan === 'paid_once' || user.plan === 'subscriber');
     const hasFreeSlot = freeTierUsage < 1;
 
-    if (!isPaid && !hasFreeSlot) {
+    if (!isTestAccount && !isPaid && !hasFreeSlot) {
       return {
         statusCode: 402,
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': process.env.FRONTEND_URL },
