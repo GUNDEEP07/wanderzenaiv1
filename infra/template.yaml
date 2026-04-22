@@ -119,6 +119,8 @@ Resources:
           Type: Api
           Properties:
             RestApiId: !Ref WanderZenApi
+            Path: /preview
+          - HttpMethod: POST
             Path: /submit
             Method: POST
       Policies:
