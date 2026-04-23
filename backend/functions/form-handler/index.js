@@ -10,47 +10,37 @@ exports.handler = async (event) => {
 
   // Handle CORS preflight
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': process.env.FRONTEND_URL, 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Allow-Methods': 'POST,OPTIONS' }, body: '' };
-  }
-
-  let body;
-  try {
-    body = JSON.parse(event.body || '{}');
-  } catch {
-    return badRequest('Invalid JSON body');
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': process.env.FRONTEND_URL,
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'POST,OPTIONS',
+      },
+      body: '',
+    };
   }
 
   // ─── POST /preview ─────────────────────────────────────────────────────────
+  // Must be checked BEFORE validation — preview does not require submit fields
   if (event.path === '/preview' || event.path?.endsWith('/preview')) {
     let previewBody;
-    try { previewBody = JSON.parse(event.body || '{}'); } catch { return badRequest('Invalid JSON'); }
+    try {
+      previewBody = JSON.parse(event.body || '{}');
+    } catch {
+      return badRequest('Invalid JSON');
+    }
 
+    const {
+      destination,
+      days,
+      travelerType,
+      travelStyle = [],
+      travelPace = 'balanced',
+      startTime = '09:00',
+      userMustDos = '',
+    } = previewBody;
 
-  // ─── Validate input ────────────────────────────────────────────────────────
-  const errors = validateFormInput(body);
-  if (errors.length) return badRequest('Validation failed', errors);
-
-  const {
-    destination, days, budget, currency, travelerType,
-    travelStyle = [], interests = '', travelDate: rawTravelDate = null,
-    travelPace = 'balanced', wantsHotelRecs = true,
-    language = 'English',
-    userAge = null,
-    userLocation = '',
-    email,
-  } = body;
-
-  // Normalize travelDate — frontend sends '' when date left blank, null is safe for DB
-  const travelDate = rawTravelDate && String(rawTravelDate).trim() !== '' ? rawTravelDate : null;
-
-  // Normalize date — HTML date input sends '' when blank, which crashes new Date()
-
-  const db = getDB();
-  const submissionId = generateId();
-
-  try {
-  
-    const { destination, days, travelerType, travelStyle = [], travelPace = 'balanced', startTime = '09:00', userMustDos = '' } = previewBody;
     if (!destination || !days) return badRequest('destination and days are required');
 
     const styleList = Array.isArray(travelStyle) ? travelStyle.join(', ') : travelStyle;
@@ -86,15 +76,47 @@ No activity detail. Titles and atmosphere only. Exactly ${days} items.`;
       // Strip any accidental markdown fences
       raw = raw.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/i, '').trim();
 
-      const days_preview = JSON.parse(raw);
-      return ok({ days: days_preview });
+      const daysPreview = JSON.parse(raw);
+      return ok({ days: daysPreview });
     } catch (err) {
       log.error('Preview generation failed', { error: err.message });
       return serverError('Preview failed');
     }
   }
 
-  // ─── Check free tier usage ───────────────────────────────────────────────
+  // ─── POST /submit ───────────────────────────────────────────────────────────
+
+  let body;
+  try {
+    body = JSON.parse(event.body || '{}');
+  } catch {
+    return badRequest('Invalid JSON body');
+  }
+
+  // ─── Validate input ────────────────────────────────────────────────────────
+  const errors = validateFormInput(body);
+  if (errors.length) return badRequest('Validation failed', errors);
+
+  const {
+    destination, days, budget, currency, travelerType,
+    travelStyle = [], interests = '', travelDate: rawTravelDate = null,
+    travelPace = 'balanced', wantsHotelRecs = true,
+    language = 'English',
+    userAge = null,
+    userLocation = '',
+    startTime = '09:00',
+    userMustDos = null,
+    email,
+  } = body;
+
+  // Normalize travelDate — frontend sends '' when date left blank, null is safe for DB
+  const travelDate = rawTravelDate && String(rawTravelDate).trim() !== '' ? rawTravelDate : null;
+
+  const db = getDB();
+  const submissionId = generateId();
+
+  try {
+    // ─── Check free tier usage ───────────────────────────────────────────────
     const usageResult = await db.query(
       `SELECT COUNT(*) as count FROM submissions
        WHERE email = $1
@@ -123,7 +145,10 @@ No activity detail. Titles and atmosphere only. Exactly ${days} items.`;
     if (!isTestAccount && !isPaid && !hasFreeSlot) {
       return {
         statusCode: 402,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': process.env.FRONTEND_URL },
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': process.env.FRONTEND_URL,
+        },
         body: JSON.stringify({
           success: false,
           message: 'Free tier limit reached',
@@ -138,8 +163,8 @@ No activity detail. Titles and atmosphere only. Exactly ${days} items.`;
       `INSERT INTO submissions
        (id, email, destination, days, budget, currency, traveler_type,
         travel_style, interests, travel_date, travel_pace, wants_hotel_recs,
-        language, user_age, user_location, plan, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,'pending')`,
+        language, user_age, user_location, start_time, user_must_dos, plan, status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,'pending')`,
       [
         submissionId, email, destination, parseInt(days, 10),
         parseFloat(budget), currency, travelerType,
@@ -148,6 +173,8 @@ No activity detail. Titles and atmosphere only. Exactly ${days} items.`;
         language || 'English',
         userAge ? parseInt(userAge, 10) : null,
         userLocation || null,
+        startTime || '09:00',
+        userMustDos && userMustDos.trim() !== '' ? userMustDos.trim() : null,
         isPaid ? 'paid' : 'free',
       ]
     );
