@@ -115,14 +115,18 @@ Resources:
       Handler: index.handler
       Description: Receives form submissions, validates, stores to DB, triggers itinerary generation
       Events:
+        PreviewSubmit:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Method: POST
+            Path: /preview
         FormSubmit:
           Type: Api
           Properties:
             RestApiId: !Ref WanderZenApi
-            Path: /preview
-          - HttpMethod: POST
-            Path: /submit
             Method: POST
+            Path: /submit
       Policies:
         - Version: '2012-10-17'
           Statement:
