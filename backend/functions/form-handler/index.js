@@ -20,6 +20,12 @@ exports.handler = async (event) => {
     return badRequest('Invalid JSON body');
   }
 
+  // ─── POST /preview ─────────────────────────────────────────────────────────
+  if (event.path === '/preview' || event.path?.endsWith('/preview')) {
+    let previewBody;
+    try { previewBody = JSON.parse(event.body || '{}'); } catch { return badRequest('Invalid JSON'); }
+
+
   // ─── Validate input ────────────────────────────────────────────────────────
   const errors = validateFormInput(body);
   if (errors.length) return badRequest('Validation failed', errors);
@@ -44,11 +50,6 @@ exports.handler = async (event) => {
 
   try {
   
-  // ─── POST /preview ─────────────────────────────────────────────────────────
-  if (event.path === '/preview' || event.path?.endsWith('/preview')) {
-    let previewBody;
-    try { previewBody = JSON.parse(event.body || '{}'); } catch { return badRequest('Invalid JSON'); }
-
     const { destination, days, travelerType, travelStyle = [], travelPace = 'balanced', startTime = '09:00', userMustDos = '' } = previewBody;
     if (!destination || !days) return badRequest('destination and days are required');
 
