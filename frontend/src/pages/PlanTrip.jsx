@@ -52,9 +52,7 @@ const INITIAL_FORM = {
   travelDate: '', travelPace: 'balanced', wantsHotelRecs: true,
   startTime: '09:00', userMustDos: '',
   language: 'English', userAge: '', userLocation: '', email: '',
-  // Preview state lives on form to avoid extra useState in parent
-  _preview: null,
-  _previewLoading: false,
+
 };
 
 // ─── Styles ────────────────────────────────────────────────────────────────────
@@ -138,6 +136,8 @@ export default function PlanTrip() {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [preview, setPreview] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   // Field setter — clears error on change
   const set = (key, val) => {
@@ -156,12 +156,15 @@ export default function PlanTrip() {
 
   // Calls /preview and stores result on form._preview
   const loadPreview = async (formData) => {
-    setForm(f => ({ ...f, _previewLoading: true, _preview: null }));
+    setPreviewLoading(true);
+    setPreview(null);
     try {
       const data = await fetchPreview(formData);
-      setForm(f => ({ ...f, _preview: data.days || null, _previewLoading: false }));
-    } catch {
-      setForm(f => ({ ...f, _previewLoading: false }));
+      setPreview(data.days || null);
+    } catch (e) {
+      console.error('Preview failed', e);
+    } finally {
+      setPreviewLoading(false);
     }
   };
 
@@ -452,6 +455,8 @@ export default function PlanTrip() {
               form={form}
               set={set}
               fetchPreview={loadPreview}
+              preview={preview}
+              previewLoading={previewLoading}
               onBack={back}
               onSubmit={handleSubmit}
               submitting={submitting}
