@@ -40,20 +40,27 @@ exports.handler = async () => {
     try {
       log.info('Processing', { id: dest.id });
       const venues = await fetchFoursquareVenues(dest.destination);
-      const foursquareTip = venues.length > 0 && venues[0].tip
-        ? `${venues[0].name}: "${venues[0].tip}"`
+      const foursquareTip = venues.length > 0
+        ? venues.slice(0, 5).map(v => {
+            const area = v.area ? `, ${v.area}` : '';
+            const tastes = v.tastes?.length ? ` [${v.tastes.slice(0,2).join(', ')}]` : '';
+            return `- ${v.name} (${v.category}${area})${tastes}`;
+          }).join('\n')
         : null;
+      const venuesJson = JSON.stringify(venues);
       const amadeusScore = await fetchAmadeusScore(dest.lat, dest.lng);
 
       await db.query(`
         INSERT INTO recommendations_cache
           (id, destination, country, continent, styles, budget_range,
            amadeus_score, trending_rank, foursquare_tip, top_places,
-           avg_nightly_rate, image_url, cached_at, expires_at)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NOW(),NOW() + INTERVAL '7 days')
+           avg_nightly_rate, image_url, venues_json, cached_at, expires_at)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,NOW(),NOW() + INTERVAL '7 days')
         ON CONFLICT (id) DO UPDATE SET
           amadeus_score    = EXCLUDED.amadeus_score,
           foursquare_tip   = EXCLUDED.foursquare_tip,
+          top_places       = EXCLUDED.top_places,
+          venues_json      = EXCLUDED.venues_json,
           avg_nightly_rate = EXCLUDED.avg_nightly_rate,
           cached_at        = NOW(),
           expires_at       = NOW() + INTERVAL '7 days'
@@ -62,6 +69,7 @@ exports.handler = async () => {
         dest.styles, dest.budget_range, amadeusScore, 0,
         foursquareTip, dest.top_places,
         BUDGET_AVG_RATES[dest.budget_range] || '$60-120', dest.image_url,
+        venuesJson,
       ]);
 
       updated++;

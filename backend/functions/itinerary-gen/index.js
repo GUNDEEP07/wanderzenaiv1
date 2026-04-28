@@ -186,7 +186,7 @@ Rules:
 - One completely free hidden gem per day
 - Specific place names, not generic descriptions
 - Costs in ${currency} (${currencySymbol})
-${fsTips ? `\nVerified local spots from Foursquare — reference these where relevant:\n${fsTips}` : ''}
+${fsTips ? `\n\nReal verified venues — use these specific names:\n${fsTips}\nFor each venue mentioned add: [View on map](https://maps.google.com/?q=VENUE+NAME+DESTINATION)` : ''}
 
 Return ONLY a JSON object with a "days" array containing ${dayNumbers.length} day object(s):
 {
