@@ -1,11 +1,14 @@
 // src/api/itinerary.js
 // All API calls related to itinerary generation.
+// Import API_URL from env — never hardcode.
 
 const API_URL = import.meta.env.VITE_API_URL;
 
 /**
  * Fetch a lightweight day-outline preview from Claude.
- * Returns in ~4 seconds. No DB write, no PDF, no email.
+ * No DB write, no PDF, no email. Returns in ~4 seconds.
+ * @param {Object} formData
+ * @returns {Promise<{days: Array<{day: number, theme: string, vibe: string}>}>}
  */
 export async function fetchPreview(formData) {
   const res = await fetch(`${API_URL}/preview`, {
@@ -22,14 +25,14 @@ export async function fetchPreview(formData) {
     }),
   });
   if (!res.ok) throw new Error(`Preview failed: ${res.status}`);
-  const json = await res.json();
-  // Lambda ok() wraps responses as { success: true, data: { ... } }
-  return json.data || json;
+  return res.json();
 }
 
 /**
  * Submit the full itinerary request.
- * Returns { status, data } — caller checks status for 402.
+ * Triggers itinerary-gen Lambda async. Returns submissionId immediately.
+ * @param {Object} formData
+ * @returns {Promise<{success: boolean, data: {submissionId: string}}>}
  */
 export async function submitItinerary(formData) {
   const res = await fetch(`${API_URL}/submit`, {
