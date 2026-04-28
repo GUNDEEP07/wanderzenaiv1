@@ -454,9 +454,6 @@ export default function PlanTrip() {
             <StepReview
               form={form}
               set={set}
-              fetchPreview={loadPreview}
-              preview={preview}
-              previewLoading={previewLoading}
               onBack={back}
               onSubmit={handleSubmit}
               submitting={submitting}
