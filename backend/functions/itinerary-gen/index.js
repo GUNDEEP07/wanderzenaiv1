@@ -132,7 +132,12 @@ ${userMustDos ? `Must include: ${userMustDos}` : ''}
 ${userAge ? `Age: ${userAge}` : ''}
 ${userLocation ? `From: ${userLocation}` : ''}
 Language: Write ENTIRELY in ${language || 'English'}.
-${fsTips ? `\n\nReal local spots verified by locals (use these to inspire hidden gem recommendations):\n${fsTips}` : ''}
+${fsTips ? `
+
+Real verified venues in ${destination} — reference these specifically by name and include their map links:
+${fsTips}
+
+For each venue mentioned: include the venue name exactly as given, and add the Google Maps link as [View on map](url) after the activity description.` : ''}
 
 Return ONLY this JSON (no extra text):
 ${META_SCHEMA}`;
