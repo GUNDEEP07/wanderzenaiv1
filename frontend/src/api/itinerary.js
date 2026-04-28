@@ -25,7 +25,10 @@ export async function fetchPreview(formData) {
     }),
   });
   if (!res.ok) throw new Error(`Preview failed: ${res.status}`);
-  return res.json();
+  const json = await res.json();
+  // The Lambda ok() helper wraps responses as { success, data: { ... } }
+  // Unwrap to return { days: [...] } directly
+  return json.data || json;
 }
 
 /**
