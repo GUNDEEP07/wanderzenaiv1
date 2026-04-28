@@ -1,6 +1,8 @@
 'use strict';
 
 const { Pool } = require('pg');
+const { searchVenues } = require('./venue-enrichment/foursquare');
+const { formatVenueForPrompt } = require('./venue-enrichment/venue-model');
 
 // ─── Database connection pool ────────────────────────────────────────────────
 let pool;
@@ -64,72 +66,33 @@ const log = {
   error: (msg, meta = {}) => console.error(JSON.stringify({ level: 'ERROR', msg, ...meta, ts: new Date().toISOString() })),
 };
 
-// ─── Foursquare categories ────────────────────────────────────────────────────
-const FS_CATEGORIES = '13032,12061,16032,16020,12096,16009,13065';
+// ─── Foursquare venue enrichment ─────────────────────────────────────────────
+// Adapters live in ./venue-enrichment/ — see foursquare.js, venue-model.js
+// google-places.js is a stub ready for future activation.
 
-// ─── fetchFoursquareTips — used by itinerary-gen (prompt enrichment) ──────────
-// Single source of truth — itinerary-gen imports this instead of defining locally
+/**
+ * Fetch real venue names near a destination for Claude prompt injection.
+ * Returns a formatted string of venues or null if unavailable.
+ * Used by: itinerary-gen Lambda
+ *
+ * @param {String} destination — e.g. "Ubud, Bali"
+ * @returns {Promise<String|null>}
+ */
 const fetchFoursquareTips = async (destination) => {
-  const key = process.env.FOURSQUARE_API_KEY;
-  if (!key) return null;
-  try {
-    const geoRes = await fetch(
-      `https://api.foursquare.com/v3/places/search?query=${encodeURIComponent(destination)}&limit=1`,
-      { headers: { Authorization: key, Accept: 'application/json' } }
-    );
-    const geoData = await geoRes.json();
-    if (!geoData.results?.length) return null;
-    const { lat, lng } = geoData.results[0].geocodes.main;
-
-    const spotsRes = await fetch(
-      `https://api.foursquare.com/v3/places/search?ll=${lat},${lng}&categories=${FS_CATEGORIES}&limit=15&sort=POPULARITY&fields=name,location,tips,categories,description`,
-      { headers: { Authorization: key, Accept: 'application/json' } }
-    );
-    const spotsData = await spotsRes.json();
-    if (!spotsData.results?.length) return null;
-
-    const gems = spotsData.results
-      .filter(p => p.tips?.length || p.description)
-      .slice(0, 10)
-      .map(p => ({
-        name: p.name,
-        cat: p.categories?.[0]?.name || 'Local spot',
-        tip: p.tips?.[0]?.text || p.description || '',
-        area: p.location?.neighborhood || p.location?.locality || '',
-      }))
-      .filter(p => p.tip.length > 20);
-
-    if (!gems.length) return null;
-    return gems.map(g => `- ${g.name} (${g.cat}${g.area ? `, ${g.area}` : ''}): "${g.tip}"`).join('\n');
-  } catch { return null; }
+  const venues = await searchVenues(destination, { limit: 15 });
+  if (!venues.length) return null;
+  return venues.slice(0, 10).map(formatVenueForPrompt).join('\n');
 };
 
-// ─── fetchFoursquareVenues — used by weekly-cache Lambda ─────────────────────
-// Returns structured array for recommendations_cache population
+/**
+ * Fetch structured venue array for recommendations_cache population.
+ * Used by: weekly-cache Lambda
+ *
+ * @param {String} destination — e.g. "Ubud, Bali"
+ * @returns {Promise<Venue[]>}
+ */
 const fetchFoursquareVenues = async (destination) => {
-  const key = process.env.FOURSQUARE_API_KEY;
-  if (!key) return [];
-  try {
-    const geoRes = await fetch(
-      `https://api.foursquare.com/v3/places/search?query=${encodeURIComponent(destination)}&limit=1`,
-      { headers: { Authorization: key, Accept: 'application/json' } }
-    );
-    const geoData = await geoRes.json();
-    if (!geoData.results?.length) return [];
-    const { lat, lng } = geoData.results[0].geocodes.main;
-
-    const spotsRes = await fetch(
-      `https://api.foursquare.com/v3/places/search?ll=${lat},${lng}&categories=${FS_CATEGORIES}&limit=10&sort=POPULARITY&fields=name,location,tips,categories,rating`,
-      { headers: { Authorization: key, Accept: 'application/json' } }
-    );
-    const data = await spotsRes.json();
-    return (data.results || []).slice(0, 5).map(p => ({
-      name: p.name,
-      category: p.categories?.[0]?.name || '',
-      tip: p.tips?.[0]?.text || '',
-      rating: p.rating || null,
-    }));
-  } catch { return []; }
+  return searchVenues(destination, { limit: 10 });
 };
 
 // ─── OpenTripMap — quality scoring (replaces Amadeus POI API) ────────────────
