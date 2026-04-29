@@ -9,65 +9,63 @@ const { getDB, getCurrencySymbol, log } = require('/opt/nodejs/index');
 const s3 = new S3Client({ region: process.env.AWS_REGION || 'ap-southeast-2' });
 const lambda = new LambdaClient({ region: process.env.AWS_REGION || 'ap-southeast-2' });
 
-// ─── Text sanitisation ────────────────────────────────────────────────────────
-// Runs on every text field before rendering in the PDF.
-// 1. Converts [text](url) markdown links → proper HTML anchors
-// 2. Decodes URL-encoded characters in display text (not in href)
-// 3. Escapes any remaining HTML special chars to prevent injection
+// ─── Text helpers ─────────────────────────────────────────────────────────────
 
 const escapeHtml = (str) =>
-  String(str)
+  String(str || '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 
+// Convert [text](url) markdown → proper HTML anchor tags
+// Also strips leftover broken URL fragments that Claude sometimes emits
 const sanitize = (text) => {
   if (!text) return '';
-  // Convert markdown links → HTML anchors with decoded display text
-  // Regex handles URLs with encoded chars (%XX) and nested parentheses
-  const withLinks = String(text).replace(
-    /\[([^\]]+)\]\((https?:[\/\/][^\s\)]*(?:\([^\)]*\)[^\s\)]*)*)\)/g,
+  let result = String(text);
+  // Replace well-formed markdown links
+  result = result.replace(
+    /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,
     (_, label, url) => {
-      const displayText = (() => { try { return decodeURIComponent(label); } catch { return label; } })();
-      const safeUrl = url.replace(/"/g, '%22');
-      return `<a href="${safeUrl}" style="color:var(--teal);text-decoration:none;font-weight:600">${escapeHtml(displayText)}</a>`;
+      let display = label;
+      try { display = decodeURIComponent(label); } catch (_) {}
+      return `<a href="${url.replace(/"/g, '%22')}" style="color:var(--teal);text-decoration:none;font-weight:600">${escapeHtml(display)}</a>`;
     }
   );
-  // Remove any leftover broken markdown fragments like: )text or map%2C...JP)
-  const cleaned = withLinks.replace(/\)%[0-9A-Fa-f]{2}[^\s<]*/g, '').replace(/map%[0-9A-Fa-f][\w%]+\)/g, '');
-  return cleaned;
+  // Strip leftover broken URL fragments like: )%2C%20JP) or map%2C...JP)
+  result = result.replace(/\)%[0-9A-Fa-f]{2}[\w%.,()-]*/g, '');
+  result = result.replace(/\bmap%[0-9A-Fa-f][\w%]*\b/g, '');
+  return result;
 };
 
-// ─── Social media link builder ────────────────────────────────────────────────
-const buildSocialLinks = (social) => {
+// Build Google Maps search URL from venue name + location
+const mapsUrl = (name, area, country) =>
+  `https://maps.google.com/?q=${encodeURIComponent([name, area, country].filter(Boolean).join(', '))}`;
+
+// ─── Social media links ───────────────────────────────────────────────────────
+
+const socialLinks = (social) => {
   if (!social) return '';
   const links = [];
-  if (social.instagram) links.push(`<a href="https://instagram.com/${social.instagram}" style="color:var(--teal);text-decoration:none;font-size:8px;font-weight:600">📷 @${social.instagram}</a>`);
+  if (social.instagram) links.push(`<a href="https://instagram.com/${social.instagram}" style="color:var(--teal);text-decoration:none;font-size:8px;font-weight:600">📷 @${escapeHtml(social.instagram)}</a>`);
+  if (social.twitter) links.push(`<a href="https://twitter.com/${social.twitter}" style="color:var(--teal);text-decoration:none;font-size:8px;font-weight:600">𝕏 @${escapeHtml(social.twitter)}</a>`);
   if (social.facebook_id) links.push(`<a href="https://facebook.com/${social.facebook_id}" style="color:var(--teal);text-decoration:none;font-size:8px;font-weight:600">🌐 Facebook</a>`);
-  if (social.twitter) links.push(`<a href="https://twitter.com/${social.twitter}" style="color:var(--teal);text-decoration:none;font-size:8px;font-weight:600">𝕏 @${social.twitter}</a>`);
   return links.length ? `<div style="display:flex;gap:8px;margin-top:3px;flex-wrap:wrap">${links.join('')}</div>` : '';
 };
 
-// ─── Venue card builder ───────────────────────────────────────────────────────
-const buildVenueCard = (venue) => {
+// ─── Venue card ───────────────────────────────────────────────────────────────
+// Renders a structured card for a verified Foursquare venue
+// Shows: name, category, address, map link, Foursquare link, phone, website, social
+
+const venueCard = (venue) => {
   if (!venue || !venue.name) return '';
-  // Prefer verified Foursquare link over constructed Google Maps URL
-  const mapsUrl = venue.mapsUrl || `https://maps.google.com/?q=${encodeURIComponent(venue.name)}`;
-  const foursquareUrl = venue.foursquareUrl || null;
-  const socialLinks = buildSocialLinks(venue.social || venue.social_media);
-  const website = venue.website
-    ? `<a href="${venue.website}" style="color:var(--teal);text-decoration:none;font-size:8px;font-weight:600">🌐 Website</a>`
-    : '';
-  const phone = venue.tel
-    ? `<span style="color:rgba(255,255,255,0.4);font-size:8px">📞 ${venue.tel}</span>`
+  const mapLink = venue.mapsUrl || mapsUrl(venue.name, venue.area, venue.country);
+  const fsqLink = venue.foursquareUrl || null;
+  const verified = venue.fsqPlaceId
+    ? `<span style="font-size:7px;padding:1px 6px;background:rgba(0,212,170,0.1);border:1px solid rgba(0,212,170,0.3);border-radius:10px;color:var(--teal);font-weight:700">✓ Verified</span>`
     : '';
   const category = venue.category
-    ? `<span style="font-size:7px;padding:1px 6px;border:1px solid rgba(0,212,170,0.3);border-radius:10px;color:var(--teal);font-weight:600">${venue.category}</span>`
-    : '';
-  // Verified badge shown when we have a Foursquare place ID
-  const verifiedBadge = venue.fsqPlaceId
-    ? `<span style="font-size:7px;padding:1px 6px;background:rgba(0,212,170,0.1);border:1px solid rgba(0,212,170,0.3);border-radius:10px;color:var(--teal);font-weight:700">✓ Verified</span>`
+    ? `<span style="font-size:7px;padding:1px 6px;border:1px solid rgba(0,212,170,0.3);border-radius:10px;color:var(--teal);font-weight:600">${escapeHtml(venue.category)}</span>`
     : '';
 
   return `
@@ -75,22 +73,22 @@ const buildVenueCard = (venue) => {
     <div style="flex:1">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;flex-wrap:wrap">
         <span style="font-size:10px;font-weight:700;color:#fff">${escapeHtml(venue.name)}</span>
-        ${category}
+        ${category}${verified}
       </div>
       ${venue.address ? `<div style="font-size:8px;color:rgba(255,255,255,0.4);margin-bottom:3px">${escapeHtml(venue.address)}</div>` : ''}
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <a href="${mapsUrl}" style="color:var(--teal);text-decoration:none;font-size:8px;font-weight:600">📍 Google Maps</a>
-        ${foursquareUrl ? `<a href="${foursquareUrl}" style="color:var(--teal);text-decoration:none;font-size:8px;font-weight:600;margin-left:8px">🔍 Foursquare</a>` : ''}
-        ${verifiedBadge}
-        ${phone}
-        ${website}
+        <a href="${mapLink}" style="color:var(--teal);text-decoration:none;font-size:8px;font-weight:600">📍 Google Maps</a>
+        ${fsqLink ? `<a href="${fsqLink}" style="color:var(--teal);text-decoration:none;font-size:8px;font-weight:600">🔍 Foursquare</a>` : ''}
+        ${venue.tel ? `<span style="color:rgba(255,255,255,0.4);font-size:8px">📞 ${escapeHtml(venue.tel)}</span>` : ''}
+        ${venue.website ? `<a href="${venue.website}" style="color:var(--teal);text-decoration:none;font-size:8px;font-weight:600">🌐 Website</a>` : ''}
       </div>
-      ${socialLinks}
+      ${socialLinks(venue.social || venue.social_media)}
     </div>
   </div>`;
 };
 
 // ─── HTML template ────────────────────────────────────────────────────────────
+
 const buildHTML = (itinerary, submission, currencySymbol, heroImageUrl = null) => `
 <!DOCTYPE html>
 <html lang="en">
@@ -112,25 +110,20 @@ const buildHTML = (itinerary, submission, currencySymbol, heroImageUrl = null) =
   --w90:     rgba(255,255,255,0.9);
   --w60:     rgba(255,255,255,0.6);
   --w30:     rgba(255,255,255,0.3);
-  --w10:     rgba(255,255,255,0.08);
   --border:  rgba(255,255,255,0.08);
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
+* { margin:0; padding:0; box-sizing:border-box; }
 
 body {
-  font-family: 'Plus Jakarta Sans', 'Noto Sans', 'Noto Sans JP', 'Noto Sans Devanagari', 'Noto Sans Arabic', sans-serif;
-  background: var(--navy);
-  color: var(--white);
-  font-size: 11px;
-  line-height: 1.7;
-  -webkit-font-smoothing: antialiased;
+  font-family: 'Plus Jakarta Sans','Noto Sans','Noto Sans JP','Noto Sans Devanagari','Noto Sans Arabic',sans-serif;
+  background:var(--navy); color:var(--white); font-size:11px; line-height:1.7;
+  -webkit-font-smoothing:antialiased;
 }
 
-.page { width: 210mm; min-height: 297mm; padding: 14mm 16mm; background: var(--navy); }
+.page { width:210mm; min-height:297mm; padding:14mm 16mm; background:var(--navy); }
 
-/* ── Header ── */
-.header { display:flex; align-items:flex-start; justify-content:space-between; padding-bottom:8mm; border-bottom:1px solid var(--border); margin-bottom:8mm; }
+.header { display:flex; align-items:flex-start; justify-content:space-between; padding-bottom:6mm; border-bottom:1px solid var(--border); margin-bottom:6mm; }
 .logo-area { display:flex; align-items:center; gap:8px; }
 .logo-mark { width:32px; height:32px; border-radius:8px; background:var(--teal); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; color:var(--navy); flex-shrink:0; }
 .logo-text { font-size:16px; font-weight:700; color:var(--white); letter-spacing:-0.02em; }
@@ -140,34 +133,34 @@ body {
 .trip-title { font-family:'Fraunces',serif; font-size:18px; font-weight:700; color:var(--white); line-height:1.2; letter-spacing:-0.02em; max-width:120mm; text-align:right; }
 .trip-summary { font-size:9px; color:var(--w60); margin-top:3px; max-width:120mm; text-align:right; line-height:1.6; font-style:italic; }
 
-/* ── Meta bar ── */
-.meta-bar { display:flex; gap:0; background:var(--navy-3); border:1px solid var(--border); border-radius:10px; margin-bottom:6mm; overflow:hidden; }
+.hero { width:100%; height:52mm; border-radius:10px; overflow:hidden; margin-bottom:6mm; position:relative; }
+.hero img { width:100%; height:100%; object-fit:cover; display:block; }
+.hero-overlay { position:absolute; bottom:0; left:0; right:0; height:20mm; background:linear-gradient(transparent,rgba(10,15,30,0.85)); }
+
+.meta-bar { display:flex; background:var(--navy-3); border:1px solid var(--border); border-radius:10px; margin-bottom:6mm; overflow:hidden; }
 .meta-item { flex:1; padding:3.5mm 4mm; text-align:center; border-right:1px solid var(--border); }
 .meta-item:last-child { border-right:none; }
 .meta-label { font-size:7px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:var(--teal); margin-bottom:2px; }
 .meta-value { font-family:'Fraunces',serif; font-size:13px; font-weight:700; color:var(--white); letter-spacing:-0.02em; }
 
-/* ── Accommodation box ── */
 .accom-box { background:var(--teal-bg); border:1px solid var(--teal-br); border-radius:10px; padding:4mm 5mm; margin-bottom:5mm; }
 .accom-header { display:flex; align-items:center; gap:6px; margin-bottom:2mm; }
-.accom-dot { width:6px; height:6px; border-radius:50%; background:var(--teal); flex-shrink:0; }
+.accom-dot { width:6px; height:6px; border-radius:50%; background:var(--teal); }
 .accom-title { font-size:7px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:var(--teal); }
 .accom-rec { font-size:10px; font-weight:700; color:var(--white); margin-bottom:1.5mm; }
 .accom-why { font-size:9px; color:var(--w60); font-style:italic; line-height:1.6; }
-.search-pills-label { font-size:7px; color:var(--w30); letter-spacing:0.1em; text-transform:uppercase; margin-top:3mm; margin-bottom:2mm; font-weight:600; }
+.search-label { font-size:7px; color:var(--w30); letter-spacing:0.1em; text-transform:uppercase; margin-top:3mm; margin-bottom:2mm; font-weight:600; }
 .search-pills { display:flex; flex-wrap:wrap; gap:4px; }
 .search-pill { font-size:8px; padding:2px 8px; border:1px solid var(--teal-br); border-radius:100px; color:var(--teal); background:rgba(0,212,170,0.05); font-weight:600; }
 
-/* ── Day card ── */
 .day-card { background:var(--navy-2); border:1px solid var(--border); border-radius:10px; margin-bottom:4mm; overflow:hidden; page-break-inside:avoid; }
 .day-header { background:var(--navy-3); padding:3.5mm 5mm; display:flex; align-items:center; gap:4mm; border-bottom:1px solid var(--border); }
 .day-num { font-family:'Fraunces',serif; font-size:26px; font-weight:700; color:var(--teal); line-height:1; letter-spacing:-0.03em; flex-shrink:0; }
 .day-info { flex:1; }
 .day-theme { font-size:12px; font-weight:700; color:var(--white); letter-spacing:-0.01em; line-height:1.2; }
-.day-budget { font-size:8px; color:var(--w30); margin-top:2px; font-weight:500; }
+.day-budget { font-size:8px; color:var(--w30); margin-top:2px; }
 .day-body { padding:4mm 5mm; }
 
-/* ── Activity ── */
 .activity { padding-bottom:3.5mm; margin-bottom:3.5mm; border-bottom:1px solid var(--border); }
 .activity:last-of-type { border-bottom:none; margin-bottom:0; padding-bottom:0; }
 .activity-header { display:flex; align-items:center; gap:3mm; margin-bottom:1.5mm; }
@@ -181,22 +174,19 @@ body {
 .activity-why { font-size:9.5px; color:var(--w60); line-height:1.6; margin-bottom:1.5mm; }
 .insider-tip { background:rgba(255,217,61,0.06); border-left:2px solid var(--gold); padding:2mm 3mm; font-size:8.5px; color:rgba(255,217,61,0.8); font-style:italic; line-height:1.5; border-radius:0 4px 4px 0; }
 
-/* ── Local eats ── */
 .local-eats { background:rgba(255,107,107,0.06); border:1px solid rgba(255,107,107,0.15); border-radius:8px; padding:3mm 4mm; margin-top:3mm; display:flex; gap:3mm; align-items:flex-start; }
 .eats-icon { width:24px; height:24px; border-radius:6px; background:rgba(255,107,107,0.15); display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; }
 .eats-name { font-size:10px; font-weight:700; color:var(--white); margin-bottom:1px; }
 .eats-dish { font-size:8.5px; color:rgba(255,107,107,0.8); margin-bottom:1px; }
 .eats-vibe { font-size:8px; color:var(--w60); font-style:italic; }
 
-/* ── Hidden gem ── */
-.hidden-gem { background:linear-gradient(135deg,rgba(0,212,170,0.1) 0%,rgba(0,212,170,0.04) 100%); border:1px solid var(--teal-br); border-radius:8px; padding:3mm 4mm; margin-top:3mm; }
+.hidden-gem { background:linear-gradient(135deg,rgba(0,212,170,0.1),rgba(0,212,170,0.04)); border:1px solid var(--teal-br); border-radius:8px; padding:3mm 4mm; margin-top:3mm; }
 .gem-label { font-size:7px; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; color:var(--teal); margin-bottom:1.5mm; display:flex; align-items:center; gap:5px; }
 .gem-label::before { content:''; display:inline-block; width:12px; height:1px; background:var(--teal); }
 .gem-text { font-size:9.5px; color:var(--w90); line-height:1.6; font-style:italic; }
 
-/* ── Tips / Avoid ── */
 .tips-grid { display:grid; grid-template-columns:1fr 1fr; gap:4mm; margin-top:5mm; align-items:start; }
-.tips-section { background:var(--navy-2); border:1px solid var(--border); border-radius:10px; padding:4mm 5mm; page-break-inside:avoid; }
+.tips-section { background:var(--navy-2); border:1px solid var(--border); border-radius:10px; padding:4mm 5mm; break-inside:avoid; }
 .section-heading { font-size:7px; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; color:var(--teal); margin-bottom:3mm; display:flex; align-items:center; gap:8px; }
 .section-heading::after { content:''; flex:1; height:1px; background:var(--border); }
 .tip-item { display:flex; gap:3mm; margin-bottom:2mm; font-size:9.5px; line-height:1.6; color:var(--w60); }
@@ -204,7 +194,6 @@ body {
 .avoid-item { display:flex; gap:3mm; margin-bottom:2mm; font-size:9.5px; line-height:1.6; color:rgba(255,107,107,0.7); }
 .avoid-x { color:var(--coral); flex-shrink:0; font-weight:700; }
 
-/* ── Footer ── */
 .pdf-footer { margin-top:6mm; padding-top:4mm; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
 .footer-left { display:flex; align-items:center; gap:6px; }
 .footer-logo-mark { width:20px; height:20px; border-radius:5px; background:var(--teal); display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:800; color:var(--navy); }
@@ -227,10 +216,17 @@ body {
       </div>
     </div>
     <div class="header-right">
-      <div class="trip-title">${escapeHtml(itinerary.title || `${submission.destination} Travel Plan`)}</div>
+      <div class="trip-title">${escapeHtml(itinerary.title || submission.destination + ' Travel Plan')}</div>
       <div class="trip-summary">${sanitize(itinerary.summary || 'A personalised slow travel itinerary crafted just for you.')}</div>
     </div>
   </div>
+
+  <!-- Hero image -->
+  ${heroImageUrl ? `
+  <div class="hero">
+    <img src="${heroImageUrl}" alt="${escapeHtml(submission.destination)}" />
+    <div class="hero-overlay"></div>
+  </div>` : ''}
 
   <!-- Meta bar -->
   <div class="meta-bar">
@@ -244,7 +240,7 @@ body {
     </div>
     <div class="meta-item">
       <div class="meta-label">Budget</div>
-      <div class="meta-value">${currencySymbol}${submission.budget}</div>
+      <div class="meta-value">${currencySymbol}${Number(submission.budget).toLocaleString()}</div>
     </div>
     <div class="meta-item">
       <div class="meta-label">Traveller</div>
@@ -261,13 +257,6 @@ body {
     </div>` : ''}
   </div>
 
-  <!-- Hero image (if available) -->
-  ${heroImageUrl ? `
-  <div style="width:100%;height:55mm;border-radius:10px;overflow:hidden;margin-bottom:6mm;position:relative">
-    <img src="${heroImageUrl}" style="width:100%;height:100%;object-fit:cover;display:block" />
-    <div style="position:absolute;bottom:0;left:0;right:0;height:20mm;background:linear-gradient(transparent,rgba(10,15,30,0.8))"></div>
-  </div>` : ''}
-
   <!-- Accommodation -->
   ${itinerary.accommodation ? `
   <div class="accom-box">
@@ -278,7 +267,7 @@ body {
     <div class="accom-rec">${escapeHtml(itinerary.accommodation.recommendation || '')}</div>
     <div class="accom-why">${sanitize(itinerary.accommodation.why || '')}</div>
     ${itinerary.accommodation.searchTerms?.length ? `
-    <div class="search-pills-label">Search for</div>
+    <div class="search-label">Search for</div>
     <div class="search-pills">
       ${itinerary.accommodation.searchTerms.map(t => `<span class="search-pill">${escapeHtml(t)}</span>`).join('')}
     </div>` : ''}
@@ -290,7 +279,7 @@ body {
     <div class="day-header">
       <div class="day-num">${String(day.dayNumber).padStart(2, '0')}</div>
       <div class="day-info">
-        <div class="day-theme">${escapeHtml(day.theme || `Day ${day.dayNumber}`)}</div>
+        <div class="day-theme">${escapeHtml(day.theme || 'Day ' + day.dayNumber)}</div>
         <div class="day-budget">Daily budget: ${currencySymbol}${day.dailyCost || 0}</div>
       </div>
     </div>
@@ -300,19 +289,17 @@ body {
         const act = day[period];
         if (!act) return '';
         const periodLabel = period.replace('Activity', '').toUpperCase();
-        // Build Google Maps URL from location string if no explicit mapsUrl
-        const mapsUrl = act.mapsUrl ||
-          `https://maps.google.com/?q=${encodeURIComponent(`${act.location || act.activity}, ${submission.destination}`)}`;
+        const actMapUrl = mapsUrl(act.location || act.activity, submission.destination, '');
         return `
         <div class="activity">
           <div class="activity-header">
             <span class="activity-time">${escapeHtml(act.time || '')}</span>
             <span class="activity-period">${periodLabel}</span>
-            <span class="activity-cost ${act.isFree ? 'free' : ''}">${act.isFree ? 'Free' : `${currencySymbol}${act.cost || 0}`}</span>
+            <span class="activity-cost ${act.isFree ? 'free' : ''}">${act.isFree ? 'Free' : currencySymbol + (act.cost || 0)}</span>
           </div>
           <div class="activity-name">${escapeHtml(act.activity || '')}</div>
           <div class="activity-location">${escapeHtml(act.location || '')}</div>
-          <a href="${mapsUrl}" class="activity-map">📍 View on map</a>
+          <a href="${actMapUrl}" class="activity-map">📍 View on map</a>
           <div class="activity-why">${sanitize(act.why || '')}</div>
           ${act.insiderTip ? `<div class="insider-tip">Insider tip: ${sanitize(act.insiderTip)}</div>` : ''}
         </div>`;
@@ -321,11 +308,11 @@ body {
       ${day.localEats ? `
       <div class="local-eats">
         <div class="eats-icon">🍜</div>
-        <div>
+        <div style="flex:1">
           <div class="eats-name">${escapeHtml(day.localEats.name || '')}</div>
           <div class="eats-dish">Order: ${escapeHtml(day.localEats.dish || '')} · ${currencySymbol}${day.localEats.cost || 0}</div>
           <div class="eats-vibe">${escapeHtml(day.localEats.vibe || '')}</div>
-          ${day.localEats.venue ? buildVenueCard(day.localEats.venue) : ''}
+          ${day.localEats.venue ? venueCard(day.localEats.venue) : ''}
         </div>
       </div>` : ''}
 
@@ -336,10 +323,9 @@ body {
       </div>` : ''}
 
     </div>
-  </div>
-  `).join('')}
+  </div>`).join('')}
 
-  <!-- Practical tips + Tourist traps -->
+  <!-- Tips + Avoid -->
   <div class="tips-grid">
     ${itinerary.practicalTips?.length ? `
     <div class="tips-section">
@@ -375,6 +361,7 @@ body {
 </html>`;
 
 // ─── Lambda handler ───────────────────────────────────────────────────────────
+
 exports.handler = async (event) => {
   const { itineraryId, submissionId, email, isPaid, submission } = event;
   log.info('PDF build started', { itineraryId, email });
@@ -387,12 +374,23 @@ exports.handler = async (event) => {
       `SELECT itinerary_data, currency FROM itineraries WHERE id = $1`,
       [itineraryId]
     );
-
     if (!result.rows.length) throw new Error('Itinerary not found');
 
     const itinerary = result.rows[0].itinerary_data;
     const currency = result.rows[0].currency;
     const currencySymbol = getCurrencySymbol(currency);
+
+    // Fetch hero image from recommendations_cache
+    let heroImageUrl = null;
+    try {
+      const heroResult = await db.query(
+        `SELECT image_url FROM recommendations_cache WHERE LOWER(destination) = LOWER($1) LIMIT 1`,
+        [submission.destination]
+      );
+      heroImageUrl = heroResult.rows[0]?.image_url || null;
+    } catch (e) {
+      log.warn('Hero image fetch failed', { destination: submission.destination });
+    }
 
     browser = await puppeteer.launch({
       args: chromium.args,
@@ -402,18 +400,6 @@ exports.handler = async (event) => {
     });
 
     const page = await browser.newPage();
-    // Fetch destination hero image from recommendations_cache
-    let heroImageUrl = null;
-    try {
-      const heroResult = await db.query(
-        `SELECT image_url FROM recommendations_cache WHERE LOWER(destination) = LOWER($1) LIMIT 1`,
-        [submission.destination]
-      );
-      heroImageUrl = heroResult.rows[0]?.image_url || null;
-    } catch (e) {
-      log.warn('Could not fetch hero image', { destination: submission.destination });
-    }
-
     const html = buildHTML(itinerary, submission, currencySymbol, heroImageUrl);
 
     await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 });
@@ -427,7 +413,7 @@ exports.handler = async (event) => {
     await browser.close();
     browser = null;
 
-    log.info('PDF generated', { itineraryId, size: pdfBuffer.length });
+    log.info('PDF generated', { itineraryId, bytes: pdfBuffer.length });
 
     const s3Key = `itineraries/${email}/${itineraryId}.pdf`;
 
@@ -450,7 +436,7 @@ exports.handler = async (event) => {
       [submissionId]
     );
 
-    log.info('PDF uploaded to S3', { itineraryId, s3Key });
+    log.info('PDF uploaded', { itineraryId, s3Key });
 
     await lambda.send(new InvokeCommand({
       FunctionName: `wanderzenai-email-sender-${process.env.STAGE}`,
