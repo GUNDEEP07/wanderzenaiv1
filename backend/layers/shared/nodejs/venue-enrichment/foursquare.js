@@ -5,7 +5,7 @@ const { buildVenue } = require('./venue-model');
 /**
  * Foursquare Places API adapter.
  * Endpoint: https://api.foursquare.com/v3/places/search
- * Auth: API key via Authorization header (no Bearer prefix)
+ * Auth: Bearer token via Authorization header + X-Places-Api-Version header
  *
  * Free tier: 500 calls/month after June 1 2026
  * Free fields: name, location, categories, tastes
@@ -35,7 +35,7 @@ const FSQ_CATEGORY_IDS = [
 
 /**
  * Build request headers for Foursquare V3 API.
- * Note: no Bearer prefix — plain API key in Authorization header.
+ * Bearer prefix required for places-api.foursquare.com.
  */
 const buildHeaders = (apiKey) => ({
   'Authorization': `Bearer ${apiKey}`,
