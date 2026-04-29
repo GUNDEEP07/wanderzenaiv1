@@ -25,16 +25,18 @@ const escapeHtml = (str) =>
 const sanitize = (text) => {
   if (!text) return '';
   // Convert markdown links → HTML anchors with decoded display text
+  // Regex handles URLs with encoded chars (%XX) and nested parentheses
   const withLinks = String(text).replace(
-    /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,
+    /\[([^\]]+)\]\((https?:[\/\/][^\s\)]*(?:\([^\)]*\)[^\s\)]*)*)\)/g,
     (_, label, url) => {
       const displayText = (() => { try { return decodeURIComponent(label); } catch { return label; } })();
       const safeUrl = url.replace(/"/g, '%22');
       return `<a href="${safeUrl}" style="color:var(--teal);text-decoration:none;font-weight:600">${escapeHtml(displayText)}</a>`;
     }
   );
-  // Escape remaining HTML (but not inside the anchor tags we just created)
-  return withLinks;
+  // Remove any leftover broken markdown fragments like: )text or map%2C...JP)
+  const cleaned = withLinks.replace(/\)%[0-9A-Fa-f]{2}[^\s<]*/g, '').replace(/map%[0-9A-Fa-f][\w%]+\)/g, '');
+  return cleaned;
 };
 
 // ─── Social media link builder ────────────────────────────────────────────────
@@ -50,8 +52,10 @@ const buildSocialLinks = (social) => {
 // ─── Venue card builder ───────────────────────────────────────────────────────
 const buildVenueCard = (venue) => {
   if (!venue || !venue.name) return '';
+  // Prefer verified Foursquare link over constructed Google Maps URL
   const mapsUrl = venue.mapsUrl || `https://maps.google.com/?q=${encodeURIComponent(venue.name)}`;
-  const socialLinks = buildSocialLinks(venue.social_media);
+  const foursquareUrl = venue.foursquareUrl || null;
+  const socialLinks = buildSocialLinks(venue.social || venue.social_media);
   const website = venue.website
     ? `<a href="${venue.website}" style="color:var(--teal);text-decoration:none;font-size:8px;font-weight:600">🌐 Website</a>`
     : '';
@@ -60,6 +64,10 @@ const buildVenueCard = (venue) => {
     : '';
   const category = venue.category
     ? `<span style="font-size:7px;padding:1px 6px;border:1px solid rgba(0,212,170,0.3);border-radius:10px;color:var(--teal);font-weight:600">${venue.category}</span>`
+    : '';
+  // Verified badge shown when we have a Foursquare place ID
+  const verifiedBadge = venue.fsqPlaceId
+    ? `<span style="font-size:7px;padding:1px 6px;background:rgba(0,212,170,0.1);border:1px solid rgba(0,212,170,0.3);border-radius:10px;color:var(--teal);font-weight:700">✓ Verified</span>`
     : '';
 
   return `
@@ -71,7 +79,9 @@ const buildVenueCard = (venue) => {
       </div>
       ${venue.address ? `<div style="font-size:8px;color:rgba(255,255,255,0.4);margin-bottom:3px">${escapeHtml(venue.address)}</div>` : ''}
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <a href="${mapsUrl}" style="color:var(--teal);text-decoration:none;font-size:8px;font-weight:600">📍 View on map</a>
+        <a href="${mapsUrl}" style="color:var(--teal);text-decoration:none;font-size:8px;font-weight:600">📍 Google Maps</a>
+        ${foursquareUrl ? `<a href="${foursquareUrl}" style="color:var(--teal);text-decoration:none;font-size:8px;font-weight:600;margin-left:8px">🔍 Foursquare</a>` : ''}
+        ${verifiedBadge}
         ${phone}
         ${website}
       </div>
@@ -81,7 +91,7 @@ const buildVenueCard = (venue) => {
 };
 
 // ─── HTML template ────────────────────────────────────────────────────────────
-const buildHTML = (itinerary, submission, currencySymbol) => `
+const buildHTML = (itinerary, submission, currencySymbol, heroImageUrl = null) => `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -251,6 +261,13 @@ body {
     </div>` : ''}
   </div>
 
+  <!-- Hero image (if available) -->
+  ${heroImageUrl ? `
+  <div style="width:100%;height:55mm;border-radius:10px;overflow:hidden;margin-bottom:6mm;position:relative">
+    <img src="${heroImageUrl}" style="width:100%;height:100%;object-fit:cover;display:block" />
+    <div style="position:absolute;bottom:0;left:0;right:0;height:20mm;background:linear-gradient(transparent,rgba(10,15,30,0.8))"></div>
+  </div>` : ''}
+
   <!-- Accommodation -->
   ${itinerary.accommodation ? `
   <div class="accom-box">
@@ -385,7 +402,19 @@ exports.handler = async (event) => {
     });
 
     const page = await browser.newPage();
-    const html = buildHTML(itinerary, submission, currencySymbol);
+    // Fetch destination hero image from recommendations_cache
+    let heroImageUrl = null;
+    try {
+      const heroResult = await db.query(
+        `SELECT image_url FROM recommendations_cache WHERE LOWER(destination) = LOWER($1) LIMIT 1`,
+        [submission.destination]
+      );
+      heroImageUrl = heroResult.rows[0]?.image_url || null;
+    } catch (e) {
+      log.warn('Could not fetch hero image', { destination: submission.destination });
+    }
+
+    const html = buildHTML(itinerary, submission, currencySymbol, heroImageUrl);
 
     await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 });
 

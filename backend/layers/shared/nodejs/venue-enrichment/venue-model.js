@@ -26,6 +26,13 @@ const buildVenue = ({ name, category, address, area, country, tastes = [] }) => 
   mapsUrl:  buildMapsUrl(name, area, country),
   tastes:   [], // Foursquare Premium field — not available on free Pro tier
 
+  // ── Verified identifiers ──────────────────────────────────────────────────────
+  fsqPlaceId:    null,   // Foursquare Place ID — permanent identifier
+  foursquareUrl: null,   // https://foursquare.com/placemakers/review-place/{id}
+  tel:           null,   // Phone number
+  website:       null,   // Official website
+  social:        null,   // { instagram, facebook_id, twitter }
+
   // ── FUTURE — null until paid source added ──────────────────────────────────
   // Populate in the relevant adapter (google-places.js, foursquare-premium.js)
   // when the data source is available. Consumers check for null before rendering.

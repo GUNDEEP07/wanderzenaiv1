@@ -54,6 +54,13 @@ const toVenue = (fsqPlace) => buildVenue({
   area:     fsqPlace.location?.locality || fsqPlace.location?.region || '',
   country:  fsqPlace.location?.country || '',
   tastes:   [], // Premium field — not available on free tier
+}),
+  // Verified Foursquare identifiers — use for permanent deep links
+  fsqPlaceId:    fsqPlace.fsq_place_id || null,
+  foursquareUrl: fsqPlace.link ? `https://foursquare.com${fsqPlace.link}` : null,
+  tel:           fsqPlace.tel || null,
+  website:       fsqPlace.website || null,
+  social:        fsqPlace.social_media || null,
 });
 
 /**
@@ -78,7 +85,7 @@ const searchVenues = async (destination, { limit = 15 } = {}) => {
       near:       destination,
       limit:      String(Math.min(limit, 50)),
       sort:       'POPULARITY',
-      fields:     'name,location,categories,tel,website,social_media',
+      fields:     'name,location,categories,tel,website,social_media,link,fsq_place_id',
       fsq_category_ids: FSQ_CATEGORY_IDS,
     });
 
