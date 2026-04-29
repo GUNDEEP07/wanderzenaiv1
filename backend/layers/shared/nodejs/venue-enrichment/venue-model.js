@@ -24,7 +24,7 @@ const buildVenue = ({ name, category, address, area, country, tastes = [] }) => 
   area:     area || '',
   country:  country || '',
   mapsUrl:  buildMapsUrl(name, area, country),
-  tastes:   Array.isArray(tastes) ? tastes.slice(0, 5) : [],
+  tastes:   [], // Foursquare Premium field — not available on free Pro tier
 
   // ── FUTURE — null until paid source added ──────────────────────────────────
   // Populate in the relevant adapter (google-places.js, foursquare-premium.js)

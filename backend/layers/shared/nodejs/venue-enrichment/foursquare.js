@@ -53,7 +53,7 @@ const toVenue = (fsqPlace) => buildVenue({
   address:  fsqPlace.location?.formatted_address || fsqPlace.location?.address || '',
   area:     fsqPlace.location?.locality || fsqPlace.location?.region || '',
   country:  fsqPlace.location?.country || '',
-  tastes:   fsqPlace.tastes || [],
+  tastes:   [], // Premium field — not available on free tier
 });
 
 /**
@@ -78,7 +78,7 @@ const searchVenues = async (destination, { limit = 15 } = {}) => {
       near:       destination,
       limit:      String(Math.min(limit, 50)),
       sort:       'POPULARITY',
-      fields:     'name,location,categories,tastes',
+      fields:     'name,location,categories,tel,website,social_media',
       fsq_category_ids: FSQ_CATEGORY_IDS,
     });
 
