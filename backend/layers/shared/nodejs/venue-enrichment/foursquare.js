@@ -15,7 +15,7 @@ const { buildVenue } = require('./venue-model');
  * (personalization-apis-movement-sdk-categories.csv)
  */
 
-const FSQ_BASE_URL = 'https://api.foursquare.com/v3';
+const FSQ_BASE_URL = 'https://places-api.foursquare.com';
 
 // Category IDs — Foursquare V3 hex format (from official taxonomy CSV)
 const FSQ_CATEGORY_IDS = [
@@ -38,7 +38,8 @@ const FSQ_CATEGORY_IDS = [
  * Note: no Bearer prefix — plain API key in Authorization header.
  */
 const buildHeaders = (apiKey) => ({
-  'Authorization': apiKey,
+  'Authorization': `Bearer ${apiKey}`,
+  'X-Places-Api-Version': '2025-06-17',
   'Accept': 'application/json',
 });
 
@@ -78,7 +79,7 @@ const searchVenues = async (destination, { limit = 15 } = {}) => {
       limit:      String(Math.min(limit, 50)),
       sort:       'POPULARITY',
       fields:     'name,location,categories,tastes',
-      categories: FSQ_CATEGORY_IDS,
+      fsq_category_ids: FSQ_CATEGORY_IDS,
     });
 
     const res = await fetch(
