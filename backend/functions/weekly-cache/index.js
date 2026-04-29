@@ -73,7 +73,7 @@ exports.handler = async () => {
       ]);
 
       updated++;
-      await new Promise(r => setTimeout(r, 300)); // rate limit buffer
+      await new Promise(r => setTimeout(r, 3000)); // Foursquare rate limit — 3s between calls
     } catch (err) {
       failed++;
       log.error('Failed', { id: dest.id, error: err.message });
