@@ -4,20 +4,19 @@ const { buildVenue } = require('./venue-model');
 
 /**
  * Foursquare Places API adapter.
- * Endpoint: https://api.foursquare.com/v3/places/search
+ * Endpoint: https://places-api.foursquare.com/places/search
  * Auth: Bearer token via Authorization header + X-Places-Api-Version header
  *
- * Free tier: 500 calls/month after June 1 2026
- * Free fields: name, location, categories, tastes
- * Premium fields (NOT free — do not add): photos, tips, ratings
+ * Free Pro fields: name, location, categories, tel, website, social_media, link, fsq_place_id
+ * Premium fields (NOT free — do not add): photos, tips, ratings, tastes
  *
  * Category IDs sourced from official Foursquare taxonomy CSV
- * (personalization-apis-movement-sdk-categories.csv)
  */
 
 const FSQ_BASE_URL = 'https://places-api.foursquare.com';
+const FSQ_API_VERSION = '2025-06-17';
 
-// Category IDs — Foursquare V3 hex format (from official taxonomy CSV)
+// Category IDs — from official Foursquare taxonomy CSV (personalization-apis-movement-sdk-categories.csv)
 const FSQ_CATEGORY_IDS = [
   '63be6904847c3692a84b9bb6', // Cafe, Coffee, and Tea House
   '4bf58dd8d48988d1e0931735', // Coffee Shop
@@ -34,44 +33,49 @@ const FSQ_CATEGORY_IDS = [
 ].join(',');
 
 /**
- * Build request headers for Foursquare V3 API.
+ * Build request headers for Foursquare Places API.
  * Bearer prefix required for places-api.foursquare.com.
  */
 const buildHeaders = (apiKey) => ({
   'Authorization': `Bearer ${apiKey}`,
-  'X-Places-Api-Version': '2025-06-17',
+  'X-Places-Api-Version': FSQ_API_VERSION,
   'Accept': 'application/json',
 });
 
 /**
- * Map a raw Foursquare V3 place result to a canonical Venue object.
- * FUTURE: map photos, tips, rating when Premium tier is enabled.
+ * Map a raw Foursquare place result to a canonical Venue object.
+ * social_media is a plain object with instagram, twitter, facebook_id fields.
  */
-const toVenue = (fsqPlace) => buildVenue({
-  name:     fsqPlace.name,
-  category: fsqPlace.categories?.[0]?.name || '',
-  address:  fsqPlace.location?.formatted_address || fsqPlace.location?.address || '',
-  area:     fsqPlace.location?.locality || fsqPlace.location?.region || '',
-  country:  fsqPlace.location?.country || '',
-  tastes:   [], // Premium field — not available on free tier
-}),
-  // Verified Foursquare identifiers — use for permanent deep links
-  fsqPlaceId:    fsqPlace.fsq_place_id || null,
-  foursquareUrl: fsqPlace.link ? `https://foursquare.com${fsqPlace.link}` : null,
-  tel:           fsqPlace.tel || null,
-  website:       fsqPlace.website || null,
-  social:        fsqPlace.social_media || null,
-});
+const toVenue = (fsqPlace) => {
+  const base = buildVenue({
+    name:     fsqPlace.name,
+    category: fsqPlace.categories?.[0]?.name || '',
+    address:  fsqPlace.location?.formatted_address || fsqPlace.location?.address || '',
+    area:     fsqPlace.location?.locality || fsqPlace.location?.region || '',
+    country:  fsqPlace.location?.country || '',
+    tastes:   [], // Premium field — not available on free Pro tier
+  });
+
+  return {
+    ...base,
+    // Verified Foursquare identifiers
+    fsqPlaceId:    fsqPlace.fsq_place_id || null,
+    foursquareUrl: fsqPlace.link ? `https://foursquare.com${fsqPlace.link}` : null,
+    tel:           fsqPlace.tel || null,
+    website:       fsqPlace.website || null,
+    social:        fsqPlace.social_media || null,
+  };
+};
 
 /**
  * Search for venues near a destination.
  * Uses `near` param for geocoding — no separate geo lookup needed.
  * Falls back to empty array on any error — never blocks itinerary generation.
  *
- * @param {String} destination — e.g. "Sydney, Australia" or "Kyoto, Japan"
- * @param {Object} options
- * @param {Number} options.limit — max results, 1–50 (default 15)
- * @returns {Promise<Venue[]>}
+ * @param {string} destination — e.g. "Sydney, Australia" or "Kyoto, Japan"
+ * @param {object} options
+ * @param {number} options.limit — max results, 1-50 (default 15)
+ * @returns {Promise<object[]>} array of canonical Venue objects
  */
 const searchVenues = async (destination, { limit = 15 } = {}) => {
   const apiKey = process.env.FOURSQUARE_API_KEY;
@@ -82,10 +86,10 @@ const searchVenues = async (destination, { limit = 15 } = {}) => {
 
   try {
     const params = new URLSearchParams({
-      near:       destination,
-      limit:      String(Math.min(limit, 50)),
-      sort:       'POPULARITY',
-      fields:     'name,location,categories,tel,website,social_media,link,fsq_place_id',
+      near:            destination,
+      limit:           String(Math.min(limit, 50)),
+      sort:            'POPULARITY',
+      fields:          'name,location,categories,tel,website,social_media,link,fsq_place_id',
       fsq_category_ids: FSQ_CATEGORY_IDS,
     });
 
