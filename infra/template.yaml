@@ -251,6 +251,12 @@ Resources:
       Timeout: 10
       MemorySize: 256
       Description: Provides destination autocomplete and venue discovery via Foursquare API
+      Environment:
+        Variables:
+          FOURSQUARE_API_KEY: !Ref FoursquareApiKey
+          FRONTEND_URL: !Ref FrontendUrl
+      Layers:
+        - !Ref SharedLayer
       Events:
         GetRecommendations:
           Type: Api
