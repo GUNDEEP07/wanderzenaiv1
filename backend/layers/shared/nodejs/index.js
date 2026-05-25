@@ -81,7 +81,22 @@ const log = {
 const fetchFoursquareTips = async (destination) => {
   const venues = await searchVenues(destination, { limit: 15 });
   if (!venues.length) return null;
-  return venues.slice(0, 10).map(formatVenueForPrompt).join('\n');
+
+  const tips = venues.slice(0, 10).map(formatVenueForPrompt).join('\n');
+
+  // Log what's being passed to Claude
+  const socialCount = venues.slice(0, 10).filter(v => v.social).length;
+  console.log(JSON.stringify({
+    level: 'INFO',
+    msg: '[FoursquareTips] Formatted for Claude prompt',
+    destination,
+    venuesCount: venues.slice(0, 10).length,
+    venuesWithSocial: socialCount,
+    tipsPreview: tips.split('\n').slice(0, 3),
+    ts: new Date().toISOString()
+  }));
+
+  return tips;
 };
 
 /**

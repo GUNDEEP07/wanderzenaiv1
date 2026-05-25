@@ -344,11 +344,35 @@ exports.handler = async (event) => {
       totalEstimatedCost: meta.totalEstimatedCost || submission.budget,
     };
 
+    // Audit venues in assembled itinerary
+    const venuesWithSocial = [];
+    allDays.forEach(day => {
+      ['morningActivity', 'afternoonActivity', 'eveningActivity'].forEach(period => {
+        const act = day[period];
+        if (act && act.venue && act.venue.social) {
+          venuesWithSocial.push({
+            name: act.venue.name,
+            social: Object.keys(act.venue.social).filter(k => act.venue.social[k]),
+            fsqPlaceId: act.venue.fsqPlaceId
+          });
+        }
+      });
+      if (day.localEats && day.localEats.venue && day.localEats.venue.social) {
+        venuesWithSocial.push({
+          name: day.localEats.venue.name,
+          social: Object.keys(day.localEats.venue.social).filter(k => day.localEats.venue.social[k]),
+          fsqPlaceId: day.localEats.venue.fsqPlaceId
+        });
+      }
+    });
+
     log.info('Itinerary assembled', {
       submissionId,
       totalDays: allDays.length,
       totalInputTokens,
       totalOutputTokens,
+      venuesWithSocial: venuesWithSocial.length,
+      socialVenues: venuesWithSocial,
     });
 
     // ── Store itinerary ───────────────────────────────────────────────────

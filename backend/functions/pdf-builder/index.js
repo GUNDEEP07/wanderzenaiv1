@@ -32,24 +32,28 @@ const sanitize = (text) => {
       return `<a href="${url.replace(/"/g, '%22')}" style="color:var(--teal);text-decoration:none;font-weight:600">${escapeHtml(display)}</a>`;
     }
   );
-  // Strip leftover broken URL fragments like: )%2C%20JP) or map%2C...JP)
-  result = result.replace(/\)%[0-9A-Fa-f]{2}[\w%.,()-]*/g, '');
-  result = result.replace(/\bmap%[0-9A-Fa-f][\w%]*\b/g, '');
+  // Strip any leftover percent-encoded fragments or broken URL pieces (Claude sometimes leaves these)
+  result = result.replace(/\s*\)\s*%[0-9A-Fa-f%\s)]*$/gm, ''); // end of line fragments with )%...
+  result = result.replace(/\s+%[0-9A-Fa-f]{2}[\s%A-Fa-f0-9]*/g, ''); // isolated encoded sequences with spaces
+  result = result.replace(/\bmap%[0-9A-Fa-f][0-9A-Fa-f%]*/gi, ''); // leftover map%XX...
   return result;
 };
 
 // Build Google Maps search URL from venue name + location
-const mapsUrl = (name, area, country) =>
-  `https://maps.google.com/?q=${encodeURIComponent([name, area, country].filter(Boolean).join(', '))}`;
+// Only use area + country to avoid special char issues with venue names
+const mapsUrl = (name, area, country) => {
+  const query = [area || '', country || ''].filter(Boolean).join(', ') || name || 'map';
+  return `https://maps.google.com/?q=${encodeURIComponent(query)}`;
+};
 
 // ─── Social media links ───────────────────────────────────────────────────────
 
 const socialLinks = (social) => {
   if (!social) return '';
   const links = [];
-  if (social.instagram) links.push(`<a href="https://instagram.com/${social.instagram}" style="color:var(--teal);text-decoration:none;font-size:8px;font-weight:600">📷 @${escapeHtml(social.instagram)}</a>`);
-  if (social.twitter) links.push(`<a href="https://twitter.com/${social.twitter}" style="color:var(--teal);text-decoration:none;font-size:8px;font-weight:600">𝕏 @${escapeHtml(social.twitter)}</a>`);
-  if (social.facebook_id) links.push(`<a href="https://facebook.com/${social.facebook_id}" style="color:var(--teal);text-decoration:none;font-size:8px;font-weight:600">🌐 Facebook</a>`);
+  if (social.instagram) links.push(`<a href="https://instagram.com/${escapeHtml(social.instagram)}" style="color:var(--teal);text-decoration:none;font-size:8px;font-weight:600">📷 @${escapeHtml(social.instagram)}</a>`);
+  if (social.twitter) links.push(`<a href="https://twitter.com/${escapeHtml(social.twitter)}" style="color:var(--teal);text-decoration:none;font-size:8px;font-weight:600">𝕏 @${escapeHtml(social.twitter)}</a>`);
+  if (social.facebook_id) links.push(`<a href="https://facebook.com/${escapeHtml(social.facebook_id)}" style="color:var(--teal);text-decoration:none;font-size:8px;font-weight:600">🌐 Facebook</a>`);
   return links.length ? `<div style="display:flex;gap:8px;margin-top:3px;flex-wrap:wrap">${links.join('')}</div>` : '';
 };
 
@@ -379,6 +383,34 @@ exports.handler = async (event) => {
     const itinerary = result.rows[0].itinerary_data;
     const currency = result.rows[0].currency;
     const currencySymbol = getCurrencySymbol(currency);
+
+    // Log social media availability in itinerary
+    const venuesWithSocial = [];
+    (itinerary.days || []).forEach(day => {
+      ['morningActivity', 'afternoonActivity', 'eveningActivity'].forEach(period => {
+        const act = day[period];
+        if (act && act.venue && act.venue.social) {
+          venuesWithSocial.push({
+            name: act.venue.name,
+            social: Object.keys(act.venue.social).filter(k => act.venue.social[k])
+          });
+        }
+      });
+      if (day.localEats && day.localEats.venue && day.localEats.venue.social) {
+        venuesWithSocial.push({
+          name: day.localEats.venue.name,
+          social: Object.keys(day.localEats.venue.social).filter(k => day.localEats.venue.social[k])
+        });
+      }
+    });
+
+    log.info('PDF render — social media audit', {
+      itineraryId,
+      submissionId,
+      totalDays: (itinerary.days || []).length,
+      venuesWithSocial: venuesWithSocial.length,
+      socialVenues: venuesWithSocial
+    });
 
     // Fetch hero image from recommendations_cache
     let heroImageUrl = null;

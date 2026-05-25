@@ -104,7 +104,25 @@ const searchVenues = async (destination, { limit = 15 } = {}) => {
     }
 
     const data = await res.json();
-    return (data.results || []).map(toVenue);
+    const venues = (data.results || []).map(toVenue);
+
+    // Log social media availability
+    const withSocial = venues.filter(v => v.social).length;
+    const socialStats = venues.slice(0, 3).map(v => ({
+      name: v.name,
+      social: v.social ? Object.keys(v.social).filter(k => v.social[k]) : []
+    }));
+    console.log(JSON.stringify({
+      level: 'INFO',
+      msg: '[Foursquare] Raw venues fetched',
+      destination,
+      totalVenues: venues.length,
+      venuesWithSocial: withSocial,
+      sampleVenues: socialStats,
+      ts: new Date().toISOString()
+    }));
+
+    return venues;
 
   } catch (err) {
     console.warn(`[Foursquare] searchVenues error: ${err.message}`);
