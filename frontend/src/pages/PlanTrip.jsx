@@ -1,11 +1,14 @@
 // src/pages/PlanTrip.jsx
 // Orchestrator for the multi-step itinerary planning form.
-// Steps 0–3 are inline (small, <60 lines each).
+// Steps 0–1 are new components (DestinationSearch, VenueSelection).
+// Steps 2–5 are existing steps.
 // Step 4 is extracted to StepReview.jsx.
 // API calls are in src/api/itinerary.js.
 
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { DestinationSearch } from '../components/plantrip/DestinationSearch';
+import { VenueSelection } from '../components/plantrip/VenueSelection';
 import RecommendationQuiz from '../components/RecommendationQuiz';
 import StepReview from '../components/plantrip/StepReview';
 import { fetchPreview, submitItinerary } from '../api/itinerary';
@@ -43,16 +46,16 @@ const LANGUAGES = [
 ];
 
 // Step names drive the progress bar — keep in sync with step indices
-const STEPS = ['Destination', 'Budget & dates', 'Travel style', 'Your details', 'Review'];
+const STEPS = ['Destination', 'Venues', 'Budget & dates', 'Travel style', 'Your details', 'Review'];
 
 // Initial form state — all fields null-safe
 const INITIAL_FORM = {
-  destination: '', days: 5, budget: '', currency: 'USD',
+  destination: '', destinationLat: null, destinationLng: null, days: 5, budget: '', currency: 'USD',
   travelerType: '', travelStyle: [], interests: '',
   travelDate: '', travelPace: 'balanced', wantsHotelRecs: true,
   startTime: '09:00', userMustDos: '',
   language: 'English', userAge: '', userLocation: '', email: '',
-
+  selected_venues: {},
 };
 
 // ─── Styles ────────────────────────────────────────────────────────────────────
@@ -154,6 +157,24 @@ export default function PlanTrip() {
     }));
   };
 
+  const handleDestinationSelect = (destination) => {
+    setForm({
+      ...form,
+      destination: destination.name,
+      destinationLat: destination.lat,
+      destinationLng: destination.lng,
+    });
+    setStep(1);
+  };
+
+  const handleVenueSelect = (selectedVenues) => {
+    setForm({
+      ...form,
+      selected_venues: selectedVenues,
+    });
+    setStep(2);
+  };
+
   // Calls /preview and stores result on form._preview
   const loadPreview = async (formData) => {
     setPreviewLoading(true);
@@ -171,9 +192,9 @@ export default function PlanTrip() {
   const validate = () => {
     const errs = {};
     if (step === 0 && !form.destination.trim()) errs.destination = 'Where are you headed?';
-    if (step === 1 && (!form.budget || isNaN(form.budget) || +form.budget <= 0)) errs.budget = 'Enter your total budget';
-    if (step === 2 && !form.travelerType) errs.travelerType = 'Select traveller type';
-    if (step === 3) {
+    if (step === 2 && (!form.budget || isNaN(form.budget) || +form.budget <= 0)) errs.budget = 'Enter your total budget';
+    if (step === 3 && !form.travelerType) errs.travelerType = 'Select traveller type';
+    if (step === 4) {
       if (!form.email.trim()) errs.email = 'We need your email to send the itinerary';
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = 'Invalid email address';
     }
@@ -185,8 +206,8 @@ export default function PlanTrip() {
     if (!validate()) return;
     const nextStep = step + 1;
     setStep(nextStep);
-    // Trigger preview when entering step 4
-    if (nextStep === 4) loadPreview(form);
+    // Trigger preview when entering step 5
+    if (nextStep === 5) loadPreview(form);
   };
 
   const back = () => setStep(s => s - 1);
@@ -246,26 +267,17 @@ export default function PlanTrip() {
 
         <div style={s.card}>
 
-          {/* ── Step 0: Destination ─────────────────────────────────── */}
+          {/* ── Step 0: Destination Search ─────────────────────────────────── */}
           {step === 0 && (
             <div>
-              <div style={s.stepLabel}>Step 1 of 5</div>
+              <div style={s.stepLabel}>Step 1 of 6</div>
               <h2 style={s.stepTitle}>Where to?</h2>
               <p style={s.stepSub}>Tell us your dream destination — we'll find the real, local version of it.</p>
 
               <div style={s.fieldWrap}>
-                <label style={s.label}>Destination</label>
-                <input
-                  style={{ ...s.input, fontSize: '1.2rem', ...(errors.destination ? s.inputError : {}) }}
-                  type="text"
-                  placeholder="e.g. Kyoto · Oaxaca · Tbilisi · Faroe Islands"
-                  value={form.destination}
-                  onChange={e => set('destination', e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && next()}
-                  autoFocus
-                />
+                <DestinationSearch onSelect={handleDestinationSelect} disabled={false} />
                 {errors.destination && <div style={s.error}>{errors.destination}</div>}
-                <RecommendationQuiz onSelect={(dest) => set('destination', dest)} />
+                <RecommendationQuiz onSelect={(dest) => handleDestinationSelect({ name: dest, lat: 0, lng: 0 })} />
               </div>
 
               <div style={s.fieldWrap}>
@@ -280,10 +292,26 @@ export default function PlanTrip() {
             </div>
           )}
 
-          {/* ── Step 1: Budget & dates ──────────────────────────────── */}
-          {step === 1 && (
+          {/* ── Step 1: Venue Selection ─────────────────────────────────── */}
+          {step === 1 && form.destinationLat && form.destinationLng && (
             <div>
-              <div style={s.stepLabel}>Step 2 of 5</div>
+              <div style={s.stepLabel}>Step 2 of 6</div>
+              <h2 style={s.stepTitle}>Favourite venues</h2>
+              <p style={s.stepSub}>Pick specific venues you'd like to visit (optional — we can skip this).</p>
+              <VenueSelection
+                destination={form.destination}
+                lat={form.destinationLat}
+                lng={form.destinationLng}
+                onSubmit={handleVenueSelect}
+                onSkip={() => setStep(2)}
+              />
+            </div>
+          )}
+
+          {/* ── Step 2: Budget & dates ──────────────────────────────── */}
+          {step === 2 && (
+            <div>
+              <div style={s.stepLabel}>Step 3 of 6</div>
               <h2 style={s.stepTitle}>Budget & dates</h2>
               <p style={s.stepSub}>A rough estimate helps us plan realistic activities and stays.</p>
 
@@ -321,10 +349,10 @@ export default function PlanTrip() {
             </div>
           )}
 
-          {/* ── Step 2: Travel style ────────────────────────────────── */}
-          {step === 2 && (
+          {/* ── Step 3: Travel style ────────────────────────────────── */}
+          {step === 3 && (
             <div>
-              <div style={s.stepLabel}>Step 3 of 5</div>
+              <div style={s.stepLabel}>Step 4 of 6</div>
               <h2 style={s.stepTitle}>How do you travel?</h2>
               <p style={s.stepSub}>This shapes the entire plan — activities, pace, food and accommodation.</p>
 
@@ -405,10 +433,10 @@ export default function PlanTrip() {
             </div>
           )}
 
-          {/* ── Step 3: Your details ────────────────────────────────── */}
-          {step === 3 && (
+          {/* ── Step 4: Your details ────────────────────────────────── */}
+          {step === 4 && (
             <div>
-              <div style={s.stepLabel}>Step 4 of 5</div>
+              <div style={s.stepLabel}>Step 5 of 6</div>
               <h2 style={s.stepTitle}>Where should we send it?</h2>
               <p style={s.stepSub}>Your personalised {form.destination} itinerary arrives in your inbox within 3 minutes.</p>
 
@@ -449,8 +477,8 @@ export default function PlanTrip() {
             </div>
           )}
 
-          {/* ── Step 4: Review & Preview (extracted component) ─────── */}
-          {step === 4 && (
+          {/* ── Step 5: Review & Preview (extracted component) ─────── */}
+          {step === 5 && (
             <StepReview
               form={form}
               set={set}
@@ -461,8 +489,8 @@ export default function PlanTrip() {
             />
           )}
 
-          {/* Nav buttons — steps 0–3 only; step 4 has its own buttons */}
-          {step < 4 && (
+          {/* Nav buttons — steps 0–4 only; step 5 has its own buttons */}
+          {step < 5 && (
             <div style={s.navBtns}>
               {step > 0 && (
                 <button style={s.backBtnForm} onClick={back} disabled={submitting}>← Back</button>
@@ -472,12 +500,12 @@ export default function PlanTrip() {
                 style={{
                   ...s.nextBtn,
                   ...(submitting ? { background: 'rgba(0,212,170,0.5)', cursor: 'not-allowed' } : {}),
-                  ...(step === 3 ? { minWidth: 200 } : {}),
+                  ...(step === 4 ? { minWidth: 200 } : {}),
                 }}
                 onClick={next}
                 disabled={submitting}
               >
-                {step === 3 ? 'Review my trip →' : 'Continue →'}
+                {step === 4 ? 'Review my trip →' : 'Continue →'}
               </button>
             </div>
           )}
