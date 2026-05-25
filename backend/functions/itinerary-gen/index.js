@@ -2,6 +2,7 @@
 
 const { LambdaClient, InvokeCommand } = require('@aws-sdk/client-lambda');
 const { getDB, generateId, getCurrencySymbol, log, fetchFoursquareTips } = require('/opt/nodejs/index');
+const { searchVenues } = require('/opt/nodejs/venue-enrichment/foursquare');
 
 const lambda = new LambdaClient({ region: process.env.AWS_REGION || 'ap-southeast-2' });
 
@@ -31,12 +32,12 @@ CRITICAL OUTPUT RULES:
 const DAY_SCHEMA = `{
   "dayNumber": number,
   "theme": "string",
-  "morningActivity": {"time":"string","activity":"string","location":"string","why":"string","cost":number,"isFree":boolean,"insiderTip":"string"},
-  "afternoonActivity": {"time":"string","activity":"string","location":"string","why":"string","cost":number,"isFree":boolean,"insiderTip":"string"},
-  "eveningActivity": {"time":"string","activity":"string","location":"string","why":"string","cost":number,"isFree":boolean,"insiderTip":"string"},
+  "morningActivity": {"time":"string","activity":"string","location":"string","venueName":"string or null","why":"string","cost":number,"isFree":boolean,"insiderTip":"string"},
+  "afternoonActivity": {"time":"string","activity":"string","location":"string","venueName":"string or null","why":"string","cost":number,"isFree":boolean,"insiderTip":"string"},
+  "eveningActivity": {"time":"string","activity":"string","location":"string","venueName":"string or null","why":"string","cost":number,"isFree":boolean,"insiderTip":"string"},
   "hiddenGem": "string",
   "dailyCost": number,
-  "localEats": {"name":"string","dish":"string","cost":number,"vibe":"string"}
+  "localEats": {"name":"string","dish":"string","cost":number,"venueName":"string or null","vibe":"string"}
 }`;
 
 // ─── META SCHEMA (cover + tips, one call) ────────────────────────────────────
@@ -186,7 +187,7 @@ Rules:
 - One completely free hidden gem per day
 - Specific place names, not generic descriptions
 - Costs in ${currency} (${currencySymbol})
-${fsTips ? `\n\nReal verified venues — use these specific names:\n${fsTips}\nFor each venue mentioned add: [View on map](https://maps.google.com/?q=VENUE+NAME+DESTINATION)` : ''}
+${fsTips ? `\n\nReal verified venues — when you reference any of these venues, set venueName to the EXACT name from this list:\n${fsTips}\n\nFor EVERY activity that references a verified venue above, set venueName to the exact venue name (e.g. "venueName":"Kiyomizu-dera Temple (清水寺)"). If the activity doesn't reference one of these venues, set venueName to null.` : ''}
 
 Return ONLY a JSON object with a "days" array containing ${dayNumbers.length} day object(s):
 {
@@ -246,6 +247,33 @@ Return ONLY a JSON object with a "days" array containing ${dayNumbers.length} da
       usage: { input_tokens: 0, output_tokens: 0 },
     };
   }
+};
+
+// ─── VENUE LOOKUP & ATTACHMENT ───────────────────────────────────────────────
+// Match venue names from Claude to actual Foursquare venue objects
+const attachVenuesToItinerary = (itinerary, allVenues) => {
+  if (!allVenues?.length) return itinerary;
+
+  // Build a map for fast lookup: exact name → venue object
+  const venueMap = new Map();
+  allVenues.forEach(v => {
+    if (v.name) venueMap.set(v.name, v);
+  });
+
+  // Attach venue objects to activities
+  (itinerary.days || []).forEach(day => {
+    ['morningActivity', 'afternoonActivity', 'eveningActivity'].forEach(period => {
+      const act = day[period];
+      if (act && act.venueName && venueMap.has(act.venueName)) {
+        act.venue = venueMap.get(act.venueName);
+      }
+    });
+    if (day.localEats && day.localEats.venueName && venueMap.has(day.localEats.venueName)) {
+      day.localEats.venue = venueMap.get(day.localEats.venueName);
+    }
+  });
+
+  return itinerary;
 };
 
 // ─── MAIN HANDLER ────────────────────────────────────────────────────────────
@@ -338,11 +366,16 @@ exports.handler = async (event) => {
     }
 
     // ── Merge everything ──────────────────────────────────────────────────
-    const itinerary = {
+    let itinerary = {
       ...meta,
       days: allDays.sort((a, b) => a.dayNumber - b.dayNumber),
       totalEstimatedCost: meta.totalEstimatedCost || submission.budget,
     };
+
+    // Attach full venue objects to activities by matching venueName
+    const allFoursquareVenues = await searchVenues(submission.destination, { limit: 50 });
+    itinerary = attachVenuesToItinerary(itinerary, allFoursquareVenues);
+    log.info('Venues attached to itinerary', { submissionId, foursquareVenuesFetched: allFoursquareVenues.length });
 
     // Audit venues in assembled itinerary
     const venuesWithSocial = [];
