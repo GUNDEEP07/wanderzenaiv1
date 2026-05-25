@@ -107,6 +107,7 @@ No activity detail. Titles and atmosphere only. Exactly ${days} items.`;
     startTime = '09:00',
     userMustDos = null,
     email,
+    selected_venues = {},
   } = body;
 
   // Normalize travelDate — frontend sends '' when date left blank, null is safe for DB
@@ -163,8 +164,8 @@ No activity detail. Titles and atmosphere only. Exactly ${days} items.`;
       `INSERT INTO submissions
        (id, email, destination, days, budget, currency, traveler_type,
         travel_style, interests, travel_date, travel_pace, wants_hotel_recs,
-        language, user_age, user_location, start_time, user_must_dos, plan, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,'pending')`,
+        language, user_age, user_location, start_time, user_must_dos, plan, status, selected_venues)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,'pending',$19)`,
       [
         submissionId, email, destination, parseInt(days, 10),
         parseFloat(budget), currency, travelerType,
@@ -176,10 +177,11 @@ No activity detail. Titles and atmosphere only. Exactly ${days} items.`;
         startTime || '09:00',
         userMustDos && userMustDos.trim() !== '' ? userMustDos.trim() : null,
         isPaid ? 'paid' : 'free',
+        JSON.stringify(selected_venues || {}),
       ]
     );
 
-    log.info('Submission stored', { submissionId, email, destination });
+    log.info('Submission stored', { submissionId, email, destination, selected_venues_count: Object.keys(selected_venues || {}).length });
 
     // ─── Invoke itinerary generator async (no wait) ──────────────────────────
     await lambda.send(new InvokeCommand({
