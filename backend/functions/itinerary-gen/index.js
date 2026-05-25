@@ -117,10 +117,27 @@ const callClaude = async (systemPrompt, userPrompt, maxTokens, submissionId, att
   return { raw, usage: data.usage };
 };
 
+// ─── FORMAT SELECTED VENUES FOR CLAUDE ──────────────────────────────────────
+const formatSelectedVenues = (selectedVenues) => {
+  if (!selectedVenues || typeof selectedVenues !== 'object') return '';
+
+  const venuesList = Object.entries(selectedVenues)
+    .flatMap(([category, fsqIds]) => {
+      const ids = Array.isArray(fsqIds) ? fsqIds : [];
+      return ids.map(id => `- ${id} (${category})`);
+    })
+    .join('\n');
+
+  if (!venuesList) return '';
+
+  return `\n\nUser has selected these specific venues to include in the itinerary:\n${venuesList}\n\nWeave these venues naturally into the itinerary at appropriate times and days.`;
+};
+
 // ─── GENERATE META (title, summary, accommodation, tips) ────────────────────
 const generateMeta = async (submission, currencySymbol, submissionId, fsTips = null) => {
-  const { destination, days, budget, currency, travelerType, travelStyle, travelPace, interests, startTime, userMustDos, userAge, userLocation, language } = submission;
+  const { destination, days, budget, currency, travelerType, travelStyle, travelPace, interests, startTime, userMustDos, userAge, userLocation, language, selectedVenues } = submission;
   const styleList = Array.isArray(travelStyle) ? travelStyle.join(', ') : travelStyle;
+  const venuesContext = formatSelectedVenues(selectedVenues);
 
   const prompt = `Create the overview section for a ${days}-day slow travel itinerary for ${destination}.
 
@@ -138,7 +155,7 @@ ${fsTips ? `
 Real verified venues in ${destination} — reference these specifically by name and include their map links:
 ${fsTips}
 
-For each venue mentioned: include the venue name exactly as given, and add the Google Maps link as [View on map](url) after the activity description.` : ''}
+For each venue mentioned: include the venue name exactly as given, and add the Google Maps link as [View on map](url) after the activity description.` : ''}${venuesContext}
 
 Return ONLY this JSON (no extra text):
 ${META_SCHEMA}`;
@@ -166,9 +183,10 @@ ${META_SCHEMA}`;
 
 // ─── GENERATE A BATCH OF DAYS ────────────────────────────────────────────────
 const generateDaysBatch = async (submission, dayNumbers, currencySymbol, submissionId, fsTips = null) => {
-  const { destination, budget, currency, travelerType, travelStyle, travelPace, interests, startTime, userMustDos, userAge, userLocation, language, days: totalDays } = submission;
+  const { destination, budget, currency, travelerType, travelStyle, travelPace, interests, startTime, userMustDos, userAge, userLocation, language, days: totalDays, selectedVenues } = submission;
   const styleList = Array.isArray(travelStyle) ? travelStyle.join(', ') : travelStyle;
   const dailyBudget = Math.round(budget / totalDays);
+  const venuesContext = formatSelectedVenues(selectedVenues);
 
   const prompt = `Create days ${dayNumbers.join(', ')} of ${totalDays} for a slow travel itinerary in ${destination}.
 
@@ -187,7 +205,7 @@ Rules:
 - One completely free hidden gem per day
 - Specific place names, not generic descriptions
 - Costs in ${currency} (${currencySymbol})
-${fsTips ? `\n\nReal verified venues — when you reference any of these venues, set venueName to the EXACT name from this list:\n${fsTips}\n\nFor EVERY activity that references a verified venue above, set venueName to the exact venue name (e.g. "venueName":"Kiyomizu-dera Temple (清水寺)"). If the activity doesn't reference one of these venues, set venueName to null.` : ''}
+${fsTips ? `\n\nReal verified venues — when you reference any of these venues, set venueName to the EXACT name from this list:\n${fsTips}\n\nFor EVERY activity that references a verified venue above, set venueName to the exact venue name (e.g. "venueName":"Kiyomizu-dera Temple (清水寺)"). If the activity doesn't reference one of these venues, set venueName to null.` : ''}${venuesContext}
 
 Return ONLY a JSON object with a "days" array containing ${dayNumbers.length} day object(s):
 {
@@ -319,6 +337,7 @@ exports.handler = async (event) => {
       userAge: row.user_age || null,
       userLocation: row.user_location || '',
       email: row.email,
+      selectedVenues: row.selected_venues || {},
     };
 
     const currencySymbol = getCurrencySymbol(submission.currency);
