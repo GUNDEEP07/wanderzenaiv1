@@ -38,12 +38,13 @@ AI-powered slow-travel itinerary SaaS. Live at wanderzenai.com. Solo-maintained.
   `env:` block, or it arrives as an empty string in `sam deploy`. Check this on any
   workflow edit.
 
-## API verification rule — HARD REQUIREMENT
-Before recommending ANY third-party API/integration, confirm current docs + access
-requirements first. Past wasted cycles: Foursquare V3 (blocked for accounts created
-after 2025-06-17), Amadeus POI (discontinued for independent devs), OpenTripMap
-(verification undeliverable). Do not suggest an integration you have not verified is
-actually accessible.
+## Third-party APIs — Current Status
+- **Foursquare V3**: ✓ Active — Places Autocomplete, Search, and Venue APIs working. Used for venue recommendations and weekly cache refresh.
+- **Amadeus POI**: ✗ Discontinued for independent devs (removed from architecture).
+- **OpenTripMap**: ✗ Verification undeliverable.
+- **Google Maps APIs**: Not currently used; evaluate if needed for destination geocoding.
+
+Before recommending any new integration, confirm current docs + access.
 
 ## Process rules
 - NO code for new features until a design decision is confirmed by Gundeep first.
