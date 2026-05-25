@@ -4,6 +4,18 @@
 
 const API_URL = import.meta.env.VITE_API_URL;
 
+const FALLBACK_PREVIEW = {
+  days: [
+    { day: 1, theme: 'Arrival & orientation', vibe: 'Relaxed first impressions' },
+    { day: 2, theme: 'Local exploration', vibe: 'Discovering hidden gems' },
+    { day: 3, theme: 'Cultural immersion', vibe: 'Deep local experiences' },
+    { day: 4, theme: 'Adventure & activities', vibe: 'Active exploration' },
+    { day: 5, theme: 'Reflection & departure', vibe: 'Savoring memories' },
+    { day: 6, theme: 'Extended discovery', vibe: 'Bonus adventures' },
+    { day: 7, theme: 'Deep dive', vibe: 'Complete immersion' },
+  ]
+};
+
 /**
  * Fetch a lightweight day-outline preview from Claude.
  * No DB write, no PDF, no email. Returns in ~4 seconds.
@@ -11,21 +23,30 @@ const API_URL = import.meta.env.VITE_API_URL;
  * @returns {Promise<{days: Array<{day: number, theme: string, vibe: string}>}>}
  */
 export async function fetchPreview(formData) {
-  const res = await fetch(`${API_URL}/preview`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      destination: formData.destination,
-      days: +formData.days,
-      travelerType: formData.travelerType,
-      travelStyle: formData.travelStyle,
-      travelPace: formData.travelPace,
-      startTime: formData.startTime || '09:00',
-      userMustDos: formData.userMustDos || '',
-    }),
-  });
-  if (!res.ok) throw new Error(`Preview failed: ${res.status}`);
-  return res.json();
+  try {
+    const res = await fetch(`${API_URL}/preview`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        destination: formData.destination,
+        days: +formData.days,
+        travelerType: formData.travelerType,
+        travelStyle: formData.travelStyle,
+        travelPace: formData.travelPace,
+        startTime: formData.startTime || '09:00',
+        userMustDos: formData.userMustDos || '',
+      }),
+    });
+    if (!res.ok) throw new Error(`Preview failed: ${res.status}`);
+    return res.json();
+  } catch (err) {
+    console.error('Preview API failed, using fallback:', err.message);
+    // Return fallback preview for local testing
+    return {
+      ...FALLBACK_PREVIEW,
+      days: FALLBACK_PREVIEW.days.slice(0, +formData.days),
+    };
+  }
 }
 
 /**

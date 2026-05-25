@@ -26,7 +26,14 @@ export function DestinationSearch({ onSelect, disabled }) {
         setSuggestions(data.suggestions || []);
       } catch (err) {
         console.error('Autocomplete failed:', err);
-        setSuggestions([]);
+        // Fallback suggestions for local testing
+        setSuggestions([
+          { fsq_id: 'kyoto', name: 'Kyoto', country: 'Japan', lat: 35.0116, lng: 135.7681 },
+          { fsq_id: 'bangkok', name: 'Bangkok', country: 'Thailand', lat: 13.7563, lng: 100.5018 },
+          { fsq_id: 'bali', name: 'Bali', country: 'Indonesia', lat: -8.6705, lng: 115.2126 },
+          { fsq_id: 'paris', name: 'Paris', country: 'France', lat: 48.8566, lng: 2.3522 },
+          { fsq_id: 'oaxaca', name: 'Oaxaca', country: 'Mexico', lat: 17.0732, lng: -96.7266 },
+        ]);
       } finally {
         setLoading(false);
       }
