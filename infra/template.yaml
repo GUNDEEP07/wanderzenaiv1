@@ -250,13 +250,25 @@ Resources:
       Handler: index.handler
       Timeout: 10
       MemorySize: 256
-      Description: Reads recommendations_cache and returns filtered destination list for explore and plan pages
+      Description: Provides destination autocomplete and venue discovery via Foursquare API
       Events:
         GetRecommendations:
           Type: Api
           Properties:
             RestApiId: !Ref WanderZenApi
             Path: /recommendations
+            Method: GET
+        GetAutocomplete:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /autocomplete
+            Method: GET
+        GetVenues:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /venues
             Method: GET
 
   # ─── S3 Bucket for PDFs ────────────────────────────────────────────────────
