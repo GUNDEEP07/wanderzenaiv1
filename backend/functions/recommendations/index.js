@@ -67,16 +67,27 @@ async function handleAutocomplete(event) {
       timeout: 5000,
     });
 
-    const suggestions = res.data.results.map(result => {
-      const place = result.place || result;
-      return {
-        fsq_id: place.fsq_place_id || place.fsq_id,
-        name: place.name,
-        country: place.location?.country || 'Unknown',
-        lat: place.latitude || place.location?.latitude,
-        lng: place.longitude || place.location?.longitude,
-      };
-    });
+    const suggestions = res.data.results
+      .map(result => {
+        const place = result.place || result;
+        return {
+          fsq_id: place.fsq_place_id || place.fsq_id,
+          name: place.name,
+          country: place.location?.country || 'Unknown',
+          lat: place.latitude || place.location?.latitude,
+          lng: place.longitude || place.location?.longitude,
+          address: place.location?.formatted_address || '',
+        };
+      })
+      .filter(place => {
+        // Keep only geographic locations (cities, countries, regions)
+        // Filter out specific business addresses (those with street addresses)
+        const addressParts = (place.address || '').split(',').length;
+        // Destinations typically have 2-3 parts (city, country) or (city, state, country)
+        // Businesses have 4+ parts (street, city, state, country)
+        return addressParts <= 3;
+      })
+      .map(({ address, ...place }) => place);
 
     log.info('Autocomplete success', { count: suggestions.length });
     return ok({ suggestions }, event);
