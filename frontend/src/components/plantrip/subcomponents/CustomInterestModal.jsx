@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 const s = {
   overlay: (isOpen) => ({
@@ -20,8 +22,10 @@ const s = {
     borderRadius: '16px',
     padding: '32px 28px',
     zIndex: 1000,
-    maxWidth: '420px',
+    maxWidth: '480px',
     width: '90%',
+    maxHeight: '80vh',
+    overflowY: 'auto',
     boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
     border: '1px solid rgba(0,212,170,0.2)',
     opacity: isOpen ? 1 : 0,
@@ -39,7 +43,7 @@ const s = {
   prompt: {
     fontSize: '14px',
     color: 'rgba(255,255,255,0.6)',
-    marginBottom: '24px',
+    marginBottom: '20px',
     fontFamily: "'Plus Jakarta Sans', sans-serif",
     textAlign: 'center',
   },
@@ -52,10 +56,37 @@ const s = {
     color: '#fff',
     fontSize: '15px',
     fontFamily: "'Plus Jakarta Sans', sans-serif",
-    marginBottom: '24px',
+    marginBottom: '20px',
     outline: 'none',
     transition: 'all 0.2s ease',
   },
+  categoriesLabel: {
+    fontSize: '12px',
+    color: 'rgba(255,255,255,0.5)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    marginBottom: '12px',
+    fontWeight: '600',
+  },
+  categoriesGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+    gap: '10px',
+    marginBottom: '24px',
+  },
+  categoryTag: (isSelected) => ({
+    padding: '10px 12px',
+    borderRadius: '8px',
+    border: isSelected ? 'none' : '1px solid rgba(0,212,170,0.3)',
+    background: isSelected ? '#00d4aa' : 'rgba(0,212,170,0.1)',
+    color: isSelected ? '#0a0f1e' : '#00d4aa',
+    fontSize: '13px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    textAlign: 'center',
+    fontFamily: "'Plus Jakarta Sans', sans-serif",
+  }),
   buttons: {
     display: 'flex',
     gap: '12px',
@@ -78,16 +109,52 @@ const s = {
 
 export function CustomInterestModal({ destination, isOpen, onClose, onSubmit, loading }) {
   const [input, setInput] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && categories.length === 0) {
+      fetchCategories();
+    }
+    if (!isOpen) {
+      setInput('');
+      setSelectedCategory(null);
+    }
+  }, [isOpen]);
+
+  const fetchCategories = async () => {
+    setCategoriesLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/recommendations/categories`);
+      if (response.ok) {
+        const data = await response.json();
+        setCategories(data.categories || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch categories:', error);
+    } finally {
+      setCategoriesLoading(false);
+    }
+  };
+
+  const handleCategoryClick = (category) => {
+    setSelectedCategory(category);
+    setInput(category);
+  };
 
   const handleSubmit = () => {
-    if (input.trim()) {
-      onSubmit(input.trim());
+    const finalInput = selectedCategory || input.trim();
+    if (finalInput) {
+      onSubmit(finalInput);
       setInput('');
+      setSelectedCategory(null);
     }
   };
 
   const handleCancel = () => {
     setInput('');
+    setSelectedCategory(null);
     onClose();
   };
 
@@ -107,12 +174,41 @@ export function CustomInterestModal({ destination, isOpen, onClose, onSubmit, lo
       <div style={s.modal(isOpen)}>
         <div style={s.header}>Add Custom Interest</div>
         <div style={s.prompt}>What interests you in {destination?.name}?</div>
+
+        <div style={s.categoriesLabel}>Available Categories</div>
+        <div style={s.categoriesGrid}>
+          {categoriesLoading ? (
+            <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: 'rgba(255,255,255,0.5)', padding: '12px' }}>
+              Loading...
+            </div>
+          ) : categories.length > 0 ? (
+            categories.map(category => (
+              <button
+                key={category.id}
+                style={s.categoryTag(selectedCategory === category.label)}
+                onClick={() => handleCategoryClick(category.label)}
+                disabled={loading}
+                title={category.label}
+              >
+                {category.name}
+              </button>
+            ))
+          ) : (
+            <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: 'rgba(255,255,255,0.5)', padding: '12px' }}>
+              No categories available
+            </div>
+          )}
+        </div>
+
         <input
           type="text"
           style={s.input}
-          placeholder="e.g., Street Art, Photography"
+          placeholder="Or type something custom..."
           value={input}
-          onChange={e => setInput(e.target.value)}
+          onChange={e => {
+            setInput(e.target.value);
+            setSelectedCategory(null);
+          }}
           onKeyDown={handleKeyDown}
           disabled={loading}
           autoFocus
