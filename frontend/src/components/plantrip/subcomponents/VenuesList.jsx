@@ -1,4 +1,5 @@
 import React from 'react';
+import { calculateDistance } from '../../../utils/foursquare';
 
 const s = {
   section: {
@@ -25,17 +26,39 @@ const s = {
     border: '1px solid rgba(255,255,255,0.1)',
     borderRadius: '10px',
     overflow: 'hidden',
+    transition: 'all 0.2s ease',
   },
   photoContainer: {
     width: '100%',
-    height: '120px',
+    height: '140px',
     background: 'linear-gradient(135deg, #1a1f2e 0%, #0f1419 100%)',
     overflow: 'hidden',
+    position: 'relative',
   },
   photo: {
     width: '100%',
     height: '100%',
     objectFit: 'cover',
+  },
+  noPhoto: {
+    width: '100%',
+    height: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '32px',
+  },
+  distanceBadge: {
+    position: 'absolute',
+    top: '8px',
+    right: '8px',
+    background: 'rgba(0, 212, 170, 0.9)',
+    color: '#0a0f1e',
+    padding: '4px 10px',
+    borderRadius: '20px',
+    fontSize: '11px',
+    fontWeight: '700',
+    backdropFilter: 'blur(4px)',
   },
   cardContent: {
     display: 'flex',
@@ -123,7 +146,7 @@ const s = {
   },
 };
 
-export function VenuesList({ activity, venues, selectedVenues, onVenueToggle, loading }) {
+export function VenuesList({ activity, venues, selectedVenues, onVenueToggle, loading, destination }) {
   return (
     <>
       <style>{`
@@ -153,13 +176,23 @@ export function VenuesList({ activity, venues, selectedVenues, onVenueToggle, lo
           <div style={s.header}>🎯 Top {activity} Spots ({venues.length} available)</div>
 
           <div style={s.list}>
-            {venues.map(venue => (
+            {venues.map(venue => {
+              const distance = destination && venue.lat && venue.lng
+                ? calculateDistance(destination.lat, destination.lng, venue.lat, venue.lng)
+                : null;
+
+              return (
               <div key={venue.id} style={s.card}>
-                {venue.photoUrl && (
-                  <div style={s.photoContainer}>
+                <div style={s.photoContainer}>
+                  {venue.photoUrl ? (
                     <img src={venue.photoUrl} alt={venue.name} style={s.photo} />
-                  </div>
-                )}
+                  ) : (
+                    <div style={s.noPhoto}>📍</div>
+                  )}
+                  {distance && (
+                    <div style={s.distanceBadge}>📏 {distance}</div>
+                  )}
+                </div>
                 <label style={s.cardContent}>
                   <input
                     type="checkbox"
@@ -243,7 +276,8 @@ export function VenuesList({ activity, venues, selectedVenues, onVenueToggle, lo
                   </div>
                 </label>
               </div>
-            ))}
+            );
+            })}
           </div>
         </div>
       )}

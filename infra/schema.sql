@@ -86,6 +86,18 @@ CREATE TABLE IF NOT EXISTS autocomplete_cache (
 
 CREATE INDEX IF NOT EXISTS idx_autocomplete_query ON autocomplete_cache(query);
 
+-- ─── Foursquare categories table ──────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS foursquare_categories (
+  id                    VARCHAR(100) PRIMARY KEY,
+  name                  VARCHAR(255) NOT NULL,
+  label                 VARCHAR(500),
+  parent_id             VARCHAR(100),
+  created_at            TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_foursquare_categories_name ON foursquare_categories(name);
+CREATE INDEX IF NOT EXISTS idx_foursquare_categories_parent ON foursquare_categories(parent_id);
+
 -- ─── Analytics view (useful for monitoring costs) ─────────────────────────────
 CREATE OR REPLACE VIEW daily_stats AS
 SELECT

@@ -12,15 +12,15 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '').split(',').map(o => 
 
 const FEATURED_CATEGORIES = [
   { id: '4d4b7105d754a06374d81259', name: 'restaurant' },
-  { id: '63be6904847c3692a84b9bb6', name: 'cafe' },
+  { id: '4bf58dd8d48988d16d941735', name: 'cafe' },
   { id: '4bf58dd8d48988d163941735', name: 'park' },
   { id: '4bf58dd8d48988d139941735', name: 'temple' },
   { id: '4bf58dd8d48988d181941735', name: 'museum' },
   { id: '4bf58dd8d48988d159941735', name: 'hiking_trail' },
-  { id: '4bf58dd8d48988d166941735', name: 'viewpoint' },
-  { id: '4bf58dd8d48988d1f4931735', name: 'market' },
+  { id: '4bf58dd8d48988d165941735', name: 'viewpoint' },
+  { id: '50be8ee891d4fa8dcc7199a7', name: 'market' },
   { id: '4bf58dd8d48988d116941735', name: 'bar' },
-  { id: '4bf58dd8d48988d1f8931735', name: 'accommodation' },
+  { id: '4bf58dd8d48988d1fa931735', name: 'accommodation' },
 ];
 
 // Fallback destinations if Foursquare is down
@@ -221,7 +221,7 @@ async function handleAutocomplete(event) {
 }
 
 async function handleVenues(event) {
-  const { destination, lat, lng } = event.queryStringParameters || {};
+  const { destination, lat, lng, activity } = event.queryStringParameters || {};
 
   if (!lat || !lng) {
     return {
@@ -232,10 +232,38 @@ async function handleVenues(event) {
   }
 
   try {
-    log.info('Venues request', { destination, lat, lng });
+    log.info('Venues request', { destination, lat, lng, activity });
     const categories = [];
 
-    for (const activity of FEATURED_CATEGORIES) {
+    // Filter to requested activity if specified, otherwise use all featured categories
+    let categoriesToFetch = FEATURED_CATEGORIES;
+    if (activity) {
+      const lowerActivity = activity.toLowerCase();
+      const activityMap = {
+        'hiking': { id: '4bf58dd8d48988d159941735', name: 'hiking_trail' },
+        'food': [
+          { id: '4d4b7105d754a06374d81259', name: 'restaurant' },
+          { id: '4bf58dd8d48988d16d941735', name: 'cafe' },
+          { id: '50be8ee891d4fa8dcc7199a7', name: 'market' },
+        ],
+        'nature': { id: '4bf58dd8d48988d163941735', name: 'park' },
+        'culture': [
+          { id: '4bf58dd8d48988d139941735', name: 'temple' },
+          { id: '4bf58dd8d48988d181941735', name: 'museum' },
+        ],
+        'views': { id: '4bf58dd8d48988d165941735', name: 'viewpoint' },
+        'nightlife': { id: '4bf58dd8d48988d116941735', name: 'bar' },
+      };
+
+      const mapped = activityMap[lowerActivity];
+      if (mapped) {
+        categoriesToFetch = Array.isArray(mapped)
+          ? FEATURED_CATEGORIES.filter(cat => mapped.some(m => m.id === cat.id))
+          : FEATURED_CATEGORIES.filter(cat => cat.id === mapped.id);
+      }
+    }
+
+    for (const activity of categoriesToFetch) {
       try {
         const fsqCategoryId = activity.id;
 

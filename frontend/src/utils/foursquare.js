@@ -2,11 +2,11 @@ const API_URL = import.meta.env.VITE_API_URL;
 
 // Map user activities to backend category names (fallback for exact matches that don't exist)
 const ACTIVITY_CATEGORY_MAP = {
-  'Hiking': ['Parks'],
+  'Hiking': ['Hiking Trails', 'Viewpoints'],
   'Food': ['Restaurants', 'Cafes', 'Markets'],
   'Nature': ['Parks'],
   'Culture': ['Temples', 'Museums'],
-  'Views': ['Parks'],
+  'Views': ['Viewpoints'],
   'Nightlife': ['Bars & Nightlife'],
 };
 
@@ -21,6 +21,7 @@ export async function fetchVenuesForActivity(activity, destination, maxResults =
       destination: destination.name || 'Unknown',
       lat: destination.lat.toString(),
       lng: destination.lng.toString(),
+      activity: activity,
     });
 
     const response = await fetch(`${API_URL}/venues?${params}`);
@@ -75,4 +76,18 @@ export async function fetchVenuesForActivity(activity, destination, maxResults =
 export function formatRating(rating) {
   if (!rating) return null;
   return `⭐ ${rating.toFixed(1)}`;
+}
+
+export function calculateDistance(lat1, lng1, lat2, lng2) {
+  const R = 6371; // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const distance = R * c;
+
+  if (distance < 1) return `${Math.round(distance * 1000)}m`;
+  return `${distance.toFixed(1)}km`;
 }

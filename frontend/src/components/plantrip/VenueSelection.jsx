@@ -167,6 +167,7 @@ export function VenueSelection({ destination, onSubmit, onSkip }) {
               selectedVenues={selectedVenues[activeTab] || new Set()}
               onVenueToggle={handleVenueToggle}
               loading={venueLoading[activeTab] || false}
+              destination={destination}
             />
           </>
         )}
