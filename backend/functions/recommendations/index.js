@@ -293,13 +293,33 @@ async function handleVenues(event) {
 
             const categoryName = place.categories?.[0]?.name || activity.name;
 
+            // Extract Instagram URL from social_media field
+            let instagramUrl = null;
+            if (place.social_media) {
+              for (const social of place.social_media) {
+                if (social.type === 'instagram') {
+                  instagramUrl = social.url || null;
+                  break;
+                }
+              }
+            }
+
+            log.debug('Venue data', {
+              name: place.name,
+              hasPhotos: !!place.photos && place.photos.length > 0,
+              photoUrl: photoUrl,
+              hasSocialMedia: !!place.social_media && place.social_media.length > 0,
+              socialMedia: place.social_media,
+              instagramUrl: instagramUrl,
+            });
+
             return {
               fsq_id: place.fsq_place_id,
               name: place.name,
               category: categoryName,
               rating: place.rating || null,
               address: place.location?.formatted_address || '',
-              instagramUrl: null,
+              instagramUrl: instagramUrl,
               photoUrl: photoUrl,
               attributes: place.attributes || null,
               hours: {
