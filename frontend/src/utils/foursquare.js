@@ -24,7 +24,7 @@ export async function fetchVenuesForActivity(activity, destination, maxResults =
       activity: activity,
     });
 
-    const response = await fetch(`${API_URL}/venues?${params}`);
+    const response = await fetch(`${API_URL}/recommendations/venues?${params}`);
 
     if (!response.ok) throw new Error(`Venues API error: ${response.status}`);
 
