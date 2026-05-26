@@ -110,16 +110,18 @@ const s = {
 export function CustomInterestModal({ destination, isOpen, onClose, onSubmit, loading }) {
   const [input, setInput] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [categories, setCategories] = useState([]);
+  const [allCategories, setAllCategories] = useState([]);
+  const [filteredCategories, setFilteredCategories] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
 
   useEffect(() => {
-    if (isOpen && categories.length === 0) {
+    if (isOpen && allCategories.length === 0) {
       fetchCategories();
     }
     if (!isOpen) {
       setInput('');
       setSelectedCategory(null);
+      setFilteredCategories([]);
     }
   }, [isOpen]);
 
@@ -129,7 +131,7 @@ export function CustomInterestModal({ destination, isOpen, onClose, onSubmit, lo
       const response = await fetch(`${API_URL}/recommendations/categories`);
       if (response.ok) {
         const data = await response.json();
-        setCategories(data.categories || []);
+        setAllCategories(data.categories || []);
       }
     } catch (error) {
       console.error('Failed to fetch categories:', error);
@@ -138,9 +140,26 @@ export function CustomInterestModal({ destination, isOpen, onClose, onSubmit, lo
     }
   };
 
+  const handleInputChange = (query) => {
+    setInput(query);
+    setSelectedCategory(null);
+
+    if (query.trim().length === 0) {
+      setFilteredCategories([]);
+    } else {
+      const lowerQuery = query.toLowerCase();
+      const filtered = allCategories.filter(cat =>
+        cat.name.toLowerCase().includes(lowerQuery) ||
+        cat.label.toLowerCase().includes(lowerQuery)
+      );
+      setFilteredCategories(filtered);
+    }
+  };
+
   const handleCategoryClick = (category) => {
     setSelectedCategory(category);
     setInput(category);
+    setFilteredCategories([]);
   };
 
   const handleSubmit = () => {
@@ -175,14 +194,30 @@ export function CustomInterestModal({ destination, isOpen, onClose, onSubmit, lo
         <div style={s.header}>Add Custom Interest</div>
         <div style={s.prompt}>What interests you in {destination?.name}?</div>
 
-        <div style={s.categoriesLabel}>Available Categories</div>
-        <div style={s.categoriesGrid}>
-          {categoriesLoading ? (
-            <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: 'rgba(255,255,255,0.5)', padding: '12px' }}>
-              Loading...
-            </div>
-          ) : categories.length > 0 ? (
-            categories.map(category => (
+        <input
+          type="text"
+          style={s.input}
+          placeholder="Search categories or type something custom..."
+          value={input}
+          onChange={e => handleInputChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          disabled={loading}
+          autoFocus
+        />
+
+        {(categoriesLoading || filteredCategories.length > 0) && (
+          <div style={s.categoriesLabel}>Matching Categories</div>
+        )}
+
+        {categoriesLoading && input.trim().length > 0 && (
+          <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.5)', padding: '12px' }}>
+            Searching...
+          </div>
+        )}
+
+        {filteredCategories.length > 0 && (
+          <div style={s.categoriesGrid}>
+            {filteredCategories.map(category => (
               <button
                 key={category.id}
                 style={s.categoryTag(selectedCategory === category.label)}
@@ -192,27 +227,9 @@ export function CustomInterestModal({ destination, isOpen, onClose, onSubmit, lo
               >
                 {category.name}
               </button>
-            ))
-          ) : (
-            <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: 'rgba(255,255,255,0.5)', padding: '12px' }}>
-              No categories available
-            </div>
-          )}
-        </div>
-
-        <input
-          type="text"
-          style={s.input}
-          placeholder="Or type something custom..."
-          value={input}
-          onChange={e => {
-            setInput(e.target.value);
-            setSelectedCategory(null);
-          }}
-          onKeyDown={handleKeyDown}
-          disabled={loading}
-          autoFocus
-        />
+            ))}
+          </div>
+        )}
         <div style={s.buttons}>
           <button
             style={s.button('secondary')}
