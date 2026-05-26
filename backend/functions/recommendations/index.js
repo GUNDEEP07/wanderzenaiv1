@@ -286,6 +286,9 @@ async function handleVenues(event) {
         );
 
         if (res.data.results && res.data.results.length > 0) {
+          log.info('Foursquare response sample', {
+            firstPlace: JSON.stringify(res.data.results[0], null, 2).slice(0, 500),
+          });
           const venues = res.data.results.map(place => {
             const photoUrl = place.photos?.[0]?.prefix
               ? `${place.photos[0].prefix}original${place.photos[0].suffix}`
@@ -295,21 +298,19 @@ async function handleVenues(event) {
 
             // Extract Instagram URL from social_media field
             let instagramUrl = null;
-            if (place.social_media) {
-              for (const social of place.social_media) {
-                if (social.type === 'instagram') {
-                  instagramUrl = social.url || null;
-                  break;
-                }
+            if (place.social_media && typeof place.social_media === 'object') {
+              // social_media might be an object with keys like 'instagram'
+              if (place.social_media.instagram) {
+                instagramUrl = place.social_media.instagram;
               }
             }
 
-            log.debug('Venue data', {
+            log.info('Venue data', {
               name: place.name,
               hasPhotos: !!place.photos && place.photos.length > 0,
               photoUrl: photoUrl,
-              hasSocialMedia: !!place.social_media && place.social_media.length > 0,
-              socialMedia: place.social_media,
+              hasSocialMedia: !!place.social_media,
+              socialMediaKeys: place.social_media ? Object.keys(place.social_media) : [],
               instagramUrl: instagramUrl,
             });
 
