@@ -76,8 +76,10 @@ async function handleAutocomplete(event) {
     log.error('Autocomplete failed, returning fallback', {
       error: err.message,
       status: err.response?.status,
+      statusText: err.response?.statusText,
       data: err.response?.data,
-      apiKey: FOURSQUARE_API_KEY ? 'set' : 'not-set'
+      apiKey: FOURSQUARE_API_KEY ? 'set' : 'not-set',
+      apiKeyLength: FOURSQUARE_API_KEY?.length || 0
     });
     return ok({ suggestions: FALLBACK_DESTINATIONS }, event);
   }
