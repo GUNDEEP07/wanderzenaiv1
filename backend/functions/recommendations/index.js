@@ -158,7 +158,7 @@ function ok(data) {
   return {
     statusCode: 200,
     headers: {
-      'Access-Control-Allow-Origin': process.env.FRONTEND_URL || '*',
+      'Access-Control-Allow-Origin': '*',
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(data),
@@ -169,7 +169,7 @@ function corsHeaders(statusCode, body) {
   return {
     statusCode,
     headers: {
-      'Access-Control-Allow-Origin': process.env.FRONTEND_URL || '*',
+      'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET,OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     },
