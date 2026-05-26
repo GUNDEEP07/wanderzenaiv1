@@ -292,7 +292,7 @@ async function handleVenues(event) {
           });
           const venues = res.data.results.map(place => {
             const photoUrl = place.photos?.[0]?.prefix
-              ? `${place.photos[0].prefix}original${place.photos[0].suffix}`
+              ? `${place.photos[0].prefix}300x300${place.photos[0].suffix}`
               : null;
 
             const categoryName = place.categories?.[0]?.name || activity.name;
