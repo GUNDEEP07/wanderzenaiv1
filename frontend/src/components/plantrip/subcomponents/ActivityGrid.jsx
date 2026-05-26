@@ -66,21 +66,22 @@ const s = {
     textAlign: 'center',
     transition: 'color 0.3s ease',
   }),
-  customButton: {
+  customButton: (isHovered) => ({
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
     gap: '10px',
     padding: '18px 12px',
-    background: 'rgba(0,212,170,0.08)',
-    border: '2px dashed rgba(0,212,170,0.4)',
+    background: 'rgba(0,212,170,0.12)',
+    border: '2px solid rgba(0,212,170,0.3)',
     borderRadius: '16px',
     cursor: 'pointer',
     fontFamily: "'Plus Jakarta Sans', sans-serif",
     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-  },
+    boxShadow: isHovered ? '0 8px 24px rgba(0,212,170,0.15)' : '0 2px 8px rgba(0,0,0,0.2)',
+    transform: isHovered ? 'scale(1.08)' : 'scale(1)',
+  }),
   customEmoji: {
     fontSize: '40px',
     fontWeight: '300',
@@ -143,15 +144,12 @@ export function ActivityGrid({ selectedActivities, onActivityToggle, onOpenCusto
           );
         })}
         <button
-          style={{
-            ...s.customButton,
-            ...(hoveredButton === 'custom' && s.buttonHover),
-          }}
+          style={s.customButton(hoveredButton === 'custom')}
           onClick={onOpenCustomModal}
           onMouseEnter={() => setHoveredButton('custom')}
           onMouseLeave={() => setHoveredButton(null)}
         >
-          <div style={s.customEmoji}>+</div>
+          <div style={s.customEmoji}>✨</div>
           <div style={s.label(false)}>Add Custom</div>
         </button>
       </div>
