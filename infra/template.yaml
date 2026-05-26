@@ -267,23 +267,23 @@ Resources:
           FRONTEND_URL: !Ref FrontendUrl
           ALLOWED_ORIGINS: !Ref AllowedOrigins
       Events:
-        GetRecommendations:
-          Type: Api
-          Properties:
-            RestApiId: !Ref WanderZenApi
-            Path: /recommendations
-            Method: GET
         GetAutocomplete:
           Type: Api
           Properties:
             RestApiId: !Ref WanderZenApi
-            Path: /autocomplete
+            Path: /recommendations/autocomplete
             Method: GET
         GetVenues:
           Type: Api
           Properties:
             RestApiId: !Ref WanderZenApi
-            Path: /venues
+            Path: /recommendations/venues
+            Method: GET
+        GetCategories:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /recommendations/categories
             Method: GET
 
   # ─── S3 Bucket for PDFs ────────────────────────────────────────────────────
