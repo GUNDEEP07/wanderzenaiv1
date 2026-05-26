@@ -139,6 +139,7 @@ async function handleVenues(event) {
             ll: `${lat},${lng}`,
             query: category,
             limit: 5,
+            fields: 'fsq_id,name,location,categories,rating,social_media',
           },
           headers: {
             'X-Places-Api-Version': FOURSQUARE_API_VERSION,
