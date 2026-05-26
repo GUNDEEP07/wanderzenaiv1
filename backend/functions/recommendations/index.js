@@ -11,8 +11,16 @@ const GOOGLE_PLACES_BASE = 'https://maps.googleapis.com/maps/api/place';
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim());
 
 const FEATURED_CATEGORIES = [
-  'restaurant', 'cafe', 'park', 'temple', 'museum',
-  'hiking_trail', 'viewpoint', 'market', 'bar', 'accommodation'
+  { id: '4d4b7105d754a06374d81259', name: 'restaurant' },
+  { id: '63be6904847c3692a84b9bb6', name: 'cafe' },
+  { id: '4bf58dd8d48988d163941735', name: 'park' },
+  { id: '4bf58dd8d48988d139941735', name: 'temple' },
+  { id: '4bf58dd8d48988d181941735', name: 'museum' },
+  { id: '4bf58dd8d48988d159941735', name: 'hiking_trail' },
+  { id: '4bf58dd8d48988d166941735', name: 'viewpoint' },
+  { id: '4bf58dd8d48988d1f4931735', name: 'market' },
+  { id: '4bf58dd8d48988d116941735', name: 'bar' },
+  { id: '4bf58dd8d48988d1f8931735', name: 'accommodation' },
 ];
 
 // Fallback destinations if Foursquare is down
@@ -51,6 +59,8 @@ exports.handler = async (event) => {
       return await handleAutocomplete(event);
     } else if (path.includes('/venues')) {
       return await handleVenues(event);
+    } else if (path.includes('/categories')) {
+      return await handleCategories(event);
     } else {
       return { statusCode: 404, body: JSON.stringify({ error: 'Not found' }) };
     }
@@ -225,23 +235,9 @@ async function handleVenues(event) {
     log.info('Venues request', { destination, lat, lng });
     const categories = [];
 
-    // Fetch category mappings from database
-    let categoryMappings = {};
-    try {
-      const categoryRes = await getDB().query(
-        'SELECT id, name, parent_id FROM foursquare_categories WHERE parent_id IS NULL ORDER BY name'
-      );
-      categoryMappings = categoryRes.rows.reduce((acc, row) => {
-        acc[row.name.toLowerCase()] = row.id;
-        return acc;
-      }, {});
-    } catch (dbErr) {
-      log.warn('Failed to fetch category mappings', { error: dbErr.message });
-    }
-
     for (const activity of FEATURED_CATEGORIES) {
       try {
-        const fsqCategoryId = categoryMappings[activity.toLowerCase()] || activity;
+        const fsqCategoryId = activity.id;
 
         const res = await axios.get(
           `${FOURSQUARE_BASE}/places/search`,
@@ -253,9 +249,9 @@ async function handleVenues(event) {
               'radius': 2000,
             },
             headers: {
-              'Authorization': FOURSQUARE_API_KEY,
-              'Accept': 'application/json',
-              'X-Foursquare-Version': FOURSQUARE_API_VERSION,
+              'Authorization': `Bearer ${FOURSQUARE_API_KEY}`,
+              'X-Places-Api-Version': FOURSQUARE_API_VERSION,
+              'accept': 'application/json',
             },
             timeout: 5000,
           }
@@ -267,7 +263,7 @@ async function handleVenues(event) {
               ? `${place.photos[0].prefix}original${place.photos[0].suffix}`
               : null;
 
-            const categoryName = place.categories?.[0]?.name || activity;
+            const categoryName = place.categories?.[0]?.name || activity.name;
 
             return {
               fsq_id: place.fsq_place_id,
@@ -290,14 +286,14 @@ async function handleVenues(event) {
 
           if (venues.length > 0) {
             categories.push({
-              category: formatCategory(activity),
+              category: formatCategory(activity.name),
               venues: venues,
             });
           }
         }
       } catch (catErr) {
         log.warn('Category fetch failed', {
-          activity,
+          activity: activity.name,
           error: catErr.message,
           status: catErr.response?.status,
           data: catErr.response?.data,
@@ -317,6 +313,33 @@ async function handleVenues(event) {
       categories: [],
       error: 'Unable to fetch venues'
     }, event);
+  }
+}
+
+async function handleCategories(event) {
+  try {
+    log.info('Categories request');
+
+    let categories = [];
+    try {
+      const categoryRes = await getDB().query(
+        'SELECT id, name, label FROM foursquare_categories WHERE parent_id IS NULL ORDER BY name'
+      );
+      categories = categoryRes.rows.map(row => ({
+        id: row.id,
+        name: row.name,
+        label: row.label || row.name,
+      }));
+    } catch (dbErr) {
+      log.warn('Failed to fetch categories from database', { error: dbErr.message });
+      categories = [];
+    }
+
+    log.info('Categories success', { count: categories.length });
+    return ok({ categories }, event);
+  } catch (err) {
+    log.error('Categories fetch failed', { error: err.message });
+    return ok({ categories: [], error: 'Unable to fetch categories' }, event);
   }
 }
 
