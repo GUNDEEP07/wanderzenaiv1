@@ -60,6 +60,7 @@ export async function fetchVenuesForActivity(activity, destination, maxResults =
       category: venue.category || activity,
       rating: venue.rating || null,
       reviewCount: venue.reviewCount || 0,
+      score: venue.score || 0,
       address: venue.address || 'Address not available',
       instagramUrl: venue.instagramUrl || null,
       photoUrl: venue.photoUrl || null,

@@ -139,6 +139,21 @@ const s = {
     fontSize: '11px',
     color: '#ffd93d',
     marginTop: '4px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+  },
+  topRankedBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '2px',
+    fontSize: '9px',
+    color: '#ffd93d',
+    backgroundColor: 'rgba(255, 217, 61, 0.15)',
+    padding: '2px 6px',
+    borderRadius: '3px',
+    fontWeight: '600',
+    letterSpacing: '0.05em',
   },
   attributes: {
     display: 'flex',
@@ -251,7 +266,7 @@ export function VenuesList({ activity, venues, selectedVenues, onVenueToggle, lo
           <div style={s.header}>🎯 Top {activity} Spots ({venues.length} available)</div>
 
           <div style={s.list}>
-            {venues.map(venue => {
+            {venues.map((venue, idx) => {
               const distance = destination && venue.lat && venue.lng
                 ? calculateDistance(destination.lat, destination.lng, venue.lat, venue.lng)
                 : null;
@@ -260,6 +275,9 @@ export function VenuesList({ activity, venues, selectedVenues, onVenueToggle, lo
               const currentPhotoIdx = getCurrentPhotoIndex(venue.id);
               const currentPhoto = photoCount > 0 ? venue.photos[currentPhotoIdx] : null;
               const currentPhotoUrl = currentPhoto ? `${currentPhoto.prefix}300x300${currentPhoto.suffix}` : null;
+
+              // Show "Top Ranked" badge for top 3 venues
+              const isTopRanked = idx < 3;
 
               return (
               <div key={venue.id} style={s.card}>
@@ -324,7 +342,9 @@ export function VenuesList({ activity, venues, selectedVenues, onVenueToggle, lo
                     )}
                     {venue.rating && (
                       <div style={s.rating}>
-                        ⭐ {venue.rating.toFixed(1)} {venue.reviewCount > 0 && `(${venue.reviewCount})`}
+                        <span>⭐ {venue.rating.toFixed(1)}</span>
+                        {venue.reviewCount > 0 && <span>({venue.reviewCount})</span>}
+                        {isTopRanked && <div style={s.topRankedBadge}>⭐ Top Ranked</div>}
                       </div>
                     )}
                     {venue.attributes && (

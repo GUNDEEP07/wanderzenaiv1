@@ -349,14 +349,30 @@ async function handleVenues(event) {
             };
           });
 
-          // Sort venues by rating (descending) then by review count (descending)
-          venues.sort((a, b) => {
-            // Primary sort: rating (highest first)
-            if (b.rating !== a.rating) {
-              return b.rating - a.rating;
-            }
-            // Secondary sort: review count (most reviews first)
-            return b.reviewCount - a.reviewCount;
+          // Calculate weighted score: 40% rating + 60% review count
+          // Find max review count to normalize
+          const maxReviews = Math.max(...venues.map(v => v.reviewCount || 0), 1);
+
+          venues.forEach(venue => {
+            const ratingScore = (venue.rating || 0) / 5; // Normalize to 0-1
+            const reviewScore = (venue.reviewCount || 0) / maxReviews; // Normalize to 0-1
+            venue.score = (ratingScore * 0.4) + (reviewScore * 0.6);
+          });
+
+          // Sort by weighted score (descending) - highest quality + popularity first
+          venues.sort((a, b) => (b.score || 0) - (a.score || 0));
+
+          // Debug logging for top venues
+          log.info(`${activity.name} venues scored and ranked`, {
+            activity: activity.name,
+            count: venues.length,
+            maxReviewCount: maxReviews,
+            topVenues: venues.slice(0, 3).map(v => ({
+              name: v.name,
+              rating: v.rating,
+              reviewCount: v.reviewCount,
+              score: v.score?.toFixed(3),
+            })),
           });
 
           if (venues.length > 0) {
