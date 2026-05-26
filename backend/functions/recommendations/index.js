@@ -110,12 +110,11 @@ async function handleVenues(event) {
 
     for (const category of FEATURED_CATEGORIES) {
       try {
-        const res = await axios.get(`${FOURSQUARE_BASE}/nearby`, {
+        const res = await axios.get(`${FOURSQUARE_BASE}/places/search`, {
           params: {
             ll: `${lat},${lng}`,
             query: category,
             limit: 5,
-            sort: 'rating',
           },
           headers: {
             'X-Places-Api-Version': FOURSQUARE_API_VERSION,
