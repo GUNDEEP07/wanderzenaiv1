@@ -91,11 +91,11 @@ Resources:
         DEFAULT_4XX:
           ResponseParameters:
             Headers:
-              gatewayresponse.header.Access-Control-Allow-Origin: !Sub "'${FrontendUrl}'"
+              gatewayresponse.header.Access-Control-Allow-Origin: "'http://localhost:5173,https://localhost:5173,http://localhost:3000,https://localhost:3000'"
         DEFAULT_5XX:
           ResponseParameters:
             Headers:
-              gatewayresponse.header.Access-Control-Allow-Origin: !Sub "'${FrontendUrl}'"
+              gatewayresponse.header.Access-Control-Allow-Origin: "'http://localhost:5173,https://localhost:5173,http://localhost:3000,https://localhost:3000'"
 
   # ─── Lambda Layer (shared utilities) ───────────────────────────────────────
   SharedLayer:
