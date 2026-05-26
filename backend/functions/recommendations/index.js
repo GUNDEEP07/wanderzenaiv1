@@ -56,7 +56,7 @@ async function handleAutocomplete(event) {
 
   try {
     log.info('Autocomplete request', { query });
-    const res = await axios.get(`${FOURSQUARE_BASE}/autocomplete`, {
+    const res = await axios.get(`${FOURSQUARE_BASE}/places/autocomplete`, {
       params: { query, limit: 5 },
       headers: { Authorization: `Bearer ${FOURSQUARE_API_KEY}` },
       timeout: 5000,
