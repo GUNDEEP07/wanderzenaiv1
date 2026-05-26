@@ -149,25 +149,20 @@ async function handleVenues(event) {
         });
 
         if (res.data.results && res.data.results.length > 0) {
-          if (category === 'restaurant') {
-            const firstVenue = res.data.results[0].place || res.data.results[0];
-            log.info('Sample venue structure', {
-              name: firstVenue.name,
-              hasSocialMedia: !!firstVenue.social_media,
-              socialMediaType: typeof firstVenue.social_media,
-              socialMediaKeys: firstVenue.social_media ? Object.keys(firstVenue.social_media).slice(0, 10) : null,
-              allKeys: Object.keys(firstVenue).slice(0, 20)
-            });
-          }
           categories.push({
             category: formatCategory(category),
             venues: res.data.results.map(result => {
               const v = result.place || result;
-              // Extract Instagram link if social_media is an array
+              // Extract Instagram link from social_media if available
               let instagramLink = null;
-              if (Array.isArray(v.social_media)) {
-                const instaData = v.social_media.find(sm => sm.type === 'instagram');
-                instagramLink = instaData?.url || null;
+              if (v.social_media) {
+                if (Array.isArray(v.social_media)) {
+                  const instaData = v.social_media.find(sm => sm.type === 'instagram');
+                  instagramLink = instaData?.url || null;
+                } else if (typeof v.social_media === 'object') {
+                  // Handle case where social_media is an object with instagram property
+                  instagramLink = v.social_media.instagram?.url || null;
+                }
               }
               return {
                 fsq_id: v.fsq_place_id || v.fsq_id,
