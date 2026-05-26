@@ -4,7 +4,8 @@ const axios = require('axios');
 const { log } = require('/opt/nodejs/index');
 
 const FOURSQUARE_API_KEY = process.env.FOURSQUARE_API_KEY;
-const FOURSQUARE_BASE = 'https://api.foursquare.com/v3';
+const FOURSQUARE_BASE = 'https://places-api.foursquare.com';
+const FOURSQUARE_API_VERSION = '2025-06-17';
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim());
 
 const FEATURED_CATEGORIES = [
@@ -56,19 +57,26 @@ async function handleAutocomplete(event) {
 
   try {
     log.info('Autocomplete request', { query });
-    const res = await axios.get(`${FOURSQUARE_BASE}/places/autocomplete`, {
+    const res = await axios.get(`${FOURSQUARE_BASE}/autocomplete`, {
       params: { query, limit: 5 },
-      headers: { Authorization: `Bearer ${FOURSQUARE_API_KEY}` },
+      headers: {
+        'X-Places-Api-Version': FOURSQUARE_API_VERSION,
+        'accept': 'application/json',
+        'Authorization': `Bearer ${FOURSQUARE_API_KEY}`,
+      },
       timeout: 5000,
     });
 
-    const suggestions = res.data.results.map(place => ({
-      fsq_id: place.fsq_id,
-      name: place.name,
-      country: place.location?.country || 'Unknown',
-      lat: place.location?.latitude,
-      lng: place.location?.longitude,
-    }));
+    const suggestions = res.data.results.map(result => {
+      const place = result.place || result;
+      return {
+        fsq_id: place.fsq_place_id || place.fsq_id,
+        name: place.name,
+        country: place.location?.country || 'Unknown',
+        lat: place.latitude || place.location?.latitude,
+        lng: place.longitude || place.location?.longitude,
+      };
+    });
 
     log.info('Autocomplete success', { count: suggestions.length });
     return ok({ suggestions }, event);
@@ -102,27 +110,34 @@ async function handleVenues(event) {
 
     for (const category of FEATURED_CATEGORIES) {
       try {
-        const res = await axios.get(`${FOURSQUARE_BASE}/places/search`, {
+        const res = await axios.get(`${FOURSQUARE_BASE}/nearby`, {
           params: {
             ll: `${lat},${lng}`,
             query: category,
             limit: 5,
             sort: 'rating',
           },
-          headers: { Authorization: `Bearer ${FOURSQUARE_API_KEY}` },
+          headers: {
+            'X-Places-Api-Version': FOURSQUARE_API_VERSION,
+            'accept': 'application/json',
+            'Authorization': `Bearer ${FOURSQUARE_API_KEY}`,
+          },
           timeout: 5000,
         });
 
         if (res.data.results && res.data.results.length > 0) {
           categories.push({
             category: formatCategory(category),
-            venues: res.data.results.map(v => ({
-              fsq_id: v.fsq_id,
-              name: v.name,
-              category: v.categories?.[0]?.name || category,
-              rating: v.rating || null,
-              address: v.location?.address || v.location?.formatted_address || '',
-            })),
+            venues: res.data.results.map(result => {
+              const v = result.place || result;
+              return {
+                fsq_id: v.fsq_place_id || v.fsq_id,
+                name: v.name,
+                category: v.categories?.[0]?.name || category,
+                rating: v.rating || null,
+                address: v.location?.formatted_address || v.location?.address || '',
+              };
+            }),
           });
         }
       } catch (catErr) {
