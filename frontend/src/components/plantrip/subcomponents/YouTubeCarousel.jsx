@@ -113,14 +113,14 @@ export function YouTubeCarousel({ activity, destination, countryCode, videos, lo
       {loading ? (
         <div style={s.section}>
           <div style={s.header}>
-            <span>🔥</span> Trending in {flag} {destination}
+            <span>🔥</span> Trending in {flag} {destination?.name}
           </div>
           <div style={s.loading}>Loading videos...</div>
         </div>
       ) : !videos || videos.length === 0 ? (
         <div style={s.section}>
           <div style={s.header}>
-            <span>🔥</span> Trending in {flag} {destination}
+            <span>🔥</span> Trending in {flag} {destination?.name}
           </div>
           <div style={s.empty}>No trending videos found for {activity}</div>
         </div>

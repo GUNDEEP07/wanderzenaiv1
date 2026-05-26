@@ -40,16 +40,6 @@ export function VenueSelection({ destination, onSubmit, onSkip }) {
     fetchUserLocation();
   }, []);
 
-  // Fetch YouTube + Foursquare data for preset activities
-  useEffect(() => {
-    if (!loading && PRESET_ACTIVITIES.length > 0 && destination?.lat && destination?.lng) {
-      PRESET_ACTIVITIES.forEach(activity => {
-        if (!youtubeVideos[activity]) {
-          fetchActivityContent(activity);
-        }
-      });
-    }
-  }, [loading, destination]);
 
   const fetchActivityContent = async (activity) => {
     // Fetch YouTube
