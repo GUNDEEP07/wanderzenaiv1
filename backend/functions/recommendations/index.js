@@ -60,10 +60,20 @@ async function handleAutocomplete(event) {
 
     // First, filter fallback destinations by query
     const lowerQuery = query.toLowerCase();
-    const fallbackMatches = FALLBACK_DESTINATIONS.filter(dest =>
-      dest.name.toLowerCase().includes(lowerQuery) ||
-      dest.country.toLowerCase().includes(lowerQuery)
+
+    // Prioritize name matches, then country matches for longer queries
+    const nameMatches = FALLBACK_DESTINATIONS.filter(dest =>
+      dest.name.toLowerCase().includes(lowerQuery)
     );
+
+    const countryMatches = query.length >= 3
+      ? FALLBACK_DESTINATIONS.filter(dest =>
+          !nameMatches.includes(dest) &&
+          dest.country.toLowerCase().includes(lowerQuery)
+        )
+      : [];
+
+    const fallbackMatches = [...nameMatches, ...countryMatches];
 
     // If we found matches in fallback destinations, return those
     if (fallbackMatches.length > 0) {
