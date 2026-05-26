@@ -23,6 +23,7 @@ Globals:
         STRIPE_WANDERER_LINK: !Ref StripeWandererLink
         FRONTEND_URL: !Ref FrontendUrl
         FOURSQUARE_API_KEY: !Ref FoursquareApiKey
+        GOOGLE_PLACES_API_KEY: !Ref GooglePlacesApiKey
 
     Layers:
       - !Ref SharedLayer
@@ -71,6 +72,11 @@ Parameters:
     NoEcho: true
     Default: ''
     Description: Foursquare Places API key for local venue enrichment
+  GooglePlacesApiKey:
+    Type: String
+    NoEcho: true
+    Default: ''
+    Description: Google Places API key for city autocomplete
   AllowedOrigins:
     Type: String
     Default: 'https://www.wanderzenai.com,http://localhost:5173,https://localhost:5173,https://web.postman.co'

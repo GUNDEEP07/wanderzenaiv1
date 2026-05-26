@@ -6,6 +6,8 @@ const { log } = require('/opt/nodejs/index');
 const FOURSQUARE_API_KEY = process.env.FOURSQUARE_API_KEY;
 const FOURSQUARE_BASE = 'https://places-api.foursquare.com';
 const FOURSQUARE_API_VERSION = '2025-06-17';
+const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
+const GOOGLE_PLACES_BASE = 'https://maps.googleapis.com/maps/api/place';
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim());
 
 const FEATURED_CATEGORIES = [
@@ -20,6 +22,16 @@ const FALLBACK_DESTINATIONS = [
   { fsq_id: 'bali', name: 'Bali', country: 'Indonesia', lat: -8.6705, lng: 115.2126 },
   { fsq_id: 'paris', name: 'Paris', country: 'France', lat: 48.8566, lng: 2.3522 },
   { fsq_id: 'oaxaca', name: 'Oaxaca', country: 'Mexico', lat: 17.0732, lng: -96.7266 },
+  { fsq_id: 'munich', name: 'Munich', country: 'Germany', lat: 48.1351, lng: 11.5820 },
+  { fsq_id: 'new-delhi', name: 'New Delhi', country: 'India', lat: 28.6139, lng: 77.2090 },
+  { fsq_id: 'tokyo', name: 'Tokyo', country: 'Japan', lat: 35.6762, lng: 139.6503 },
+  { fsq_id: 'london', name: 'London', country: 'United Kingdom', lat: 51.5074, lng: -0.1278 },
+  { fsq_id: 'barcelona', name: 'Barcelona', country: 'Spain', lat: 41.3851, lng: 2.1734 },
+  { fsq_id: 'amsterdam', name: 'Amsterdam', country: 'Netherlands', lat: 52.3676, lng: 4.9041 },
+  { fsq_id: 'rome', name: 'Rome', country: 'Italy', lat: 41.9028, lng: 12.4964 },
+  { fsq_id: 'singapore', name: 'Singapore', country: 'Singapore', lat: 1.3521, lng: 103.8198 },
+  { fsq_id: 'hong-kong', name: 'Hong Kong', country: 'Hong Kong', lat: 22.3193, lng: 114.1694 },
+  { fsq_id: 'dubai', name: 'Dubai', country: 'United Arab Emirates', lat: 25.2048, lng: 55.2708 },
 ];
 
 exports.handler = async (event) => {
@@ -58,10 +70,8 @@ async function handleAutocomplete(event) {
   try {
     log.info('Autocomplete request', { query });
 
-    // First, filter fallback destinations by query
+    // First, filter fallback destinations by query (prioritize exact matches)
     const lowerQuery = query.toLowerCase();
-
-    // Prioritize name matches, then country matches for longer queries
     const nameMatches = FALLBACK_DESTINATIONS.filter(dest =>
       dest.name.toLowerCase().includes(lowerQuery)
     );
@@ -75,37 +85,62 @@ async function handleAutocomplete(event) {
 
     const fallbackMatches = [...nameMatches, ...countryMatches];
 
-    // If we found matches in fallback destinations, return those
+    // If we found matches in fallback destinations, return those first
     if (fallbackMatches.length > 0) {
       log.info('Autocomplete success (from fallback)', { count: fallbackMatches.length });
       return ok({ suggestions: fallbackMatches }, event);
     }
 
-    // Otherwise, try Foursquare API
-    const res = await axios.get(`${FOURSQUARE_BASE}/autocomplete`, {
-      params: { query, limit: 5 },
-      headers: {
-        'X-Places-Api-Version': FOURSQUARE_API_VERSION,
-        'accept': 'application/json',
-        'Authorization': `Bearer ${FOURSQUARE_API_KEY}`,
+    // Otherwise, try Google Places Autocomplete API
+    const res = await axios.get(`${GOOGLE_PLACES_BASE}/autocomplete/json`, {
+      params: {
+        input: query,
+        key: GOOGLE_PLACES_API_KEY,
+        components: 'country:*', // Allow all countries
       },
       timeout: 5000,
     });
 
-    const suggestions = res.data.results
-      .map(result => {
-        const place = result.place || result;
-        return {
-          fsq_id: place.fsq_place_id || place.fsq_id,
-          name: place.name,
-          country: place.location?.country || 'Unknown',
-          lat: place.latitude || place.location?.latitude,
-          lng: place.longitude || place.location?.longitude,
-        };
-      });
+    if (!res.data.predictions || res.data.predictions.length === 0) {
+      log.info('Autocomplete no results from Google Places');
+      return ok({ suggestions: [] }, event);
+    }
 
-    log.info('Autocomplete success (from Foursquare)', { count: suggestions.length });
-    return ok({ suggestions }, event);
+    // Get place details for each prediction to extract coordinates
+    const suggestions = await Promise.all(
+      res.data.predictions.slice(0, 5).map(async (prediction) => {
+        try {
+          const detailsRes = await axios.get(`${GOOGLE_PLACES_BASE}/details/json`, {
+            params: {
+              place_id: prediction.place_id,
+              key: GOOGLE_PLACES_API_KEY,
+              fields: 'geometry,formatted_address',
+            },
+            timeout: 5000,
+          });
+
+          const location = detailsRes.data.result?.geometry?.location;
+          const formatted = detailsRes.data.result?.formatted_address || prediction.description;
+
+          return {
+            fsq_id: prediction.place_id,
+            name: prediction.main_text,
+            country: prediction.terms?.[prediction.terms.length - 1]?.value || 'Unknown',
+            lat: location?.lat || null,
+            lng: location?.lng || null,
+            description: formatted,
+          };
+        } catch (detailErr) {
+          log.warn('Failed to get place details', { place_id: prediction.place_id, error: detailErr.message });
+          return null;
+        }
+      })
+    );
+
+    const validSuggestions = suggestions.filter(s => s !== null);
+
+    log.info('Autocomplete success (from Google Places)', { count: validSuggestions.length });
+    return ok({ suggestions: validSuggestions }, event);
   } catch (err) {
     log.error('Autocomplete failed, returning fallback', {
       error: err.message,
