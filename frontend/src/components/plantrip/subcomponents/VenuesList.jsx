@@ -323,7 +323,9 @@ export function VenuesList({ activity, venues, selectedVenues, onVenueToggle, lo
                       <div style={s.category}>{venue.category}</div>
                     )}
                     {venue.rating && (
-                      <div style={s.rating}>⭐ {venue.rating.toFixed(1)}</div>
+                      <div style={s.rating}>
+                        ⭐ {venue.rating.toFixed(1)} {venue.reviewCount > 0 && `(${venue.reviewCount})`}
+                      </div>
                     )}
                     {venue.attributes && (
                       <div style={s.attributes}>

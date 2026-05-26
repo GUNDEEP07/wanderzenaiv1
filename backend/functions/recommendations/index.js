@@ -330,7 +330,8 @@ async function handleVenues(event) {
               fsq_id: place.fsq_place_id,
               name: place.name,
               category: categoryName,
-              rating: place.rating || null,
+              rating: place.rating || 0,
+              reviewCount: place.review_count || 0,
               address: place.location?.formatted_address || '',
               lat: place.latitude || null,
               lng: place.longitude || null,
@@ -346,6 +347,16 @@ async function handleVenues(event) {
               tel: place.tel || null,
               tips: place.tips || [],
             };
+          });
+
+          // Sort venues by rating (descending) then by review count (descending)
+          venues.sort((a, b) => {
+            // Primary sort: rating (highest first)
+            if (b.rating !== a.rating) {
+              return b.rating - a.rating;
+            }
+            // Secondary sort: review count (most reviews first)
+            return b.reviewCount - a.reviewCount;
           });
 
           if (venues.length > 0) {
