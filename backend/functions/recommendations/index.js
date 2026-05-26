@@ -1,7 +1,7 @@
 'use strict';
 
 const axios = require('axios');
-const { log, db } = require('/opt/nodejs/index');
+const { log, getDB } = require('/opt/nodejs/index');
 
 const FOURSQUARE_API_KEY = process.env.FOURSQUARE_API_KEY;
 const FOURSQUARE_BASE = 'https://places-api.foursquare.com';
@@ -78,7 +78,7 @@ async function handleAutocomplete(event) {
 
     // Check cache first
     try {
-      const cacheResult = await db.query(
+      const cacheResult = await getDB().query(
         'SELECT suggestions FROM autocomplete_cache WHERE query = $1',
         [query.toLowerCase()]
       );
@@ -186,7 +186,7 @@ async function handleAutocomplete(event) {
     // Cache the results
     if (validSuggestions.length > 0) {
       try {
-        await db.query(
+        await getDB().query(
           'INSERT INTO autocomplete_cache (query, suggestions) VALUES ($1, $2) ON CONFLICT (query) DO UPDATE SET suggestions = $2',
           [query.toLowerCase(), JSON.stringify(validSuggestions)]
         );
@@ -210,19 +210,6 @@ async function handleAutocomplete(event) {
   }
 }
 
-const CATEGORY_TO_GOOGLE_TYPES = {
-  'restaurant': ['restaurant'],
-  'cafe': ['cafe'],
-  'park': ['park'],
-  'temple': ['place_of_worship'],
-  'museum': ['museum'],
-  'hiking_trail': ['hiking_area', 'park'],
-  'viewpoint': ['scenic_point', 'park'],
-  'market': ['market'],
-  'bar': ['bar'],
-  'accommodation': ['hotel', 'lodging']
-};
-
 async function handleVenues(event) {
   const { destination, lat, lng } = event.queryStringParameters || {};
 
@@ -234,80 +221,86 @@ async function handleVenues(event) {
     };
   }
 
-  const adminBoundaryTypes = ['locality', 'administrative_area_level_1', 'administrative_area_level_2', 'country', 'postal_code'];
-
-  function isValidVenue(place, requestedTypes) {
-    if (!place.name || !place.rating) return false;
-    const types = place.types || [];
-
-    if (types.some(t => adminBoundaryTypes.includes(t))) return false;
-
-    return requestedTypes.some(reqType => types.includes(reqType));
-  }
-
   try {
     log.info('Venues request', { destination, lat, lng });
     const categories = [];
 
+    // Fetch category mappings from database
+    let categoryMappings = {};
+    try {
+      const categoryRes = await getDB().query(
+        'SELECT id, name, parent_id FROM foursquare_categories WHERE parent_id IS NULL ORDER BY name'
+      );
+      categoryMappings = categoryRes.rows.reduce((acc, row) => {
+        acc[row.name.toLowerCase()] = row.id;
+        return acc;
+      }, {});
+    } catch (dbErr) {
+      log.warn('Failed to fetch category mappings', { error: dbErr.message });
+    }
+
     for (const activity of FEATURED_CATEGORIES) {
       try {
-        const types = CATEGORY_TO_GOOGLE_TYPES[activity] || [activity];
-        let venues = [];
-        let typeIndex = 0;
+        const fsqCategoryId = categoryMappings[activity.toLowerCase()] || activity;
 
-        while (venues.length === 0 && typeIndex < types.length) {
-          const res = await axios.get(`${GOOGLE_PLACES_BASE}/nearbysearch/json`, {
+        const res = await axios.get(
+          `${FOURSQUARE_BASE}/places/search`,
+          {
             params: {
-              location: `${lat},${lng}`,
-              type: types[typeIndex],
-              radius: 2000,
-              key: GOOGLE_PLACES_API_KEY,
+              'll': `${lat},${lng}`,
+              'fsq_category_ids': fsqCategoryId,
+              'limit': 5,
+              'radius': 2000,
+            },
+            headers: {
+              'Authorization': FOURSQUARE_API_KEY,
+              'Accept': 'application/json',
+              'X-Foursquare-Version': FOURSQUARE_API_VERSION,
             },
             timeout: 5000,
-          });
-
-          if (res.data.results && res.data.results.length > 0) {
-            venues = res.data.results
-              .filter(place => isValidVenue(place, [types[typeIndex]]))
-              .slice(0, 5)
-              .map(place => {
-                const photoUrl = place.photos?.[0]
-                  ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${place.photos[0].photo_reference}&key=${GOOGLE_PLACES_API_KEY}`
-                  : null;
-
-                return {
-                  fsq_id: place.place_id,
-                  name: place.name,
-                  category: place.types?.find(t => !adminBoundaryTypes.includes(t) && t !== 'point_of_interest' && t !== 'establishment') || activity,
-                  rating: place.rating || null,
-                  address: place.vicinity || place.formatted_address || '',
-                  instagramUrl: null,
-                  photoUrl: photoUrl,
-                  attributes: null,
-                  hours: {
-                    open_now: place.opening_hours?.open_now || null,
-                    display: null,
-                  },
-                  website: null,
-                  tel: null,
-                };
-              });
           }
+        );
 
-          typeIndex++;
-        }
+        if (res.data.results && res.data.results.length > 0) {
+          const venues = res.data.results.map(place => {
+            const photoUrl = place.photos?.[0]?.prefix
+              ? `${place.photos[0].prefix}original${place.photos[0].suffix}`
+              : null;
 
-        if (venues.length > 0) {
-          categories.push({
-            category: formatCategory(activity),
-            venues: venues,
+            const categoryName = place.categories?.[0]?.name || activity;
+
+            return {
+              fsq_id: place.fsq_place_id,
+              name: place.name,
+              category: categoryName,
+              rating: place.rating || null,
+              address: place.location?.formatted_address || '',
+              instagramUrl: null,
+              photoUrl: photoUrl,
+              attributes: place.attributes || null,
+              hours: {
+                open_now: place.hours?.open_now || null,
+                display: place.hours?.display || null,
+              },
+              website: place.website || null,
+              tel: place.tel || null,
+              tips: place.tips || [],
+            };
           });
+
+          if (venues.length > 0) {
+            categories.push({
+              category: formatCategory(activity),
+              venues: venues,
+            });
+          }
         }
       } catch (catErr) {
         log.warn('Category fetch failed', {
           activity,
           error: catErr.message,
           status: catErr.response?.status,
+          data: catErr.response?.data,
         });
       }
     }
