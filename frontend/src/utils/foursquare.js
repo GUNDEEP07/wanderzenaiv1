@@ -1,23 +1,7 @@
-let apiKey = null;
-
-export function setFoursquareApiKey(key) {
-  apiKey = key;
-}
-
-function getApiKey() {
-  // If not set via setFoursquareApiKey, try to get from Vite environment
-  if (!apiKey && typeof window !== 'undefined') {
-    // Access via globalThis to avoid import.meta syntax errors in CommonJS
-    const env = window.__VITE_ENV__ || {};
-    return env.VITE_FOURSQUARE_API_KEY;
-  }
-  return apiKey;
-}
+const FOURSQUARE_API_KEY = import.meta.env.VITE_FOURSQUARE_API_KEY;
 
 export async function fetchVenuesForActivity(activity, destination, maxResults = 5) {
-  const key = getApiKey();
-
-  if (!key) {
+  if (!FOURSQUARE_API_KEY) {
     console.warn('Foursquare API key not configured');
     return [];
   }
@@ -33,7 +17,7 @@ export async function fetchVenuesForActivity(activity, destination, maxResults =
       `https://api.foursquare.com/v3/places/search?${params}`,
       {
         headers: {
-          'Authorization': key,
+          'Authorization': FOURSQUARE_API_KEY,
           'Accept': 'application/json',
         },
       }

@@ -1,5 +1,5 @@
 // YouTube API key - injected at build time via Vite
-const YOUTUBE_API_KEY = process.env.VITE_YOUTUBE_API_KEY || '';
+const YOUTUBE_API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY || '';
 
 export async function fetchTrendingVideos(activity, destination, countryCode, maxResults = 8) {
   if (!YOUTUBE_API_KEY) {
