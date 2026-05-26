@@ -134,6 +134,7 @@ export function VenueSelection({ destination, onSubmit, onSkip }) {
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 600;
 
   return (
+    <>
     <div className="venue-selection-redesign">
       <div className="venue-selection-header">
         <div className="step-label">STEP 2 OF 6</div>
@@ -200,14 +201,16 @@ export function VenueSelection({ destination, onSubmit, onSkip }) {
         </button>
       </div>
 
-      {/* Custom Interest Modal */}
-      <CustomInterestModal
-        destination={destination}
-        isOpen={showCustomModal}
-        onClose={() => setShowCustomModal(false)}
-        onSubmit={handleCustomActivitySubmit}
-        loading={false}
-      />
     </div>
+
+    {/* Custom Interest Modal - Rendered outside main div for proper overlay behavior */}
+    <CustomInterestModal
+      destination={destination}
+      isOpen={showCustomModal}
+      onClose={() => setShowCustomModal(false)}
+      onSubmit={handleCustomActivitySubmit}
+      loading={false}
+    />
+    </>
   );
 }

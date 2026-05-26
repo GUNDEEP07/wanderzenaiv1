@@ -1,0 +1,163 @@
+<h2>VenueSelection Redesign — Quick Decision UX</h2>
+<p class="subtitle">Preset profiles + individual activity icons for fast, mobile-friendly selection</p>
+
+<div class="cards">
+  <div class="card" data-choice="option-a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background: #0a0f1e; padding: 20px; border-radius: 8px; color: #fff; font-family: 'Plus Jakarta Sans', sans-serif;">
+        <div style="margin-bottom: 16px;">
+          <div style="font-size: 12px; color: #00d4aa; font-weight: 700; margin-bottom: 8px;">STEP 1: CHOOSE PRESET</div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button style="padding: 10px 16px; background: rgba(0,212,170,0.2); border: 1px solid #00d4aa; border-radius: 20px; color: #00d4aa; cursor: pointer; font-size: 13px; font-weight: 600;">⛺ Adventure</button>
+            <button style="padding: 10px 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; color: rgba(255,255,255,0.6); cursor: pointer; font-size: 13px;">🍜 Foodie</button>
+            <button style="padding: 10px 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; color: rgba(255,255,255,0.6); cursor: pointer; font-size: 13px;">🏛️ Culture</button>
+            <button style="padding: 10px 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; color: rgba(255,255,255,0.6); cursor: pointer; font-size: 13px;">🌳 Nature</button>
+          </div>
+        </div>
+        <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 16px; margin-top: 16px;">
+          <div style="font-size: 12px; color: rgba(255,255,255,0.4); margin-bottom: 8px;">STEP 2: REFINE (Optional)</div>
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
+            <div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 8px; cursor: pointer;">
+              <div style="font-size: 24px; margin-bottom: 4px;">🥾</div>
+              <div style="font-size: 10px; color: rgba(255,255,255,0.5);">Hiking</div>
+            </div>
+            <div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 8px; cursor: pointer;">
+              <div style="font-size: 24px; margin-bottom: 4px;">🍽️</div>
+              <div style="font-size: 10px; color: rgba(255,255,255,0.5);">Dining</div>
+            </div>
+            <div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 8px; cursor: pointer; border: 1px solid rgba(0,212,170,0.3); background: rgba(0,212,170,0.08);">
+              <div style="font-size: 24px; margin-bottom: 4px;">⛰️</div>
+              <div style="font-size: 10px; color: #00d4aa;">Views</div>
+            </div>
+            <div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 8px; cursor: pointer;">
+              <div style="font-size: 24px; margin-bottom: 4px;">☕</div>
+              <div style="font-size: 10px; color: rgba(255,255,255,0.5);">Cafes</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Option A: Two-Step Flow</h3>
+      <p><strong>Speed:</strong> 1 tap for preset, then optional refinement</p>
+      <p><strong>Feel:</strong> "Give me a quick bundle, then I'll adjust"</p>
+      <p class="pros-cons"><strong style="color: #00d4aa;">✓</strong> Fastest for users who just want defaults</p>
+      <p class="pros-cons"><strong style="color: #ff6b6b;">✗</strong> Extra step if they want to skip presets</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="option-b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background: #0a0f1e; padding: 20px; border-radius: 8px; color: #fff; font-family: 'Plus Jakarta Sans', sans-serif;">
+        <div style="margin-bottom: 12px;">
+          <div style="font-size: 12px; color: #00d4aa; font-weight: 700; margin-bottom: 12px;">TAP ACTIVITIES YOU LIKE</div>
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px;">
+            <div style="text-align: center; padding: 12px 8px; background: rgba(0,212,170,0.2); border: 2px solid #00d4aa; border-radius: 12px; cursor: pointer;">
+              <div style="font-size: 32px; margin-bottom: 6px;">🥾</div>
+              <div style="font-size: 11px; color: #00d4aa; font-weight: 600;">Hiking</div>
+            </div>
+            <div style="text-align: center; padding: 12px 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; cursor: pointer;">
+              <div style="font-size: 32px; margin-bottom: 6px;">🍽️</div>
+              <div style="font-size: 11px; color: rgba(255,255,255,0.5);">Dining</div>
+            </div>
+            <div style="text-align: center; padding: 12px 8px; background: rgba(0,212,170,0.2); border: 2px solid #00d4aa; border-radius: 12px; cursor: pointer;">
+              <div style="font-size: 32px; margin-bottom: 6px;">⛰️</div>
+              <div style="font-size: 11px; color: #00d4aa; font-weight: 600;">Views</div>
+            </div>
+            <div style="text-align: center; padding: 12px 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; cursor: pointer;">
+              <div style="font-size: 32px; margin-bottom: 6px;">☕</div>
+              <div style="font-size: 11px; color: rgba(255,255,255,0.5);">Cafes</div>
+            </div>
+            <div style="text-align: center; padding: 12px 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; cursor: pointer;">
+              <div style="font-size: 32px; margin-bottom: 6px;">🏛️</div>
+              <div style="font-size: 11px; color: rgba(255,255,255,0.5);">Culture</div>
+            </div>
+            <div style="text-align: center; padding: 12px 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; cursor: pointer;">
+              <div style="font-size: 32px; margin-bottom: 6px;">🌳</div>
+              <div style="font-size: 11px; color: rgba(255,255,255,0.5);">Nature</div>
+            </div>
+            <div style="text-align: center; padding: 12px 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; cursor: pointer;">
+              <div style="font-size: 32px; margin-bottom: 6px;">🎵</div>
+              <div style="font-size: 11px; color: rgba(255,255,255,0.5);">Nightlife</div>
+            </div>
+            <div style="text-align: center; padding: 12px 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; cursor: pointer;">
+              <div style="font-size: 32px; margin-bottom: 6px;">🏨</div>
+              <div style="font-size: 11px; color: rgba(255,255,255,0.5);">Stay</div>
+            </div>
+          </div>
+        </div>
+        <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; text-align: center;">
+          <div style="font-size: 11px; color: rgba(255,255,255,0.4);">Venues will auto-load for: <strong style="color: #00d4aa;">Hiking · Views</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Option B: Activity Icons Only</h3>
+      <p><strong>Speed:</strong> Tap icons directly, instant filtering</p>
+      <p><strong>Feel:</strong> "Show me venues for what I love"</p>
+      <p class="pros-cons"><strong style="color: #00d4aa;">✓</strong> No presets — pure customization</p>
+      <p class="pros-cons"><strong style="color: #ff6b6b;">✗</strong> Users must explore to know what to pick</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="option-c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background: #0a0f1e; padding: 20px; border-radius: 8px; color: #fff; font-family: 'Plus Jakarta Sans', sans-serif;">
+        <div style="margin-bottom: 14px;">
+          <div style="font-size: 12px; color: #00d4aa; font-weight: 700; margin-bottom: 10px;">QUICK PICK (Tap one)</div>
+          <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+            <button style="flex: 1; padding: 12px; background: rgba(0,212,170,0.2); border: 2px solid #00d4aa; border-radius: 8px; color: #00d4aa; cursor: pointer; font-size: 13px; font-weight: 600;">⛺ Adventure</button>
+            <button style="flex: 1; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: rgba(255,255,255,0.6); cursor: pointer; font-size: 13px;">🍜 Foodie</button>
+            <button style="flex: 1; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: rgba(255,255,255,0.6); cursor: pointer; font-size: 13px;">🏛️ Culture</button>
+          </div>
+        </div>
+        <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 14px; margin-bottom: 14px;">
+          <div style="font-size: 12px; color: rgba(255,255,255,0.4); margin-bottom: 10px;">OR CUSTOMIZE (Tap icons)</div>
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
+            <div style="text-align: center; padding: 10px 6px; background: rgba(0,212,170,0.15); border: 1px solid #00d4aa; border-radius: 8px; cursor: pointer;">
+              <div style="font-size: 28px; margin-bottom: 4px;">🥾</div>
+              <div style="font-size: 9px; color: #00d4aa; font-weight: 500;">Hiking</div>
+            </div>
+            <div style="text-align: center; padding: 10px 6px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer;">
+              <div style="font-size: 28px; margin-bottom: 4px;">🍽️</div>
+              <div style="font-size: 9px; color: rgba(255,255,255,0.5);">Dining</div>
+            </div>
+            <div style="text-align: center; padding: 10px 6px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer;">
+              <div style="font-size: 28px; margin-bottom: 4px;">⛰️</div>
+              <div style="font-size: 9px; color: rgba(255,255,255,0.5);">Views</div>
+            </div>
+            <div style="text-align: center; padding: 10px 6px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer;">
+              <div style="font-size: 28px; margin-bottom: 4px;">☕</div>
+              <div style="font-size: 9px; color: rgba(255,255,255,0.5);">Cafes</div>
+            </div>
+            <div style="text-align: center; padding: 10px 6px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer;">
+              <div style="font-size: 28px; margin-bottom: 4px;">🏛️</div>
+              <div style="font-size: 9px; color: rgba(255,255,255,0.5);">Culture</div>
+            </div>
+            <div style="text-align: center; padding: 10px 6px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer;">
+              <div style="font-size: 28px; margin-bottom: 4px;">🌳</div>
+              <div style="font-size: 9px; color: rgba(255,255,255,0.5);">Nature</div>
+            </div>
+            <div style="text-align: center; padding: 10px 6px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer;">
+              <div style="font-size: 28px; margin-bottom: 4px;">🎵</div>
+              <div style="font-size: 9px; color: rgba(255,255,255,0.5);">Night</div>
+            </div>
+            <div style="text-align: center; padding: 10px 6px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer;">
+              <div style="font-size: 28px; margin-bottom: 4px;">🏨</div>
+              <div style="font-size: 9px; color: rgba(255,255,255,0.5);">Stay</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Option C: Presets + Icons (Recommended)</h3>
+      <p><strong>Speed:</strong> 1 tap for quick preset OR customize with icons</p>
+      <p><strong>Feel:</strong> "Fast defaults OR fine-tune exactly what I want"</p>
+      <p class="pros-cons"><strong style="color: #00d4aa;">✓</strong> Best of both — speed + flexibility</p>
+      <p class="pros-cons"><strong style="color: #00d4aa;">✓</strong> Clean visual hierarchy</p>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top: 24px; font-size: 13px; color: rgba(255,255,255,0.4);">Click a card to see what resonates with you.</p>

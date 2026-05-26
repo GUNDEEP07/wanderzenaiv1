@@ -1,0 +1,281 @@
+<h2>Multiple Interests — Activity Tabs</h2>
+<p class="subtitle">Select multiple activities, switch between tabs to view trending content and venues for each</p>
+
+<div class="cards">
+  <div class="card" data-choice="multi-hiking" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background: #0a0f1e; border-radius: 8px; overflow: hidden; font-family: 'Plus Jakarta Sans', sans-serif; color: #fff; width: 100%; aspect-ratio: 9/16; display: flex; flex-direction: column;">
+
+        <!-- HEADER -->
+        <div style="padding: 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.08); flex-shrink: 0;">
+          <div style="font-size: 10px; color: #00d4aa; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 6px;">STEP 2 OF 6</div>
+          <h2 style="font-family: 'Fraunces', serif; font-size: 28px; font-weight: 700; color: #fff; margin: 0 0 6px 0; line-height: 1.1;">Favourite activities</h2>
+          <p style="font-size: 13px; color: rgba(255,255,255,0.5); margin: 0; font-style: italic;">Pick multiple interests</p>
+        </div>
+
+        <!-- ACTIVITY ICONS GRID - Multiple Selected -->
+        <div style="padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); flex-shrink: 0;">
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px;">
+            <!-- Hiking - Selected -->
+            <button style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 10px; background: rgba(0,212,170,0.12); border: 2px solid #00d4aa; border-radius: 12px; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif;">
+              <div style="font-size: 36px;">🥾</div>
+              <div style="font-size: 11px; color: #00d4aa; font-weight: 600;">Hiking</div>
+              <div style="font-size: 8px; color: #00d4aa; background: rgba(0,212,170,0.3); padding: 2px 6px; border-radius: 10px;">✓</div>
+            </button>
+            <!-- Food - Selected -->
+            <button style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 10px; background: rgba(0,212,170,0.12); border: 2px solid #00d4aa; border-radius: 12px; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif;">
+              <div style="font-size: 36px;">🍜</div>
+              <div style="font-size: 11px; color: #00d4aa; font-weight: 600;">Food</div>
+              <div style="font-size: 8px; color: #00d4aa; background: rgba(0,212,170,0.3); padding: 2px 6px; border-radius: 10px;">✓</div>
+            </button>
+            <!-- Views - Selected -->
+            <button style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 10px; background: rgba(0,212,170,0.12); border: 2px solid #00d4aa; border-radius: 12px; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif;">
+              <div style="font-size: 36px;">⛰️</div>
+              <div style="font-size: 11px; color: #00d4aa; font-weight: 600;">Views</div>
+              <div style="font-size: 8px; color: #00d4aa; background: rgba(0,212,170,0.3); padding: 2px 6px; border-radius: 10px;">✓</div>
+            </button>
+            <!-- Culture -->
+            <button style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif;">
+              <div style="font-size: 36px;">🏛️</div>
+              <div style="font-size: 11px; color: rgba(255,255,255,0.5); font-weight: 600;">Culture</div>
+            </button>
+            <!-- Nature -->
+            <button style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif;">
+              <div style="font-size: 36px;">🌳</div>
+              <div style="font-size: 11px; color: rgba(255,255,255,0.5); font-weight: 600;">Nature</div>
+            </button>
+            <!-- Nightlife -->
+            <button style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif;">
+              <div style="font-size: 36px;">🎵</div>
+              <div style="font-size: 11px; color: rgba(255,255,255,0.5); font-weight: 600;">Nightlife</div>
+            </button>
+          </div>
+          <div style="font-size: 10px; color: rgba(255,255,255,0.4);"><span style="color: #00d4aa; font-weight: 700;">Selected:</span> Hiking, Food, Views (3)</div>
+        </div>
+
+        <!-- ACTIVITY TABS - Switch between selected -->
+        <div style="display: flex; gap: 8px; padding: 12px 12px; border-bottom: 1px solid rgba(255,255,255,0.08); overflow-x: auto; flex-shrink: 0; background: rgba(255,255,255,0.02);">
+          <button style="padding: 8px 14px; background: rgba(0,212,170,0.2); border: 1px solid #00d4aa; border-radius: 6px; color: #00d4aa; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; flex-shrink: 0;">🥾 Hiking</button>
+          <button style="padding: 8px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: rgba(255,255,255,0.5); font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; flex-shrink: 0;">🍜 Food</button>
+          <button style="padding: 8px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: rgba(255,255,255,0.5); font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; flex-shrink: 0;">⛰️ Views</button>
+        </div>
+
+        <!-- CONTENT AREA - Hiking Tab Active -->
+        <div style="flex: 1; overflow-y: auto; padding: 16px 12px;">
+
+          <!-- TRENDING SECTION -->
+          <div style="margin-bottom: 20px;">
+            <div style="font-size: 10px; color: #ffd93d; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+              <span>🔥</span> Trending: Hiking
+            </div>
+
+            <!-- YouTube Card 1 -->
+            <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; margin-bottom: 10px;">
+              <div style="position: relative; background: linear-gradient(135deg, #1a1f2e 0%, #0f1419 100%); height: 120px; display: flex; align-items: center; justify-content: center; font-size: 32px;">🥾</div>
+              <div style="padding: 12px;">
+                <div style="font-size: 12px; font-weight: 600; color: #fff; margin-bottom: 4px; line-height: 1.3;">Mountain Peak Trek</div>
+                <div style="font-size: 10px; color: rgba(255,255,255,0.5); margin-bottom: 8px;">Adventure Max • 245K</div>
+                <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px;">
+                  <span style="font-size: 9px; background: rgba(0,212,170,0.15); color: #00d4aa; padding: 3px 8px; border-radius: 12px;">#bangkokhike</span>
+                  <span style="font-size: 9px; background: rgba(0,212,170,0.15); color: #00d4aa; padding: 3px 8px; border-radius: 12px;">#hiking</span>
+                </div>
+                <a href="#" style="color: #00d4aa; text-decoration: none; font-size: 11px; font-weight: 600;">Watch video →</a>
+              </div>
+            </div>
+
+            <!-- YouTube Card 2 -->
+            <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; margin-bottom: 12px;">
+              <div style="position: relative; background: linear-gradient(135deg, #1a1f2e 0%, #0f1419 100%); height: 120px; display: flex; align-items: center; justify-content: center; font-size: 32px;">⛰️</div>
+              <div style="padding: 12px;">
+                <div style="font-size: 12px; font-weight: 600; color: #fff; margin-bottom: 4px; line-height: 1.3;">Waterfall Hidden Trail</div>
+                <div style="font-size: 10px; color: rgba(255,255,255,0.5); margin-bottom: 8px;">Travel Vlog • 1.2M</div>
+                <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px;">
+                  <span style="font-size: 9px; background: rgba(0,212,170,0.15); color: #00d4aa; padding: 3px 8px; border-radius: 12px;">#waterfall</span>
+                  <span style="font-size: 9px; background: rgba(0,212,170,0.15); color: #00d4aa; padding: 3px 8px; border-radius: 12px;">#thailand</span>
+                </div>
+                <a href="#" style="color: #00d4aa; text-decoration: none; font-size: 11px; font-weight: 600;">Watch video →</a>
+              </div>
+            </div>
+          </div>
+
+          <!-- VENUES SECTION -->
+          <div>
+            <div style="font-size: 10px; color: #00d4aa; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px;">Hiking Trails (5 available)</div>
+
+            <!-- Venue 1 -->
+            <label style="display: flex; align-items: flex-start; gap: 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px; margin-bottom: 8px; cursor: pointer;">
+              <input type="checkbox" style="width: 18px; height: 18px; margin-top: 2px; cursor: pointer; accent-color: #00d4aa; flex-shrink: 0;">
+              <div style="flex: 1;">
+                <div style="font-size: 12px; font-weight: 600; color: #fff;">Mountain Peak Trail</div>
+                <div style="font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 2px;">High Mountains</div>
+                <div style="font-size: 11px; color: #ffd93d; margin-top: 4px;">⭐ 4.8</div>
+              </div>
+            </label>
+
+            <!-- Venue 2 -->
+            <label style="display: flex; align-items: flex-start; gap: 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px; margin-bottom: 8px; cursor: pointer;">
+              <input type="checkbox" style="width: 18px; height: 18px; margin-top: 2px; cursor: pointer; accent-color: #00d4aa; flex-shrink: 0;">
+              <div style="flex: 1;">
+                <div style="font-size: 12px; font-weight: 600; color: #fff;">Waterfall Hike</div>
+                <div style="font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 2px;">Water Cascade Zone</div>
+                <div style="font-size: 11px; color: #ffd93d; margin-top: 4px;">⭐ 4.9</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- FOOTER -->
+        <div style="padding: 14px 12px; border-top: 1px solid rgba(255,255,255,0.08); flex-shrink: 0;">
+          <button style="width: 100%; padding: 13px; background: #00d4aa; color: #0a0f1e; border: none; border-radius: 8px; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer;">Continue →</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Multi-Select Flow: Hiking Tab Active</h3>
+      <p><strong>User has selected:</strong> Hiking, Food, Views (3 activities)</p>
+      <p><strong>Current tab:</strong> Hiking — showing trending hiking videos + hiking venues</p>
+      <p class="pros-cons"><strong style="color: #00d4aa;">✓</strong> User can tap "Food" or "Views" tab to see different content</p>
+      <p class="pros-cons"><strong style="color: #00d4aa;">✓</strong> All trending content available without scrolling</p>
+      <p class="pros-cons"><strong style="color: #00d4aa;">✓</strong> Venues for each activity selected separately</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="multi-food" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background: #0a0f1e; border-radius: 8px; overflow: hidden; font-family: 'Plus Jakarta Sans', sans-serif; color: #fff; width: 100%; aspect-ratio: 9/16; display: flex; flex-direction: column;">
+
+        <!-- HEADER -->
+        <div style="padding: 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.08); flex-shrink: 0;">
+          <div style="font-size: 10px; color: #00d4aa; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 6px;">STEP 2 OF 6</div>
+          <h2 style="font-family: 'Fraunces', serif; font-size: 28px; font-weight: 700; color: #fff; margin: 0 0 6px 0; line-height: 1.1;">Favourite activities</h2>
+          <p style="font-size: 13px; color: rgba(255,255,255,0.5); margin: 0; font-style: italic;">Pick multiple interests</p>
+        </div>
+
+        <!-- ACTIVITY ICONS GRID -->
+        <div style="padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); flex-shrink: 0;">
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px;">
+            <!-- Hiking - Selected -->
+            <button style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 10px; background: rgba(0,212,170,0.12); border: 2px solid #00d4aa; border-radius: 12px; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif;">
+              <div style="font-size: 36px;">🥾</div>
+              <div style="font-size: 11px; color: #00d4aa; font-weight: 600;">Hiking</div>
+              <div style="font-size: 8px; color: #00d4aa; background: rgba(0,212,170,0.3); padding: 2px 6px; border-radius: 10px;">✓</div>
+            </button>
+            <!-- Food - Selected -->
+            <button style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 10px; background: rgba(0,212,170,0.12); border: 2px solid #00d4aa; border-radius: 12px; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif;">
+              <div style="font-size: 36px;">🍜</div>
+              <div style="font-size: 11px; color: #00d4aa; font-weight: 600;">Food</div>
+              <div style="font-size: 8px; color: #00d4aa; background: rgba(0,212,170,0.3); padding: 2px 6px; border-radius: 10px;">✓</div>
+            </button>
+            <!-- Views - Selected -->
+            <button style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 10px; background: rgba(0,212,170,0.12); border: 2px solid #00d4aa; border-radius: 12px; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif;">
+              <div style="font-size: 36px;">⛰️</div>
+              <div style="font-size: 11px; color: #00d4aa; font-weight: 600;">Views</div>
+              <div style="font-size: 8px; color: #00d4aa; background: rgba(0,212,170,0.3); padding: 2px 6px; border-radius: 10px;">✓</div>
+            </button>
+            <!-- Culture -->
+            <button style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif;">
+              <div style="font-size: 36px;">🏛️</div>
+              <div style="font-size: 11px; color: rgba(255,255,255,0.5); font-weight: 600;">Culture</div>
+            </button>
+            <!-- Nature -->
+            <button style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif;">
+              <div style="font-size: 36px;">🌳</div>
+              <div style="font-size: 11px; color: rgba(255,255,255,0.5); font-weight: 600;">Nature</div>
+            </button>
+            <!-- Nightlife -->
+            <button style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif;">
+              <div style="font-size: 36px;">🎵</div>
+              <div style="font-size: 11px; color: rgba(255,255,255,0.5); font-weight: 600;">Nightlife</div>
+            </button>
+          </div>
+          <div style="font-size: 10px; color: rgba(255,255,255,0.4);"><span style="color: #00d4aa; font-weight: 700;">Selected:</span> Hiking, Food, Views (3)</div>
+        </div>
+
+        <!-- ACTIVITY TABS - Food Tab Active -->
+        <div style="display: flex; gap: 8px; padding: 12px 12px; border-bottom: 1px solid rgba(255,255,255,0.08); overflow-x: auto; flex-shrink: 0; background: rgba(255,255,255,0.02);">
+          <button style="padding: 8px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: rgba(255,255,255,0.5); font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; flex-shrink: 0;">🥾 Hiking</button>
+          <button style="padding: 8px 14px; background: rgba(0,212,170,0.2); border: 1px solid #00d4aa; border-radius: 6px; color: #00d4aa; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; flex-shrink: 0;">🍜 Food</button>
+          <button style="padding: 8px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: rgba(255,255,255,0.5); font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; flex-shrink: 0;">⛰️ Views</button>
+        </div>
+
+        <!-- CONTENT AREA - Food Tab Active -->
+        <div style="flex: 1; overflow-y: auto; padding: 16px 12px;">
+
+          <!-- TRENDING SECTION -->
+          <div style="margin-bottom: 20px;">
+            <div style="font-size: 10px; color: #ffd93d; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+              <span>🔥</span> Trending: Food
+            </div>
+
+            <!-- YouTube Card 1 -->
+            <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; margin-bottom: 10px;">
+              <div style="position: relative; background: linear-gradient(135deg, #1a1f2e 0%, #0f1419 100%); height: 120px; display: flex; align-items: center; justify-content: center; font-size: 32px;">🍜</div>
+              <div style="padding: 12px;">
+                <div style="font-size: 12px; font-weight: 600; color: #fff; margin-bottom: 4px; line-height: 1.3;">Bangkok Street Food Tour</div>
+                <div style="font-size: 10px; color: rgba(255,255,255,0.5); margin-bottom: 8px;">Food Hunter • 3.2M</div>
+                <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px;">
+                  <span style="font-size: 9px; background: rgba(0,212,170,0.15); color: #00d4aa; padding: 3px 8px; border-radius: 12px;">#bangkokfood</span>
+                  <span style="font-size: 9px; background: rgba(0,212,170,0.15); color: #00d4aa; padding: 3px 8px; border-radius: 12px;">#streetfood</span>
+                </div>
+                <a href="#" style="color: #00d4aa; text-decoration: none; font-size: 11px; font-weight: 600;">Watch video →</a>
+              </div>
+            </div>
+
+            <!-- YouTube Card 2 -->
+            <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; margin-bottom: 12px;">
+              <div style="position: relative; background: linear-gradient(135deg, #1a1f2e 0%, #0f1419 100%); height: 120px; display: flex; align-items: center; justify-content: center; font-size: 32px;">🥘</div>
+              <div style="padding: 12px;">
+                <div style="font-size: 12px; font-weight: 600; color: #fff; margin-bottom: 4px; line-height: 1.3;">Thai Curry Cooking Class</div>
+                <div style="font-size: 10px; color: rgba(255,255,255,0.5); margin-bottom: 8px;">Kitchen Diary • 854K</div>
+                <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px;">
+                  <span style="font-size: 9px; background: rgba(0,212,170,0.15); color: #00d4aa; padding: 3px 8px; border-radius: 12px;">#thaicooking</span>
+                  <span style="font-size: 9px; background: rgba(0,212,170,0.15); color: #00d4aa; padding: 3px 8px; border-radius: 12px;">#foodculture</span>
+                </div>
+                <a href="#" style="color: #00d4aa; text-decoration: none; font-size: 11px; font-weight: 600;">Watch video →</a>
+              </div>
+            </div>
+          </div>
+
+          <!-- VENUES SECTION -->
+          <div>
+            <div style="font-size: 10px; color: #00d4aa; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px;">Restaurants (6 available)</div>
+
+            <!-- Venue 1 -->
+            <label style="display: flex; align-items: flex-start; gap: 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px; margin-bottom: 8px; cursor: pointer;">
+              <input type="checkbox" style="width: 18px; height: 18px; margin-top: 2px; cursor: pointer; accent-color: #00d4aa; flex-shrink: 0;">
+              <div style="flex: 1;">
+                <div style="font-size: 12px; font-weight: 600; color: #fff;">Local Market Restaurant</div>
+                <div style="font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 2px;">Central Market District</div>
+                <div style="font-size: 11px; color: #ffd93d; margin-top: 4px;">⭐ 4.5</div>
+              </div>
+            </label>
+
+            <!-- Venue 2 -->
+            <label style="display: flex; align-items: flex-start; gap: 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px; margin-bottom: 8px; cursor: pointer;">
+              <input type="checkbox" style="width: 18px; height: 18px; margin-top: 2px; cursor: pointer; accent-color: #00d4aa; flex-shrink: 0;">
+              <div style="flex: 1;">
+                <div style="font-size: 12px; font-weight: 600; color: #fff;">Rooftop Bistro</div>
+                <div style="font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 2px;">Downtown</div>
+                <div style="font-size: 11px; color: #ffd93d; margin-top: 4px;">⭐ 4.6</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- FOOTER -->
+        <div style="padding: 14px 12px; border-top: 1px solid rgba(255,255,255,0.08); flex-shrink: 0;">
+          <button style="width: 100%; padding: 13px; background: #00d4aa; color: #0a0f1e; border: none; border-radius: 8px; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer;">Continue →</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Multi-Select Flow: Food Tab Active</h3>
+      <p><strong>Same selections,</strong> but user tapped "Food" tab</p>
+      <p><strong>Content updates:</strong> Trending food videos + restaurant venues</p>
+      <p class="pros-cons"><strong style="color: #00d4aa;">✓</strong> Seamless switching between activities</p>
+      <p class="pros-cons"><strong style="color: #00d4aa;">✓</strong> Each activity has its own trending content</p>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top: 24px; font-size: 13px; color: rgba(255,255,255,0.4);">Click cards to see how tabs switch between Hiking and Food. Views tab works the same way.</p>

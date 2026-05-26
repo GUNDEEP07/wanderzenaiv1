@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 
 const s = {
   overlay: (isOpen) => ({
-    display: isOpen ? 'fixed' : 'none',
+    position: 'fixed',
     inset: 0,
     background: 'rgba(0,0,0,0.5)',
     zIndex: 999,
-    animation: isOpen ? 'fadeIn 0.2s ease' : undefined,
+    opacity: isOpen ? 1 : 0,
+    pointerEvents: isOpen ? 'auto' : 'none',
+    transition: 'opacity 0.3s ease',
   }),
   modal: (isOpen) => ({
     position: 'fixed',
@@ -22,7 +24,6 @@ const s = {
     overflowY: 'auto',
     transform: isOpen ? 'translateY(0)' : 'translateY(100%)',
     transition: 'transform 0.3s ease',
-    animation: isOpen ? 'slideUp 0.3s ease' : undefined,
   }),
   header: {
     fontSize: '16px',
@@ -127,16 +128,6 @@ export function CustomInterestModal({ destination, isOpen, onClose, onSubmit, lo
           </button>
         </div>
       </div>
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes slideUp {
-          from { transform: translateY(100%); }
-          to { transform: translateY(0); }
-        }
-      `}</style>
     </>
   );
 }
