@@ -153,16 +153,16 @@ async function handleAutocomplete(event) {
 }
 
 const CATEGORY_TO_GOOGLE_TYPES = {
-  'restaurant': ['restaurant', 'food'],
-  'cafe': ['cafe', 'bakery', 'coffee_shop'],
-  'park': ['park', 'natural_feature'],
-  'temple': ['place_of_worship', 'hindu_temple', 'buddhist_temple'],
-  'museum': ['museum', 'art_gallery'],
-  'hiking_trail': ['hiking_area', 'park', 'natural_feature'],
-  'viewpoint': ['scenic_point', 'natural_feature', 'park'],
-  'market': ['market', 'shopping_mall', 'tourist_attraction'],
-  'bar': ['bar', 'night_club', 'drinking_establishment'],
-  'accommodation': ['hotel', 'lodging', 'hostel', 'apartment_hotel']
+  'restaurant': ['restaurant'],
+  'cafe': ['cafe'],
+  'park': ['park'],
+  'temple': ['place_of_worship'],
+  'museum': ['museum'],
+  'hiking_trail': ['hiking_area', 'park'],
+  'viewpoint': ['scenic_point', 'park'],
+  'market': ['market'],
+  'bar': ['bar'],
+  'accommodation': ['hotel', 'lodging']
 };
 
 async function handleVenues(event) {
@@ -176,6 +176,17 @@ async function handleVenues(event) {
     };
   }
 
+  const adminBoundaryTypes = ['locality', 'administrative_area_level_1', 'administrative_area_level_2', 'country', 'postal_code'];
+
+  function isValidVenue(place, requestedTypes) {
+    if (!place.name || !place.rating) return false;
+    const types = place.types || [];
+
+    if (types.some(t => adminBoundaryTypes.includes(t))) return false;
+
+    return requestedTypes.some(reqType => types.includes(reqType));
+  }
+
   try {
     log.info('Venues request', { destination, lat, lng });
     const categories = [];
@@ -183,47 +194,56 @@ async function handleVenues(event) {
     for (const activity of FEATURED_CATEGORIES) {
       try {
         const types = CATEGORY_TO_GOOGLE_TYPES[activity] || [activity];
+        let venues = [];
+        let typeIndex = 0;
 
-        const res = await axios.get(`${GOOGLE_PLACES_BASE}/nearbysearch/json`, {
-          params: {
-            location: `${lat},${lng}`,
-            type: types[0],
-            radius: 2000,
-            key: GOOGLE_PLACES_API_KEY,
-          },
-          timeout: 5000,
-        });
-
-        if (res.data.results && res.data.results.length > 0) {
-          const venues = res.data.results.slice(0, 5).map(place => {
-            const photoUrl = place.photos?.[0]
-              ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${place.photos[0].photo_reference}&key=${GOOGLE_PLACES_API_KEY}`
-              : null;
-
-            return {
-              fsq_id: place.place_id,
-              name: place.name,
-              category: place.types?.find(t => t !== 'point_of_interest' && t !== 'establishment') || activity,
-              rating: place.rating || null,
-              address: place.vicinity || place.formatted_address || '',
-              instagramUrl: null,
-              photoUrl: photoUrl,
-              attributes: null,
-              hours: {
-                open_now: place.opening_hours?.open_now || null,
-                display: null,
-              },
-              website: null,
-              tel: null,
-            };
+        while (venues.length === 0 && typeIndex < types.length) {
+          const res = await axios.get(`${GOOGLE_PLACES_BASE}/nearbysearch/json`, {
+            params: {
+              location: `${lat},${lng}`,
+              type: types[typeIndex],
+              radius: 2000,
+              key: GOOGLE_PLACES_API_KEY,
+            },
+            timeout: 5000,
           });
 
-          if (venues.length > 0) {
-            categories.push({
-              category: formatCategory(activity),
-              venues: venues,
-            });
+          if (res.data.results && res.data.results.length > 0) {
+            venues = res.data.results
+              .filter(place => isValidVenue(place, [types[typeIndex]]))
+              .slice(0, 5)
+              .map(place => {
+                const photoUrl = place.photos?.[0]
+                  ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${place.photos[0].photo_reference}&key=${GOOGLE_PLACES_API_KEY}`
+                  : null;
+
+                return {
+                  fsq_id: place.place_id,
+                  name: place.name,
+                  category: place.types?.find(t => !adminBoundaryTypes.includes(t) && t !== 'point_of_interest' && t !== 'establishment') || activity,
+                  rating: place.rating || null,
+                  address: place.vicinity || place.formatted_address || '',
+                  instagramUrl: null,
+                  photoUrl: photoUrl,
+                  attributes: null,
+                  hours: {
+                    open_now: place.opening_hours?.open_now || null,
+                    display: null,
+                  },
+                  website: null,
+                  tel: null,
+                };
+              });
           }
+
+          typeIndex++;
+        }
+
+        if (venues.length > 0) {
+          categories.push({
+            category: formatCategory(activity),
+            venues: venues,
+          });
         }
       } catch (catErr) {
         log.warn('Category fetch failed', {
