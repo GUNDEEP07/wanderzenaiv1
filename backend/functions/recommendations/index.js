@@ -73,7 +73,12 @@ async function handleAutocomplete(event) {
     log.info('Autocomplete success', { count: suggestions.length });
     return ok({ suggestions }, event);
   } catch (err) {
-    log.error('Autocomplete failed, returning fallback', { error: err.message });
+    log.error('Autocomplete failed, returning fallback', {
+      error: err.message,
+      status: err.response?.status,
+      data: err.response?.data,
+      apiKey: FOURSQUARE_API_KEY ? 'set' : 'not-set'
+    });
     return ok({ suggestions: FALLBACK_DESTINATIONS }, event);
   }
 }
@@ -119,7 +124,12 @@ async function handleVenues(event) {
           });
         }
       } catch (catErr) {
-        log.warn('Category fetch failed', { category, error: catErr.message });
+        log.warn('Category fetch failed', {
+          category,
+          error: catErr.message,
+          status: catErr.response?.status,
+          data: catErr.response?.data
+        });
         // Continue with next category
       }
     }
