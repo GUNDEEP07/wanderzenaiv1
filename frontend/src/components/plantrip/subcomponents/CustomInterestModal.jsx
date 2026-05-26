@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 
 const s = {
   overlay: (isOpen) => ({
@@ -92,7 +93,7 @@ export function CustomInterestModal({ destination, isOpen, onClose, onSubmit, lo
     }
   };
 
-  return (
+  const modalContent = (
     <>
       <div
         style={s.overlay(isOpen)}
@@ -130,4 +131,6 @@ export function CustomInterestModal({ destination, isOpen, onClose, onSubmit, lo
       </div>
     </>
   );
+
+  return createPortal(modalContent, document.body);
 }
