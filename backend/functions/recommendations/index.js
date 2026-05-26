@@ -275,6 +275,7 @@ async function handleVenues(event) {
               'fsq_category_ids': fsqCategoryId,
               'limit': 5,
               'radius': 2000,
+              'fields': 'fsq_place_id,name,categories,rating,location,photos,website,tel,hours,social_media,attributes,distance',
             },
             headers: {
               'Authorization': `Bearer ${FOURSQUARE_API_KEY}`,
