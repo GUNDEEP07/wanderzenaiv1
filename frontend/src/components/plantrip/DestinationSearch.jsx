@@ -54,8 +54,34 @@ export function DestinationSearch({ onSelect, disabled }) {
 
   const fetchSuggestions = useCallback(
     debounce(async (q) => {
-      const filtered = filterDestinations(q);
-      setSuggestions(filtered);
+      if (q.trim().length < 2) {
+        setSuggestions([]);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        // Try to fetch from backend autocomplete API
+        const res = await fetch(
+          `${API_URL}/autocomplete?query=${encodeURIComponent(q)}`
+        );
+        const data = await res.json();
+
+        if (data.suggestions && data.suggestions.length > 0) {
+          setSuggestions(data.suggestions);
+        } else {
+          // Fallback to local filtering if API returns no results
+          const filtered = filterDestinations(q);
+          setSuggestions(filtered);
+        }
+      } catch (err) {
+        console.error('Autocomplete API failed, using local filter:', err);
+        // Fallback to local filtering if API call fails
+        const filtered = filterDestinations(q);
+        setSuggestions(filtered);
+      } finally {
+        setLoading(false);
+      }
     }, 200),
     []
   );
