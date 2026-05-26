@@ -153,12 +153,16 @@ async function handleVenues(event) {
             category: formatCategory(category),
             venues: res.data.results.map(result => {
               const v = result.place || result;
+              // Extract Instagram handle from social_media object
+              const instagramHandle = v.social_media?.instagram || null;
+              const instagramUrl = instagramHandle ? `https://instagram.com/${instagramHandle}` : null;
               return {
                 fsq_id: v.fsq_place_id || v.fsq_id,
                 name: v.name,
                 category: v.categories?.[0]?.name || category,
                 rating: v.rating || null,
                 address: v.location?.formatted_address || v.location?.address || '',
+                instagramUrl: instagramUrl,
               };
             }),
           });
