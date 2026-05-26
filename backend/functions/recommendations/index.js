@@ -150,7 +150,14 @@ async function handleVenues(event) {
 
         if (res.data.results && res.data.results.length > 0) {
           if (category === 'restaurant') {
-            log.info('Sample Foursquare response (first result)', { sample: JSON.stringify(res.data.results[0]).substring(0, 500) });
+            const firstVenue = res.data.results[0].place || res.data.results[0];
+            log.info('Sample venue structure', {
+              name: firstVenue.name,
+              hasSocialMedia: !!firstVenue.social_media,
+              socialMediaType: typeof firstVenue.social_media,
+              socialMediaKeys: firstVenue.social_media ? Object.keys(firstVenue.social_media).slice(0, 10) : null,
+              allKeys: Object.keys(firstVenue).slice(0, 20)
+            });
           }
           categories.push({
             category: formatCategory(category),
