@@ -255,8 +255,6 @@ Resources:
         Variables:
           FOURSQUARE_API_KEY: !Ref FoursquareApiKey
           FRONTEND_URL: !Ref FrontendUrl
-      Layers:
-        - !Ref SharedLayer
       Events:
         GetRecommendations:
           Type: Api
