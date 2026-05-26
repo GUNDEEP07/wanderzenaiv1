@@ -149,6 +149,9 @@ async function handleVenues(event) {
         });
 
         if (res.data.results && res.data.results.length > 0) {
+          if (category === 'restaurant') {
+            log.info('Sample Foursquare response (first result)', { sample: JSON.stringify(res.data.results[0]).substring(0, 500) });
+          }
           categories.push({
             category: formatCategory(category),
             venues: res.data.results.map(result => {
