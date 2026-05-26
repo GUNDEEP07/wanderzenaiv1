@@ -153,24 +153,12 @@ async function handleVenues(event) {
             category: formatCategory(category),
             venues: res.data.results.map(result => {
               const v = result.place || result;
-              // Extract Instagram link from social_media if available
-              let instagramLink = null;
-              if (v.social_media) {
-                if (Array.isArray(v.social_media)) {
-                  const instaData = v.social_media.find(sm => sm.type === 'instagram');
-                  instagramLink = instaData?.url || null;
-                } else if (typeof v.social_media === 'object') {
-                  // Handle case where social_media is an object with instagram property
-                  instagramLink = v.social_media.instagram?.url || null;
-                }
-              }
               return {
                 fsq_id: v.fsq_place_id || v.fsq_id,
                 name: v.name,
                 category: v.categories?.[0]?.name || category,
                 rating: v.rating || null,
                 address: v.location?.formatted_address || v.location?.address || '',
-                instagramUrl: instagramLink,
               };
             }),
           });
