@@ -85,17 +85,17 @@ export function VenuesList({ activity, venues, selectedVenues, onVenueToggle, lo
       `}</style>
       {loading ? (
         <div style={s.section}>
-          <div style={s.header}>{activity} Venues</div>
+          <div style={s.header}>🎯 Top {activity} Spots</div>
           <div style={s.loading}>Loading venues...</div>
         </div>
       ) : !venues || venues.length === 0 ? (
         <div style={s.section}>
-          <div style={s.header}>{activity} Venues ({0} available)</div>
+          <div style={s.header}>🎯 Top {activity} Spots</div>
           <div style={s.empty}>No venues found for {activity}</div>
         </div>
       ) : (
         <div style={s.section}>
-          <div style={s.header}>{activity} Venues ({venues.length} available)</div>
+          <div style={s.header}>🎯 Top {activity} Spots ({venues.length} available)</div>
 
           <div style={s.list}>
             {venues.map(venue => (

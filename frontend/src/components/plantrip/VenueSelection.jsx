@@ -138,8 +138,8 @@ export function VenueSelection({ destination, onSubmit, onSkip }) {
     <div className="venue-selection-redesign">
       <div className="venue-selection-header">
         <div className="step-label">STEP 2 OF 6</div>
-        <h2>Favourite activities</h2>
-        <p>Tap interests or add your own</p>
+        <h2>What gets you excited?</h2>
+        <p>Pick your passions to discover amazing spots</p>
       </div>
 
       <div className="venue-selection-content">
