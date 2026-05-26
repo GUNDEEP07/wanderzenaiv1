@@ -75,6 +75,17 @@ CREATE TABLE IF NOT EXISTS email_log (
   signed_url_expires_at TIMESTAMPTZ
 );
 
+-- ─── Autocomplete cache table ────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS autocomplete_cache (
+  id                    UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  query                 VARCHAR(255) NOT NULL,
+  suggestions           JSONB NOT NULL,
+  created_at            TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(query)
+);
+
+CREATE INDEX IF NOT EXISTS idx_autocomplete_query ON autocomplete_cache(query);
+
 -- ─── Analytics view (useful for monitoring costs) ─────────────────────────────
 CREATE OR REPLACE VIEW daily_stats AS
 SELECT

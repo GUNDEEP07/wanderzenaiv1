@@ -1,7 +1,7 @@
 'use strict';
 
 const axios = require('axios');
-const { log } = require('/opt/nodejs/index');
+const { log, db } = require('/opt/nodejs/index');
 
 const FOURSQUARE_API_KEY = process.env.FOURSQUARE_API_KEY;
 const FOURSQUARE_BASE = 'https://places-api.foursquare.com';
@@ -76,7 +76,22 @@ async function handleAutocomplete(event) {
   try {
     log.info('Autocomplete request', { query, location, radius });
 
-    // First, filter fallback destinations by query (prioritize exact matches)
+    // Check cache first
+    try {
+      const cacheResult = await db.query(
+        'SELECT suggestions FROM autocomplete_cache WHERE query = $1',
+        [query.toLowerCase()]
+      );
+
+      if (cacheResult.rows.length > 0) {
+        log.info('Autocomplete success (from cache)', { query });
+        return ok({ suggestions: cacheResult.rows[0].suggestions }, event);
+      }
+    } catch (cacheErr) {
+      log.warn('Cache lookup failed', { error: cacheErr.message });
+    }
+
+    // Check fallback destinations by query
     const lowerQuery = query.toLowerCase();
     const nameMatches = FALLBACK_DESTINATIONS.filter(dest =>
       dest.name.toLowerCase().includes(lowerQuery)
@@ -101,7 +116,6 @@ async function handleAutocomplete(event) {
     const params = {
       input: query,
       key: GOOGLE_PLACES_API_KEY,
-      components: 'country:*',
     };
 
     if (location) {
@@ -115,7 +129,11 @@ async function handleAutocomplete(event) {
     });
 
     if (!res.data.predictions || res.data.predictions.length === 0) {
-      log.info('Autocomplete no results from Google Places');
+      log.info('Autocomplete no results from Google Places', {
+        status: res.status,
+        statusText: res.statusText,
+        data: res.data,
+      });
       return ok({ suggestions: [] }, event);
     }
 
@@ -165,14 +183,28 @@ async function handleAutocomplete(event) {
 
     const validSuggestions = suggestions.filter(s => s !== null);
 
+    // Cache the results
+    if (validSuggestions.length > 0) {
+      try {
+        await db.query(
+          'INSERT INTO autocomplete_cache (query, suggestions) VALUES ($1, $2) ON CONFLICT (query) DO UPDATE SET suggestions = $2',
+          [query.toLowerCase(), JSON.stringify(validSuggestions)]
+        );
+      } catch (cacheInsertErr) {
+        log.warn('Failed to cache results', { error: cacheInsertErr.message });
+      }
+    }
+
     log.info('Autocomplete success (from Google Places)', { count: validSuggestions.length });
     return ok({ suggestions: validSuggestions }, event);
   } catch (err) {
-    log.error('Autocomplete failed, returning fallback', {
+    log.error('Autocomplete failed', {
       error: err.message,
       status: err.response?.status,
       statusText: err.response?.statusText,
       data: err.response?.data,
+      code: err.code,
+      query,
     });
     return ok({ suggestions: FALLBACK_DESTINATIONS }, event);
   }
