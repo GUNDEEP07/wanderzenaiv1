@@ -63,7 +63,7 @@ export function DestinationSearch({ onSelect, disabled }) {
       try {
         // Try to fetch from backend autocomplete API
         const res = await fetch(
-          `${API_URL}/autocomplete?query=${encodeURIComponent(q)}`
+          `${API_URL}/recommendations/autocomplete?query=${encodeURIComponent(q)}`
         );
         const data = await res.json();
 
