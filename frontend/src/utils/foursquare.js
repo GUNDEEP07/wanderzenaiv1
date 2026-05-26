@@ -60,6 +60,11 @@ export async function fetchVenuesForActivity(activity, destination, maxResults =
       rating: venue.rating || null,
       address: venue.address || 'Address not available',
       instagramUrl: venue.instagramUrl || null,
+      photoUrl: venue.photoUrl || null,
+      attributes: venue.attributes || null,
+      hours: venue.hours || null,
+      website: venue.website || null,
+      tel: venue.tel || null,
     }));
   } catch (error) {
     console.error('Failed to fetch venues:', error);

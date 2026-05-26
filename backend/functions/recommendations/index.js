@@ -156,6 +156,26 @@ async function handleVenues(event) {
               // Extract Instagram handle from social_media object
               const instagramHandle = v.social_media?.instagram || null;
               const instagramUrl = instagramHandle ? `https://instagram.com/${instagramHandle}` : null;
+
+              // Extract first photo if available
+              const photoUrl = v.photos?.[0] ? `${v.photos[0].prefix}300x300${v.photos[0].suffix}` : null;
+
+              // Extract key attributes
+              const attributes = v.attributes ? {
+                wifi: v.attributes.wifi || null,
+                parking: v.attributes.has_parking || false,
+                outdoor_seating: v.attributes.outdoor_seating || false,
+                restroom: v.attributes.restroom || false,
+                delivery: v.attributes.delivery || false,
+                reservations: v.attributes.reservations || false,
+              } : null;
+
+              // Extract hours info
+              const hours = v.hours ? {
+                open_now: v.hours.open_now || null,
+                display: v.hours.display || null,
+              } : null;
+
               return {
                 fsq_id: v.fsq_place_id || v.fsq_id,
                 name: v.name,
@@ -163,6 +183,11 @@ async function handleVenues(event) {
                 rating: v.rating || null,
                 address: v.location?.formatted_address || v.location?.address || '',
                 instagramUrl: instagramUrl,
+                photoUrl: photoUrl,
+                attributes: attributes,
+                hours: hours,
+                website: v.website || null,
+                tel: v.tel || null,
               };
             }),
           });
