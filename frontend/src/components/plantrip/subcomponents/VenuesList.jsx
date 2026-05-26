@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { calculateDistance } from '../../../utils/foursquare';
 
 const s = {
@@ -59,6 +59,54 @@ const s = {
     fontSize: '11px',
     fontWeight: '700',
     backdropFilter: 'blur(4px)',
+  },
+  carouselControls: {
+    position: 'absolute',
+    bottom: '8px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    display: 'flex',
+    gap: '4px',
+    zIndex: 10,
+  },
+  photoDot: {
+    width: '6px',
+    height: '6px',
+    borderRadius: '50%',
+    background: 'rgba(255,255,255,0.4)',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    border: 'none',
+    padding: 0,
+  },
+  photoDotActive: {
+    background: '#00d4aa',
+    width: '8px',
+    height: '8px',
+  },
+  carouselArrow: {
+    position: 'absolute',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    background: 'rgba(0,0,0,0.5)',
+    color: '#fff',
+    border: 'none',
+    width: '28px',
+    height: '28px',
+    borderRadius: '50%',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '14px',
+    transition: 'all 0.2s',
+    zIndex: 5,
+  },
+  carouselArrowLeft: {
+    left: '6px',
+  },
+  carouselArrowRight: {
+    right: '6px',
   },
   cardContent: {
     display: 'flex',
@@ -147,6 +195,33 @@ const s = {
 };
 
 export function VenuesList({ activity, venues, selectedVenues, onVenueToggle, loading, destination }) {
+  const [currentPhotoIndices, setCurrentPhotoIndices] = useState({});
+
+  const getCurrentPhotoIndex = (venueId) => currentPhotoIndices[venueId] || 0;
+
+  const setCurrentPhotoIndex = (venueId, index) => {
+    setCurrentPhotoIndices(prev => ({ ...prev, [venueId]: index }));
+  };
+
+  const goToPreviousPhoto = (e, venueId, photoCount) => {
+    e.stopPropagation();
+    const current = getCurrentPhotoIndex(venueId);
+    const previous = current === 0 ? photoCount - 1 : current - 1;
+    setCurrentPhotoIndex(venueId, previous);
+  };
+
+  const goToNextPhoto = (e, venueId, photoCount) => {
+    e.stopPropagation();
+    const current = getCurrentPhotoIndex(venueId);
+    const next = (current + 1) % photoCount;
+    setCurrentPhotoIndex(venueId, next);
+  };
+
+  const buildInstagramUrl = (instagramHandle) => {
+    if (!instagramHandle) return null;
+    return `https://instagram.com/${instagramHandle}`;
+  };
+
   return (
     <>
       <style>{`
@@ -181,11 +256,53 @@ export function VenuesList({ activity, venues, selectedVenues, onVenueToggle, lo
                 ? calculateDistance(destination.lat, destination.lng, venue.lat, venue.lng)
                 : null;
 
+              const photoCount = venue.photos ? venue.photos.length : 0;
+              const currentPhotoIdx = getCurrentPhotoIndex(venue.id);
+              const currentPhoto = photoCount > 0 ? venue.photos[currentPhotoIdx] : null;
+              const currentPhotoUrl = currentPhoto ? `${currentPhoto.prefix}300x300${currentPhoto.suffix}` : null;
+
               return (
               <div key={venue.id} style={s.card}>
                 <div style={s.photoContainer}>
-                  {venue.photoUrl ? (
-                    <img src={venue.photoUrl} alt={venue.name} style={s.photo} />
+                  {currentPhotoUrl ? (
+                    <>
+                      <img src={currentPhotoUrl} alt={venue.name} style={s.photo} />
+                      {photoCount > 1 && (
+                        <>
+                          <button
+                            style={{ ...s.carouselArrow, ...s.carouselArrowLeft }}
+                            onClick={(e) => goToPreviousPhoto(e, venue.id, photoCount)}
+                            onMouseEnter={(e) => e.target.style.background = 'rgba(0,0,0,0.7)'}
+                            onMouseLeave={(e) => e.target.style.background = 'rgba(0,0,0,0.5)'}
+                          >
+                            ‹
+                          </button>
+                          <button
+                            style={{ ...s.carouselArrow, ...s.carouselArrowRight }}
+                            onClick={(e) => goToNextPhoto(e, venue.id, photoCount)}
+                            onMouseEnter={(e) => e.target.style.background = 'rgba(0,0,0,0.7)'}
+                            onMouseLeave={(e) => e.target.style.background = 'rgba(0,0,0,0.5)'}
+                          >
+                            ›
+                          </button>
+                          <div style={s.carouselControls}>
+                            {venue.photos.map((_, idx) => (
+                              <button
+                                key={idx}
+                                style={{
+                                  ...s.photoDot,
+                                  ...(idx === currentPhotoIdx ? s.photoDotActive : {})
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCurrentPhotoIndex(venue.id, idx);
+                                }}
+                              />
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </>
                   ) : (
                     <div style={s.noPhoto}>📍</div>
                   )}
@@ -242,7 +359,7 @@ export function VenuesList({ activity, venues, selectedVenues, onVenueToggle, lo
                       <div style={s.links}>
                         {venue.instagramUrl && (
                           <a
-                            href={venue.instagramUrl}
+                            href={buildInstagramUrl(venue.instagramUrl)}
                             target="_blank"
                             rel="noopener noreferrer"
                             style={s.link}

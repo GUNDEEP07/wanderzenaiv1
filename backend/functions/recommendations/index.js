@@ -287,8 +287,14 @@ async function handleVenues(event) {
         );
 
         if (res.data.results && res.data.results.length > 0) {
-          log.info('Foursquare response sample', {
-            firstPlace: JSON.stringify(res.data.results[0], null, 2).slice(0, 500),
+          const firstPlace = res.data.results[0];
+          log.info('Foursquare response details', {
+            photoCount: firstPlace.photos ? firstPlace.photos.length : 0,
+            photos: firstPlace.photos ? firstPlace.photos.slice(0, 3).map(p => ({ prefix: p.prefix, suffix: p.suffix })) : [],
+            latitude: firstPlace.latitude,
+            longitude: firstPlace.longitude,
+            location: firstPlace.location,
+            social_media: firstPlace.social_media ? Object.keys(firstPlace.social_media) : [],
           });
           const venues = res.data.results.map(place => {
             const photoUrl = place.photos?.[0]?.prefix
@@ -308,8 +314,13 @@ async function handleVenues(event) {
 
             log.info('Venue data', {
               name: place.name,
-              hasPhotos: !!place.photos && place.photos.length > 0,
+              photoCount: place.photos ? place.photos.length : 0,
               photoUrl: photoUrl,
+              location: {
+                lat: place.latitude,
+                lng: place.longitude,
+                formatted_address: place.location?.formatted_address,
+              },
               hasSocialMedia: !!place.social_media,
               socialMediaKeys: place.social_media ? Object.keys(place.social_media) : [],
               instagramUrl: instagramUrl,
@@ -321,8 +332,11 @@ async function handleVenues(event) {
               category: categoryName,
               rating: place.rating || null,
               address: place.location?.formatted_address || '',
+              lat: place.latitude || null,
+              lng: place.longitude || null,
               instagramUrl: instagramUrl,
               photoUrl: photoUrl,
+              photos: place.photos || [],
               attributes: place.attributes || null,
               hours: {
                 open_now: place.hours?.open_now || null,
