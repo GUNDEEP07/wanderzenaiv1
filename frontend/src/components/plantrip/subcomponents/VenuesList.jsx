@@ -55,6 +55,20 @@ const s = {
     color: '#ffd93d',
     marginTop: '4px',
   },
+  social: {
+    display: 'flex',
+    gap: '8px',
+    marginTop: '6px',
+  },
+  instagramLink: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
+    fontSize: '10px',
+    color: '#00d4aa',
+    textDecoration: 'none',
+    transition: 'color 0.2s',
+  },
   loading: {
     padding: '20px',
     textAlign: 'center',
@@ -113,6 +127,19 @@ export function VenuesList({ activity, venues, selectedVenues, onVenueToggle, lo
                   )}
                   {venue.rating && (
                     <div style={s.rating}>⭐ {venue.rating.toFixed(1)}</div>
+                  )}
+                  {venue.instagramUrl && (
+                    <div style={s.social}>
+                      <a
+                        href={venue.instagramUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={s.instagramLink}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        📷 Instagram
+                      </a>
+                    </div>
                   )}
                 </div>
               </label>

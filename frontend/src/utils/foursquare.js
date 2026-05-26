@@ -1,5 +1,15 @@
 const API_URL = import.meta.env.VITE_API_URL;
 
+// Map user activities to backend category names (fallback for exact matches that don't exist)
+const ACTIVITY_CATEGORY_MAP = {
+  'Hiking': ['Parks'],
+  'Food': ['Restaurants', 'Cafes', 'Markets'],
+  'Nature': ['Parks'],
+  'Culture': ['Temples', 'Museums'],
+  'Views': ['Parks'],
+  'Nightlife': ['Bars & Nightlife'],
+};
+
 export async function fetchVenuesForActivity(activity, destination, maxResults = 5) {
   if (!destination || !destination.lat || !destination.lng) {
     console.warn('Destination coordinates required for venue search');
@@ -19,15 +29,27 @@ export async function fetchVenuesForActivity(activity, destination, maxResults =
 
     const data = await response.json();
 
+    // Debug: log what the backend returned
+    console.log(`Backend returned categories:`, data.categories?.map(c => c.category) || []);
+
     // Find categories matching the activity
     const activityLower = activity.toLowerCase();
-    const matchingCategory = data.categories?.find(cat =>
-      cat.category.toLowerCase().includes(activityLower) ||
-      activityLower.includes(cat.category.toLowerCase().split(' ')[0])
+
+    // Try exact match first
+    let matchingCategory = data.categories?.find(cat =>
+      cat.category.toLowerCase() === activityLower
     );
 
+    // If no exact match, try mapped categories
     if (!matchingCategory) {
-      console.warn(`No venues found for activity: ${activity}`);
+      const mappedCategories = ACTIVITY_CATEGORY_MAP[activity];
+      matchingCategory = data.categories?.find(cat =>
+        mappedCategories?.some(mapped => cat.category.toLowerCase() === mapped.toLowerCase())
+      );
+    }
+
+    if (!matchingCategory) {
+      console.warn(`No venues found for activity: ${activity}. Available categories:`, data.categories?.map(c => c.category) || []);
       return [];
     }
 
@@ -37,6 +59,7 @@ export async function fetchVenuesForActivity(activity, destination, maxResults =
       category: venue.category || activity,
       rating: venue.rating || null,
       address: venue.address || 'Address not available',
+      instagramUrl: venue.instagramUrl || null,
     }));
   } catch (error) {
     console.error('Failed to fetch venues:', error);
