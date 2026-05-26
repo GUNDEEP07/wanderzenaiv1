@@ -5,6 +5,7 @@ const { log } = require('/opt/nodejs/index');
 
 const FOURSQUARE_API_KEY = process.env.FOURSQUARE_API_KEY;
 const FOURSQUARE_BASE = 'https://api.foursquare.com/v3';
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim());
 
 const FEATURED_CATEGORIES = [
   'restaurant', 'cafe', 'park', 'temple', 'museum',
@@ -22,7 +23,7 @@ const FALLBACK_DESTINATIONS = [
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
-    return corsHeaders(200, '');
+    return corsHeaders(200, '', event);
   }
 
   const path = event.path || event.resource || '';
@@ -50,7 +51,7 @@ async function handleAutocomplete(event) {
   const query = event.queryStringParameters?.query || '';
 
   if (!query || query.trim().length < 2) {
-    return ok({ suggestions: [] });
+    return ok({ suggestions: [] }, event);
   }
 
   try {
@@ -70,10 +71,10 @@ async function handleAutocomplete(event) {
     }));
 
     log.info('Autocomplete success', { count: suggestions.length });
-    return ok({ suggestions });
+    return ok({ suggestions }, event);
   } catch (err) {
     log.error('Autocomplete failed, returning fallback', { error: err.message });
-    return ok({ suggestions: FALLBACK_DESTINATIONS });
+    return ok({ suggestions: FALLBACK_DESTINATIONS }, event);
   }
 }
 
@@ -127,14 +128,14 @@ async function handleVenues(event) {
     return ok({
       destination,
       categories: categories.slice(0, 10),
-    });
+    }, event);
   } catch (err) {
     log.error('Venues fetch failed', { error: err.message });
     return ok({
       destination,
       categories: [],
       error: 'Unable to fetch venues'
-    });
+    }, event);
   }
 }
 
@@ -154,22 +155,30 @@ function formatCategory(cat) {
   return categoryMap[cat] || cat.split('_').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
 }
 
-function ok(data) {
+function getAllowedOrigin(event) {
+  const origin = event?.headers?.Origin || event?.headers?.origin || '';
+  if (ALLOWED_ORIGINS.includes(origin)) {
+    return origin;
+  }
+  return ALLOWED_ORIGINS[0] || '*';
+}
+
+function ok(data, event) {
   return {
     statusCode: 200,
     headers: {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': getAllowedOrigin(event),
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(data),
   };
 }
 
-function corsHeaders(statusCode, body) {
+function corsHeaders(statusCode, body, event) {
   return {
     statusCode,
     headers: {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': getAllowedOrigin(event),
       'Access-Control-Allow-Methods': 'GET,OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     },

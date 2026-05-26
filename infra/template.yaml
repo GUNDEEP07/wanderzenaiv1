@@ -71,6 +71,10 @@ Parameters:
     NoEcho: true
     Default: ''
     Description: Foursquare Places API key for local venue enrichment
+  AllowedOrigins:
+    Type: String
+    Default: 'https://www.wanderzenai.com,http://localhost:5173,https://localhost:5173,https://web.postman.co'
+    Description: Comma-separated list of allowed origins for recommendations endpoint
 
 
 Resources:
@@ -255,6 +259,7 @@ Resources:
         Variables:
           FOURSQUARE_API_KEY: !Ref FoursquareApiKey
           FRONTEND_URL: !Ref FrontendUrl
+          ALLOWED_ORIGINS: !Ref AllowedOrigins
       Events:
         GetRecommendations:
           Type: Api
