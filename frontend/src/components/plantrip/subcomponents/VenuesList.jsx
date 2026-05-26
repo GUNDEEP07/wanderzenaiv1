@@ -3,6 +3,7 @@ import React from 'react';
 const s = {
   section: {
     marginTop: '20px',
+    animation: 'fadeIn 0.5s ease-out',
   },
   header: {
     fontSize: '10px',
@@ -68,49 +69,57 @@ const s = {
 };
 
 export function VenuesList({ activity, venues, selectedVenues, onVenueToggle, loading }) {
-  if (loading) {
-    return (
-      <div style={s.section}>
-        <div style={s.header}>{activity} Venues</div>
-        <div style={s.loading}>Loading venues...</div>
-      </div>
-    );
-  }
-
-  if (!venues || venues.length === 0) {
-    return (
-      <div style={s.section}>
-        <div style={s.header}>{activity} Venues ({0} available)</div>
-        <div style={s.empty}>No venues found for {activity}</div>
-      </div>
-    );
-  }
-
   return (
-    <div style={s.section}>
-      <div style={s.header}>{activity} Venues ({venues.length} available)</div>
+    <>
+      <style>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
+      {loading ? (
+        <div style={s.section}>
+          <div style={s.header}>{activity} Venues</div>
+          <div style={s.loading}>Loading venues...</div>
+        </div>
+      ) : !venues || venues.length === 0 ? (
+        <div style={s.section}>
+          <div style={s.header}>{activity} Venues ({0} available)</div>
+          <div style={s.empty}>No venues found for {activity}</div>
+        </div>
+      ) : (
+        <div style={s.section}>
+          <div style={s.header}>{activity} Venues ({venues.length} available)</div>
 
-      <div style={s.list}>
-        {venues.map(venue => (
-          <label key={venue.id} style={s.label}>
-            <input
-              type="checkbox"
-              style={s.checkbox}
-              checked={selectedVenues.has(venue.id)}
-              onChange={() => onVenueToggle(venue.id)}
-            />
-            <div style={s.info}>
-              <div style={s.name}>{venue.name}</div>
-              {venue.category && (
-                <div style={s.category}>{venue.category}</div>
-              )}
-              {venue.rating && (
-                <div style={s.rating}>⭐ {venue.rating.toFixed(1)}</div>
-              )}
-            </div>
-          </label>
-        ))}
-      </div>
-    </div>
+          <div style={s.list}>
+            {venues.map(venue => (
+              <label key={venue.id} style={s.label}>
+                <input
+                  type="checkbox"
+                  style={s.checkbox}
+                  checked={selectedVenues.has(venue.id)}
+                  onChange={() => onVenueToggle(venue.id)}
+                />
+                <div style={s.info}>
+                  <div style={s.name}>{venue.name}</div>
+                  {venue.category && (
+                    <div style={s.category}>{venue.category}</div>
+                  )}
+                  {venue.rating && (
+                    <div style={s.rating}>⭐ {venue.rating.toFixed(1)}</div>
+                  )}
+                </div>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
   );
 }

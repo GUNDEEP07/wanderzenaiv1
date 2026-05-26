@@ -203,7 +203,7 @@ export function VenueSelection({ destination, onSubmit, onSkip }) {
 
     </div>
 
-    {/* Custom Interest Modal - Rendered outside main div for proper overlay behavior */}
+    {/* Custom Interest Modal - Uses React Portal to render at document body */}
     <CustomInterestModal
       destination={destination}
       isOpen={showCustomModal}

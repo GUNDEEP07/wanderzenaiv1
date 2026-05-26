@@ -4,6 +4,7 @@ import { getCountryFlag } from '../../../utils/countryFlags';
 const s = {
   section: {
     marginBottom: '20px',
+    animation: 'fadeIn 0.5s ease-out',
   },
   header: {
     fontSize: '10px',
@@ -95,67 +96,75 @@ const s = {
 export function YouTubeCarousel({ activity, destination, countryCode, videos, loading, isMobile }) {
   const flag = getCountryFlag(countryCode);
 
-  if (loading) {
-    return (
-      <div style={s.section}>
-        <div style={s.header}>
-          <span>🔥</span> Trending in {flag} {destination}
-        </div>
-        <div style={s.loading}>Loading videos...</div>
-      </div>
-    );
-  }
-
-  if (!videos || videos.length === 0) {
-    return (
-      <div style={s.section}>
-        <div style={s.header}>
-          <span>🔥</span> Trending in {flag} {destination}
-        </div>
-        <div style={s.empty}>No trending videos found for {activity}</div>
-      </div>
-    );
-  }
-
   return (
-    <div style={s.section}>
-      <div style={s.header}>
-        <span>🔥</span> Trending in <span style={{ fontSize: '18px' }}>{flag}</span> {destination}
-      </div>
-
-      <div style={s.carousel(isMobile)}>
-        {videos.map(video => (
-          <div key={video.id} style={s.cardContainer(isMobile)}>
-            {video.thumbnailUrl && (
-              <img
-                src={video.thumbnailUrl}
-                alt={video.title}
-                style={s.thumbnail}
-              />
-            )}
-            <div style={s.content}>
-              <div style={s.title}>{video.title}</div>
-              <div style={s.metadata}>{video.creator}</div>
-              <div style={s.tags}>
-                <span style={s.tag}>#trending</span>
-                <span style={s.tag}>{activity.toLowerCase()}</span>
-              </div>
-              <a
-                href={`https://www.youtube.com/watch?v=${video.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={s.link}
-              >
-                Watch video →
-              </a>
-            </div>
+    <>
+      <style>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
+      {loading ? (
+        <div style={s.section}>
+          <div style={s.header}>
+            <span>🔥</span> Trending in {flag} {destination}
           </div>
-        ))}
-      </div>
+          <div style={s.loading}>Loading videos...</div>
+        </div>
+      ) : !videos || videos.length === 0 ? (
+        <div style={s.section}>
+          <div style={s.header}>
+            <span>🔥</span> Trending in {flag} {destination}
+          </div>
+          <div style={s.empty}>No trending videos found for {activity}</div>
+        </div>
+      ) : (
+        <div style={s.section}>
+          <div style={s.header}>
+            <span>🔥</span> Trending in <span style={{ fontSize: '18px' }}>{flag}</span> {destination}
+          </div>
 
-      {isMobile && (
-        <div style={s.swipeHint}>← Swipe for more →</div>
+          <div style={s.carousel(isMobile)}>
+            {videos.map(video => (
+              <div key={video.id} style={s.cardContainer(isMobile)}>
+                {video.thumbnailUrl && (
+                  <img
+                    src={video.thumbnailUrl}
+                    alt={video.title}
+                    style={s.thumbnail}
+                  />
+                )}
+                <div style={s.content}>
+                  <div style={s.title}>{video.title}</div>
+                  <div style={s.metadata}>{video.creator}</div>
+                  <div style={s.tags}>
+                    <span style={s.tag}>#trending</span>
+                    <span style={s.tag}>{activity.toLowerCase()}</span>
+                  </div>
+                  <a
+                    href={`https://www.youtube.com/watch?v=${video.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={s.link}
+                  >
+                    Watch video →
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {isMobile && (
+            <div style={s.swipeHint}>← Swipe for more →</div>
+          )}
+        </div>
       )}
-    </div>
+    </>
   );
 }
