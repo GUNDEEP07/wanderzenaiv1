@@ -115,11 +115,7 @@ export function VenueSelection({ destination, onSubmit, onSkip }) {
     Object.entries(selectedVenues).forEach(([activity, venues]) => {
       venueData[activity] = Array.from(venues);
     });
-    onSubmit({
-      selectedActivities,
-      selectedVenues: venueData,
-      userLocation,
-    });
+    onSubmit(venueData);
   };
 
   if (loading) {
