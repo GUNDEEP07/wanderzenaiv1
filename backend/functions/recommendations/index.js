@@ -57,6 +57,21 @@ async function handleAutocomplete(event) {
 
   try {
     log.info('Autocomplete request', { query });
+
+    // First, filter fallback destinations by query
+    const lowerQuery = query.toLowerCase();
+    const fallbackMatches = FALLBACK_DESTINATIONS.filter(dest =>
+      dest.name.toLowerCase().includes(lowerQuery) ||
+      dest.country.toLowerCase().includes(lowerQuery)
+    );
+
+    // If we found matches in fallback destinations, return those
+    if (fallbackMatches.length > 0) {
+      log.info('Autocomplete success (from fallback)', { count: fallbackMatches.length });
+      return ok({ suggestions: fallbackMatches }, event);
+    }
+
+    // Otherwise, try Foursquare API
     const res = await axios.get(`${FOURSQUARE_BASE}/autocomplete`, {
       params: { query, limit: 5 },
       headers: {
@@ -67,23 +82,7 @@ async function handleAutocomplete(event) {
       timeout: 5000,
     });
 
-    const businessCategories = [
-      'restaurant', 'cafe', 'bar', 'hotel', 'shop', 'store', 'clinic', 'hospital',
-      'gym', 'salon', 'park', 'museum', 'gallery', 'theater', 'cinema', 'mall',
-      'market', 'stand', 'office', 'studio', 'home', 'apartment', 'hostel', 'lodge'
-    ];
-
     const suggestions = res.data.results
-      .filter(result => {
-        // Filter out business venues - keep only city/country/region level places
-        const place = result.place || result;
-        const hasBusinessCategory = place.categories?.some(cat =>
-          businessCategories.some(busType =>
-            cat.name?.toLowerCase().includes(busType)
-          )
-        );
-        return !hasBusinessCategory;
-      })
       .map(result => {
         const place = result.place || result;
         return {
@@ -95,7 +94,7 @@ async function handleAutocomplete(event) {
         };
       });
 
-    log.info('Autocomplete success', { count: suggestions.length });
+    log.info('Autocomplete success (from Foursquare)', { count: suggestions.length });
     return ok({ suggestions }, event);
   } catch (err) {
     log.error('Autocomplete failed, returning fallback', {
@@ -103,8 +102,6 @@ async function handleAutocomplete(event) {
       status: err.response?.status,
       statusText: err.response?.statusText,
       data: err.response?.data,
-      apiKey: FOURSQUARE_API_KEY ? 'set' : 'not-set',
-      apiKeyLength: FOURSQUARE_API_KEY?.length || 0
     });
     return ok({ suggestions: FALLBACK_DESTINATIONS }, event);
   }
