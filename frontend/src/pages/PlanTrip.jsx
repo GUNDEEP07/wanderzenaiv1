@@ -299,9 +299,11 @@ export default function PlanTrip() {
               <h2 style={s.stepTitle}>Favourite venues</h2>
               <p style={s.stepSub}>Pick specific venues you'd like to visit (optional — we can skip this).</p>
               <VenueSelection
-                destination={form.destination}
-                lat={form.destinationLat}
-                lng={form.destinationLng}
+                destination={{
+                  name: form.destination,
+                  lat: form.destinationLat,
+                  lng: form.destinationLng,
+                }}
                 onSubmit={handleVenueSelect}
                 onSkip={() => setStep(2)}
               />

@@ -1,42 +1,45 @@
-const FOURSQUARE_API_KEY = import.meta.env.VITE_FOURSQUARE_API_KEY;
+const API_URL = import.meta.env.VITE_API_URL;
 
 export async function fetchVenuesForActivity(activity, destination, maxResults = 5) {
-  if (!FOURSQUARE_API_KEY) {
-    console.warn('Foursquare API key not configured');
+  if (!destination || !destination.lat || !destination.lng) {
+    console.warn('Destination coordinates required for venue search');
     return [];
   }
 
   try {
     const params = new URLSearchParams({
-      query: activity,
-      location: destination,
-      limit: maxResults.toString(),
+      destination: destination.name || 'Unknown',
+      lat: destination.lat.toString(),
+      lng: destination.lng.toString(),
     });
 
-    const response = await fetch(
-      `https://api.foursquare.com/v3/places/search?${params}`,
-      {
-        headers: {
-          'Authorization': FOURSQUARE_API_KEY,
-          'Accept': 'application/json',
-        },
-      }
-    );
+    const response = await fetch(`${API_URL}/venues?${params}`);
 
-    if (!response.ok) throw new Error(`Foursquare API error: ${response.status}`);
+    if (!response.ok) throw new Error(`Venues API error: ${response.status}`);
 
     const data = await response.json();
-    if (!data.results) return [];
 
-    return data.results.map(venue => ({
+    // Find categories matching the activity
+    const activityLower = activity.toLowerCase();
+    const matchingCategory = data.categories?.find(cat =>
+      cat.category.toLowerCase().includes(activityLower) ||
+      activityLower.includes(cat.category.toLowerCase().split(' ')[0])
+    );
+
+    if (!matchingCategory) {
+      console.warn(`No venues found for activity: ${activity}`);
+      return [];
+    }
+
+    return matchingCategory.venues.map(venue => ({
       id: venue.fsq_id,
       name: venue.name,
-      category: venue.categories?.[0]?.name || 'Venue',
+      category: venue.category || activity,
       rating: venue.rating || null,
-      address: venue.location?.address || 'Address not available',
+      address: venue.address || 'Address not available',
     }));
   } catch (error) {
-    console.error('Failed to fetch Foursquare venues:', error);
+    console.error('Failed to fetch venues:', error);
     return [];
   }
 }

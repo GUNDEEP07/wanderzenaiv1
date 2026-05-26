@@ -106,7 +106,7 @@ export function CustomInterestModal({ destination, isOpen, onClose, onSubmit, lo
       />
       <div style={s.modal(isOpen)}>
         <div style={s.header}>Add Custom Interest</div>
-        <div style={s.prompt}>What interests you in {destination}?</div>
+        <div style={s.prompt}>What interests you in {destination?.name}?</div>
         <input
           type="text"
           style={s.input}
