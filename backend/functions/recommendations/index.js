@@ -24,6 +24,10 @@ const FALLBACK_DESTINATIONS = [
   { fsq_id: 'oaxaca', name: 'Oaxaca', country: 'Mexico', lat: 17.0732, lng: -96.7266 },
   { fsq_id: 'munich', name: 'Munich', country: 'Germany', lat: 48.1351, lng: 11.5820 },
   { fsq_id: 'new-delhi', name: 'New Delhi', country: 'India', lat: 28.6139, lng: 77.2090 },
+  { fsq_id: 'shimla', name: 'Shimla', country: 'India', lat: 31.7773, lng: 77.1063 },
+  { fsq_id: 'bir', name: 'Bir', country: 'India', lat: 32.1848, lng: 76.8185 },
+  { fsq_id: 'manali', name: 'Manali', country: 'India', lat: 32.2431, lng: 77.1892 },
+  { fsq_id: 'goa', name: 'Goa', country: 'India', lat: 15.2993, lng: 73.8243 },
   { fsq_id: 'tokyo', name: 'Tokyo', country: 'Japan', lat: 35.6762, lng: 139.6503 },
   { fsq_id: 'london', name: 'London', country: 'United Kingdom', lat: 51.5074, lng: -0.1278 },
   { fsq_id: 'barcelona', name: 'Barcelona', country: 'Spain', lat: 41.3851, lng: 2.1734 },
@@ -62,13 +66,15 @@ exports.handler = async (event) => {
 
 async function handleAutocomplete(event) {
   const query = event.queryStringParameters?.query || '';
+  const location = event.queryStringParameters?.location || '';
+  const radius = event.queryStringParameters?.radius || '';
 
   if (!query || query.trim().length < 2) {
     return ok({ suggestions: [] }, event);
   }
 
   try {
-    log.info('Autocomplete request', { query });
+    log.info('Autocomplete request', { query, location, radius });
 
     // First, filter fallback destinations by query (prioritize exact matches)
     const lowerQuery = query.toLowerCase();
@@ -92,12 +98,19 @@ async function handleAutocomplete(event) {
     }
 
     // Otherwise, try Google Places Autocomplete API
+    const params = {
+      input: query,
+      key: GOOGLE_PLACES_API_KEY,
+      components: 'country:*',
+    };
+
+    if (location) {
+      params.location = location;
+      if (radius) params.radius = radius;
+    }
+
     const res = await axios.get(`${GOOGLE_PLACES_BASE}/autocomplete/json`, {
-      params: {
-        input: query,
-        key: GOOGLE_PLACES_API_KEY,
-        components: 'country:*', // Allow all countries
-      },
+      params,
       timeout: 5000,
     });
 
@@ -106,7 +119,6 @@ async function handleAutocomplete(event) {
       return ok({ suggestions: [] }, event);
     }
 
-    // Get place details for each prediction to extract coordinates
     const suggestions = await Promise.all(
       res.data.predictions.slice(0, 5).map(async (prediction) => {
         try {
@@ -122,10 +134,24 @@ async function handleAutocomplete(event) {
           const location = detailsRes.data.result?.geometry?.location;
           const formatted = detailsRes.data.result?.formatted_address || prediction.description;
 
+          let name = prediction.main_text || prediction.description?.split(',')[0];
+          if (!name && prediction.structured_formatting) {
+            name = prediction.structured_formatting.main_text;
+          }
+
+          if (!name) return null;
+
+          let country = 'Unknown';
+          if (prediction.terms?.length > 0) {
+            country = prediction.terms[prediction.terms.length - 1]?.value || 'Unknown';
+          } else if (prediction.structured_formatting?.secondary_text) {
+            country = prediction.structured_formatting.secondary_text;
+          }
+
           return {
             fsq_id: prediction.place_id,
-            name: prediction.main_text,
-            country: prediction.terms?.[prediction.terms.length - 1]?.value || 'Unknown',
+            name: name,
+            country: country,
             lat: location?.lat || null,
             lng: location?.lng || null,
             description: formatted,
