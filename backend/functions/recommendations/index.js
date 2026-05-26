@@ -153,8 +153,12 @@ async function handleVenues(event) {
             category: formatCategory(category),
             venues: res.data.results.map(result => {
               const v = result.place || result;
-              // Extract Instagram link from social_media array
-              const instagramLink = v.social_media?.find(sm => sm.type === 'instagram')?.url || null;
+              // Extract Instagram link if social_media is an array
+              let instagramLink = null;
+              if (Array.isArray(v.social_media)) {
+                const instaData = v.social_media.find(sm => sm.type === 'instagram');
+                instagramLink = instaData?.url || null;
+              }
               return {
                 fsq_id: v.fsq_place_id || v.fsq_id,
                 name: v.name,
