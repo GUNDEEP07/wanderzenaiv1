@@ -17,7 +17,11 @@ const client = new Anthropic({
 export async function handler(event) {
   console.log('Destination Insights request:', JSON.stringify(event));
 
-  const { destination, travelStyles = [], startDate, endDate } = event;
+  const queryParams = event.queryStringParameters || {};
+  const destination = queryParams.destination;
+  const startDate = queryParams.startDate;
+  const endDate = queryParams.endDate;
+  const travelStyles = queryParams.travelStyles ? queryParams.travelStyles.split(',').map(s => s.trim()) : [];
 
   if (!destination || !startDate || !endDate) {
     return {
