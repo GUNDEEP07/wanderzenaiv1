@@ -35,10 +35,9 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
     : PRESET_ACTIVITIES;
 
   useEffect(() => {
-    getUserLocationFromIP().then(loc => {
-      setCountryCode(loc.countryCode);
-      setLoading(false);
-    });
+    getUserLocationFromIP()
+      .then(loc => { setCountryCode(loc.countryCode); setLoading(false); })
+      .catch(() => setLoading(false));
   }, []);
 
   const fetchActivityContent = async (activity) => {
@@ -125,9 +124,9 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
           <div className="venue-dest-tabs">
             {destinations.map((dest, idx) => (
               <button
-                key={idx}
+                key={dest.name}
                 className={`venue-dest-tab${selectedDestination === idx ? ' venue-dest-tab--active' : ''}`}
-                onClick={() => { setSelectedDestination(idx); setActiveTab(null); }}
+                onClick={() => { setSelectedDestination(idx); setActiveTab(null); setAiSuggestions([]); }}
               >
                 {dest.name}
               </button>
@@ -168,7 +167,7 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
               </div>
             )}
 
-            <div className="venue-browse-label">Or Browse All</div>
+            {aiSuggestions.length > 0 && <div className="venue-browse-label">Or Browse All</div>}
 
             <ActivityGrid
               availableActivities={availableActivities}
