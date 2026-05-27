@@ -1,13 +1,32 @@
 import React, { useState } from 'react';
 
-const PRESET_ACTIVITIES = [
-  { name: 'Hiking', emoji: '🥾' },
-  { name: 'Food', emoji: '🍜' },
-  { name: 'Views', emoji: '⛰️' },
-  { name: 'Culture', emoji: '🏛️' },
-  { name: 'Nature', emoji: '🌳' },
-  { name: 'Nightlife', emoji: '🎵' },
-];
+const ACTIVITY_EMOJI_MAP = {
+  'Hiking': '🥾',
+  'Food': '🍜',
+  'Views': '⛰️',
+  'Culture': '🏛️',
+  'Nature': '🌳',
+  'Nightlife': '🎵',
+  'Parks': '🌲',
+  'Spa': '🧘',
+  'Adventure': '🚀',
+  'Beaches': '🏖️',
+  'Shopping': '🛍️',
+  'Markets': '🏪',
+  'Wellness': '💪',
+  'Museums': '🖼️',
+  'Restaurants': '🍽️',
+  'Cafes': '☕',
+  'Sports': '⚽',
+  'Landmarks': '🗽',
+  'Amusement Park': '🎢',
+  'Water Sports': '🏄',
+  'Coffee Shop': '☕',
+  'Aquarium': '🐠',
+  'Gym': '💪',
+  'Playground': '⛹️',
+  'Yoga Studio': '🧘',
+};
 
 const s = {
   grid: {
@@ -99,12 +118,18 @@ const s = {
   },
 };
 
-export function ActivityGrid({ selectedActivities, onActivityToggle, onOpenCustomModal }) {
+export function ActivityGrid({ availableActivities, selectedActivities, onActivityToggle, onOpenCustomModal }) {
   const [hoveredButton, setHoveredButton] = useState(null);
 
   const handleActivityClick = (activity) => {
     onActivityToggle(activity);
   };
+
+  // Convert activity strings to activity objects with emojis
+  const activities = (availableActivities || []).map(name => ({
+    name,
+    emoji: ACTIVITY_EMOJI_MAP[name] || '📍',
+  }));
 
   return (
     <div>
@@ -121,7 +146,7 @@ export function ActivityGrid({ selectedActivities, onActivityToggle, onOpenCusto
         }
       `}</style>
       <div style={s.grid}>
-        {PRESET_ACTIVITIES.map(activity => {
+        {activities.map(activity => {
           const isSelected = selectedActivities.includes(activity.name);
           const isHovered = hoveredButton === activity.name;
           return (

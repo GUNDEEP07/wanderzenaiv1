@@ -1,14 +1,49 @@
 const API_URL = import.meta.env.VITE_API_URL;
 
-// Map user activities to backend category names (fallback for exact matches that don't exist)
+// Map user activities to Foursquare category names (from foursquare_categories table)
 const ACTIVITY_CATEGORY_MAP = {
-  'Hiking': ['Hiking Trails', 'Viewpoints'],
-  'Food': ['Restaurants', 'Cafes', 'Markets'],
-  'Nature': ['Parks'],
-  'Culture': ['Temples', 'Museums'],
-  'Views': ['Viewpoints'],
-  'Nightlife': ['Bars & Nightlife'],
+  'Hiking': ['Hiking Trail', 'Viewpoint'],
+  'Food': ['Restaurant', 'Cafe', 'Market', 'Bakery'],
+  'Nature': ['Park', 'Garden', 'Botanical Garden', 'Zoo'],
+  'Culture': ['Temple', 'Museum', 'Historic Site', 'Art Gallery', 'Landmark', 'Monument', 'Religious Site'],
+  'Views': ['Viewpoint', 'Landmark', 'Bridge'],
+  'Nightlife': ['Bar', 'Nightlife Spot', 'Music Venue'],
+  'Parks': ['Park', 'Garden', 'Botanical Garden', 'Playground'],
+  'Spa': ['Spa', 'Yoga Studio'],
+  'Adventure': ['Hiking Trail', 'Sports', 'Amusement Park', 'Water Sports'],
+  'Beaches': ['Beach'],
+  'Shopping': ['Shopping'],
+  'Markets': ['Market'],
+  'Wellness': ['Spa', 'Yoga Studio', 'Gym', 'Park'],
+  'Museums': ['Museum', 'Art Gallery', 'Aquarium'],
+  'Restaurants': ['Restaurant'],
+  'Cafes': ['Cafe', 'Coffee Shop'],
 };
+
+// Map travel styles to available activities
+const TRAVEL_STYLE_TO_ACTIVITIES = {
+  'Relaxation': ['Food', 'Spa', 'Parks', 'Beaches', 'Cafes', 'Markets'],
+  'Adventure': ['Hiking', 'Adventure', 'Sports', 'Beaches', 'Nature', 'Culture'],
+  'Cultural': ['Culture', 'Museums', 'Landmarks', 'Restaurants', 'Markets', 'Shopping'],
+  'Foodie': ['Food', 'Restaurants', 'Markets', 'Cafes', 'Nightlife'],
+  'Nature': ['Nature', 'Parks', 'Hiking', 'Beaches', 'Views'],
+  'Wellness': ['Wellness', 'Spa', 'Cafes', 'Parks', 'Food'],
+  'Luxury': ['Restaurants', 'Shopping', 'Spa', 'Culture', 'Nightlife'],
+};
+
+export function getActivitiesForTravelStyle(travelStyles) {
+  if (!travelStyles || travelStyles.length === 0) {
+    return ['Hiking', 'Food', 'Views', 'Culture', 'Nature', 'Nightlife', 'Parks', 'Spa'];
+  }
+
+  const activitiesSet = new Set();
+  travelStyles.forEach(style => {
+    const activities = TRAVEL_STYLE_TO_ACTIVITIES[style] || [];
+    activities.forEach(activity => activitiesSet.add(activity));
+  });
+
+  return Array.from(activitiesSet);
+}
 
 export async function fetchVenuesForActivity(activity, destination, maxResults = 5) {
   if (!destination || !destination.lat || !destination.lng) {

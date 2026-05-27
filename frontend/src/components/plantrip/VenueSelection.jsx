@@ -7,12 +7,12 @@ import { VenuesList } from './subcomponents/VenuesList';
 import { CustomInterestModal } from './subcomponents/CustomInterestModal';
 import { getUserLocationFromIP } from '../../utils/geolocation';
 import { fetchTrendingVideos } from '../../utils/youtube';
-import { fetchVenuesForActivity } from '../../utils/foursquare';
+import { fetchVenuesForActivity, getActivitiesForTravelStyle } from '../../utils/foursquare';
 import './styles/venueselection-redesign.css';
 
 const PRESET_ACTIVITIES = ['Hiking', 'Food', 'Views', 'Culture', 'Nature', 'Nightlife'];
 
-export function VenueSelection({ destinations, onSubmit, onSkip }) {
+export function VenueSelection({ destinations, travelStyles, onSubmit, onSkip }) {
   const [selectedDestination, setSelectedDestination] = useState(0);
   const [selectedActivities, setSelectedActivities] = useState({});
   const [activeTab, setActiveTab] = useState(null);
@@ -30,6 +30,11 @@ export function VenueSelection({ destinations, onSubmit, onSkip }) {
   const destination = destinations && destinations[selectedDestination];
   const destKey = destination?.name || `destination_${selectedDestination}`;
   const currentActivities = selectedActivities[destKey] || [];
+
+  // Determine which activities to show based on travel styles
+  const availableActivities = travelStyles && travelStyles.length > 0
+    ? getActivitiesForTravelStyle(travelStyles)
+    : PRESET_ACTIVITIES;
 
   // Fetch user IP location on mount
   useEffect(() => {
@@ -170,6 +175,7 @@ export function VenueSelection({ destinations, onSubmit, onSkip }) {
       <div className="venue-selection-content">
         {/* Activity Grid */}
         <ActivityGrid
+          availableActivities={availableActivities}
           selectedActivities={currentActivities}
           onActivityToggle={handleActivityToggle}
           onOpenCustomModal={() => setShowCustomModal(true)}
