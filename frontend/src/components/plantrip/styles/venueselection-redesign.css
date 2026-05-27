@@ -119,3 +119,280 @@
     max-height: 600px;
   }
 }
+
+/* ─── Responsive Two-Panel Layout ────────────────────────────────── */
+
+.venue-split {
+  display: flex;
+  gap: 16px;
+  flex-direction: column;
+}
+
+@media (min-width: 768px) {
+  .venue-split {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+  .venue-panel-left {
+    width: 40%;
+    flex-shrink: 0;
+    position: sticky;
+    top: 16px;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+  }
+  .venue-panel-right {
+    flex: 1;
+    min-width: 0;
+  }
+  .ai-chip-row { display: none; }
+}
+
+@media (max-width: 767px) {
+  .venue-panel-left { width: 100%; }
+  .venue-panel-right { width: 100%; }
+  .ai-suggestion-list { display: none; }
+}
+
+/* ─── Destination switcher tabs ───────────────────────────────────── */
+
+.venue-dest-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.venue-dest-tab {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.venue-dest-tab--active {
+  border-color: #00d4aa;
+  background: rgba(0, 212, 170, 0.15);
+  color: #00d4aa;
+}
+
+/* ─── Insights strip ──────────────────────────────────────────────── */
+
+.insights-strip {
+  background: rgba(0, 212, 170, 0.06);
+  border: 1px solid rgba(0, 212, 170, 0.2);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.insights-strip--error {
+  background: rgba(255, 107, 107, 0.06);
+  border-color: rgba(255, 107, 107, 0.2);
+}
+
+.insights-strip__error-text {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.insights-strip__header {
+  font-size: 12px;
+  font-weight: 700;
+  color: #00d4aa;
+  margin-bottom: 8px;
+  letter-spacing: 0.03em;
+}
+
+.insights-strip__badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.insights-badge {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 5px;
+  padding: 3px 8px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.insights-badge--weather {
+  background: rgba(0, 212, 170, 0.1);
+  border-color: rgba(0, 212, 170, 0.25);
+  color: #00d4aa;
+}
+
+.insights-badge--crowd {
+  background: rgba(255, 217, 61, 0.1);
+  border-color: rgba(255, 217, 61, 0.25);
+  color: #ffd93d;
+}
+
+.insights-badge--months {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* ─── AI suggestion cards (desktop left panel) ────────────────────── */
+
+.ai-suggestions {
+  margin-top: 14px;
+}
+
+.ai-suggestions__label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.ai-suggestion-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ai-suggestion-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.ai-suggestion-card:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.ai-suggestion-card--selected {
+  background: rgba(0, 212, 170, 0.1);
+  border-color: rgba(0, 212, 170, 0.35);
+}
+
+.ai-suggestion-card__emoji {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.ai-suggestion-card__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ai-suggestion-card__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 2px;
+}
+
+.ai-suggestion-card__reason {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.45);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ai-suggestion-card__check {
+  font-size: 11px;
+  background: #00d4aa;
+  color: #0a0f1e;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* ─── AI chip row (mobile only, hidden on desktop) ────────────────── */
+
+.ai-chip-row {
+  margin-bottom: 12px;
+}
+
+.ai-chip-row__label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.ai-chip-row__chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+
+.ai-chip-row__chips::-webkit-scrollbar { display: none; }
+
+.ai-chip {
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.ai-chip--selected {
+  border-color: rgba(0, 212, 170, 0.5);
+  background: rgba(0, 212, 170, 0.12);
+  color: #00d4aa;
+}
+
+/* ─── Browse all divider ──────────────────────────────────────────── */
+
+.venue-browse-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.3);
+  text-align: center;
+  padding: 10px 0 6px;
+  text-transform: uppercase;
+  position: relative;
+}
+
+.venue-browse-label::before,
+.venue-browse-label::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 30%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.venue-browse-label::before { left: 0; }
+.venue-browse-label::after { right: 0; }
