@@ -184,7 +184,6 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
             travelStyles={travelStyles}
             startDate={startDate}
             endDate={endDate}
-            loading={loading}
           />
         )}
 

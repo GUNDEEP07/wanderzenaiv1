@@ -19,7 +19,7 @@ export function DestinationInsightsPanel({
   useEffect(() => {
     if (!destination || !startDate || !endDate) return;
     let cancelled = false;
-    const fetch = async () => {
+    const loadInsights = async () => {
       setLoading(true);
       setError(null);
       try {
@@ -38,7 +38,7 @@ export function DestinationInsightsPanel({
         if (!cancelled) setLoading(false);
       }
     };
-    fetch();
+    loadInsights();
     return () => { cancelled = true; };
   }, [destination, travelStyles, startDate, endDate]);
 
@@ -87,15 +87,13 @@ export function DestinationInsightsPanel({
         <div className="ai-suggestions">
           <div className="ai-suggestions__label">AI Picks — tap to add</div>
           <div className="ai-suggestion-list">
-            {insights.thingsToDo.map((thing, idx) => {
+            {insights.thingsToDo.map((thing) => {
               const isSelected = selectedActivities.includes(thing.name);
-              const reasonShort = thing.reason
-                ? thing.reason.split('—')[0].trim().slice(0, 55) +
-                  (thing.reason.length > 55 ? '…' : '')
-                : '';
+              const segment = thing.reason ? thing.reason.split('—')[0].trim() : '';
+              const reasonShort = segment.length > 55 ? segment.slice(0, 55) + '…' : segment;
               return (
                 <button
-                  key={idx}
+                  key={thing.name}
                   className={`ai-suggestion-card${isSelected ? ' ai-suggestion-card--selected' : ''}`}
                   onClick={() => onActivityToggle?.(thing.name)}
                 >
