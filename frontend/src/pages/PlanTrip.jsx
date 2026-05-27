@@ -190,7 +190,6 @@ export default function PlanTrip() {
     const errs = {};
     if (step === 0 && form.destinations.length === 0) errs.destination = 'Select at least one destination';
     if (step === 2 && (!form.budget || isNaN(form.budget) || +form.budget <= 0)) errs.budget = 'Enter your total budget';
-    if (step === 3 && !form.travelerType) errs.travelerType = 'Select traveller type';
     if (step === 4) {
       if (!form.email.trim()) errs.email = 'We need your email to send the itinerary';
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = 'Invalid email address';
@@ -287,6 +286,29 @@ export default function PlanTrip() {
                   <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem' }}>days</span>
                 </div>
               </div>
+
+              <div style={s.fieldWrap}>
+                <label style={s.label}>Start date <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontSize: '0.7rem' }}>(optional)</span></label>
+                <input style={s.input} type="date" value={form.travelDate} onChange={e => set('travelDate', e.target.value)} />
+              </div>
+
+              <div style={s.fieldWrap}>
+                <label style={s.label}>Travelling as</label>
+                <div style={s.grid2}>
+                  {TRAVELER_TYPES.map(t => (
+                    <button key={t} style={s.choiceBtn(form.travelerType === t)} onClick={() => set('travelerType', t)}>{t}</button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={s.fieldWrap}>
+                <label style={s.label}>Travel style <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(pick any)</span></label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  {TRAVEL_STYLES.map(st => (
+                    <button key={st} style={s.tag(form.travelStyle.includes(st))} onClick={() => toggleStyle(st)}>{st}</button>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
@@ -341,10 +363,6 @@ export default function PlanTrip() {
                 {errors.budget && <div style={s.error}>{errors.budget}</div>}
               </div>
 
-              <div style={s.fieldWrap}>
-                <label style={s.label}>Travel date <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontSize: '0.7rem' }}>(optional)</span></label>
-                <input style={s.input} type="date" value={form.travelDate} onChange={e => set('travelDate', e.target.value)} />
-              </div>
             </div>
           )}
 
@@ -354,25 +372,6 @@ export default function PlanTrip() {
               <div style={s.stepLabel}>Step 4 of 6</div>
               <h2 style={s.stepTitle}>How do you travel?</h2>
               <p style={s.stepSub}>This shapes the entire plan — activities, pace, food and accommodation.</p>
-
-              <div style={s.fieldWrap}>
-                <label style={s.label}>You are travelling as</label>
-                <div style={s.grid2}>
-                  {TRAVELER_TYPES.map(t => (
-                    <button key={t} style={s.choiceBtn(form.travelerType === t)} onClick={() => set('travelerType', t)}>{t}</button>
-                  ))}
-                </div>
-                {errors.travelerType && <div style={s.error}>{errors.travelerType}</div>}
-              </div>
-
-              <div style={s.fieldWrap}>
-                <label style={s.label}>Travel style <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(pick any)</span></label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  {TRAVEL_STYLES.map(st => (
-                    <button key={st} style={s.tag(form.travelStyle.includes(st))} onClick={() => toggleStyle(st)}>{st}</button>
-                  ))}
-                </div>
-              </div>
 
               <div style={s.fieldWrap}>
                 <label style={s.label}>Pace</label>

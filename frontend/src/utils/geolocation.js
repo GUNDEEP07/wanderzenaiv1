@@ -1,6 +1,9 @@
 export async function getUserLocationFromIP() {
   try {
-    const response = await fetch('https://ipapi.co/json/');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    const response = await fetch('https://ipapi.co/json/', { signal: controller.signal });
+    clearTimeout(timeoutId);
     if (!response.ok) throw new Error('Geolocation API failed');
     const data = await response.json();
     return {
