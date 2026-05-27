@@ -12,8 +12,9 @@ import './styles/venueselection-redesign.css';
 
 const PRESET_ACTIVITIES = ['Hiking', 'Food', 'Views', 'Culture', 'Nature', 'Nightlife'];
 
-export function VenueSelection({ destination, onSubmit, onSkip }) {
-  const [selectedActivities, setSelectedActivities] = useState([]);
+export function VenueSelection({ destinations, onSubmit, onSkip }) {
+  const [selectedDestination, setSelectedDestination] = useState(0);
+  const [selectedActivities, setSelectedActivities] = useState({});
   const [activeTab, setActiveTab] = useState(null);
   const [youtubeVideos, setYoutubeVideos] = useState({});
   const [foursquareVenues, setFoursquareVenues] = useState({});
@@ -26,8 +27,9 @@ export function VenueSelection({ destination, onSubmit, onSkip }) {
   const [countryCode, setCountryCode] = useState('US');
   const [error, setError] = useState(null);
 
-  // Debug: log destination object
-  console.log('VenueSelection received destination:', destination);
+  const destination = destinations && destinations[selectedDestination];
+  const destKey = destination?.name || `destination_${selectedDestination}`;
+  const currentActivities = selectedActivities[destKey] || [];
 
   // Fetch user IP location on mount
   useEffect(() => {
@@ -60,55 +62,62 @@ export function VenueSelection({ destination, onSubmit, onSkip }) {
   };
 
   const handleActivityToggle = (activity) => {
-    if (selectedActivities.includes(activity)) {
-      const updated = selectedActivities.filter(a => a !== activity);
-      setSelectedActivities(updated);
-      if (activeTab === activity) {
-        setActiveTab(updated.length > 0 ? updated[0] : null);
+    setSelectedActivities(prev => {
+      const activities = prev[destKey] || [];
+      let updated;
+      if (activities.includes(activity)) {
+        updated = activities.filter(a => a !== activity);
+        if (activeTab === activity) {
+          setActiveTab(updated.length > 0 ? updated[0] : null);
+        }
+      } else {
+        updated = [...activities, activity];
+        if (!activeTab) {
+          setActiveTab(activity);
+        }
+        if (!youtubeVideos[activity] || !foursquareVenues[activity]) {
+          fetchActivityContent(activity);
+        }
       }
-    } else {
-      const updated = [...selectedActivities, activity];
-      setSelectedActivities(updated);
-      if (!activeTab) {
-        setActiveTab(activity);
-      }
-      // Fetch content for newly selected activity if not cached
-      if (!youtubeVideos[activity] || !foursquareVenues[activity]) {
-        fetchActivityContent(activity);
-      }
-    }
+      return { ...prev, [destKey]: updated };
+    });
   };
 
   const handleCustomActivitySubmit = async (activityName) => {
-    if (!selectedActivities.includes(activityName)) {
-      const updated = [...selectedActivities, activityName];
-      setSelectedActivities(updated);
-      setActiveTab(activityName);
-      setShowCustomModal(false);
-      await fetchActivityContent(activityName);
-    }
+    setSelectedActivities(prev => {
+      const activities = prev[destKey] || [];
+      if (!activities.includes(activityName)) {
+        const updated = [...activities, activityName];
+        setActiveTab(activityName);
+        setShowCustomModal(false);
+        fetchActivityContent(activityName);
+        return { ...prev, [destKey]: updated };
+      }
+      return prev;
+    });
   };
 
   const handleVenueToggle = (venueId) => {
     const activeActivity = activeTab;
+    const venueKey = `${destKey}/${activeActivity}`;
     setSelectedVenues(prev => {
-      const activityVenues = prev[activeActivity] || new Set();
+      const activityVenues = prev[venueKey] || new Set();
       const updated = new Set(activityVenues);
       if (updated.has(venueId)) {
         updated.delete(venueId);
       } else {
         updated.add(venueId);
       }
-      return { ...prev, [activeActivity]: updated };
+      return { ...prev, [venueKey]: updated };
     });
   };
 
   const handleContinue = () => {
     const venueData = {};
-    Object.entries(selectedVenues).forEach(([activity, venues]) => {
-      venueData[activity] = Array.from(venues);
+    Object.entries(selectedVenues).forEach(([key, venues]) => {
+      venueData[key] = Array.from(venues);
     });
-    onSubmit(venueData);
+    onSubmit({ activities: selectedActivities, venues: venueData });
   };
 
   if (loading) {
@@ -131,18 +140,45 @@ export function VenueSelection({ destination, onSubmit, onSkip }) {
         <p>Pick your passions to discover amazing spots</p>
       </div>
 
+      {destinations && destinations.length > 1 && (
+        <div style={{ marginBottom: '2rem', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          {destinations.map((dest, idx) => (
+            <button
+              key={idx}
+              onClick={() => {
+                setSelectedDestination(idx);
+                setActiveTab(null);
+              }}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '20px',
+                border: selectedDestination === idx ? '1px solid #00d4aa' : '1px solid rgba(255,255,255,0.2)',
+                background: selectedDestination === idx ? 'rgba(0,212,170,0.15)' : 'transparent',
+                color: selectedDestination === idx ? '#00d4aa' : 'rgba(255,255,255,0.6)',
+                fontSize: '0.9rem',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                fontFamily: 'inherit',
+              }}
+            >
+              {dest.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="venue-selection-content">
         {/* Activity Grid */}
         <ActivityGrid
-          selectedActivities={selectedActivities}
+          selectedActivities={currentActivities}
           onActivityToggle={handleActivityToggle}
           onOpenCustomModal={() => setShowCustomModal(true)}
         />
 
         {/* Activity Tabs */}
-        {selectedActivities.length > 0 && (
+        {currentActivities.length > 0 && (
           <ActivityTabs
-            selectedActivities={selectedActivities}
+            selectedActivities={currentActivities}
             activeTab={activeTab}
             onTabChange={setActiveTab}
           />
@@ -185,7 +221,7 @@ export function VenueSelection({ destination, onSubmit, onSkip }) {
         <button
           className="btn-continue"
           onClick={handleContinue}
-          disabled={selectedActivities.length === 0}
+          disabled={Object.values(selectedActivities).every(arr => arr.length === 0)}
         >
           Continue →
         </button>

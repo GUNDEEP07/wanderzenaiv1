@@ -72,6 +72,7 @@ export async function submitItinerary(formData) {
     body: JSON.stringify({
       ...formData,
       destination: destinationName,
+      destinations: Array.isArray(formData.destinations) ? formData.destinations : [],
       destinationLat: typeof primaryDestination === 'object' ? primaryDestination.lat : 0,
       destinationLng: typeof primaryDestination === 'object' ? primaryDestination.lng : 0,
       days: +formData.days,
@@ -79,6 +80,7 @@ export async function submitItinerary(formData) {
       travelDate: formData.travelDate && formData.travelDate.trim() !== '' ? formData.travelDate : null,
       startTime: formData.startTime || '09:00',
       userMustDos: formData.userMustDos && formData.userMustDos.trim() !== '' ? formData.userMustDos.trim() : null,
+      selected_venues: formData.selected_venues || { activities: {}, venues: {} },
     }),
   });
   const data = await res.json();

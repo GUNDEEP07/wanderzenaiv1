@@ -164,10 +164,10 @@ export default function PlanTrip() {
     });
   };
 
-  const handleVenueSelect = (selectedVenues) => {
+  const handleVenueSelect = (venueData) => {
     setForm({
       ...form,
-      selected_venues: selectedVenues,
+      selected_venues: venueData,
     });
     setStep(2);
   };
@@ -297,7 +297,7 @@ export default function PlanTrip() {
               <h2 style={s.stepTitle}>Favourite venues</h2>
               <p style={s.stepSub}>Pick specific venues you'd like to visit (optional — we can skip this).</p>
               <VenueSelection
-                destination={form.destinations[0]}
+                destinations={form.destinations}
                 onSubmit={handleVenueSelect}
                 onSkip={() => setStep(2)}
               />
