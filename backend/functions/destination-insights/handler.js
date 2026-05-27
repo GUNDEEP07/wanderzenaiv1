@@ -14,6 +14,12 @@ const client = new Anthropic({
   apiKey: process.env.CLAUDE_API_KEY,
 });
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+  'Content-Type': 'application/json',
+};
+
 export async function handler(event) {
   console.log('Destination Insights request:', JSON.stringify(event));
 
@@ -26,38 +32,38 @@ export async function handler(event) {
   if (!destination || !startDate || !endDate) {
     return {
       statusCode: 400,
+      headers: CORS_HEADERS,
       body: JSON.stringify({ error: 'Missing required fields: destination, startDate, endDate' }),
     };
   }
 
   try {
-    // Check cache first
     const cacheKey = { destination, startDate, endDate };
     const cached = await getFromCache(cacheKey, travelStyles);
     if (cached) {
       console.log(`Cache hit for ${destination} [${startDate} to ${endDate}]`);
       return {
         statusCode: 200,
+        headers: CORS_HEADERS,
         body: JSON.stringify({ insights: cached, cached: true }),
       };
     }
 
     console.log(`Cache miss for ${destination} [${startDate} to ${endDate}], calling Claude...`);
 
-    // Generate insights with Claude
     const insights = await generateInsights(destination, travelStyles, startDate, endDate);
-
-    // Cache the result
     await saveToCache(cacheKey, travelStyles, insights);
 
     return {
       statusCode: 200,
+      headers: CORS_HEADERS,
       body: JSON.stringify({ insights, cached: false }),
     };
   } catch (error) {
     console.error('Error:', error);
     return {
       statusCode: 500,
+      headers: CORS_HEADERS,
       body: JSON.stringify({ error: error.message }),
     };
   }
