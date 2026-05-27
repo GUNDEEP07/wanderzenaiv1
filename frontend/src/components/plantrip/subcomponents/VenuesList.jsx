@@ -274,7 +274,7 @@ export function VenuesList({ activity, venues, selectedVenues, onVenueToggle, lo
               const photoCount = venue.photos ? venue.photos.length : 0;
               const currentPhotoIdx = getCurrentPhotoIndex(venue.id);
               const currentPhoto = photoCount > 0 ? venue.photos[currentPhotoIdx] : null;
-              const currentPhotoUrl = currentPhoto ? `${currentPhoto.prefix}300x300${currentPhoto.suffix}` : null;
+              const currentPhotoUrl = currentPhoto ? `${currentPhoto.prefix}original${currentPhoto.suffix}` : null;
 
               // Show "Top Ranked" badge for top 3 venues
               const isTopRanked = idx < 3;

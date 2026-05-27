@@ -116,3 +116,54 @@
   font-weight: 500;
   color: #fff;
 }
+
+.selected-destinations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.selected-destination-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(0, 212, 170, 0.15);
+  border: 1px solid rgba(0, 212, 170, 0.3);
+  border-radius: 20px;
+  color: #00d4aa;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.selected-destination-tag .remove-btn {
+  background: none;
+  border: none;
+  color: #00d4aa;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  opacity: 0.6;
+}
+
+.selected-destination-tag .remove-btn:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.suggestion-item.selected {
+  background-color: rgba(0, 212, 170, 0.15);
+  border-color: rgba(0, 212, 170, 0.3);
+}
+
+.suggestion-item .checkmark {
+  position: absolute;
+  right: 16px;
+  color: #00d4aa;
+  font-weight: bold;
+}

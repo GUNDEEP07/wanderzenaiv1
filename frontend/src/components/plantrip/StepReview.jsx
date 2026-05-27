@@ -50,7 +50,7 @@ export default function StepReview({ form, set, onBack, onSubmit, submitting, su
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
         <div style={panel}>
           <div style={sectionLabel}>Your preferences</div>
-          <div style={{ marginBottom: '1rem' }}><div style={fieldLabel}>Destination & duration</div><div style={{ color: '#fff', fontWeight: 600 }}>{form.destination} — {form.days} days</div></div>
+          <div style={{ marginBottom: '1rem' }}><div style={fieldLabel}>Destination & duration</div><div style={{ color: '#fff', fontWeight: 600 }}>{form.destinations && form.destinations.length > 0 ? form.destinations[0].name : 'Unknown'} — {form.days} days</div></div>
           <div style={{ marginBottom: '1rem' }}><div style={fieldLabel}>Budget</div><div style={{ color: '#fff', fontWeight: 600 }}>{form.currency} {(+form.budget).toLocaleString()}</div></div>
           <div style={{ marginBottom: '1rem' }}>
             <div style={fieldLabel}>Travel style</div>

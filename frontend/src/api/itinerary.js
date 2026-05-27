@@ -24,11 +24,15 @@ const FALLBACK_PREVIEW = {
  */
 export async function fetchPreview(formData) {
   try {
+    const primaryDestination = Array.isArray(formData.destinations) && formData.destinations.length > 0
+      ? formData.destinations[0]
+      : formData.destination;
+
     const res = await fetch(`${API_URL}/preview`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        destination: formData.destination,
+        destination: typeof primaryDestination === 'object' ? primaryDestination.name : primaryDestination,
         days: +formData.days,
         travelerType: formData.travelerType,
         travelStyle: formData.travelStyle,
@@ -56,11 +60,20 @@ export async function fetchPreview(formData) {
  * @returns {Promise<{success: boolean, data: {submissionId: string}}>}
  */
 export async function submitItinerary(formData) {
+  const primaryDestination = Array.isArray(formData.destinations) && formData.destinations.length > 0
+    ? formData.destinations[0]
+    : { name: formData.destination || '', lat: 0, lng: 0 };
+
+  const destinationName = typeof primaryDestination === 'object' ? primaryDestination.name : primaryDestination;
+
   const res = await fetch(`${API_URL}/submit`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       ...formData,
+      destination: destinationName,
+      destinationLat: typeof primaryDestination === 'object' ? primaryDestination.lat : 0,
+      destinationLng: typeof primaryDestination === 'object' ? primaryDestination.lng : 0,
       days: +formData.days,
       budget: +formData.budget,
       travelDate: formData.travelDate && formData.travelDate.trim() !== '' ? formData.travelDate : null,

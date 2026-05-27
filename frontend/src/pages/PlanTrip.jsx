@@ -50,7 +50,7 @@ const STEPS = ['Destination', 'Venues', 'Budget & dates', 'Travel style', 'Your 
 
 // Initial form state — all fields null-safe
 const INITIAL_FORM = {
-  destination: '', destinationLat: null, destinationLng: null, days: 5, budget: '', currency: 'USD',
+  destinations: [], days: 5, budget: '', currency: 'USD',
   travelerType: '', travelStyle: [], interests: '',
   travelDate: '', travelPace: 'balanced', wantsHotelRecs: true,
   startTime: '09:00', userMustDos: '',
@@ -157,14 +157,11 @@ export default function PlanTrip() {
     }));
   };
 
-  const handleDestinationSelect = (destination) => {
+  const handleDestinationSelect = (destinations) => {
     setForm({
       ...form,
-      destination: destination.name,
-      destinationLat: destination.lat,
-      destinationLng: destination.lng,
+      destinations: Array.isArray(destinations) ? destinations : [destinations],
     });
-    setStep(1);
   };
 
   const handleVenueSelect = (selectedVenues) => {
@@ -191,7 +188,7 @@ export default function PlanTrip() {
 
   const validate = () => {
     const errs = {};
-    if (step === 0 && !form.destination.trim()) errs.destination = 'Where are you headed?';
+    if (step === 0 && form.destinations.length === 0) errs.destination = 'Select at least one destination';
     if (step === 2 && (!form.budget || isNaN(form.budget) || +form.budget <= 0)) errs.budget = 'Enter your total budget';
     if (step === 3 && !form.travelerType) errs.travelerType = 'Select traveller type';
     if (step === 4) {
@@ -219,8 +216,9 @@ export default function PlanTrip() {
       const { status, data } = await submitItinerary(form);
       if (status === 402) { navigate('/pricing', { state: { reason: 'free_limit' } }); return; }
       if (!data.success) throw new Error(data.message || 'Submission failed');
+      const destinationName = form.destinations.length > 0 ? form.destinations[0].name : 'Unknown';
       navigate('/confirmation', {
-        state: { submissionId: data.data.submissionId, destination: form.destination, email: form.email },
+        state: { submissionId: data.data.submissionId, destination: destinationName, email: form.email },
       });
     } catch (err) {
       setSubmitError(err.message || 'Something went wrong. Please try again.');
@@ -275,7 +273,7 @@ export default function PlanTrip() {
               <p style={s.stepSub}>Tell us your dream destination — we'll find the real, local version of it.</p>
 
               <div style={s.fieldWrap}>
-                <DestinationSearch onSelect={handleDestinationSelect} disabled={false} />
+                <DestinationSearch onSelect={handleDestinationSelect} disabled={false} allowMultiple={true} />
                 {errors.destination && <div style={s.error}>{errors.destination}</div>}
                 <RecommendationQuiz onSelect={(dest) => handleDestinationSelect({ name: dest, lat: 0, lng: 0 })} />
               </div>
@@ -293,17 +291,13 @@ export default function PlanTrip() {
           )}
 
           {/* ── Step 1: Venue Selection ─────────────────────────────────── */}
-          {step === 1 && form.destinationLat && form.destinationLng && (
+          {step === 1 && form.destinations.length > 0 && (
             <div>
               <div style={s.stepLabel}>Step 2 of 6</div>
               <h2 style={s.stepTitle}>Favourite venues</h2>
               <p style={s.stepSub}>Pick specific venues you'd like to visit (optional — we can skip this).</p>
               <VenueSelection
-                destination={{
-                  name: form.destination,
-                  lat: form.destinationLat,
-                  lng: form.destinationLng,
-                }}
+                destination={form.destinations[0]}
                 onSubmit={handleVenueSelect}
                 onSkip={() => setStep(2)}
               />
@@ -440,11 +434,11 @@ export default function PlanTrip() {
             <div>
               <div style={s.stepLabel}>Step 5 of 6</div>
               <h2 style={s.stepTitle}>Where should we send it?</h2>
-              <p style={s.stepSub}>Your personalised {form.destination} itinerary arrives in your inbox within 3 minutes.</p>
+              <p style={s.stepSub}>Your personalised {form.destinations.length > 0 ? form.destinations[0].name : 'itinerary'} itinerary arrives in your inbox within 3 minutes.</p>
 
               <div style={s.summaryBox}>
                 {[
-                  ['Destination', form.destination],
+                  ['Destinations', form.destinations.map(d => d.name).join(', ') || '—'],
                   ['Duration', `${form.days} days`],
                   ['Budget', `${form.currency} ${form.budget}`],
                   ['Traveller', form.travelerType || '—'],

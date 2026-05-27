@@ -4,11 +4,11 @@ import './styles/destinationsearch.css';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-export function DestinationSearch({ onSelect, disabled }) {
+export function DestinationSearch({ onSelect, disabled, allowMultiple = false }) {
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [selected, setSelected] = useState(null);
+  const [selected, setSelected] = useState(allowMultiple ? [] : null);
 
   const allDestinations = [
     { fsq_id: 'kyoto', name: 'Kyoto', country: 'Japan', lat: 35.0116, lng: 135.7681 },
@@ -93,10 +93,31 @@ export function DestinationSearch({ onSelect, disabled }) {
   };
 
   const handleSelect = (suggestion) => {
-    setSelected(suggestion);
-    setQuery(suggestion.name);
-    setSuggestions([]);
-    onSelect(suggestion);
+    if (allowMultiple) {
+      const isAlreadySelected = selected.some(s => s.fsq_id === suggestion.fsq_id);
+      if (isAlreadySelected) {
+        const updated = selected.filter(s => s.fsq_id !== suggestion.fsq_id);
+        setSelected(updated);
+        onSelect(updated);
+      } else {
+        const updated = [...selected, suggestion];
+        setSelected(updated);
+        onSelect(updated);
+      }
+      setQuery('');
+      setSuggestions([]);
+    } else {
+      setSelected(suggestion);
+      setQuery(suggestion.name);
+      setSuggestions([]);
+      onSelect(suggestion);
+    }
+  };
+
+  const handleRemove = (fsq_id) => {
+    const updated = selected.filter(s => s.fsq_id !== fsq_id);
+    setSelected(updated);
+    onSelect(updated);
   };
 
   return (
@@ -115,25 +136,50 @@ export function DestinationSearch({ onSelect, disabled }) {
       {loading && <div className="loading-spinner">Searching...</div>}
       {suggestions.length > 0 && (
         <ul className="suggestions-list">
-          {suggestions.map((suggestion) => (
-            <li
-              key={suggestion.fsq_id}
-              onClick={() => handleSelect(suggestion)}
-              className="suggestion-item"
-            >
-              <div className="suggestion-name">{suggestion.name}</div>
-              <div className="suggestion-country">{suggestion.country}</div>
-            </li>
-          ))}
+          {suggestions.map((suggestion) => {
+            const isSelected = allowMultiple && selected.some(s => s.fsq_id === suggestion.fsq_id);
+            return (
+              <li
+                key={suggestion.fsq_id}
+                onClick={() => handleSelect(suggestion)}
+                className={`suggestion-item ${isSelected ? 'selected' : ''}`}
+              >
+                <div className="suggestion-name">{suggestion.name}</div>
+                <div className="suggestion-country">{suggestion.country}</div>
+                {isSelected && <div className="checkmark">✓</div>}
+              </li>
+            );
+          })}
         </ul>
       )}
-      {selected && (
-        <div className="selected-destination">
-          <div className="checkmark">✓</div>
-          <div className="selected-text">
-            {selected.name}, {selected.country}
+      {allowMultiple ? (
+        selected.length > 0 && (
+          <div className="selected-destinations">
+            {selected.map((dest) => (
+              <div key={dest.fsq_id} className="selected-destination-tag">
+                <span>{dest.name}, {dest.country}</span>
+                <button
+                  className="remove-btn"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleRemove(dest.fsq_id);
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
           </div>
-        </div>
+        )
+      ) : (
+        selected && (
+          <div className="selected-destination">
+            <div className="checkmark">✓</div>
+            <div className="selected-text">
+              {selected.name}, {selected.country}
+            </div>
+          </div>
+        )
       )}
     </div>
   );
