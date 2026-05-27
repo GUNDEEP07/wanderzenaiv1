@@ -1,4 +1,3 @@
-// frontend/src/components/plantrip/VenueSelection.jsx
 import { useState, useEffect } from 'react';
 import { ActivityGrid } from './subcomponents/ActivityGrid';
 import { ActivityTabs } from './subcomponents/ActivityTabs';
@@ -24,44 +23,31 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
   const [loading, setLoading] = useState(true);
   const [videoLoading, setVideoLoading] = useState({});
   const [venueLoading, setVenueLoading] = useState({});
-  const [userLocation, setUserLocation] = useState(null);
   const [countryCode, setCountryCode] = useState('US');
-  const [error, setError] = useState(null);
+  const [aiSuggestions, setAiSuggestions] = useState([]);
 
-  const destination = destinations && destinations[selectedDestination];
+  const destination = destinations?.[selectedDestination];
   const destKey = destination?.name || `destination_${selectedDestination}`;
   const currentActivities = selectedActivities[destKey] || [];
 
-  // Determine which activities to show based on travel styles
-  const availableActivities = travelStyles && travelStyles.length > 0
+  const availableActivities = travelStyles?.length > 0
     ? getActivitiesForTravelStyle(travelStyles)
     : PRESET_ACTIVITIES;
 
-  console.log('[VenueSelection] travelStyles:', travelStyles);
-  console.log('[VenueSelection] availableActivities:', availableActivities);
-
-  // Fetch user IP location on mount
   useEffect(() => {
-    const fetchUserLocation = async () => {
-      const location = await getUserLocationFromIP();
-      setUserLocation(location);
-      setCountryCode(location.countryCode);
+    getUserLocationFromIP().then(loc => {
+      setCountryCode(loc.countryCode);
       setLoading(false);
-    };
-    fetchUserLocation();
+    });
   }, []);
 
-
   const fetchActivityContent = async (activity) => {
-    // Fetch YouTube
     if (!youtubeVideos[activity]) {
       setVideoLoading(prev => ({ ...prev, [activity]: true }));
       const videos = await fetchTrendingVideos(activity, destination, countryCode);
       setYoutubeVideos(prev => ({ ...prev, [activity]: videos }));
       setVideoLoading(prev => ({ ...prev, [activity]: false }));
     }
-
-    // Fetch Foursquare
     if (!foursquareVenues[activity]) {
       setVenueLoading(prev => ({ ...prev, [activity]: true }));
       const venues = await fetchVenuesForActivity(activity, destination);
@@ -76,47 +62,34 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
       let updated;
       if (activities.includes(activity)) {
         updated = activities.filter(a => a !== activity);
-        if (activeTab === activity) {
-          setActiveTab(updated.length > 0 ? updated[0] : null);
-        }
+        if (activeTab === activity) setActiveTab(updated.length > 0 ? updated[0] : null);
       } else {
         updated = [...activities, activity];
-        if (!activeTab) {
-          setActiveTab(activity);
-        }
-        if (!youtubeVideos[activity] || !foursquareVenues[activity]) {
-          fetchActivityContent(activity);
-        }
+        if (!activeTab) setActiveTab(activity);
+        fetchActivityContent(activity);
       }
       return { ...prev, [destKey]: updated };
     });
   };
 
-  const handleCustomActivitySubmit = async (activityName) => {
+  const handleCustomActivitySubmit = (activityName) => {
     setSelectedActivities(prev => {
       const activities = prev[destKey] || [];
-      if (!activities.includes(activityName)) {
-        const updated = [...activities, activityName];
-        setActiveTab(activityName);
-        setShowCustomModal(false);
-        fetchActivityContent(activityName);
-        return { ...prev, [destKey]: updated };
-      }
-      return prev;
+      if (activities.includes(activityName)) return prev;
+      setActiveTab(activityName);
+      setShowCustomModal(false);
+      fetchActivityContent(activityName);
+      return { ...prev, [destKey]: [...activities, activityName] };
     });
   };
 
   const handleVenueToggle = (venueId) => {
-    const activeActivity = activeTab;
-    const venueKey = `${destKey}/${activeActivity}`;
+    const venueKey = `${destKey}/${activeTab}`;
     setSelectedVenues(prev => {
-      const activityVenues = prev[venueKey] || new Set();
-      const updated = new Set(activityVenues);
-      if (updated.has(venueId)) {
-        updated.delete(venueId);
-      } else {
-        updated.add(venueId);
-      }
+      const existing = prev[venueKey] || new Set();
+      const updated = new Set(existing);
+      if (updated.has(venueId)) updated.delete(venueId);
+      else updated.add(venueId);
       return { ...prev, [venueKey]: updated };
     });
   };
@@ -132,131 +105,128 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
   if (loading) {
     return (
       <div className="venue-selection-redesign venue-selection-loading">
-        <div>Detecting your location...</div>
+        <div>Detecting your location…</div>
       </div>
     );
   }
 
-  // Detect mobile vs desktop
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 600;
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
   return (
     <>
-    <div className="venue-selection-redesign">
-      <div className="venue-selection-header">
-        <div className="step-label">STEP 2 OF 6</div>
-        <h2>What gets you excited?</h2>
-        <p>Pick your passions to discover amazing spots</p>
-      </div>
-
-      {destinations && destinations.length > 1 && (
-        <div style={{ marginBottom: '2rem', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          {destinations.map((dest, idx) => (
-            <button
-              key={idx}
-              onClick={() => {
-                setSelectedDestination(idx);
-                setActiveTab(null);
-              }}
-              style={{
-                padding: '8px 16px',
-                borderRadius: '20px',
-                border: selectedDestination === idx ? '1px solid #00d4aa' : '1px solid rgba(255,255,255,0.2)',
-                background: selectedDestination === idx ? 'rgba(0,212,170,0.15)' : 'transparent',
-                color: selectedDestination === idx ? '#00d4aa' : 'rgba(255,255,255,0.6)',
-                fontSize: '0.9rem',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                fontFamily: 'inherit',
-              }}
-            >
-              {dest.name}
-            </button>
-          ))}
+      <div className="venue-selection-redesign">
+        <div className="venue-selection-header">
+          <div className="step-label">STEP 2 OF 6</div>
+          <h2>What gets you excited?</h2>
+          <p>Pick your passions to discover amazing spots</p>
         </div>
-      )}
 
-      <div className="venue-selection-content">
-        {/* Destination Insights */}
-        {destination && startDate && endDate && (
-          <DestinationInsightsPanel
-            destination={destination}
-            travelStyles={travelStyles}
-            startDate={startDate}
-            endDate={endDate}
-          />
+        {destinations?.length > 1 && (
+          <div className="venue-dest-tabs">
+            {destinations.map((dest, idx) => (
+              <button
+                key={idx}
+                className={`venue-dest-tab${selectedDestination === idx ? ' venue-dest-tab--active' : ''}`}
+                onClick={() => { setSelectedDestination(idx); setActiveTab(null); }}
+              >
+                {dest.name}
+              </button>
+            ))}
+          </div>
         )}
 
-        {/* Activity Grid */}
-        <ActivityGrid
-          availableActivities={availableActivities}
-          selectedActivities={currentActivities}
-          onActivityToggle={handleActivityToggle}
-          onOpenCustomModal={() => setShowCustomModal(true)}
-        />
+        <div className="venue-split">
+          <div className="venue-panel-left">
+            {destination && startDate && endDate && (
+              <DestinationInsightsPanel
+                destination={destination}
+                travelStyles={travelStyles}
+                startDate={startDate}
+                endDate={endDate}
+                selectedActivities={currentActivities}
+                onActivityToggle={handleActivityToggle}
+                onInsightsLoaded={setAiSuggestions}
+              />
+            )}
+          </div>
 
-        {/* Activity Tabs */}
-        {currentActivities.length > 0 && (
-          <ActivityTabs
-            selectedActivities={currentActivities}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-          />
-        )}
+          <div className="venue-panel-right">
+            {aiSuggestions.length > 0 && (
+              <div className="ai-chip-row">
+                <div className="ai-chip-row__label">AI Picks — tap to add</div>
+                <div className="ai-chip-row__chips">
+                  {aiSuggestions.map((thing, idx) => (
+                    <button
+                      key={idx}
+                      className={`ai-chip${currentActivities.includes(thing.name) ? ' ai-chip--selected' : ''}`}
+                      onClick={() => handleActivityToggle(thing.name)}
+                    >
+                      {thing.emoji} {thing.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
-        {/* YouTube Carousel */}
-        {activeTab && (
-          <>
-            <YouTubeCarousel
-              activity={activeTab}
-              destination={destination}
-              countryCode={countryCode}
-              videos={youtubeVideos[activeTab] || []}
-              loading={videoLoading[activeTab] || false}
-              isMobile={isMobile}
+            <div className="venue-browse-label">Or Browse All</div>
+
+            <ActivityGrid
+              availableActivities={availableActivities}
+              selectedActivities={currentActivities}
+              onActivityToggle={handleActivityToggle}
+              onOpenCustomModal={() => setShowCustomModal(true)}
             />
 
-            {/* Venues List */}
-            <VenuesList
-              activity={activeTab}
-              venues={foursquareVenues[activeTab] || []}
-              selectedVenues={selectedVenues[activeTab] || new Set()}
-              onVenueToggle={handleVenueToggle}
-              loading={venueLoading[activeTab] || false}
-              destination={destination}
-            />
-          </>
-        )}
+            {currentActivities.length > 0 && (
+              <ActivityTabs
+                selectedActivities={currentActivities}
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+              />
+            )}
 
-        {error && (
-          <div className="venue-selection-error">{error}</div>
-        )}
+            {activeTab && (
+              <>
+                <YouTubeCarousel
+                  activity={activeTab}
+                  destination={destination}
+                  countryCode={countryCode}
+                  videos={youtubeVideos[activeTab] || []}
+                  loading={videoLoading[activeTab] || false}
+                  isMobile={isMobile}
+                />
+                <VenuesList
+                  activity={activeTab}
+                  venues={foursquareVenues[activeTab] || []}
+                  selectedVenues={selectedVenues[`${destKey}/${activeTab}`] || new Set()}
+                  onVenueToggle={handleVenueToggle}
+                  loading={venueLoading[activeTab] || false}
+                  destination={destination}
+                />
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="venue-selection-footer">
+          <button className="btn-skip" onClick={onSkip}>Skip</button>
+          <button
+            className="btn-continue"
+            onClick={handleContinue}
+            disabled={Object.values(selectedActivities).every(arr => arr.length === 0)}
+          >
+            Continue →
+          </button>
+        </div>
       </div>
 
-      {/* Footer Buttons */}
-      <div className="venue-selection-footer">
-        <button className="btn-skip" onClick={onSkip}>
-          Skip
-        </button>
-        <button
-          className="btn-continue"
-          onClick={handleContinue}
-          disabled={Object.values(selectedActivities).every(arr => arr.length === 0)}
-        >
-          Continue →
-        </button>
-      </div>
-
-    </div>
-
-    {/* Custom Interest Modal - Uses React Portal to render at document body */}
-    <CustomInterestModal
-      destination={destination}
-      isOpen={showCustomModal}
-      onClose={() => setShowCustomModal(false)}
-      onSubmit={handleCustomActivitySubmit}
-      loading={false}
-    />
+      <CustomInterestModal
+        destination={destination}
+        isOpen={showCustomModal}
+        onClose={() => setShowCustomModal(false)}
+        onSubmit={handleCustomActivitySubmit}
+        loading={false}
+      />
     </>
   );
 }
