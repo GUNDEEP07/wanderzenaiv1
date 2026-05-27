@@ -1,0 +1,17 @@
+{
+  "name": "destination-insights-lambda",
+  "version": "1.0.0",
+  "description": "Lambda function to generate and cache destination insights using Claude",
+  "type": "module",
+  "main": "handler.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.28.0",
+    "pg": "^8.11.3"
+  },
+  "devDependencies": {},
+  "author": "WanderZenAI",
+  "license": "MIT"
+}

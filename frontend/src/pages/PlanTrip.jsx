@@ -299,6 +299,8 @@ export default function PlanTrip() {
               <VenueSelection
                 destinations={form.destinations}
                 travelStyles={form.travelStyle}
+                startDate={form.travelDate}
+                endDate={form.travelDate ? new Date(new Date(form.travelDate).getTime() + form.days * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : null}
                 onSubmit={handleVenueSelect}
                 onSkip={() => setStep(2)}
               />

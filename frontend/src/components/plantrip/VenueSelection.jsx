@@ -5,6 +5,7 @@ import { ActivityTabs } from './subcomponents/ActivityTabs';
 import { YouTubeCarousel } from './subcomponents/YouTubeCarousel';
 import { VenuesList } from './subcomponents/VenuesList';
 import { CustomInterestModal } from './subcomponents/CustomInterestModal';
+import { DestinationInsightsPanel } from './subcomponents/DestinationInsightsPanel';
 import { getUserLocationFromIP } from '../../utils/geolocation';
 import { fetchTrendingVideos } from '../../utils/youtube';
 import { fetchVenuesForActivity, getActivitiesForTravelStyle } from '../../utils/foursquare';
@@ -12,7 +13,7 @@ import './styles/venueselection-redesign.css';
 
 const PRESET_ACTIVITIES = ['Hiking', 'Food', 'Views', 'Culture', 'Nature', 'Nightlife'];
 
-export function VenueSelection({ destinations, travelStyles, onSubmit, onSkip }) {
+export function VenueSelection({ destinations, travelStyles, startDate, endDate, onSubmit, onSkip }) {
   const [selectedDestination, setSelectedDestination] = useState(0);
   const [selectedActivities, setSelectedActivities] = useState({});
   const [activeTab, setActiveTab] = useState(null);
@@ -176,6 +177,17 @@ export function VenueSelection({ destinations, travelStyles, onSubmit, onSkip })
       )}
 
       <div className="venue-selection-content">
+        {/* Destination Insights */}
+        {destination && startDate && endDate && (
+          <DestinationInsightsPanel
+            destination={destination}
+            travelStyles={travelStyles}
+            startDate={startDate}
+            endDate={endDate}
+            loading={loading}
+          />
+        )}
+
         {/* Activity Grid */}
         <ActivityGrid
           availableActivities={availableActivities}

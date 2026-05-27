@@ -286,6 +286,27 @@ Resources:
             Path: /recommendations/categories
             Method: GET
 
+  # ─── Destination Insights Lambda ──────────────────────────────────────────
+  DestinationInsightsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub wanderzenai-destination-insights-${Stage}
+      CodeUri: ../backend/functions/destination-insights
+      Handler: handler.handler
+      Timeout: 30
+      MemorySize: 512
+      Description: Generates and caches destination insights using Claude API
+      Environment:
+        Variables:
+          CLAUDE_API_KEY: !Ref ClaudeApiKey
+      Events:
+        GetDestinationInsights:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /destination-insights
+            Method: GET
+
   # ─── S3 Bucket for PDFs ────────────────────────────────────────────────────
   PDFBucket:
     Type: AWS::S3::Bucket
