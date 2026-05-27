@@ -131,6 +131,9 @@ export function ActivityGrid({ availableActivities, selectedActivities, onActivi
     emoji: ACTIVITY_EMOJI_MAP[name] || '📍',
   }));
 
+  console.log('[ActivityGrid] availableActivities:', availableActivities);
+  console.log('[ActivityGrid] mapped activities:', activities);
+
   return (
     <div>
       <style>{`

@@ -36,6 +36,9 @@ export function VenueSelection({ destinations, travelStyles, onSubmit, onSkip })
     ? getActivitiesForTravelStyle(travelStyles)
     : PRESET_ACTIVITIES;
 
+  console.log('[VenueSelection] travelStyles:', travelStyles);
+  console.log('[VenueSelection] availableActivities:', availableActivities);
+
   // Fetch user IP location on mount
   useEffect(() => {
     const fetchUserLocation = async () => {
