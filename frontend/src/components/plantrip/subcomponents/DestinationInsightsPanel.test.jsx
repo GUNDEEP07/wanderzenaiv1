@@ -51,15 +51,16 @@ test('clicking a suggestion card calls onActivityToggle with its name', async ()
   const onActivityToggle = jest.fn();
   render(<DestinationInsightsPanel {...PROPS} onActivityToggle={onActivityToggle} />);
   await waitFor(() => expect(screen.getByText('Alps Hiking')).toBeInTheDocument());
-  fireEvent.click(screen.getByText('Alps Hiking').closest('button'));
+  const card = screen.getByText('Alps Hiking').closest('.item-card');
+  fireEvent.click(card.querySelector('.add-btn'));
   expect(onActivityToggle).toHaveBeenCalledWith('Alps Hiking');
 });
 
-test('selected activity shows --selected class on its card', async () => {
+test('selected activity shows --added class on its card', async () => {
   render(<DestinationInsightsPanel {...PROPS} selectedActivities={['Alps Hiking']} />);
   await waitFor(() => expect(screen.getByText('Alps Hiking')).toBeInTheDocument());
-  const card = screen.getByText('Alps Hiking').closest('button');
-  expect(card.className).toContain('ai-suggestion-card--selected');
+  const card = screen.getByText('Alps Hiking').closest('.item-card');
+  expect(card.className).toContain('item-card--added');
 });
 
 test('calls onInsightsLoaded with thingsToDo when insights arrive', async () => {
@@ -76,4 +77,32 @@ test('shows error message when fetch fails', async () => {
   await waitFor(() =>
     expect(screen.getByText('Could not load destination insights')).toBeInTheDocument()
   );
+});
+
+test('clicking chevron expands a pick card', async () => {
+  render(<DestinationInsightsPanel {...PROPS} />);
+  await waitFor(() => expect(screen.getByText('Alps Hiking')).toBeInTheDocument());
+  const card = screen.getByText('Alps Hiking').closest('.item-card');
+  expect(card.className).not.toContain('item-card--picking');
+  fireEvent.click(card.querySelector('.item-chevron'));
+  expect(card.className).toContain('item-card--picking');
+});
+
+test('selecting a day calls onDayAssign and onActivityToggle', async () => {
+  const onActivityToggle = jest.fn();
+  const onDayAssign = jest.fn();
+  render(
+    <DestinationInsightsPanel
+      {...PROPS}
+      onActivityToggle={onActivityToggle}
+      onDayAssign={onDayAssign}
+      days={3}
+    />
+  );
+  await waitFor(() => expect(screen.getByText('Alps Hiking')).toBeInTheDocument());
+  const card = screen.getByText('Alps Hiking').closest('.item-card');
+  fireEvent.click(card.querySelector('.item-chevron'));
+  fireEvent.click(screen.getByText('Day 2').closest('button'));
+  expect(onActivityToggle).toHaveBeenCalledWith('Alps Hiking');
+  expect(onDayAssign).toHaveBeenCalledWith('Alps Hiking', 'Day 2');
 });
