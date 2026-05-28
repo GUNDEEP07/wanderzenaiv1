@@ -1,41 +1,44 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ActivityGrid } from './ActivityGrid';
 
-test('ActivityGrid renders all preset activities', () => {
-  render(
-    <ActivityGrid selectedActivities={[]} onActivityToggle={() => {}} onOpenCustomModal={() => {}} />
-  );
+const ACTIVITIES = ['Hiking', 'Food', 'Views', 'Culture', 'Nature', 'Nightlife', 'Wellness'];
+
+test('renders all available activities', () => {
+  render(<ActivityGrid availableActivities={ACTIVITIES} selectedActivities={[]} onActivityToggle={() => {}} onOpenCustomModal={() => {}} />);
   expect(screen.getByText('Hiking')).toBeInTheDocument();
-  expect(screen.getByText('Food')).toBeInTheDocument();
-  expect(screen.getByText('Culture')).toBeInTheDocument();
-  expect(screen.getByText('Add Custom')).toBeInTheDocument();
+  expect(screen.getByText('Wellness')).toBeInTheDocument();
+  expect(screen.getByText('Add own')).toBeInTheDocument();
 });
 
-test('ActivityGrid highlights selected activity', () => {
+test('selected activity has --selected class', () => {
   const { container } = render(
-    <ActivityGrid selectedActivities={['Hiking']} onActivityToggle={() => {}} onOpenCustomModal={() => {}} />
+    <ActivityGrid availableActivities={ACTIVITIES} selectedActivities={['Hiking']} onActivityToggle={() => {}} onOpenCustomModal={() => {}} />
   );
-  const buttons = screen.getAllByRole('button');
-  const hikingButton = buttons.find(btn => btn.textContent.includes('Hiking'));
-  expect(hikingButton.style.border).toContain('rgb(0, 212, 170)');
+  const cards = container.querySelectorAll('.activity-card');
+  expect(cards[0].className).toContain('activity-card--selected');
+  expect(cards[1].className).not.toContain('activity-card--selected');
 });
 
-test('ActivityGrid calls onActivityToggle when activity clicked', () => {
-  const mockToggle = jest.fn();
-  render(
-    <ActivityGrid selectedActivities={[]} onActivityToggle={mockToggle} onOpenCustomModal={() => {}} />
-  );
-  const buttons = screen.getAllByRole('button');
-  fireEvent.click(buttons[0]);
-  expect(mockToggle).toHaveBeenCalled();
+test('clicking activity calls onActivityToggle with name', () => {
+  const toggle = jest.fn();
+  render(<ActivityGrid availableActivities={ACTIVITIES} selectedActivities={[]} onActivityToggle={toggle} onOpenCustomModal={() => {}} />);
+  fireEvent.click(screen.getByText('Food').closest('button'));
+  expect(toggle).toHaveBeenCalledWith('Food');
 });
 
-test('ActivityGrid calls onOpenCustomModal when + clicked', () => {
-  const mockOpen = jest.fn();
-  render(
-    <ActivityGrid selectedActivities={[]} onActivityToggle={() => {}} onOpenCustomModal={mockOpen} />
+test('clicking Add own calls onOpenCustomModal', () => {
+  const open = jest.fn();
+  render(<ActivityGrid availableActivities={ACTIVITIES} selectedActivities={[]} onActivityToggle={() => {}} onOpenCustomModal={open} />);
+  fireEvent.click(screen.getByText('Add own').closest('button'));
+  expect(open).toHaveBeenCalled();
+});
+
+test('each category gets its own colour class', () => {
+  const { container } = render(
+    <ActivityGrid availableActivities={['Hiking','Food','Views']} selectedActivities={[]} onActivityToggle={() => {}} onOpenCustomModal={() => {}} />
   );
-  const customButton = screen.getByText('Add Custom').closest('button');
-  fireEvent.click(customButton);
-  expect(mockOpen).toHaveBeenCalled();
+  const cards = container.querySelectorAll('.activity-card');
+  expect(cards[0].className).toContain('activity-card--hiking');
+  expect(cards[1].className).toContain('activity-card--food');
+  expect(cards[2].className).toContain('activity-card--views');
 });
