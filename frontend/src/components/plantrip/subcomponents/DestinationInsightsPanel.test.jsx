@@ -47,13 +47,14 @@ test('renders AI suggestion cards', async () => {
   expect(screen.getByText('Beer Festival')).toBeInTheDocument();
 });
 
-test('clicking a suggestion card calls onActivityToggle with its name', async () => {
+test('clicking + opens the day-picker panel without calling onActivityToggle', async () => {
   const onActivityToggle = jest.fn();
-  render(<DestinationInsightsPanel {...PROPS} onActivityToggle={onActivityToggle} />);
+  render(<DestinationInsightsPanel {...PROPS} onActivityToggle={onActivityToggle} days={3} />);
   await waitFor(() => expect(screen.getByText('Alps Hiking')).toBeInTheDocument());
   const card = screen.getByText('Alps Hiking').closest('.item-card');
   fireEvent.click(card.querySelector('.add-btn'));
-  expect(onActivityToggle).toHaveBeenCalledWith('Alps Hiking');
+  expect(onActivityToggle).not.toHaveBeenCalled();
+  expect(card.className).toContain('item-card--picking');
 });
 
 test('selected activity shows --added class on its card', async () => {

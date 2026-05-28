@@ -18,6 +18,7 @@ export function DestinationInsightsPanel({
   const [error, setError] = useState(null);
   const [openCard, setOpenCard] = useState(null);
   const [dayMap, setDayMap] = useState({});
+  const [changingDay, setChangingDay] = useState(new Set());
 
   const destName = typeof destination === 'object' ? destination?.name : destination;
 
@@ -76,7 +77,6 @@ export function DestinationInsightsPanel({
   const handleAddClick = (e, name) => {
     e.stopPropagation();
     if (!selectedActivities.includes(name)) {
-      onActivityToggle?.(name);
       setOpenCard(prev => prev === name ? null : name);
     }
   };
@@ -86,10 +86,12 @@ export function DestinationInsightsPanel({
     if (!selectedActivities.includes(name)) onActivityToggle?.(name);
     onDayAssign?.(name, day);
     setOpenCard(null);
+    setChangingDay(prev => { const s = new Set(prev); s.delete(name); return s; });
   };
 
   const handleChangeDay = (e, name) => {
     e.stopPropagation();
+    setChangingDay(prev => { const s = new Set(prev); s.add(name); return s; });
     setOpenCard(name);
   };
 
@@ -160,7 +162,7 @@ export function DestinationInsightsPanel({
                             <span className="item-tag">{thing.category}</span>
                           </div>
                         )}
-                        {!isAdded ? (
+                        {!isAdded || changingDay.has(thing.name) ? (
                           <div>
                             <div className="day-list-section__label">Which day will you visit?</div>
                             <DayList

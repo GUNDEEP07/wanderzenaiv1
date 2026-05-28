@@ -4,6 +4,7 @@ import { DayList } from './DayList';
 export function VenuesList({ activity, venues, selectedVenues, onVenueToggle, onDayAssign, loading, destination, days = 5, startDate }) {
   const [openCard, setOpenCard] = useState(null);
   const [dayMap, setDayMap] = useState({});
+  const [changingDay, setChangingDay] = useState(new Set());
 
   if (loading) {
     return (
@@ -31,10 +32,12 @@ export function VenuesList({ activity, venues, selectedVenues, onVenueToggle, on
     if (!selectedVenues.has(venueId)) onVenueToggle(venueId);
     onDayAssign(venueId, day);
     setOpenCard(null);
+    setChangingDay(prev => { const s = new Set(prev); s.delete(venueId); return s; });
   };
 
   const handleChangeDay = (e, venueId) => {
     e.stopPropagation();
+    setChangingDay(prev => { const s = new Set(prev); s.add(venueId); return s; });
     setOpenCard(venueId);
   };
 
@@ -61,7 +64,7 @@ export function VenuesList({ activity, venues, selectedVenues, onVenueToggle, on
 
           return (
             <div key={venue.fsq_id} className={cardClass}>
-              <div className="item-card__header" onClick={(e) => handleAddClick(e, venue.fsq_id)}>
+              <div className="item-card__header">
                 <div className="item-card__icon" style={{ fontSize: '16px' }}>{iconEl}</div>
                 <div className="item-card__text">
                   <div className="item-card__name">{venue.name}</div>
@@ -82,7 +85,7 @@ export function VenuesList({ activity, venues, selectedVenues, onVenueToggle, on
               {(isOpen || isAdded) && (
                 <div className="item-card__detail">
                   <div className="item-card__detail-body">
-                    {!isAdded ? (
+                    {!isAdded || changingDay.has(venue.fsq_id) ? (
                       <div>
                         <div className="day-list-section__label">Which day will you visit?</div>
                         <DayList
