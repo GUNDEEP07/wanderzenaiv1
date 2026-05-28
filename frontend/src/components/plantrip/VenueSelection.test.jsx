@@ -122,3 +122,27 @@ test('Continue calls onSubmit with activities and venues', async () => {
     expect.objectContaining({ activities: expect.any(Object), venues: expect.any(Object) })
   );
 });
+
+test('onSubmit receives dayAssignments when Continue clicked', async () => {
+  const onSubmit = jest.fn();
+  render(
+    <VenueSelection
+      destinations={DESTINATIONS}
+      travelStyles={[]}
+      startDate="2026-05-31"
+      endDate="2026-06-05"
+      days={5}
+      onSubmit={onSubmit}
+      onSkip={jest.fn()}
+    />
+  );
+  await waitFor(() => screen.getByText('Hiking'));
+  fireEvent.click(screen.getByText('Continue →'));
+  expect(onSubmit).toHaveBeenCalledWith(
+    expect.objectContaining({
+      activities: expect.any(Object),
+      venues: expect.any(Object),
+      dayAssignments: expect.any(Object),
+    })
+  );
+});
