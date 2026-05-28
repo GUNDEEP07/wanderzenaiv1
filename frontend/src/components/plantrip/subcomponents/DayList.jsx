@@ -3,8 +3,12 @@ export function DayList({ days, startDate, selectedDay, onSelect }) {
     const label = `Day ${i + 1}`;
     let dateStr = '';
     if (startDate) {
-      const d = new Date(new Date(startDate).getTime() + i * 86400000);
-      dateStr = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+      const base = new Date(startDate);
+      if (!isNaN(base)) {
+        const d = new Date(startDate);
+        d.setDate(d.getDate() + i);
+        dateStr = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+      }
     }
     return { label, dateStr };
   });
@@ -17,7 +21,7 @@ export function DayList({ days, startDate, selectedDay, onSelect }) {
           <button
             key={label}
             className={`day-list__row${chosen ? ' day-list__row--chosen' : ''}`}
-            onClick={() => onSelect(label)}
+            onClick={() => onSelect?.(label)}
           >
             <span className="day-list__num">{label}</span>
             {dateStr && <span className="day-list__date">{dateStr}</span>}
