@@ -56,6 +56,7 @@ const INITIAL_FORM = {
   startTime: '09:00', userMustDos: '',
   language: 'English', userAge: '', userLocation: '', email: '',
   selected_venues: {},
+  day_assignments: {},   // ← day→venue mapping from VenueSelection
 };
 
 // ─── Styles ────────────────────────────────────────────────────────────────────
@@ -167,7 +168,8 @@ export default function PlanTrip() {
   const handleVenueSelect = (venueData) => {
     setForm({
       ...form,
-      selected_venues: venueData,
+      selected_venues: venueData.venues || venueData,
+      day_assignments: venueData.dayAssignments || {},
     });
     setStep(2);
   };
@@ -247,21 +249,34 @@ export default function PlanTrip() {
 
       <div style={s.inner}>
 
-        {/* Progress dots */}
-        <div style={s.progress}>
-          {STEPS.map((name, i) => (
-            <div key={name} style={s.stepDot}>
-              <div style={s.dotCircle(i === step, i < step)}>
-                {i < step ? '✓' : i + 1}
-              </div>
-              <div style={s.dotLabel(i === step)}>{name}</div>
-            </div>
-          ))}
-          <div style={s.progressLine}>
-            <div style={s.progressFill(pct)} />
-          </div>
+        {/* Slim segmented progress bar */}
+        <div className="plantrip-progress" style={{ marginBottom: '2rem' }}>
+          {STEPS.map((_, i) => {
+            let cls = 'plantrip-progress__seg';
+            if (i < step) cls += ' plantrip-progress__seg--done';
+            else if (i === step) cls += ' plantrip-progress__seg--active';
+            return <div key={i} className={cls}></div>;
+          })}
         </div>
 
+        {/* ── Step 1: Venue Selection — full-bleed, outside the card ─────── */}
+        {step === 1 && form.destinations.length > 0 && (
+          <VenueSelection
+            destinations={form.destinations}
+            travelStyles={form.travelStyle}
+            startDate={form.travelDate}
+            endDate={form.travelDate
+              ? new Date(new Date(form.travelDate).getTime() + form.days * 24 * 60 * 60 * 1000)
+                  .toISOString().split('T')[0]
+              : null}
+            days={form.days}
+            onSubmit={handleVenueSelect}
+            onSkip={() => setStep(2)}
+          />
+        )}
+
+        {/* All other steps — inside the narrow card */}
+        {step !== 1 && (
         <div style={s.card}>
 
           {/* ── Step 0: Destination Search ─────────────────────────────────── */}
@@ -309,23 +324,6 @@ export default function PlanTrip() {
                   ))}
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* ── Step 1: Venue Selection ─────────────────────────────────── */}
-          {step === 1 && form.destinations.length > 0 && (
-            <div>
-              <div style={s.stepLabel}>Step 2 of 6</div>
-              <h2 style={s.stepTitle}>Favourite venues</h2>
-              <p style={s.stepSub}>Pick specific venues you'd like to visit (optional — we can skip this).</p>
-              <VenueSelection
-                destinations={form.destinations}
-                travelStyles={form.travelStyle}
-                startDate={form.travelDate}
-                endDate={form.travelDate ? new Date(new Date(form.travelDate).getTime() + form.days * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : null}
-                onSubmit={handleVenueSelect}
-                onSkip={() => setStep(2)}
-              />
             </div>
           )}
 
@@ -508,6 +506,7 @@ export default function PlanTrip() {
             </div>
           )}
         </div>
+        )}
 
         <div style={s.footerNote}>Free plan · 1 itinerary per month · No card required</div>
       </div>
