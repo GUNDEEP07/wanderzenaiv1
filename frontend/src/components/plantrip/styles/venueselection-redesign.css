@@ -682,3 +682,16 @@
 .insights-badge--weather { background:rgba(0,212,170,0.08); border-color:rgba(0,212,170,0.2); color:#00d4aa; }
 .insights-badge--crowd   { background:rgba(255,217,61,0.08); border-color:rgba(255,217,61,0.2); color:#ffd93d; }
 .insights-badge--months  { color: rgba(255,255,255,0.55); }
+
+/* ─── Keyboard focus states ─────────────────────────────────────────── */
+
+.add-btn:focus-visible,
+.item-chevron:focus-visible,
+.day-list__row:focus-visible,
+.activity-card:focus-visible,
+.venue-dest-tab:focus-visible,
+.venue-footer__skip:focus-visible,
+.venue-footer__continue:focus-visible {
+  outline: 2px solid #00d4aa;
+  outline-offset: 2px;
+}
