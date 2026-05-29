@@ -98,6 +98,9 @@ export async function fetchVenuesForActivity(activity, destination, maxResults =
       lng: venue.lng || null,
       attributes: venue.attributes || null,
       hours: venue.hours || null,
+      source: venue.source || 'foursquare',
+      description: venue.description || null,
+      openingHours: venue.openingHours || venue.hours?.display || null,
       website: venue.website || null,
       tel: venue.tel || null,
     }));
