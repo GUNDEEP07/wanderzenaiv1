@@ -65,7 +65,10 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
       } else {
         updated = [...activities, activity];
         if (!activeTab) setActiveTab(activity);
-        fetchActivityContent(activity);
+        // Only search Foursquare/YouTube for generic categories, not AI-specific place names
+        if (availableActivities.includes(activity)) {
+          fetchActivityContent(activity);
+        }
       }
       return { ...prev, [destKey]: updated };
     });
@@ -209,7 +212,7 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
               />
             )}
 
-            {activeTab && (
+            {activeTab && availableActivities.includes(activeTab) && (
               <>
                 <div className="venue-sec-row" style={{ marginTop: 16 }}>
                   <div className="venue-sec-label">📺 {activeTab} — watch before you go</div>
@@ -238,6 +241,17 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
                   startDate={startDate}
                 />
               </>
+            )}
+
+            {activeTab && !availableActivities.includes(activeTab) && (
+              <div style={{ marginTop: 16, padding: '16px', background: 'rgba(0,212,170,0.05)', border: '1px solid rgba(0,212,170,0.15)', borderRadius: 12, textAlign: 'center' }}>
+                <div style={{ fontSize: 24, marginBottom: 8 }}>✦</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#00d4aa', marginBottom: 4 }}>{activeTab}</div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>
+                  This is an AI-curated pick — already added to your itinerary.<br />
+                  Assign it a day using the left panel.
+                </div>
+              </div>
             )}
           </div>
 
