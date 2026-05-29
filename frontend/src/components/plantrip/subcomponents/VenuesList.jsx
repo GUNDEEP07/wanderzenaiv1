@@ -58,14 +58,22 @@ export function VenuesList({ activity, venues, selectedVenues, onVenueToggle, on
           if (isAdded) cardClass += ' item-card--added';
           else if (isOpen) cardClass += ' item-card--picking';
 
-          const iconEl = venue.categories?.[0]?.icon
-            ? <img src={`${venue.categories[0].icon.prefix}32${venue.categories[0].icon.suffix}`} alt="" style={{ width: 20 }} />
-            : '📍';
-
           return (
             <div key={venue.fsq_id} className={cardClass}>
               <div className="item-card__header">
-                <div className="item-card__icon" style={{ fontSize: '16px' }}>{iconEl}</div>
+                {/* Photo thumbnail or category gradient */}
+                <div style={{
+                  width: 44, height: 44, borderRadius: 10, flexShrink: 0, overflow: 'hidden',
+                  background: venue.photoUrl ? 'transparent' : 'rgba(0,212,170,0.1)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  backgroundImage: venue.photoUrl ? `url(${venue.photoUrl})` : 'none',
+                  backgroundSize: 'cover', backgroundPosition: 'center',
+                  fontSize: venue.photoUrl ? 0 : 18,
+                }}>
+                  {!venue.photoUrl && (venue.categories?.[0]?.icon
+                    ? <img src={`${venue.categories[0].icon.prefix}32${venue.categories[0].icon.suffix}`} alt="" style={{ width: 22 }} onError={e => { e.target.style.display='none'; }} />
+                    : '📍')}
+                </div>
                 <div className="item-card__text">
                   <div className="item-card__name">{venue.name}</div>
                   <div className="item-card__sub">{venue.categories?.[0]?.name || ''}</div>

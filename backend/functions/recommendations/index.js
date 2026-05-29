@@ -224,8 +224,30 @@ async function handleAutocomplete(event) {
   }
 }
 
+async function interpretNaturalQuery(query, destination) {
+  if (!anthropic) return null;
+  const safe = query.replace(/[\n\r`\\]/g, ' ').trim().slice(0, 200);
+  try {
+    const msg = await anthropic.messages.create(
+      {
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 256,
+        messages: [{
+          role: 'user',
+          content: `Extract the venue type from this search query for ${destination}: "${safe}"\nReturn JSON only: {"venueType": "...", "searchTerms": ["term1","term2"], "foursquareCategory": "restaurant|cafe|park|temple|museum|hiking_trail|viewpoint|market|bar|spa|beach|shopping"}`,
+        }],
+      },
+      { timeout: 5000 }
+    );
+    const text = msg.content[0]?.text || '';
+    const match = text.match(/\{[\s\S]*\}/);
+    if (match) return JSON.parse(match[0]);
+  } catch {}
+  return null;
+}
+
 async function handleVenues(event) {
-  const { destination, lat, lng, activity } = event.queryStringParameters || {};
+  const { destination, lat, lng, activity, query } = event.queryStringParameters || {};
 
   if (!lat || !lng) {
     return {
@@ -233,6 +255,29 @@ async function handleVenues(event) {
       body: JSON.stringify({ error: 'Missing lat and lng parameters' }),
       headers: { 'Content-Type': 'application/json' },
     };
+  }
+
+  // Natural language query path
+  if (query) {
+    log.info('Natural language search', { destination, query });
+    const intent = await interpretNaturalQuery(query, destination || 'this city');
+    const resolvedActivity = intent?.foursquareCategory || intent?.venueType || query;
+    log.info('Interpreted intent', { intent, resolvedActivity });
+
+    const aiVenues = await generateAIVenues(
+      destination || 'Unknown',
+      intent?.venueType || query,
+      lat,
+      lng,
+      query
+    );
+    if (aiVenues.length > 0) {
+      return ok({
+        destination,
+        categories: [{ category: intent?.venueType || query, venues: aiVenues, source: 'ai' }],
+      }, event);
+    }
+    return ok({ destination, categories: [] }, event);
   }
 
   try {
@@ -376,10 +421,10 @@ async function handleVenues(event) {
   }
 }
 
-async function generateAIVenues(destination, activity, lat, lng) {
+async function generateAIVenues(destination, activity, lat, lng, naturalQuery) {
   if (!anthropic) return [];
 
-  const cacheKey = `${destination}::${activity}`;
+  const cacheKey = `${destination}::${naturalQuery || activity}`;
   if (aiVenueCache.has(cacheKey)) {
     log.info('AI venue cache hit', { destination, activity });
     return aiVenueCache.get(cacheKey);
@@ -387,8 +432,12 @@ async function generateAIVenues(destination, activity, lat, lng) {
 
   const safeDestination = destination.replace(/[\n\r`\\]/g, ' ').trim().slice(0, 100);
   const safeActivity = activity.replace(/[\n\r`\\]/g, ' ').trim().slice(0, 50);
+  const safeQuery = naturalQuery ? naturalQuery.replace(/[\n\r`\\]/g, ' ').trim().slice(0, 200) : null;
+  const promptContext = safeQuery
+    ? `A traveller searched: "${safeQuery}". List 5 real, specific matching places in ${safeDestination}.`
+    : `List 5 real, specific places for "${safeActivity}" in ${safeDestination}.`;
 
-  const prompt = `You are a local travel expert. List 5 real, specific places for "${safeActivity}" in ${safeDestination}.
+  const prompt = `You are a local travel expert. ${promptContext}
 
 Return a JSON array ONLY — no explanation, no markdown:
 [

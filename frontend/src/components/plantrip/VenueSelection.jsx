@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+const API_URL = import.meta.env.VITE_API_URL;
 import { ActivityGrid } from './subcomponents/ActivityGrid';
 import { ActivityTabs } from './subcomponents/ActivityTabs';
 import { YouTubeCarousel } from './subcomponents/YouTubeCarousel';
@@ -26,6 +27,9 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
   const [venueLoading, setVenueLoading] = useState({});
   const [countryCode, setCountryCode] = useState('US');
   const [aiSuggestions, setAiSuggestions] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
 
   const destination = destinations?.[selectedDestination];
   const destKey = destination?.name || `destination_${selectedDestination}`;
@@ -76,6 +80,50 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
 
   const handleDayAssign = (nameOrId, day) => {
     setDayAssignments(prev => ({ ...prev, [nameOrId]: day }));
+  };
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    const q = searchQuery.trim();
+    if (!q || !destination?.lat) return;
+    setSearchLoading(true);
+    setSearchResults([]);
+    try {
+      const params = new URLSearchParams({
+        query: q,
+        destination: destination.name || '',
+        lat: destination.lat.toString(),
+        lng: destination.lng.toString(),
+      });
+      const res = await fetch(`${API_URL}/recommendations/venues?${params}`);
+      const data = await res.json();
+      const allVenues = (data.categories || []).flatMap(c => c.venues || []).map(v => ({
+        id: v.fsq_id,
+        name: v.name,
+        category: v.category || q,
+        rating: v.rating || null,
+        reviewCount: v.reviewCount || 0,
+        score: v.score || 0,
+        address: v.address || '',
+        source: v.source || 'foursquare',
+        description: v.description || null,
+        openingHours: v.openingHours || v.hours?.display || null,
+        photoUrl: v.photoUrl || null,
+        photos: v.photos || [],
+        lat: v.lat || null,
+        lng: v.lng || null,
+        hours: v.hours || null,
+        website: v.website || null,
+        tel: v.tel || null,
+        instagramUrl: v.instagramUrl || null,
+        attributes: v.attributes || null,
+      }));
+      setSearchResults(allVenues);
+    } catch {
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
   };
 
   const handleCustomActivitySubmit = (activityName) => {
@@ -203,6 +251,66 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
               onActivityToggle={handleActivityToggle}
               onOpenCustomModal={() => setShowCustomModal(true)}
             />
+
+            {/* Natural language search */}
+            <form onSubmit={handleSearch} style={{ marginBottom: 20 }}>
+              <div style={{
+                display: 'flex', gap: 8, alignItems: 'center',
+                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 12, padding: '6px 6px 6px 14px',
+                transition: 'border-color 0.2s',
+              }}>
+                <span style={{ fontSize: 14, flexShrink: 0 }}>🔍</span>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder={`e.g. top Indian restaurants near ${destination?.name || 'here'}`}
+                  style={{
+                    flex: 1, background: 'none', border: 'none', outline: 'none',
+                    color: '#fff', fontFamily: 'inherit', fontSize: 12,
+                  }}
+                />
+                <button type="submit" disabled={searchLoading || !searchQuery.trim()} style={{
+                  padding: '7px 14px', background: searchLoading ? 'rgba(255,255,255,0.08)' : '#00d4aa',
+                  border: 'none', borderRadius: 8, color: '#06090f', fontFamily: 'inherit',
+                  fontSize: 11, fontWeight: 700, cursor: searchLoading ? 'not-allowed' : 'pointer',
+                  flexShrink: 0, transition: 'all 0.15s',
+                }}>
+                  {searchLoading ? '…' : 'Search'}
+                </button>
+              </div>
+            </form>
+
+            {/* Search results */}
+            {searchResults.length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <div className="venue-sec-row">
+                  <div className="venue-sec-label">🎯 Search results</div>
+                  <div className="venue-sec-line"></div>
+                </div>
+                <VenuesList
+                  activity={searchQuery}
+                  venues={searchResults}
+                  selectedVenues={selectedVenues[`${destKey}/__search__`] || new Set()}
+                  onVenueToggle={(venueId) => {
+                    const venueKey = `${destKey}/__search__`;
+                    setSelectedVenues(prev => {
+                      const existing = prev[venueKey] || new Set();
+                      const updated = new Set(existing);
+                      if (updated.has(venueId)) updated.delete(venueId);
+                      else updated.add(venueId);
+                      return { ...prev, [venueKey]: updated };
+                    });
+                  }}
+                  onDayAssign={handleDayAssign}
+                  loading={false}
+                  destination={destination}
+                  days={days}
+                  startDate={startDate}
+                />
+              </div>
+            )}
 
             {currentActivities.length > 0 && (
               <ActivityTabs
