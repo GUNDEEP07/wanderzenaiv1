@@ -49,13 +49,23 @@ exports.handler = async (event) => {
   // ── GET /profile ───────────────────────────────────────────────────────────
   if (event.httpMethod === 'GET') {
     try {
-      const [userResult, tripsResult] = await Promise.all([
-        db.query(
+      // Try full profile query; fall back to base columns if migration not run yet
+      let userResult;
+      try {
+        userResult = await db.query(
           `SELECT email, name, gender, age, whatsapp, home_city, language,
                   onboarding_complete, plan
            FROM users WHERE email = $1`,
           [email]
-        ),
+        );
+      } catch {
+        userResult = await db.query(
+          `SELECT email, plan FROM users WHERE email = $1`,
+          [email]
+        );
+      }
+      const [, tripsResult] = await Promise.all([
+        Promise.resolve(),
         db.query(
           `SELECT s.id, s.destination, s.days, s.status, s.created_at,
                   i.id AS itinerary_id
