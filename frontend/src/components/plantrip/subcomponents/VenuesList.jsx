@@ -72,6 +72,7 @@ export function VenuesList({ activity, venues, selectedVenues, onVenueToggle, on
                 </div>
                 <div className="item-card__actions">
                   {assignedDay && <span className="item-day-badge">{assignedDay}</span>}
+                  {venue.source === 'ai' && <span className="item-ai-tag">AI</span>}
                   {rating && <span className="item-rating">⭐{rating}</span>}
                   <button
                     className={`add-btn${isAdded ? ' add-btn--done' : ''}`}
@@ -87,6 +88,17 @@ export function VenuesList({ activity, venues, selectedVenues, onVenueToggle, on
                   <div className="item-card__detail-body">
                     {!isAdded || changingDay.has(venue.fsq_id) ? (
                       <div>
+                        {venue.description && (
+                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', lineHeight: 1.5, marginBottom: 8 }}>
+                            {venue.description}
+                          </div>
+                        )}
+                        {venue.openingHours && (
+                          <div style={{ display: 'flex', gap: 5, fontSize: 10, color: 'rgba(255,255,255,0.45)', marginBottom: 8 }}>
+                            <span style={{ color: '#00d4aa' }}>🕐</span>
+                            <span>{venue.openingHours}</span>
+                          </div>
+                        )}
                         <div className="day-list-section__label">Which day will you visit?</div>
                         <DayList
                           days={days}
@@ -112,6 +124,11 @@ export function VenuesList({ activity, venues, selectedVenues, onVenueToggle, on
           );
         })}
       </div>
+      {venues.some(v => v.source === 'ai') && (
+        <div style={{ marginTop: 8, fontSize: 10, color: 'rgba(255,255,255,0.3)', textAlign: 'center', fontStyle: 'italic' }}>
+          ✦ AI suggested · verify hours and availability before visiting
+        </div>
+      )}
     </div>
   );
 }
