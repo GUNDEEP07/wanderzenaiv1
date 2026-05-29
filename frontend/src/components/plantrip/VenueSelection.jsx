@@ -13,14 +13,19 @@ import './styles/venueselection-redesign.css';
 
 const PRESET_ACTIVITIES = ['Hiking', 'Food', 'Views', 'Culture', 'Nature', 'Nightlife', 'Wellness'];
 
-export function VenueSelection({ destinations, travelStyles, startDate, endDate, days = 5, onSubmit, onSkip, onBack }) {
+export function VenueSelection({ destinations, travelStyles, startDate, endDate, days = 5, onSubmit, onSkip, onBack, savedState, onSave }) {
   const [selectedDestination, setSelectedDestination] = useState(0);
-  const [selectedActivities, setSelectedActivities] = useState({});
-  const [activeTab, setActiveTab] = useState(null);
+  const [selectedActivities, setSelectedActivities] = useState(() => savedState?.activities || {});
+  const [activeTab, setActiveTab] = useState(() => savedState?.activeTab || null);
   const [youtubeVideos, setYoutubeVideos] = useState({});
   const [foursquareVenues, setFoursquareVenues] = useState({});
-  const [selectedVenues, setSelectedVenues] = useState({});
-  const [dayAssignments, setDayAssignments] = useState({});
+  const [selectedVenues, setSelectedVenues] = useState(() => {
+    const raw = savedState?.venues || {};
+    const result = {};
+    Object.entries(raw).forEach(([k, arr]) => { result[k] = new Set(arr); });
+    return result;
+  });
+  const [dayAssignments, setDayAssignments] = useState(() => savedState?.dayAssignments || {});
   const [showCustomModal, setShowCustomModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [videoLoading, setVideoLoading] = useState({});
@@ -148,12 +153,16 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
     });
   };
 
-  const handleContinue = () => {
+  const buildSnapshot = () => {
     const venueData = {};
-    Object.entries(selectedVenues).forEach(([key, venues]) => {
-      venueData[key] = Array.from(venues);
-    });
-    onSubmit({ activities: selectedActivities, venues: venueData, dayAssignments });
+    Object.entries(selectedVenues).forEach(([key, venues]) => { venueData[key] = Array.from(venues); });
+    return { activities: selectedActivities, venues: venueData, dayAssignments, activeTab };
+  };
+
+  const handleContinue = () => {
+    const snap = buildSnapshot();
+    onSave?.(snap);
+    onSubmit({ activities: snap.activities, venues: snap.venues, dayAssignments: snap.dayAssignments });
   };
 
   if (loading) {
@@ -290,11 +299,12 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
                   <div className="venue-sec-line"></div>
                 </div>
                 <VenuesList
+                  key={searchQuery}
                   activity={searchQuery}
                   venues={searchResults}
-                  selectedVenues={selectedVenues[`${destKey}/__search__`] || new Set()}
+                  selectedVenues={selectedVenues[`${destKey}/__search__/${searchQuery}`] || new Set()}
                   onVenueToggle={(venueId) => {
-                    const venueKey = `${destKey}/__search__`;
+                    const venueKey = `${destKey}/__search__/${searchQuery}`;
                     setSelectedVenues(prev => {
                       const existing = prev[venueKey] || new Set();
                       const updated = new Set(existing);
@@ -364,12 +374,12 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
           </div>
 
           <div className="venue-footer">
-            <button className="venue-footer__skip" onClick={onBack}>← Back</button>
+            <button className="venue-footer__skip" onClick={() => { onSave?.(buildSnapshot()); onBack?.(); }}>← Back</button>
             <div className="venue-footer__count">
               <b>{selectedCount}</b> selected{scheduledCount > 0 && <> · <b>{scheduledCount}</b> scheduled</>}
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="venue-footer__skip" onClick={onSkip}>Skip</button>
+              <button className="venue-footer__skip" onClick={() => { onSave?.(buildSnapshot()); onSkip?.(); }}>Skip</button>
               <button
                 className="venue-footer__continue"
                 onClick={handleContinue}

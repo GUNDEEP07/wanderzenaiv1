@@ -127,6 +127,7 @@ export default function PlanTrip() {
   const [submitError, setSubmitError] = useState('');
   const [preview, setPreview] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [venueSelState, setVenueSelState] = useState(null);
 
   // Field setter — clears error on change
   const set = (key, val) => {
@@ -257,6 +258,8 @@ export default function PlanTrip() {
             onSubmit={handleVenueSelect}
             onSkip={() => setStep(2)}
             onBack={() => setStep(0)}
+            savedState={venueSelState}
+            onSave={setVenueSelState}
           />
         </div>
       </div>
