@@ -1,0 +1,1 @@
+export default function Login() { return <div style={{background:'#06090f',minHeight:'100vh',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'sans-serif'}}>Login — coming in next task</div>; }

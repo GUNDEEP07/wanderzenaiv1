@@ -127,3 +127,22 @@ SELECT
 FROM itineraries
 GROUP BY DATE_TRUNC('month', created_at)
 ORDER BY month DESC;
+
+-- ─── User profile columns (added for auth feature) ────────────────────────
+ALTER TABLE users ADD COLUMN IF NOT EXISTS firebase_uid        VARCHAR(255);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS name                VARCHAR(255);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS gender              VARCHAR(20);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS age                 INTEGER;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS whatsapp            VARCHAR(50);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS home_city           VARCHAR(255);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS language            VARCHAR(50) DEFAULT 'English';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_complete BOOLEAN DEFAULT FALSE;
+
+CREATE INDEX IF NOT EXISTS idx_users_firebase_uid ON users(firebase_uid);
+
+-- ─── Recommendation cache ──────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS recommendation_cache (
+  email           VARCHAR(255) PRIMARY KEY,
+  recommendations JSONB NOT NULL,
+  created_at      TIMESTAMPTZ DEFAULT NOW()
+);

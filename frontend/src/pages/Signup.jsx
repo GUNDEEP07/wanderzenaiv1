@@ -1,0 +1,1 @@
+export default function Signup() { return <div style={{background:'#06090f',minHeight:'100vh',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'sans-serif'}}>Signup — coming in next task</div>; }
