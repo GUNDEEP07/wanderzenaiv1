@@ -1,6 +1,7 @@
 'use strict';
 
 const axios = require('axios');
+const Anthropic = require('@anthropic-ai/sdk');
 const { log, getDB } = require('/opt/nodejs/index');
 
 const FOURSQUARE_API_KEY = process.env.FOURSQUARE_API_KEY;
@@ -8,6 +9,7 @@ const FOURSQUARE_BASE = 'https://places-api.foursquare.com';
 const FOURSQUARE_API_VERSION = '2025-06-17';
 const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
 const GOOGLE_PLACES_BASE = 'https://maps.googleapis.com/maps/api/place';
+const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim());
 
 const FEATURED_CATEGORIES = [
@@ -392,6 +394,20 @@ async function handleVenues(event) {
       }
     }
 
+    // If Foursquare returned nothing, fall back to Claude AI
+    if (categories.length === 0) {
+      log.info('Foursquare returned 0 venues, trying AI fallback', { destination, activity });
+      const aiVenues = await generateAIVenues(destination, activity, lat, lng);
+      if (aiVenues.length > 0) {
+        categories.push({
+          category: activity,
+          venues: aiVenues,
+          source: 'ai',
+        });
+        log.info('AI fallback success', { destination, activity, count: aiVenues.length });
+      }
+    }
+
     log.info('Venues success', { destination, categoryCount: categories.length });
     return ok({
       destination,
@@ -404,6 +420,69 @@ async function handleVenues(event) {
       categories: [],
       error: 'Unable to fetch venues'
     }, event);
+  }
+}
+
+async function generateAIVenues(destination, activity, lat, lng) {
+  if (!CLAUDE_API_KEY) return [];
+
+  const anthropic = new Anthropic({ apiKey: CLAUDE_API_KEY });
+
+  const prompt = `You are a local travel expert. List 5 real, specific places for "${activity}" in ${destination}.
+
+Return a JSON array ONLY — no explanation, no markdown:
+[
+  {
+    "name": "Exact name of the place",
+    "address": "Street address or neighbourhood name",
+    "description": "One sentence on why a slow traveller would love this",
+    "openingHours": "e.g. Daily 8am–9pm or Mon–Sat 10am–6pm",
+    "category": "${activity}"
+  }
+]
+
+Rules:
+- Use real, verifiable places
+- Be specific — no generic names like "Local Cafe"
+- If you are not sure of exact hours, give a typical range for that type of place`;
+
+  try {
+    const message = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1024,
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    const text = message.content[0]?.type === 'text' ? message.content[0].text : '';
+    const jsonMatch = text.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) return [];
+
+    const places = JSON.parse(jsonMatch[0]);
+    if (!Array.isArray(places)) return [];
+
+    return places.slice(0, 5).map((place, i) => ({
+      fsq_id: `ai-${activity}-${i}`,
+      name: place.name || 'Unknown',
+      category: place.category || activity,
+      rating: null,
+      reviewCount: 0,
+      score: 0,
+      address: place.address || '',
+      description: place.description || '',
+      openingHours: place.openingHours || '',
+      lat: parseFloat(lat) || null,
+      lng: parseFloat(lng) || null,
+      source: 'ai',
+      photoUrl: null,
+      photos: [],
+      instagramUrl: null,
+      hours: { open_now: null, display: place.openingHours || null },
+      website: null,
+      tel: null,
+    }));
+  } catch (err) {
+    log.warn('AI venue fallback failed', { error: err.message, destination, activity });
+    return [];
   }
 }
 
