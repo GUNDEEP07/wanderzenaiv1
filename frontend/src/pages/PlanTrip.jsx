@@ -9,7 +9,6 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { DestinationSearch } from '../components/plantrip/DestinationSearch';
 import { VenueSelection } from '../components/plantrip/VenueSelection';
-import RecommendationQuiz from '../components/RecommendationQuiz';
 import StepReview from '../components/plantrip/StepReview';
 import { fetchPreview, submitItinerary } from '../api/itinerary';
 
@@ -214,37 +213,38 @@ export default function PlanTrip() {
     }
   };
 
-  return (
-    <div style={s.page}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,700;1,9..144,400&display=swap');
-        input::placeholder, textarea::placeholder { color: rgba(255,255,255,0.2); }
-        input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.4); }
-        select option { background: #111827; color: #fff; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-      `}</style>
+  const progressBar = (
+    <div className="plantrip-progress">
+      {STEPS.map((_, i) => {
+        let cls = 'plantrip-progress__seg';
+        if (i < step) cls += ' plantrip-progress__seg--done';
+        else if (i === step) cls += ' plantrip-progress__seg--active';
+        return <div key={i} className={cls}></div>;
+      })}
+    </div>
+  );
 
-      <nav style={s.nav}>
-        <button style={s.backBtn} onClick={() => navigate('/')}>
-          <div style={s.logoMark}>W</div>
-          WanderZenAI
-        </button>
-      </nav>
+  const sharedStyles = `
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,700;1,9..144,400&display=swap');
+    input::placeholder, textarea::placeholder { color: rgba(255,255,255,0.2); }
+    input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.4); }
+    select option { background: #111827; color: #fff; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  `;
 
-      <div style={s.inner}>
-
-        {/* Slim segmented progress bar */}
-        <div className="plantrip-progress" style={{ marginBottom: '2rem' }}>
-          {STEPS.map((_, i) => {
-            let cls = 'plantrip-progress__seg';
-            if (i < step) cls += ' plantrip-progress__seg--done';
-            else if (i === step) cls += ' plantrip-progress__seg--active';
-            return <div key={i} className={cls}></div>;
-          })}
-        </div>
-
-        {/* ── Step 1: Venue Selection — full-bleed, outside the card ─────── */}
-        {step === 1 && form.destinations.length > 0 && (
+  /* ── Step 1 (Venues): full-bleed, full-height ────────────────────── */
+  if (step === 1 && form.destinations.length > 0) {
+    return (
+      <div style={{ ...s.page, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+        <style>{sharedStyles}</style>
+        <nav style={s.nav}>
+          <button style={s.backBtn} onClick={() => navigate('/')}>
+            <div style={s.logoMark}>W</div>
+            WanderZenAI
+          </button>
+        </nav>
+        <div style={{ padding: '12px 24px 0' }}>{progressBar}</div>
+        <div style={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>
           <VenueSelection
             destinations={form.destinations}
             travelStyles={form.travelStyle}
@@ -256,10 +256,28 @@ export default function PlanTrip() {
             days={form.days}
             onSubmit={handleVenueSelect}
             onSkip={() => setStep(2)}
+            onBack={() => setStep(0)}
           />
-        )}
+        </div>
+      </div>
+    );
+  }
 
-        {/* All other steps — inside the narrow card */}
+  return (
+    <div style={s.page}>
+      <style>{sharedStyles}</style>
+
+      <nav style={s.nav}>
+        <button style={s.backBtn} onClick={() => navigate('/')}>
+          <div style={s.logoMark}>W</div>
+          WanderZenAI
+        </button>
+      </nav>
+
+      <div style={s.inner}>
+        <div style={{ marginBottom: '2rem' }}>{progressBar}</div>
+
+        {/* All steps — inside the card */}
         {(step !== 1 || form.destinations.length === 0) && (
         <div style={s.card}>
 
@@ -273,7 +291,6 @@ export default function PlanTrip() {
               <div style={s.fieldWrap}>
                 <DestinationSearch onSelect={handleDestinationSelect} disabled={false} allowMultiple={true} />
                 {errors.destination && <div style={s.error}>{errors.destination}</div>}
-                <RecommendationQuiz onSelect={(dest) => handleDestinationSelect({ name: dest, lat: 0, lng: 0 })} />
               </div>
 
               <div style={s.fieldWrap}>

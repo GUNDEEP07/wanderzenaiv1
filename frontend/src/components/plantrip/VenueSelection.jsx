@@ -12,7 +12,7 @@ import './styles/venueselection-redesign.css';
 
 const PRESET_ACTIVITIES = ['Hiking', 'Food', 'Views', 'Culture', 'Nature', 'Nightlife', 'Wellness'];
 
-export function VenueSelection({ destinations, travelStyles, startDate, endDate, days = 5, onSubmit, onSkip }) {
+export function VenueSelection({ destinations, travelStyles, startDate, endDate, days = 5, onSubmit, onSkip, onBack }) {
   const [selectedDestination, setSelectedDestination] = useState(0);
   const [selectedActivities, setSelectedActivities] = useState({});
   const [activeTab, setActiveTab] = useState(null);
@@ -240,16 +240,19 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
           </div>
 
           <div className="venue-footer">
-            <button className="venue-footer__skip" onClick={onSkip}>Skip</button>
+            <button className="venue-footer__skip" onClick={onBack}>← Back</button>
             <div className="venue-footer__count">
               <b>{selectedCount}</b> selected{scheduledCount > 0 && <> · <b>{scheduledCount}</b> scheduled</>}
             </div>
-            <button
-              className="venue-footer__continue"
-              onClick={handleContinue}
-            >
-              Continue →
-            </button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="venue-footer__skip" onClick={onSkip}>Skip</button>
+              <button
+                className="venue-footer__continue"
+                onClick={handleContinue}
+              >
+                Continue →
+              </button>
+            </div>
           </div>
         </div>
       </div>
