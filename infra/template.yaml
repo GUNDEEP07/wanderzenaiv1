@@ -323,8 +323,6 @@ Resources:
       Timeout: 15
       MemorySize: 256
       Description: GET and PUT user profile + past trips
-      Layers:
-        - !Ref SharedLayer
       Policies:
         - S3ReadPolicy:
             BucketName: !Sub wanderzenai-pdfs-${Stage}-${AWS::AccountId}
