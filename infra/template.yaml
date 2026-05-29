@@ -258,7 +258,7 @@ Resources:
       FunctionName: !Sub wanderzenai-recommendations-${Stage}
       CodeUri: ../backend/functions/recommendations
       Handler: index.handler
-      Timeout: 10
+      Timeout: 25
       MemorySize: 256
       Description: Provides destination autocomplete and venue discovery via Foursquare API
       Environment:
@@ -266,6 +266,7 @@ Resources:
           FOURSQUARE_API_KEY: !Ref FoursquareApiKey
           FRONTEND_URL: !Ref FrontendUrl
           ALLOWED_ORIGINS: !Ref AllowedOrigins
+          CLAUDE_API_KEY: !Ref ClaudeApiKey
       Events:
         GetAutocomplete:
           Type: Api
