@@ -11,6 +11,7 @@ const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
 const GOOGLE_PLACES_BASE = 'https://maps.googleapis.com/maps/api/place';
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
 const anthropic = CLAUDE_API_KEY ? new Anthropic({ apiKey: CLAUDE_API_KEY }) : null;
+const aiVenueCache = new Map();
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim());
 
 const FEATURED_CATEGORIES = [
@@ -266,11 +267,10 @@ async function handleVenues(event) {
       }
     }
 
-    for (const activityCat of categoriesToFetch) {
-      try {
+    const fsqResults = await Promise.allSettled(
+      categoriesToFetch.map(activityCat => {
         const fsqCategoryId = activityCat.id;
-
-        const res = await axios.get(
+        return axios.get(
           `${FOURSQUARE_BASE}/places/search`,
           {
             params: {
@@ -287,110 +287,62 @@ async function handleVenues(event) {
             },
             timeout: 5000,
           }
-        );
+        ).then(res => ({ res, activityCat }));
+      })
+    );
 
-        if (res.data.results && res.data.results.length > 0) {
-          const firstPlace = res.data.results[0];
-          log.info('Foursquare response details', {
-            photoCount: firstPlace.photos ? firstPlace.photos.length : 0,
-            photos: firstPlace.photos ? firstPlace.photos.slice(0, 3).map(p => ({ prefix: p.prefix, suffix: p.suffix })) : [],
-            latitude: firstPlace.latitude,
-            longitude: firstPlace.longitude,
-            location: firstPlace.location,
-            social_media: firstPlace.social_media ? Object.keys(firstPlace.social_media) : [],
-          });
-          const venues = res.data.results.map(place => {
-            const photoUrl = place.photos?.[0]?.prefix
-              ? `${place.photos[0].prefix}300x300${place.photos[0].suffix}`
-              : null;
+    for (const result of fsqResults) {
+      if (result.status === 'rejected') {
+        log.warn('Category fetch failed', { error: result.reason?.message });
+        continue;
+      }
+      const { res, activityCat } = result.value;
+      if (!res.data.results || res.data.results.length === 0) continue;
 
-            const categoryName = place.categories?.[0]?.name || activityCat.name;
-
-            // Extract Instagram URL from social_media field
-            let instagramUrl = null;
-            if (place.social_media && typeof place.social_media === 'object') {
-              // social_media might be an object with keys like 'instagram'
-              if (place.social_media.instagram) {
-                instagramUrl = place.social_media.instagram;
-              }
-            }
-
-            log.info('Venue data', {
-              name: place.name,
-              photoCount: place.photos ? place.photos.length : 0,
-              photoUrl: photoUrl,
-              location: {
-                lat: place.latitude,
-                lng: place.longitude,
-                formatted_address: place.location?.formatted_address,
-              },
-              hasSocialMedia: !!place.social_media,
-              socialMediaKeys: place.social_media ? Object.keys(place.social_media) : [],
-              instagramUrl: instagramUrl,
-            });
-
-            return {
-              fsq_id: place.fsq_place_id,
-              name: place.name,
-              category: categoryName,
-              rating: place.rating || 0,
-              reviewCount: place.review_count || 0,
-              address: place.location?.formatted_address || '',
-              lat: place.latitude || null,
-              lng: place.longitude || null,
-              instagramUrl: instagramUrl,
-              photoUrl: photoUrl,
-              photos: place.photos || [],
-              attributes: place.attributes || null,
-              hours: {
-                open_now: place.hours?.open_now || null,
-                display: place.hours?.display || null,
-              },
-              website: place.website || null,
-              tel: place.tel || null,
-              tips: place.tips || [],
-            };
-          });
-
-          // Calculate weighted score: 40% rating + 60% review count
-          // Find max review count to normalize
-          const maxReviews = Math.max(...venues.map(v => v.reviewCount || 0), 1);
-
-          venues.forEach(venue => {
-            const ratingScore = (venue.rating || 0) / 5; // Normalize to 0-1
-            const reviewScore = (venue.reviewCount || 0) / maxReviews; // Normalize to 0-1
-            venue.score = (ratingScore * 0.4) + (reviewScore * 0.6);
-          });
-
-          // Sort by weighted score (descending) - highest quality + popularity first
-          venues.sort((a, b) => (b.score || 0) - (a.score || 0));
-
-          // Debug logging for top venues
-          log.info(`${activityCat.name} venues scored and ranked`, {
-            activity: activityCat.name,
-            count: venues.length,
-            maxReviewCount: maxReviews,
-            topVenues: venues.slice(0, 3).map(v => ({
-              name: v.name,
-              rating: v.rating,
-              reviewCount: v.reviewCount,
-              score: v.score?.toFixed(3),
-            })),
-          });
-
-          if (venues.length > 0) {
-            categories.push({
-              category: formatCategory(activityCat.name),
-              venues: venues,
-            });
-          }
+      const venues = res.data.results.map(place => {
+        const photoUrl = place.photos?.[0]?.prefix
+          ? `${place.photos[0].prefix}300x300${place.photos[0].suffix}`
+          : null;
+        const categoryName = place.categories?.[0]?.name || activityCat.name;
+        let instagramUrl = null;
+        if (place.social_media?.instagram) {
+          instagramUrl = place.social_media.instagram;
         }
-      } catch (catErr) {
-        log.warn('Category fetch failed', {
-          activity: activityCat.name,
-          error: catErr.message,
-          status: catErr.response?.status,
-          data: catErr.response?.data,
+        return {
+          fsq_id: place.fsq_place_id,
+          name: place.name,
+          category: categoryName,
+          rating: place.rating || 0,
+          reviewCount: place.review_count || 0,
+          address: place.location?.formatted_address || '',
+          lat: place.latitude || null,
+          lng: place.longitude || null,
+          instagramUrl,
+          photoUrl,
+          photos: place.photos || [],
+          attributes: place.attributes || null,
+          hours: {
+            open_now: place.hours?.open_now || null,
+            display: place.hours?.display || null,
+          },
+          website: place.website || null,
+          tel: place.tel || null,
+          tips: place.tips || [],
+        };
+      });
+
+      const maxReviews = Math.max(...venues.map(v => v.reviewCount || 0), 1);
+      venues.forEach(venue => {
+        const ratingScore = (venue.rating || 0) / 5;
+        const reviewScore = (venue.reviewCount || 0) / maxReviews;
+        venue.score = (ratingScore * 0.4) + (reviewScore * 0.6);
+      });
+      venues.sort((a, b) => (b.score || 0) - (a.score || 0));
+
+      if (venues.length > 0) {
+        categories.push({
+          category: formatCategory(activityCat.name),
+          venues,
         });
       }
     }
@@ -427,7 +379,16 @@ async function handleVenues(event) {
 async function generateAIVenues(destination, activity, lat, lng) {
   if (!anthropic) return [];
 
-  const prompt = `You are a local travel expert. List 5 real, specific places for "${activity}" in ${destination}.
+  const cacheKey = `${destination}::${activity}`;
+  if (aiVenueCache.has(cacheKey)) {
+    log.info('AI venue cache hit', { destination, activity });
+    return aiVenueCache.get(cacheKey);
+  }
+
+  const safeDestination = destination.replace(/[\n\r`\\]/g, ' ').trim().slice(0, 100);
+  const safeActivity = activity.replace(/[\n\r`\\]/g, ' ').trim().slice(0, 50);
+
+  const prompt = `You are a local travel expert. List 5 real, specific places for "${safeActivity}" in ${safeDestination}.
 
 Return a JSON array ONLY — no explanation, no markdown:
 [
@@ -436,7 +397,7 @@ Return a JSON array ONLY — no explanation, no markdown:
     "address": "Street address or neighbourhood name",
     "description": "One sentence on why a slow traveller would love this",
     "openingHours": "e.g. Daily 8am–9pm or Mon–Sat 10am–6pm",
-    "category": "${activity}"
+    "category": "${safeActivity}"
   }
 ]
 
@@ -469,10 +430,10 @@ Rules:
     const places = JSON.parse(jsonMatch[0]);
     if (!Array.isArray(places)) return [];
 
-    return places.slice(0, 5).map((place, i) => ({
-      fsq_id: `ai-${(destination || '').replace(/\s+/g, '-').toLowerCase()}-${activity}-${i}`,
+    const results = places.slice(0, 5).map((place, i) => ({
+      fsq_id: `ai-${(destination || '').replace(/\s+/g, '-').toLowerCase()}-${safeActivity}-${i}`,
       name: place.name || 'Unknown',
-      category: place.category || activity,
+      category: place.category || safeActivity,
       rating: null,
       reviewCount: 0,
       score: 0,
@@ -489,6 +450,9 @@ Rules:
       website: null,
       tel: null,
     }));
+
+    aiVenueCache.set(cacheKey, results);
+    return results;
   } catch (err) {
     log.warn('AI venue fallback failed', { error: err.message, destination, activity });
     return [];
