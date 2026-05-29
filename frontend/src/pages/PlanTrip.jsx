@@ -5,12 +5,13 @@
 // Step 4 is extracted to StepReview.jsx.
 // API calls are in src/api/itinerary.js.
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { DestinationSearch } from '../components/plantrip/DestinationSearch';
 import { VenueSelection } from '../components/plantrip/VenueSelection';
 import StepReview from '../components/plantrip/StepReview';
 import { fetchPreview, submitItinerary } from '../api/itinerary';
+import { useAuth } from '../context/AuthContext';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -128,6 +129,41 @@ export default function PlanTrip() {
   const [preview, setPreview] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [venueSelState, setVenueSelState] = useState(null);
+  const { currentUser, getIdToken } = useAuth();
+  const [personalRecs, setPersonalRecs] = useState([]);
+  const [preferredActivities, setPreferredActivities] = useState([]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    (async () => {
+      try {
+        const token = await getIdToken();
+        const headers = { Authorization: `Bearer ${token}` };
+        const [profileRes, recsRes] = await Promise.allSettled([
+          fetch(`${import.meta.env.VITE_API_URL}/profile`, { headers }),
+          fetch(`${import.meta.env.VITE_API_URL}/recommendations/personalised`, { headers }),
+        ]);
+        if (profileRes.status === 'fulfilled') {
+          const d = await profileRes.value.json();
+          if (d.profile) {
+            const p = d.profile;
+            setForm(f => ({
+              ...f,
+              email:        currentUser.email || f.email,
+              userAge:      p.age ? String(p.age) : f.userAge,
+              userLocation: p.home_city || f.userLocation,
+              language:     p.language || f.language,
+            }));
+          }
+        }
+        if (recsRes.status === 'fulfilled') {
+          const d = await recsRes.value.json();
+          if (d.recommendations) setPersonalRecs(d.recommendations);
+          if (d.preferred_activities) setPreferredActivities(d.preferred_activities);
+        }
+      } catch { /* graceful */ }
+    })();
+  }, [currentUser]);
 
   // Field setter — clears error on change
   const set = (key, val) => {
@@ -260,6 +296,7 @@ export default function PlanTrip() {
             onBack={() => setStep(0)}
             savedState={venueSelState}
             onSave={setVenueSelState}
+            preferredActivities={preferredActivities}
           />
         </div>
       </div>
@@ -294,6 +331,18 @@ export default function PlanTrip() {
               <div style={s.fieldWrap}>
                 <DestinationSearch onSelect={handleDestinationSelect} disabled={false} allowMultiple={true} />
                 {errors.destination && <div style={s.error}>{errors.destination}</div>}
+                {personalRecs.length > 0 && (
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)', marginBottom: 8 }}>Based on your travels</div>
+                    <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+                      {personalRecs.map((rec, i) => (
+                        <button key={i} onClick={() => handleDestinationSelect({ name: rec.destination.split(',')[0].trim(), lat: 0, lng: 0 })} style={{ padding: '6px 12px', borderRadius: 20, border: '1px solid rgba(0,212,170,0.25)', background: 'rgba(0,212,170,0.07)', color: '#00d4aa', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          {rec.emoji} {rec.destination.split(',')[0].trim()}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div style={s.fieldWrap}>

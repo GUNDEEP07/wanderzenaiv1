@@ -286,6 +286,12 @@ Resources:
             RestApiId: !Ref WanderZenApi
             Path: /recommendations/categories
             Method: GET
+        GetPersonalised:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /recommendations/personalised
+            Method: GET
 
   # ─── Destination Insights Lambda ──────────────────────────────────────────
   DestinationInsightsFunction:

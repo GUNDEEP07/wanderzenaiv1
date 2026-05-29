@@ -63,6 +63,8 @@ exports.handler = async (event) => {
       return await handleAutocomplete(event);
     } else if (path.includes('/venues')) {
       return await handleVenues(event);
+    } else if (path.includes('/personalised')) {
+      return await handlePersonalised(event);
     } else if (path.includes('/categories')) {
       return await handleCategories(event);
     } else {
@@ -505,6 +507,123 @@ Rules:
   } catch (err) {
     log.warn('AI venue fallback failed', { error: err.message, destination, activity });
     return [];
+  }
+}
+
+async function handlePersonalised(event) {
+  const authHeader = event.headers?.Authorization || event.headers?.authorization || '';
+  const token = authHeader.replace('Bearer ', '');
+
+  let email = null;
+  try {
+    if (token && token !== 'demo-token') {
+      const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString());
+      email = payload.email || null;
+    }
+  } catch { /* invalid token */ }
+
+  if (!email) return ok({ recommendations: [], preferred_activities: [] }, event);
+
+  // Check 7-day cache
+  try {
+    const cached = await getDB().query(
+      `SELECT recommendations FROM recommendation_cache
+       WHERE email = $1 AND created_at > NOW() - INTERVAL '7 days'`,
+      [email]
+    );
+    if (cached.rows.length > 0) {
+      log.info('Personalised recs cache hit', { email });
+      return ok(cached.rows[0].recommendations, event);
+    }
+  } catch (cacheErr) {
+    log.warn('Recs cache lookup failed', { error: cacheErr.message });
+  }
+
+  if (!anthropic) return ok({ recommendations: [], preferred_activities: [] }, event);
+
+  try {
+    // Fetch past destinations and profile in parallel
+    const [tripsResult, profileResult] = await Promise.all([
+      getDB().query(
+        `SELECT DISTINCT destination FROM submissions WHERE email = $1 ORDER BY destination LIMIT 10`,
+        [email]
+      ),
+      getDB().query(
+        `SELECT age, gender, home_city FROM users WHERE email = $1`,
+        [email]
+      ),
+    ]);
+
+    const pastDestinations = tripsResult.rows.map(r => r.destination).filter(Boolean);
+    const profile = profileResult.rows[0] || {};
+
+    const profileDesc = [
+      profile.age    ? `age ${profile.age}`          : null,
+      profile.gender || null,
+      profile.home_city ? `based in ${profile.home_city}` : null,
+    ].filter(Boolean).join(', ');
+
+    const pastDesc = pastDestinations.length > 0
+      ? `has visited: ${pastDestinations.join(', ')}`
+      : 'has no past trips yet';
+
+    const prompt = `You are a slow-travel expert. A traveller (${profileDesc || 'profile unknown'}) ${pastDesc}.
+
+Recommend 3 new slow-travel destinations they haven't visited yet.
+Return JSON array ONLY — no explanation:
+[
+  { "destination": "City, Country", "country": "Country", "emoji": "🇯🇵", "reason": "One sentence why this suits them" }
+]`;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    let message;
+    try {
+      message = await anthropic.messages.create(
+        { model: 'claude-haiku-4-5-20251001', max_tokens: 512, messages: [{ role: 'user', content: prompt }] },
+        { signal: controller.signal }
+      );
+    } finally {
+      clearTimeout(timer);
+    }
+
+    const text = message.content[0]?.text || '';
+    const match = text.match(/\[[\s\S]*\]/);
+    const recommendations = match ? JSON.parse(match[0]).slice(0, 3) : [];
+
+    // Compute preferred activities
+    const activitiesResult = await getDB().query(
+      `SELECT form_data FROM submissions WHERE email = $1 AND form_data IS NOT NULL LIMIT 10`,
+      [email]
+    );
+    const counts = {};
+    for (const row of activitiesResult.rows) {
+      try {
+        const fd = typeof row.form_data === 'string' ? JSON.parse(row.form_data) : row.form_data;
+        (fd?.travelStyle || []).forEach(s => { counts[s] = (counts[s] || 0) + 1; });
+      } catch { /* skip */ }
+    }
+    const preferred_activities = Object.entries(counts)
+      .sort((a, b) => b[1] - a[1]).slice(0, 3).map(([s]) => s);
+
+    const result = { recommendations, preferred_activities };
+
+    // Cache result
+    try {
+      await getDB().query(
+        `INSERT INTO recommendation_cache (email, recommendations)
+         VALUES ($1, $2)
+         ON CONFLICT (email) DO UPDATE SET recommendations = $2, created_at = NOW()`,
+        [email, JSON.stringify(result)]
+      );
+    } catch (cacheErr) {
+      log.warn('Recs cache write failed', { error: cacheErr.message });
+    }
+
+    return ok(result, event);
+  } catch (err) {
+    log.error('Personalised recs failed', { error: err.message });
+    return ok({ recommendations: [], preferred_activities: [] }, event);
   }
 }
 

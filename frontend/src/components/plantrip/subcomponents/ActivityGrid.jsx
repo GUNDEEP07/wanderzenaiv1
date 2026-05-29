@@ -10,7 +10,7 @@ const COLOUR_CLASS = {
   'Nature':'nature','Nightlife':'nightlife','Wellness':'wellness',
 };
 
-export function ActivityGrid({ availableActivities, selectedActivities, onActivityToggle, onOpenCustomModal }) {
+export function ActivityGrid({ availableActivities, selectedActivities, onActivityToggle, onOpenCustomModal, initialSelected = [] }) {
   const activities = (availableActivities || []).map(name => ({
     name,
     emoji: EMOJI_MAP[name] || '📍',
@@ -29,6 +29,9 @@ export function ActivityGrid({ availableActivities, selectedActivities, onActivi
           >
             <span className="activity-card__emoji">{emoji}</span>
             <div className="activity-card__label">{name}</div>
+            {!selected && initialSelected.includes(name) && (
+              <span style={{ position: 'absolute', top: 5, right: 7, fontSize: 7, color: '#00d4aa', fontWeight: 800 }}>★</span>
+            )}
           </button>
         );
       })}
