@@ -68,20 +68,6 @@ const s = {
   backBtn: { background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '6px', transition: 'color 0.2s' },
   logoMark: { width: 28, height: 28, borderRadius: 7, background: '#00d4aa', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, color: '#0a0f1e' },
   inner: { maxWidth: 680, margin: '0 auto', padding: '3rem 1.5rem 4rem' },
-  progress: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', marginBottom: '3rem' },
-  progressLine: { position: 'absolute', top: 14, left: 14, right: 14, height: 1, background: 'rgba(255,255,255,0.08)', zIndex: 0 },
-  progressFill: (pct) => ({ height: '100%', background: '#00d4aa', transition: 'width 0.4s ease', width: pct + '%' }),
-  stepDot: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', zIndex: 1 },
-  dotCircle: (active, done) => ({
-    width: 28, height: 28, borderRadius: '50%',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: '0.7rem', fontWeight: 700,
-    background: done || active ? '#00d4aa' : 'rgba(255,255,255,0.05)',
-    border: `1px solid ${done || active ? '#00d4aa' : 'rgba(255,255,255,0.12)'}`,
-    color: done || active ? '#0a0f1e' : 'rgba(255,255,255,0.4)',
-    transition: 'all 0.3s',
-  }),
-  dotLabel: (active) => ({ fontSize: '0.6rem', color: active ? '#00d4aa' : 'rgba(255,255,255,0.3)', letterSpacing: '0.05em', whiteSpace: 'nowrap' }),
   card: { background: '#111827', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '2.5rem', marginBottom: '1rem' },
   stepLabel: { fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#00d4aa', marginBottom: '0.5rem' },
   stepTitle: { fontFamily: "'Fraunces', serif", fontSize: '2rem', color: '#fff', marginBottom: '0.5rem', lineHeight: 1.2, letterSpacing: '-0.02em' },
@@ -228,8 +214,6 @@ export default function PlanTrip() {
     }
   };
 
-  const pct = (step / (STEPS.length - 1)) * 100;
-
   return (
     <div style={s.page}>
       <style>{`
@@ -276,11 +260,11 @@ export default function PlanTrip() {
         )}
 
         {/* All other steps — inside the narrow card */}
-        {step !== 1 && (
+        {(step !== 1 || form.destinations.length === 0) && (
         <div style={s.card}>
 
           {/* ── Step 0: Destination Search ─────────────────────────────────── */}
-          {step === 0 && (
+          {(step === 0 || (step === 1 && form.destinations.length === 0)) && (
             <div>
               <div style={s.stepLabel}>Step 1 of 6</div>
               <h2 style={s.stepTitle}>Where to?</h2>
