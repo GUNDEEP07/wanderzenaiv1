@@ -47,7 +47,6 @@ export function getActivitiesForTravelStyle(travelStyles) {
 
 export async function fetchVenuesForActivity(activity, destination, maxResults = 5) {
   if (!destination || !destination.lat || !destination.lng) {
-    console.warn('Destination coordinates required for venue search');
     return [];
   }
 
@@ -65,12 +64,6 @@ export async function fetchVenuesForActivity(activity, destination, maxResults =
 
     const data = await response.json();
 
-    // Debug: log what the backend returned
-    const backendCategories = data.categories?.map(c => c.category) || [];
-    console.log(`[Foursquare] Activity: ${activity}, Backend returned ${backendCategories.length} categories:`, backendCategories);
-    console.log(`[Foursquare] ACTIVITY_CATEGORY_MAP for "${activity}":`, ACTIVITY_CATEGORY_MAP[activity]);
-
-    // Find categories matching the activity
     const activityLower = activity.toLowerCase();
 
     // Try exact match first
@@ -81,19 +74,14 @@ export async function fetchVenuesForActivity(activity, destination, maxResults =
     // If no exact match, try mapped categories
     if (!matchingCategory) {
       const mappedCategories = ACTIVITY_CATEGORY_MAP[activity];
-      console.log(`[Foursquare] No exact match for "${activity}". Trying mapped categories:`, mappedCategories);
-      matchingCategory = data.categories?.find(cat => {
-        const isMatch = mappedCategories?.some(mapped => cat.category.toLowerCase() === mapped.toLowerCase());
-        console.log(`[Foursquare] Testing "${cat.category}" against mapped categories: ${isMatch}`);
-        return isMatch;
-      });
+      matchingCategory = data.categories?.find(cat =>
+        mappedCategories?.some(mapped => cat.category.toLowerCase() === mapped.toLowerCase())
+      );
     }
 
     if (!matchingCategory) {
-      console.warn(`❌ No venues found for activity: ${activity}. Available backend categories:`, backendCategories);
       return [];
     }
-    console.log(`✅ Found matching category for "${activity}":`, matchingCategory.category);
 
     return matchingCategory.venues.map(venue => ({
       id: venue.fsq_id,
