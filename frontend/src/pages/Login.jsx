@@ -13,12 +13,15 @@ const s = {
   divLine: { flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' },
   divText: { fontSize: 11, color: 'rgba(255,255,255,0.3)' },
   input: { width: '100%', padding: '12px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#fff', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 14, outline: 'none', marginBottom: 10, boxSizing: 'border-box' },
-  inputFocus: { borderColor: 'rgba(0,212,170,0.4)' },
   btn: { width: '100%', padding: 13, background: 'linear-gradient(135deg,#00d4aa,#00a87e)', border: 'none', borderRadius: 12, color: '#06090f', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 14, fontWeight: 800, cursor: 'pointer', marginBottom: 16, boxShadow: '0 4px 18px rgba(0,212,170,0.25)', boxSizing: 'border-box' },
-  footer: { textAlign: 'center', fontSize: 13, color: 'rgba(255,255,255,0.35)' },
+  footer: { textAlign: 'center', fontSize: 13, color: 'rgba(255,255,255,0.35)', marginBottom: 14 },
   link: { color: '#00d4aa', textDecoration: 'none', fontWeight: 600 },
   error: { background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.3)', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#ff6b6b', marginBottom: 12 },
+  success: { background: 'rgba(0,212,170,0.08)', border: '1px solid rgba(0,212,170,0.25)', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#00d4aa', marginBottom: 12 },
   demo: { background: 'rgba(0,212,170,0.06)', border: '1px solid rgba(0,212,170,0.15)', borderRadius: 8, padding: '8px 12px', fontSize: 11, color: 'rgba(0,212,170,0.7)', marginBottom: 16, textAlign: 'center' },
+  resetBox: { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '16px', marginTop: 4 },
+  resetTitle: { fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.7)', marginBottom: 10 },
+  resetBtn: { width: '100%', padding: '10px', background: 'rgba(0,212,170,0.1)', border: '1px solid rgba(0,212,170,0.25)', borderRadius: 10, color: '#00d4aa', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 13, fontWeight: 700, cursor: 'pointer', boxSizing: 'border-box' },
 };
 
 const GoogleIcon = () => (
@@ -31,24 +34,43 @@ const GoogleIcon = () => (
 );
 
 export default function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const { signInWithGoogle, signInWithEmail, isDemo } = useAuth();
+  const [email, setEmail]           = useState('');
+  const [password, setPassword]     = useState('');
+  const [error, setError]           = useState('');
+  const [loading, setLoading]       = useState(false);
+  const [showReset, setShowReset]   = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetSent, setResetSent]   = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+  const { signInWithGoogle, signInWithEmail, resetPassword, isDemo } = useAuth();
   const navigate = useNavigate();
 
-  const go = (fn) => async () => {
-    setError('');
-    setLoading(true);
+  const handleGoogle = async () => {
+    setError(''); setLoading(true);
+    try { await signInWithGoogle(); navigate('/dashboard'); }
+    catch { setError('Google sign-in failed. Try again.'); }
+    finally { setLoading(false); }
+  };
+
+  const handleEmail = async (e) => {
+    e.preventDefault();
+    setError(''); setLoading(true);
+    try { await signInWithEmail(email, password); navigate('/dashboard'); }
+    catch (err) {
+      setError(err?.code === 'auth/invalid-credential' ? 'Invalid email or password.' : 'Sign-in failed. Try again.');
+    } finally { setLoading(false); }
+  };
+
+  const handleReset = async (e) => {
+    e.preventDefault();
+    if (!resetEmail.trim()) return;
+    setResetLoading(true);
     try {
-      await fn();
-      navigate('/dashboard');
-    } catch (e) {
-      setError(e.code === 'auth/invalid-credential' ? 'Invalid email or password.' : 'Sign-in failed. Try again.');
-    } finally {
-      setLoading(false);
-    }
+      await resetPassword(resetEmail.trim());
+      setResetSent(true);
+    } catch {
+      setResetSent(true); // Don't reveal if email exists
+    } finally { setResetLoading(false); }
   };
 
   return (
@@ -61,21 +83,20 @@ export default function Login() {
       <div style={s.box}>
         <div style={s.logo}>W</div>
         <div style={s.headline}>Plan your next<br /><em style={{ fontWeight: 300, color: 'rgba(255,255,255,0.45)' }}>slow journey</em></div>
-        <div style={s.sub}>Sign in to access your trips and personalised recommendations</div>
+        <div style={s.sub}>Sign in to access your trips and recommendations</div>
 
         {isDemo && <div style={s.demo}>✦ Demo mode — sign in with any credentials</div>}
         {error && <div style={s.error}>{error}</div>}
 
-        <button style={s.googleBtn} onClick={go(signInWithGoogle)} disabled={loading}>
-          <GoogleIcon />
-          Continue with Google
+        <button style={s.googleBtn} onClick={handleGoogle} disabled={loading}>
+          <GoogleIcon /> Continue with Google
         </button>
 
         <div style={s.divider}>
           <div style={s.divLine} /><span style={s.divText}>or</span><div style={s.divLine} />
         </div>
 
-        <form onSubmit={(e) => { e.preventDefault(); go(() => signInWithEmail(email, password))(); }}>
+        <form onSubmit={handleEmail}>
           <input style={s.input} type="email" placeholder="Email address" value={email} onChange={e => setEmail(e.target.value)} required />
           <input style={s.input} type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required />
           <button style={s.btn} type="submit" disabled={loading}>{loading ? '…' : 'Sign in →'}</button>
@@ -83,7 +104,37 @@ export default function Login() {
 
         <div style={s.footer}>
           <Link to="/signup" style={s.link}>No account? Sign up</Link>
+          {' · '}
+          <span style={{ cursor: 'pointer', color: 'rgba(255,255,255,0.4)', textDecoration: 'underline', textUnderlineOffset: 2 }} onClick={() => { setShowReset(!showReset); setResetSent(false); }}>
+            Forgot password?
+          </span>
         </div>
+
+        {/* Inline password reset */}
+        {showReset && (
+          <div style={s.resetBox}>
+            <div style={s.resetTitle}>Reset your password</div>
+            {resetSent ? (
+              <div style={s.success}>
+                ✓ If an account exists for that email, a reset link has been sent. Check your inbox.
+              </div>
+            ) : (
+              <form onSubmit={handleReset}>
+                <input
+                  style={{ ...s.input, marginBottom: 10 }}
+                  type="email"
+                  placeholder="Enter your email address"
+                  value={resetEmail}
+                  onChange={e => setResetEmail(e.target.value)}
+                  required
+                />
+                <button style={s.resetBtn} type="submit" disabled={resetLoading}>
+                  {resetLoading ? '…' : 'Send reset link →'}
+                </button>
+              </form>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
