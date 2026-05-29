@@ -114,14 +114,19 @@ Travel dates: ${startDate} to ${endDate}.
 
 Return a JSON object with this exact structure:
 {
-  "bestMonths": ["month1", "month2", ...],
+  "bestMonths": ["month1", "month2"],
   "whyThisMonth": "Brief explanation of why these months are best",
   "thingsToDo": [
     {
-      "name": "Activity name",
-      "category": "Category (e.g., Food, Culture, Nature, Adventure)",
-      "reason": "Why this is good for these travel styles",
-      "emoji": "🏛️"
+      "name": "Specific place or activity name",
+      "category": "Category (e.g., Food, Culture, Nature, Adventure, Wellness)",
+      "reason": "One sentence on why this matches the travel style",
+      "emoji": "🏛️",
+      "openingHours": "e.g. Daily 9am–6pm, or Tue–Sun 10am–5pm, or 24 hours",
+      "distanceFromCenter": "e.g. 2km from city centre or In the old town",
+      "bestTime": "e.g. Early morning to avoid crowds, or Sunset for best views",
+      "visitorTip": "One specific insider tip — a detail most tourists miss",
+      "unsplashKeyword": "2-3 word search term for a photo of this place, e.g. english garden munich"
     }
   ],
   "seasonalHighlights": "What makes this season special in this destination",
@@ -130,11 +135,11 @@ Return a JSON object with this exact structure:
   "travelTip": "One specific, actionable tip for this destination and travel style"
 }
 
-Be specific to the destination and travel styles. Keep responses concise.`;
+Return 5–7 thingsToDo. Be specific — use real place names, real opening hours, real distances. Keep all fields concise (1 sentence max each).`;
 
   const response = await client.messages.create({
     model: 'claude-haiku-4-5-20251001',
-    max_tokens: 1024,
+    max_tokens: 2048,
     messages: [
       {
         role: 'user',

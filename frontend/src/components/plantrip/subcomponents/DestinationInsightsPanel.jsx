@@ -152,16 +152,63 @@ export function DestinationInsightsPanel({
                   </div>
 
                   {(isOpen || isAdded) && (
-                    <div className="item-card__detail" style={{ maxHeight: 300 }}>
+                    <div className="item-card__detail" style={{ maxHeight: 480 }}>
                       <div className="item-card__detail-body">
+
+                        {/* Unsplash photo */}
+                        {thing.unsplashKeyword && (
+                          <div style={{
+                            height: 100, borderRadius: 8, marginBottom: 10, overflow: 'hidden',
+                            background: 'rgba(255,255,255,0.04)',
+                            backgroundImage: `url(https://source.unsplash.com/featured/320x100?${encodeURIComponent(thing.unsplashKeyword)})`,
+                            backgroundSize: 'cover', backgroundPosition: 'center',
+                          }} />
+                        )}
+
+                        {/* Why visit */}
                         {thing.reason && (
                           <div className="item-card__desc">{thing.reason}</div>
                         )}
+
+                        {/* Meta details */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, margin: '8px 0 10px' }}>
+                          {thing.openingHours && (
+                            <div style={{ display: 'flex', gap: 6, fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>
+                              <span style={{ color: '#00d4aa', flexShrink: 0 }}>🕐</span>
+                              <span>{thing.openingHours}</span>
+                            </div>
+                          )}
+                          {thing.distanceFromCenter && (
+                            <div style={{ display: 'flex', gap: 6, fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>
+                              <span style={{ color: '#00d4aa', flexShrink: 0 }}>📍</span>
+                              <span>{thing.distanceFromCenter}</span>
+                            </div>
+                          )}
+                          {thing.bestTime && (
+                            <div style={{ display: 'flex', gap: 6, fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>
+                              <span style={{ color: '#ffd93d', flexShrink: 0 }}>✨</span>
+                              <span>{thing.bestTime}</span>
+                            </div>
+                          )}
+                          {thing.visitorTip && (
+                            <div style={{
+                              marginTop: 4, padding: '6px 8px',
+                              background: 'rgba(0,212,170,0.06)', borderRadius: 7,
+                              border: '1px solid rgba(0,212,170,0.15)',
+                              fontSize: 10, color: 'rgba(255,255,255,0.7)', lineHeight: 1.4,
+                            }}>
+                              💡 {thing.visitorTip}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Category + day tags */}
                         {thing.category && (
                           <div className="item-card__tags">
                             <span className="item-tag">{thing.category}</span>
                           </div>
                         )}
+
                         {!isAdded || changingDay.has(thing.name) ? (
                           <div>
                             <div className="day-list-section__label">Which day will you visit?</div>
