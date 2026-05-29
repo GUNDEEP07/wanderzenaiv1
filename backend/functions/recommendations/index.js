@@ -10,6 +10,7 @@ const FOURSQUARE_API_VERSION = '2025-06-17';
 const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
 const GOOGLE_PLACES_BASE = 'https://maps.googleapis.com/maps/api/place';
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
+const anthropic = CLAUDE_API_KEY ? new Anthropic({ apiKey: CLAUDE_API_KEY }) : null;
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim());
 
 const FEATURED_CATEGORIES = [
@@ -265,9 +266,9 @@ async function handleVenues(event) {
       }
     }
 
-    for (const activity of categoriesToFetch) {
+    for (const activityCat of categoriesToFetch) {
       try {
-        const fsqCategoryId = activity.id;
+        const fsqCategoryId = activityCat.id;
 
         const res = await axios.get(
           `${FOURSQUARE_BASE}/places/search`,
@@ -303,7 +304,7 @@ async function handleVenues(event) {
               ? `${place.photos[0].prefix}300x300${place.photos[0].suffix}`
               : null;
 
-            const categoryName = place.categories?.[0]?.name || activity.name;
+            const categoryName = place.categories?.[0]?.name || activityCat.name;
 
             // Extract Instagram URL from social_media field
             let instagramUrl = null;
@@ -365,8 +366,8 @@ async function handleVenues(event) {
           venues.sort((a, b) => (b.score || 0) - (a.score || 0));
 
           // Debug logging for top venues
-          log.info(`${activity.name} venues scored and ranked`, {
-            activity: activity.name,
+          log.info(`${activityCat.name} venues scored and ranked`, {
+            activity: activityCat.name,
             count: venues.length,
             maxReviewCount: maxReviews,
             topVenues: venues.slice(0, 3).map(v => ({
@@ -379,14 +380,14 @@ async function handleVenues(event) {
 
           if (venues.length > 0) {
             categories.push({
-              category: formatCategory(activity.name),
+              category: formatCategory(activityCat.name),
               venues: venues,
             });
           }
         }
       } catch (catErr) {
         log.warn('Category fetch failed', {
-          activity: activity.name,
+          activity: activityCat.name,
           error: catErr.message,
           status: catErr.response?.status,
           data: catErr.response?.data,
@@ -424,9 +425,7 @@ async function handleVenues(event) {
 }
 
 async function generateAIVenues(destination, activity, lat, lng) {
-  if (!CLAUDE_API_KEY) return [];
-
-  const anthropic = new Anthropic({ apiKey: CLAUDE_API_KEY });
+  if (!anthropic) return [];
 
   const prompt = `You are a local travel expert. List 5 real, specific places for "${activity}" in ${destination}.
 
@@ -447,11 +446,21 @@ Rules:
 - If you are not sure of exact hours, give a typical range for that type of place`;
 
   try {
-    const message = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1024,
-      messages: [{ role: 'user', content: prompt }],
-    });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    let message;
+    try {
+      message = await anthropic.messages.create(
+        {
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 1024,
+          messages: [{ role: 'user', content: prompt }],
+        },
+        { signal: controller.signal }
+      );
+    } finally {
+      clearTimeout(timer);
+    }
 
     const text = message.content[0]?.type === 'text' ? message.content[0].text : '';
     const jsonMatch = text.match(/\[[\s\S]*\]/);
@@ -461,7 +470,7 @@ Rules:
     if (!Array.isArray(places)) return [];
 
     return places.slice(0, 5).map((place, i) => ({
-      fsq_id: `ai-${activity}-${i}`,
+      fsq_id: `ai-${(destination || '').replace(/\s+/g, '-').toLowerCase()}-${activity}-${i}`,
       name: place.name || 'Unknown',
       category: place.category || activity,
       rating: null,
