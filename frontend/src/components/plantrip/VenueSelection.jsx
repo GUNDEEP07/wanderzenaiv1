@@ -136,19 +136,21 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
             )}
           </div>
 
-          {destination && startDate && endDate && (
-            <DestinationInsightsPanel
-              destination={destination}
-              travelStyles={travelStyles}
-              startDate={startDate}
-              endDate={endDate}
-              selectedActivities={currentActivities}
-              onActivityToggle={handleActivityToggle}
-              onInsightsLoaded={setAiSuggestions}
-              onDayAssign={handleDayAssign}
-              days={days}
-            />
-          )}
+          <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', scrollbarWidth: 'none', padding: '0 14px 16px 24px', position: 'relative', zIndex: 1 }}>
+            {destination && startDate && endDate && (
+              <DestinationInsightsPanel
+                destination={destination}
+                travelStyles={travelStyles}
+                startDate={startDate}
+                endDate={endDate}
+                selectedActivities={currentActivities}
+                onActivityToggle={handleActivityToggle}
+                onInsightsLoaded={setAiSuggestions}
+                onDayAssign={handleDayAssign}
+                days={days}
+              />
+            )}
+          </div>
 
           {destinations?.length > 1 && (
             <div className="venue-dest-tabs">

@@ -2,6 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { fetchDestinationInsights } from '../../../api/destinationInsights';
 import { DayList } from './DayList';
 
+const CATEGORY_COLOURS = {
+  'Food':      'rgba(251,146,60,0.5)',
+  'Culture':   'rgba(167,139,250,0.5)',
+  'Nature':    'rgba(52,211,153,0.5)',
+  'Adventure': 'rgba(34,197,94,0.5)',
+  'Wellness':  'rgba(251,113,133,0.5)',
+  'Nightlife': 'rgba(129,90,213,0.5)',
+  'Hiking':    'rgba(34,197,94,0.5)',
+  'Views':     'rgba(96,165,250,0.5)',
+};
+
 export function DestinationInsightsPanel({
   destination,
   travelStyles,
@@ -98,7 +109,7 @@ export function DestinationInsightsPanel({
   return (
     <div>
       {/* Compact insight badges */}
-      <div className="insights-strip" style={{ marginBottom: 12 }}>
+      <div className="insights-strip" style={{ marginBottom: 14 }}>
         <div className="insights-strip__header">✨ {destName} · {startDate} – {endDate}</div>
         <div className="insights-strip__badges">
           {weatherShort && <span className="insights-badge insights-badge--weather">☀️ {weatherShort}</span>}
@@ -128,6 +139,7 @@ export function DestinationInsightsPanel({
 
               return (
                 <div key={thing.name} className={cardClass}>
+                  {/* Header — always visible */}
                   <div className="item-card__header">
                     <div className="item-card__icon">{thing.emoji}</div>
                     <div className="item-card__text">
@@ -151,27 +163,26 @@ export function DestinationInsightsPanel({
                     </div>
                   </div>
 
+                  {/* Expanded detail — shown when open or added */}
                   {(isOpen || isAdded) && (
-                    <div className="item-card__detail" style={{ maxHeight: 480 }}>
-                      <div className="item-card__detail-body">
+                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '10px 12px 12px 12px' }}>
 
-                        {/* Unsplash photo */}
-                        {thing.unsplashKeyword && (
-                          <div style={{
-                            height: 100, borderRadius: 8, marginBottom: 10, overflow: 'hidden',
-                            background: 'rgba(255,255,255,0.04)',
-                            backgroundImage: `url(https://source.unsplash.com/featured/320x100?${encodeURIComponent(thing.unsplashKeyword)})`,
-                            backgroundSize: 'cover', backgroundPosition: 'center',
-                          }} />
-                        )}
+                      {/* Category colour bar */}
+                      <div style={{
+                        height: 3, borderRadius: 2, marginBottom: 10,
+                        background: CATEGORY_COLOURS[thing.category] || 'rgba(0,212,170,0.4)',
+                      }} />
 
-                        {/* Why visit */}
-                        {thing.reason && (
-                          <div className="item-card__desc">{thing.reason}</div>
-                        )}
+                      {/* Why visit */}
+                      {thing.reason && (
+                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', lineHeight: 1.55, marginBottom: 10 }}>
+                          {thing.reason}
+                        </div>
+                      )}
 
-                        {/* Meta details */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, margin: '8px 0 10px' }}>
+                      {/* Meta details */}
+                      {(thing.openingHours || thing.distanceFromCenter || thing.bestTime) && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 10 }}>
                           {thing.openingHours && (
                             <div style={{ display: 'flex', gap: 6, fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>
                               <span style={{ color: '#00d4aa', flexShrink: 0 }}>🕐</span>
@@ -190,46 +201,49 @@ export function DestinationInsightsPanel({
                               <span>{thing.bestTime}</span>
                             </div>
                           )}
-                          {thing.visitorTip && (
-                            <div style={{
-                              marginTop: 4, padding: '6px 8px',
-                              background: 'rgba(0,212,170,0.06)', borderRadius: 7,
-                              border: '1px solid rgba(0,212,170,0.15)',
-                              fontSize: 10, color: 'rgba(255,255,255,0.7)', lineHeight: 1.4,
-                            }}>
-                              💡 {thing.visitorTip}
-                            </div>
-                          )}
                         </div>
+                      )}
 
-                        {/* Category + day tags */}
-                        {thing.category && (
-                          <div className="item-card__tags">
-                            <span className="item-tag">{thing.category}</span>
-                          </div>
-                        )}
+                      {/* Insider tip */}
+                      {thing.visitorTip && (
+                        <div style={{
+                          marginBottom: 10, padding: '6px 8px',
+                          background: 'rgba(0,212,170,0.06)', borderRadius: 7,
+                          border: '1px solid rgba(0,212,170,0.15)',
+                          fontSize: 10, color: 'rgba(255,255,255,0.7)', lineHeight: 1.4,
+                        }}>
+                          💡 {thing.visitorTip}
+                        </div>
+                      )}
 
-                        {!isAdded || changingDay.has(thing.name) ? (
-                          <div>
-                            <div className="day-list-section__label">Which day will you visit?</div>
-                            <DayList
-                              days={days}
-                              startDate={startDate}
-                              selectedDay={assignedDay || null}
-                              onSelect={(day) => handleDaySelect(thing.name, day)}
-                            />
+                      {/* Category tag */}
+                      {thing.category && (
+                        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 10 }}>
+                          <span className="item-tag">{thing.category}</span>
+                        </div>
+                      )}
+
+                      {/* Day picker or confirmation */}
+                      {!isAdded || changingDay.has(thing.name) ? (
+                        <div>
+                          <div className="day-list-section__label">Which day will you visit?</div>
+                          <DayList
+                            days={days}
+                            startDate={startDate}
+                            selectedDay={assignedDay || null}
+                            onSelect={(day) => handleDaySelect(thing.name, day)}
+                          />
+                        </div>
+                      ) : (
+                        <div className="day-added-confirm">
+                          <div className="day-added-confirm__text">
+                            ✓ Added to <span className="item-day-badge" style={{ marginLeft: 4 }}>{assignedDay}</span>
                           </div>
-                        ) : (
-                          <div className="day-added-confirm">
-                            <div className="day-added-confirm__text">
-                              ✓ Added to <span className="item-day-badge" style={{ marginLeft: 4 }}>{assignedDay}</span>
-                            </div>
-                            <button className="day-added-confirm__change" onClick={(e) => handleChangeDay(e, thing.name)}>
-                              Change day
-                            </button>
-                          </div>
-                        )}
-                      </div>
+                          <button className="day-added-confirm__change" onClick={(e) => handleChangeDay(e, thing.name)}>
+                            Change day
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
