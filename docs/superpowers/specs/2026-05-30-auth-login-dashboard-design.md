@@ -1,4 +1,4 @@
-# Auth, Login & Dashboard — Design Spec
+# Auth, Login, Dashboard & Personalised Recommendations — Design Spec
 
 **Date:** 2026-05-30  
 **Status:** Approved
@@ -7,7 +7,7 @@
 
 ## Overview
 
-Add a complete authentication layer to WanderZenAI: Google OAuth + email/password sign-in via Firebase Auth, a 2-screen onboarding flow for new users, and a Dashboard showing past trips. `/plan` becomes a protected route — unauthenticated users are redirected to `/login`.
+Add a complete authentication layer to WanderZenAI: Google OAuth + email/password sign-in via Firebase Auth, a 2-screen onboarding flow for new users, a Dashboard showing past trips with AI-powered destination recommendations, and personalisation woven into Steps 1 and 2 of the PlanTrip form. `/plan` becomes a protected route — unauthenticated users are redirected to `/login`.
 
 ---
 
@@ -172,6 +172,88 @@ When `/plan` loads, if `currentUser` exists:
 | `backend/functions/profile/package.json` | Lambda deps (pg via shared layer) |
 | `infra/template.yaml` | Add ProfileFunction + `/profile` GET/PUT routes |
 | `infra/schema.sql` | Add new user columns |
+
+---
+
+## Personalised Recommendations
+
+Recommendations are woven into three touchpoints. All use the same input data: the user's `profile` (age, gender, home_city, language) + their `past_trips` (destinations, activities selected, travel styles used).
+
+---
+
+### 1. Dashboard — "Recommended for you"
+
+Below the past trips section, a **"Recommended for you"** row shows 3 destination cards.
+
+**How it works:**
+- On Dashboard load, frontend calls `GET /recommendations/personalised?email={email}`
+- New Lambda endpoint (or extend existing `recommendations` Lambda) fetches user's past destinations from `submissions` table + profile from `users`
+- Calls Claude Haiku with:  
+  *"User has visited: {past destinations}. Profile: age {age}, gender {gender}, based in {home_city}. Suggest 3 new slow-travel destinations they haven't visited, with a one-line reason why each suits them. Return JSON: [{ destination, country, reason, emoji }]"*
+- Results cached per user for 7 days in a new `recommendation_cache` table (keyed by `email`)
+- Each card shows: destination name, country, emoji, reason, "Plan this →" button
+
+**Re-planning:** "Re-plan" on past trip cards → opens `/plan` with `destination` pre-filled via router state.
+
+---
+
+### 2. Step 1 (Destination search) — Personalised suggestions
+
+When an authenticated user opens `/plan`, below the search input show a **"Based on your travels"** chip row with 3 suggested destinations (same data as Dashboard recommendations — reuse the cached result, no extra API call).
+
+Tapping a chip fills the destination input and triggers search. If the user has no past trips, this section is hidden.
+
+---
+
+### 3. Step 2 (Activity grid) — Pre-selected categories
+
+When an authenticated user reaches the VenueSelection step, the activity grid highlights categories the user has historically selected across past trips.
+
+**How it works:**
+- `GET /profile` response includes a new field `preferred_activities: string[]` — the top 3 most-selected activity categories across all the user's past `submissions`
+- `preferred_activities` is computed on the backend by parsing `selected_activities` from the `submissions` JSONB column
+- VenueSelection receives `preferredActivities` prop from PlanTrip
+- These are passed to `ActivityGrid` as `initialSelected` — pre-checked on mount (user can deselect)
+
+---
+
+### New DB — recommendation_cache table
+
+```sql
+CREATE TABLE IF NOT EXISTS recommendation_cache (
+  email           VARCHAR(255) PRIMARY KEY,
+  recommendations JSONB NOT NULL,
+  created_at      TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+Cache TTL: 7 days. On cache miss → call Claude. On hit → return immediately.
+
+---
+
+### New Backend endpoint
+
+`GET /recommendations/personalised?email={email}`
+
+1. Check `recommendation_cache` for recent entry (< 7 days)
+2. If miss: fetch past destinations from `submissions` (last 10, distinct), fetch profile from `users`
+3. Call Claude Haiku with the prompt above
+4. Store in `recommendation_cache`, return result
+
+Returns: `{ recommendations: [{ destination, country, reason, emoji }], preferred_activities: string[] }`
+
+---
+
+### Updated Files for Recommendations
+
+| File | Addition |
+|---|---|
+| `backend/functions/recommendations/index.js` | Add `handlePersonalised` route for `GET /recommendations/personalised` |
+| `frontend/src/pages/Dashboard.jsx` | "Recommended for you" row |
+| `frontend/src/pages/PlanTrip.jsx` | Fetch personalised recs on mount, pass to VenueSelection + show destination chips |
+| `frontend/src/components/plantrip/subcomponents/ActivityGrid.jsx` | Accept `initialSelected` prop |
+| `infra/schema.sql` | Add `recommendation_cache` table |
+| `infra/template.yaml` | Add `/recommendations/personalised` GET route |
 
 ---
 
