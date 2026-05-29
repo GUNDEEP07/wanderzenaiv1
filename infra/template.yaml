@@ -308,6 +308,41 @@ Resources:
             Path: /destination-insights
             Method: GET
 
+  ProfileFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub wanderzenai-profile-${Stage}
+      CodeUri: ../backend/functions/profile
+      Handler: handler.handler
+      Timeout: 15
+      MemorySize: 256
+      Description: GET and PUT user profile + past trips
+      Layers:
+        - !Ref SharedLayer
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Sub wanderzenai-pdfs-${Stage}-${AWS::AccountId}
+      Environment:
+        Variables:
+          DB_HOST:     !Ref DBHost
+          DB_NAME:     !Ref DBName
+          DB_USER:     !Ref DBUser
+          DB_PASSWORD: !Ref DBPassword
+          PDF_BUCKET:  !Sub wanderzenai-pdfs-${Stage}-${AWS::AccountId}
+      Events:
+        GetProfile:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /profile
+            Method: GET
+        PutProfile:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /profile
+            Method: PUT
+
   # ─── S3 Bucket for PDFs ────────────────────────────────────────────────────
   PDFBucket:
     Type: AWS::S3::Bucket
