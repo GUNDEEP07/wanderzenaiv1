@@ -128,6 +128,8 @@ export default function Dashboard() {
   const [recs, setRecs]             = useState([]);
   const [prefActivities, setPrefActivities] = useState([]);
   const [loading, setLoading]       = useState(true);
+  const [search, setSearch]         = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -455,10 +457,44 @@ export default function Dashboard() {
         <div>
           <div style={s.secHeader}>
             <div style={s.secTitle}>Your journeys</div>
-            {pastTrips.length > 4 && (
-              <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>{pastTrips.length} total</span>
-            )}
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>{pastTrips.length} total</span>
           </div>
+
+          {/* Search + filter bar — only show when there are trips */}
+          {!loading && pastTrips.length > 0 && (
+            <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, minWidth: 180, display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '8px 12px' }}>
+                <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', flexShrink: 0 }}>🔍</span>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search destinations…"
+                  style={{ flex: 1, background: 'none', border: 'none', outline: 'none', color: '#fff', fontFamily: 'inherit', fontSize: 13 }}
+                />
+                {search && (
+                  <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontSize: 14, padding: 0 }}>✕</button>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {[['all', 'All'], ['email_sent', 'Completed'], ['pending', 'Processing']].map(([val, label]) => (
+                  <button
+                    key={val}
+                    onClick={() => setFilterStatus(val)}
+                    style={{
+                      padding: '7px 14px', borderRadius: 9, border: `1px solid ${filterStatus === val ? 'rgba(0,212,170,0.35)' : 'rgba(255,255,255,0.09)'}`,
+                      background: filterStatus === val ? 'rgba(0,212,170,0.1)' : 'rgba(255,255,255,0.03)',
+                      color: filterStatus === val ? '#00d4aa' : 'rgba(255,255,255,0.5)',
+                      fontSize: 12, fontWeight: filterStatus === val ? 700 : 500,
+                      cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {loading ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -482,9 +518,24 @@ export default function Dashboard() {
                 Plan your first trip →
               </button>
             </div>
-          ) : (
+          ) : (() => {
+            const filtered = pastTrips.filter(trip => {
+              const matchSearch = !search || trip.destination?.toLowerCase().includes(search.toLowerCase());
+              const matchStatus = filterStatus === 'all' || (filterStatus === 'email_sent' ? trip.status === 'email_sent' : trip.status !== 'email_sent');
+              return matchSearch && matchStatus;
+            });
+            if (filtered.length === 0) return (
+              <div style={{ textAlign: 'center', padding: '40px 0', color: 'rgba(255,255,255,0.3)' }}>
+                <div style={{ fontSize: 24, marginBottom: 8 }}>🔍</div>
+                <div style={{ fontSize: 14 }}>No trips match your search</div>
+                <button onClick={() => { setSearch(''); setFilterStatus('all'); }} style={{ marginTop: 12, background: 'none', border: 'none', color: '#00d4aa', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, textDecoration: 'underline' }}>
+                  Clear filters
+                </button>
+              </div>
+            );
+            return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {pastTrips.map(trip => (
+              {filtered.map(trip => (
                 <div
                   key={trip.id}
                   style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, overflow: 'hidden', display: 'flex', alignItems: 'center', transition: 'all 0.2s', cursor: 'pointer' }}
@@ -563,7 +614,8 @@ export default function Dashboard() {
                 </div>
               ))}
             </div>
-          )}
+            );
+          })()}
         </div>
 
       </div>

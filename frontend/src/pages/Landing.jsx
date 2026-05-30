@@ -360,6 +360,46 @@ export default function Landing() {
       </section>
 
       {/* ── Pricing ── */}
+      {/* ── Testimonials ── */}
+      <section style={{ background: '#0a0f1e', padding: '0 0 5rem' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 2rem' }}>
+          <div className="reveal" ref={addRef} style={{ textAlign: 'center', marginBottom: '3rem' }}>
+            <div className="section-tag">What slow travelers say</div>
+            <h2 className="section-title" style={{ fontSize: 'clamp(1.5rem,3vw,2.2rem)' }}>Built for people who travel differently</h2>
+          </div>
+          <div className="reveal" ref={addRef} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20 }}>
+            {[
+              { quote: "Finally a travel app that doesn't just list the Eiffel Tower. My Kyoto itinerary had me at a 6am temple before any tourists arrived — that's the kind of thing I can never find on my own.", name: 'Prabhsimran K.', location: 'Sydney, Australia', dest: '🇯🇵 Kyoto' },
+              { quote: "I've used every travel planner out there. This is the first one that actually understood I don't want tourist traps — the Kerala backwaters route it gave me was completely off the usual trail.", name: 'Meena C.', location: 'Melbourne, Australia', dest: '🇮🇳 Kerala' },
+              { quote: "Planned a solo trip to Shimla in under 3 minutes. The hidden gem section alone was worth it — a sunrise trek I'd never heard of that locals use. No crowds, no queues.", name: 'Jaideep S.', location: 'Chandigarh, India', dest: '🇮🇳 Shimla' },
+            ].map((t, i) => (
+              <div key={i} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 18, padding: '26px 28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+                {/* Stars */}
+                <div style={{ display: 'flex', gap: 3 }}>
+                  {[...Array(5)].map((_, j) => (
+                    <span key={j} style={{ color: '#ffd93d', fontSize: 14 }}>★</span>
+                  ))}
+                </div>
+                {/* Quote */}
+                <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.75)', lineHeight: 1.7, margin: 0, flex: 1 }}>
+                  "{t.quote}"
+                </p>
+                {/* Attribution */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 2 }}>{t.name}</div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>{t.location}</div>
+                  </div>
+                  <div style={{ padding: '5px 12px', background: 'rgba(0,212,170,0.08)', border: '1px solid rgba(0,212,170,0.15)', borderRadius: 20, fontSize: 12, fontWeight: 600, color: '#00d4aa' }}>
+                    {t.dest}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="section" style={{ background: '#0a0f1e' }}>
         <div className="section-inner">
           <div className="reveal" ref={addRef}>
