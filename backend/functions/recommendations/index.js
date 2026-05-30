@@ -669,17 +669,28 @@ async function handleChat(event) {
     } catch { /* use default context */ }
   }
 
-  const systemPrompt = `You are a concise, conversational slow travel advisor for WanderZenAI.
+  const systemPrompt = `You are a concise trip planning assistant for WanderZenAI — a slow travel app.
 
 User context: ${userContext}
 
-Rules — follow strictly:
-1. ALWAYS ask 1 clarifying question before giving suggestions, UNLESS the user's request is already very specific (e.g. they named a city AND duration AND travel style).
-2. Keep every reply under 60 words. No exceptions.
-3. Never give a list of more than 3 items.
-4. Ask one question at a time — never stack multiple questions.
-5. Be direct and warm. No lengthy intros or sign-offs.
-6. If you already have enough info, give ONE specific recommendation with a one-line reason, then ask "Want more options or shall I build an itinerary?"`;
+Your job: collect the details needed to plan a trip, then confirm and trigger planning.
+
+Required details to collect (one question at a time):
+1. Destination (if not given)
+2. Duration — how many days?
+3. Travel dates — when roughly?
+4. Who they're travelling with — Solo / Couple / Family / Group?
+5. Travel vibe — pick from: Nature, Cultural, Foodie, Adventure, Relaxation, Wellness
+6. Budget range — Budget / Mid-range / Luxury?
+
+Rules:
+- Ask ONE question per reply. Never stack questions.
+- Keep replies under 50 words.
+- Be warm and conversational, not robotic.
+- Once you have ALL 6 details confirmed, respond with ONLY this JSON (no other text):
+  READY:{"destination":"...","days":N,"travelDate":"YYYY-MM-DD or null","travelerType":"Solo|Couple|Family|Group of friends","travelStyle":["..."],"budget":"Budget|Mid-range|Luxury","currency":"USD"}
+- Set travelDate to null if user gave a vague answer like "next month" or "sometime in July".
+- If user just wants recommendations (not planning), give ONE suggestion with a one-line reason, then ask "Want me to plan this trip for you?"`;
 
 
   // Build conversation history for Claude
@@ -700,8 +711,22 @@ Rules — follow strictly:
     } finally {
       clearTimeout(timer);
     }
-    const reply = response.content[0]?.text || 'Sorry, I couldn\'t generate a response. Try again.';
-    return ok({ reply }, event);
+    const raw = response.content[0]?.text || '';
+
+    // Detect READY: signal — Claude has collected all trip details
+    const readyMatch = raw.match(/^READY:(\{[\s\S]*\})\s*$/m);
+    if (readyMatch) {
+      try {
+        const tripData = JSON.parse(readyMatch[1]);
+        return ok({
+          reply: `✦ I have everything I need! Here's your trip summary:\n\n📍 ${tripData.destination} · ${tripData.days} days · ${tripData.travelerType} · ${(tripData.travelStyle || []).join(', ')} · ${tripData.budget}\n\nReady to build your full itinerary?`,
+          readyToPlan: true,
+          tripData,
+        }, event);
+      } catch { /* fall through to normal reply */ }
+    }
+
+    return ok({ reply: raw || 'Sorry, I couldn\'t generate a response. Try again.' }, event);
   } catch (err) {
     log.error('Chat failed', { error: err.message });
     return ok({ reply: 'I\'m having trouble connecting right now. Please try again in a moment.' }, event);

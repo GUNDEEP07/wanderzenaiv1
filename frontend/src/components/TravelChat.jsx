@@ -1,24 +1,27 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
 const SUGGESTIONS = [
+  'Help me plan my next trip',
   'What\'s the best time to visit Vietnam?',
-  'Plan a 5-day Bali itinerary for solo travel',
   'Hidden gems near Kyoto off the tourist trail',
   'Budget tips for slow travel in Southeast Asia',
   'Best street food cities in Asia',
 ];
 
 export function TravelChat() {
-  const [open, setOpen]       = useState(false);
-  const [input, setInput]     = useState('');
-  const [history, setHistory] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const { getIdToken }        = useAuth();
-  const bottomRef             = useRef(null);
-  const inputRef              = useRef(null);
+  const [open, setOpen]         = useState(false);
+  const [input, setInput]       = useState('');
+  const [history, setHistory]   = useState([]);
+  const [loading, setLoading]   = useState(false);
+  const [pendingTrip, setPendingTrip] = useState(null);
+  const { getIdToken }          = useAuth();
+  const navigate                = useNavigate();
+  const bottomRef               = useRef(null);
+  const inputRef                = useRef(null);
 
   useEffect(() => {
     if (open) {
@@ -46,6 +49,9 @@ export function TravelChat() {
       });
       const data = await res.json();
       setHistory(h => [...h, { role: 'assistant', content: data.reply || 'Sorry, something went wrong.' }]);
+      if (data.readyToPlan && data.tripData) {
+        setPendingTrip(data.tripData);
+      }
     } catch {
       setHistory(h => [...h, { role: 'assistant', content: 'I\'m having trouble connecting right now. Try again in a moment.' }]);
     } finally {
@@ -100,7 +106,7 @@ export function TravelChat() {
             </div>
           </div>
           <button
-            onClick={() => setHistory([])}
+            onClick={() => { setHistory([]); setPendingTrip(null); }}
             style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'rgba(255,255,255,0.25)', cursor: 'pointer', fontSize: 11, fontFamily: 'inherit' }}
             title="Clear chat"
           >
@@ -170,6 +176,45 @@ export function TravelChat() {
 
           <div ref={bottomRef} />
         </div>
+
+        {/* Plan this trip CTA */}
+        {pendingTrip && (
+          <div style={{ padding: '10px 14px 0', flexShrink: 0 }}>
+            <button
+              onClick={() => {
+                const dest = pendingTrip.destination?.split(',')[0]?.trim();
+                navigate('/plan', {
+                  state: {
+                    prefill: {
+                      destinations: dest ? [{ name: dest, lat: 0, lng: 0 }] : [],
+                      days: pendingTrip.days || 5,
+                      travelDate: pendingTrip.travelDate || '',
+                      travelerType: pendingTrip.travelerType || '',
+                      travelStyle: pendingTrip.travelStyle || [],
+                      budget: pendingTrip.budget === 'Budget' ? '1500' : pendingTrip.budget === 'Mid-range' ? '3000' : '6000',
+                      currency: pendingTrip.currency || 'USD',
+                    },
+                  },
+                });
+                setOpen(false);
+              }}
+              style={{
+                width: '100%', padding: '13px', borderRadius: 12, border: 'none',
+                background: 'linear-gradient(135deg,#00d4aa,#00a87e)', cursor: 'pointer',
+                color: '#06090f', fontFamily: 'inherit', fontSize: 14, fontWeight: 800,
+                boxShadow: '0 4px 18px rgba(0,212,170,0.35)', marginBottom: 8,
+              }}
+            >
+              ✦ Yes, plan this trip for me →
+            </button>
+            <button
+              onClick={() => setPendingTrip(null)}
+              style={{ width: '100%', background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', fontFamily: 'inherit', fontSize: 12, cursor: 'pointer', paddingBottom: 4 }}
+            >
+              No, let's keep chatting
+            </button>
+          </div>
+        )}
 
         {/* Input */}
         <div style={{ padding: '12px 14px', borderTop: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
