@@ -134,6 +134,13 @@ export default function Dashboard() {
   const [filterStatus, setFilterStatus] = useState('all');
   const navigate = useNavigate();
 
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+
   useEffect(() => {
     if (!currentUser) return;
     (async () => {
@@ -230,7 +237,7 @@ export default function Dashboard() {
       `}</style>
 
       {/* NAV */}
-      <nav style={s.nav}>
+      <nav style={{ ...s.nav, padding: isMobile ? '12px 16px' : '14px 36px' }}>
         <div style={s.logo}>
           <div style={s.logoMark}>W</div>
           <span style={s.logoText}>WanderZenAI</span>
@@ -244,7 +251,7 @@ export default function Dashboard() {
       </nav>
 
       {/* HERO */}
-      <div style={s.hero}>
+      <div style={{ padding: isMobile ? '28px 16px 32px' : '52px 36px 44px', position: 'relative', overflow: 'hidden' }}>
         {/* Ambient glows */}
         <div style={{ position: 'absolute', top: -100, left: -100, width: 600, height: 500, background: 'radial-gradient(ellipse,rgba(0,212,170,0.07) 0%,transparent 65%)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', top: 0, right: 0, width: 400, height: 400, background: 'radial-gradient(ellipse,rgba(96,165,250,0.04) 0%,transparent 65%)', pointerEvents: 'none' }} />
@@ -253,7 +260,7 @@ export default function Dashboard() {
           <span style={{ display: 'inline-block', width: 20, height: 1.5, background: '#00d4aa', borderRadius: 2 }} />
           {greeting}
         </div>
-        <div style={s.heroTitle}>
+        <div style={{ ...s.heroTitle, fontSize: isMobile ? 28 : 48 }}>
           {loading ? 'Loading…' : `${firstName},`}<br />
           <em style={{ fontStyle: 'italic', fontWeight: 300, color: 'transparent', background: 'linear-gradient(135deg,rgba(255,255,255,0.55),rgba(255,255,255,0.2))', WebkitBackgroundClip: 'text', backgroundClip: 'text' }}>
             where next?
@@ -276,20 +283,20 @@ export default function Dashboard() {
             ))}
           </div>
         ) : (
-          <div style={s.statsStrip}>
-            <div style={{ ...s.stat }}>
+          <div style={{ ...s.statsStrip, maxWidth: isMobile ? '100%' : 600, flexDirection: isMobile ? 'column' : 'row' }}>
+            <div style={{ ...s.stat, borderRight: isMobile ? 'none' : '1px solid rgba(255,255,255,0.06)', borderBottom: isMobile ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
               <div style={{ ...s.statNum, color: '#00d4aa' }}>{totalTrips}</div>
               <div style={s.statLabel}>Itineraries</div>
             </div>
-            <div style={{ ...s.stat }}>
+            <div style={{ ...s.stat, borderRight: isMobile ? 'none' : '1px solid rgba(255,255,255,0.06)', borderBottom: isMobile ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
               <div style={s.statNum}>{countryCount}</div>
               <div style={s.statLabel}>Countries</div>
             </div>
-            <div style={{ ...s.stat }}>
+            <div style={{ ...s.stat, borderRight: isMobile ? 'none' : '1px solid rgba(255,255,255,0.06)', borderBottom: isMobile ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
               <div style={s.statNum}>{totalDays}</div>
               <div style={s.statLabel}>Days planned</div>
             </div>
-            <div style={{ ...s.stat, borderRight: 'none' }}>
+            <div style={{ ...s.stat, borderRight: 'none', borderBottom: 'none' }}>
               <div style={{ ...s.statNum, fontSize: sinceLastTrip ? 18 : 28 }}>{sinceLastTrip || '–'}</div>
               <div style={s.statLabel}>Since last trip</div>
             </div>
@@ -297,7 +304,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      <div style={s.main}>
+      <div style={{ ...s.main, padding: isMobile ? '0 16px 60px' : '0 36px 60px' }}>
 
         {/* ── READY FOR NEXT ADVENTURE ── */}
         {!loading && (
@@ -305,7 +312,7 @@ export default function Dashboard() {
             <div style={s.secHeader}>
               <div style={s.secTitle}>Ready for your next adventure?</div>
             </div>
-            <div style={{ background: 'linear-gradient(135deg,rgba(0,212,170,0.08),rgba(96,165,250,0.05))', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 20, padding: '28px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24, position: 'relative', overflow: 'hidden' }}>
+            <div style={{ background: 'linear-gradient(135deg,rgba(0,212,170,0.08),rgba(96,165,250,0.05))', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 20, padding: '28px 32px', display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', gap: 24, position: 'relative', overflow: 'hidden', flexDirection: isMobile ? 'column' : 'row' }}>
               <div style={{ position: 'absolute', right: 32, top: '50%', transform: 'translateY(-50%)', fontSize: 80, color: 'rgba(0,212,170,0.04)', pointerEvents: 'none' }}>✦</div>
               <div style={{ position: 'relative', zIndex: 1 }}>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(0,212,170,0.1)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 100, padding: '4px 12px', fontSize: 10, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#00d4aa', marginBottom: 12 }}>
@@ -326,7 +333,7 @@ export default function Dashboard() {
               </div>
               <button
                 onClick={() => navigate('/plan')}
-                style={{ padding: '14px 28px', background: 'linear-gradient(135deg,#00d4aa,#00a87e)', border: 'none', borderRadius: 12, color: '#06090f', fontFamily: 'inherit', fontSize: 14, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 4px 20px rgba(0,212,170,0.3)', flexShrink: 0, position: 'relative', zIndex: 1 }}
+                style={{ padding: '14px 28px', background: 'linear-gradient(135deg,#00d4aa,#00a87e)', border: 'none', borderRadius: 12, color: '#06090f', fontFamily: 'inherit', fontSize: 14, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 4px 20px rgba(0,212,170,0.3)', flexShrink: 0, position: 'relative', zIndex: 1, width: isMobile ? '100%' : 'auto', textAlign: 'center' }}
               >
                 Plan my next trip →
               </button>
@@ -341,7 +348,7 @@ export default function Dashboard() {
               <div style={s.secTitle}>Picked for you</div>
               <button style={s.secLink} onClick={() => navigate('/explore')}>Explore all →</button>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: 14 }}>
               {recs.map((rec, i) => (
                 <div
                   key={i}
@@ -386,7 +393,7 @@ export default function Dashboard() {
                 Trending among travelers from {trendingCountry || 'your country'}
               </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
               {trending.map((item, i) => (
                 <div
                   key={i}
@@ -424,7 +431,7 @@ export default function Dashboard() {
               <div style={s.secTitle}>Your travel DNA</div>
               <button style={s.secLink} onClick={() => navigate('/onboarding')}>Edit preferences →</button>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: 14 }}>
 
               {/* Top activities */}
               <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '20px 22px' }}>
@@ -510,7 +517,7 @@ export default function Dashboard() {
           {/* Search + filter bar — only show when there are trips */}
           {!loading && pastTrips.length > 0 && (
             <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-              <div style={{ flex: 1, minWidth: 180, display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '8px 12px' }}>
+              <div style={{ flex: 1, minWidth: isMobile ? 0 : 180, display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '8px 12px' }}>
                 <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', flexShrink: 0 }}>🔍</span>
                 <input
                   type="text"
@@ -589,8 +596,8 @@ export default function Dashboard() {
                   onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
                   onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; }}
                 >
-                  <div style={{ width: 5, height: 72, background: tripAccentColor(trip.destination), flexShrink: 0 }} />
-                  <div style={{ width: 72, height: 72, flexShrink: 0, overflow: 'hidden', position: 'relative' }}>
+                  <div style={{ width: 5, height: isMobile ? 52 : 72, background: tripAccentColor(trip.destination), flexShrink: 0 }} />
+                  <div style={{ width: isMobile ? 52 : 72, height: isMobile ? 52 : 72, flexShrink: 0, overflow: 'hidden', position: 'relative' }}>
                     <img
                       src={getDestinationPhotoUrl(trip.destination)}
                       alt={trip.destination}
@@ -617,7 +624,7 @@ export default function Dashboard() {
                       {trip.status === 'email_sent' ? 'Completed' : 'Processing'}
                     </span>
                   </div>
-                  <div style={{ display: 'flex', gap: 8, padding: '0 20px', alignItems: 'center', flexShrink: 0 }}>
+                  <div style={{ display: 'flex', gap: 6, padding: isMobile ? '0 8px' : '0 20px', alignItems: 'center', flexShrink: 0, flexWrap: 'wrap' }}>
                     {trip.hasItinerary && (
                       <>
                         <button
