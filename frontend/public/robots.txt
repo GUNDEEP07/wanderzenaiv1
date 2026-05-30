@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /plan
+Disallow: /onboarding
+Disallow: /settings
+Disallow: /confirmation
+
+Sitemap: https://www.wanderzenai.com/sitemap.xml
