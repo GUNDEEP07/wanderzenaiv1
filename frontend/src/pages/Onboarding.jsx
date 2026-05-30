@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -37,6 +37,8 @@ export default function Onboarding() {
   const [saving, setSaving]       = useState(false);
   const { currentUser, getIdToken } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const refCode = searchParams.get('ref') || null;
 
   const saveProfile = async (complete) => {
     setSaving(true);
@@ -54,6 +56,7 @@ export default function Onboarding() {
           language,
           firebase_uid:       currentUser?.uid || null,
           onboarding_complete: complete,
+          referred_by:        refCode,
         }),
       });
     } catch { /* graceful — demo mode or network */ }

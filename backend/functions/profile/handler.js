@@ -2,6 +2,9 @@
 const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const { log, getDB } = require('/opt/nodejs/index');
+const Stripe = require('stripe');
+
+const stripe = process.env.STRIPE_SECRET_KEY ? Stripe(process.env.STRIPE_SECRET_KEY) : null;
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -81,6 +84,39 @@ async function getItinerary(event, db, email) {
   }
 }
 
+function generateReferralCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = 'WZ';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+async function handleCustomerPortal(event, db, email) {
+  if (!stripe) return { statusCode: 503, headers: CORS, body: JSON.stringify({ error: 'Billing not configured' }) };
+  try {
+    const body = JSON.parse(event.body || '{}');
+    const returnUrl = body.returnUrl || process.env.FRONTEND_URL + '/settings';
+
+    // Get stripe_customer_id from DB
+    const userRow = await db.query('SELECT stripe_customer_id FROM users WHERE email = $1', [email]);
+    const customerId = userRow.rows[0]?.stripe_customer_id;
+
+    if (!customerId) {
+      return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'No active subscription found' }) };
+    }
+
+    const session = await stripe.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: returnUrl,
+    });
+
+    return { statusCode: 200, headers: CORS, body: JSON.stringify({ url: session.url }) };
+  } catch (err) {
+    log.error('Customer portal failed', { error: err.message });
+    return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: err.message }) };
+  }
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers: { ...CORS, 'Access-Control-Allow-Methods': 'GET,PUT,OPTIONS' }, body: '' };
@@ -100,6 +136,10 @@ exports.handler = async (event) => {
     return { statusCode: 401, headers: CORS, body: JSON.stringify({ error: 'Unauthorized' }) };
   }
 
+  if (path.includes('/customer-portal') && event.httpMethod === 'POST') {
+    return handleCustomerPortal(event, db, email);
+  }
+
   // ── GET /profile ───────────────────────────────────────────────────────────
   if (event.httpMethod === 'GET') {
     try {
@@ -108,10 +148,25 @@ exports.handler = async (event) => {
       try {
         userResult = await db.query(
           `SELECT email, name, gender, age, whatsapp, home_city, language,
-                  onboarding_complete, plan
+                  onboarding_complete, plan, referral_code, itineraries_remaining,
+                  (SELECT COUNT(*) FROM users WHERE referred_by = users.referral_code) as referral_count
            FROM users WHERE email = $1`,
           [email]
         );
+
+        // Generate referral code if user doesn't have one yet
+        if (userResult.rows.length > 0 && !userResult.rows[0].referral_code) {
+          let code;
+          let attempts = 0;
+          do {
+            code = generateReferralCode();
+            attempts++;
+          } while (attempts < 10);
+          try {
+            await db.query('UPDATE users SET referral_code = $1 WHERE email = $2', [code, email]);
+            userResult.rows[0].referral_code = code;
+          } catch { /* collision — will try next time */ }
+        }
       } catch {
         userResult = await db.query(
           `SELECT email, plan FROM users WHERE email = $1`,
@@ -161,11 +216,11 @@ exports.handler = async (event) => {
   if (event.httpMethod === 'PUT') {
     try {
       const body = JSON.parse(event.body || '{}');
-      const { name, gender, age, whatsapp, home_city, language, firebase_uid, onboarding_complete } = body;
+      const { name, gender, age, whatsapp, home_city, language, firebase_uid, onboarding_complete, referred_by } = body;
 
       await db.query(
-        `INSERT INTO users (email, name, gender, age, whatsapp, home_city, language, firebase_uid, onboarding_complete)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+        `INSERT INTO users (email, name, gender, age, whatsapp, home_city, language, firebase_uid, onboarding_complete, referred_by)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
          ON CONFLICT (email) DO UPDATE SET
            name               = COALESCE(EXCLUDED.name, users.name),
            gender             = COALESCE(EXCLUDED.gender, users.gender),
@@ -175,9 +230,10 @@ exports.handler = async (event) => {
            language           = COALESCE(EXCLUDED.language, users.language),
            firebase_uid       = COALESCE(EXCLUDED.firebase_uid, users.firebase_uid),
            onboarding_complete = COALESCE(EXCLUDED.onboarding_complete, users.onboarding_complete),
+           referred_by        = COALESCE(users.referred_by, EXCLUDED.referred_by),
            updated_at         = NOW()`,
         [email, name||null, gender||null, age||null, whatsapp||null,
-         home_city||null, language||null, firebase_uid||null, onboarding_complete??null]
+         home_city||null, language||null, firebase_uid||null, onboarding_complete??null, referred_by||null]
       );
 
       return { statusCode: 200, headers: CORS, body: JSON.stringify({ ok: true }) };

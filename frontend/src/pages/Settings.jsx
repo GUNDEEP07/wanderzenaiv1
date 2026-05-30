@@ -60,9 +60,13 @@ export default function Settings() {
   const [currency, setCurrency] = useState('USD ($)');
 
   // Account
-  const [currentPw, setCurrentPw] = useState('');
-  const [newPw, setNewPw]         = useState('');
-  const [confirmPw, setConfirmPw] = useState('');
+  const [currentPw, setCurrentPw]       = useState('');
+  const [newPw, setNewPw]               = useState('');
+  const [confirmPw, setConfirmPw]       = useState('');
+  const [referralCode, setReferralCode] = useState('');
+  const [referralCount, setReferralCount] = useState(0);
+  const [plan, setPlan]                 = useState('free');
+  const [portalLoading, setPortalLoading] = useState(false);
 
   const { currentUser, getIdToken, signOut } = useAuth();
   const navigate = useNavigate();
@@ -82,6 +86,9 @@ export default function Settings() {
           setWhatsapp(p.whatsapp || '');
           setHomeCity(p.home_city || '');
           setLanguage(p.language || 'English');
+          if (p.referral_code) setReferralCode(p.referral_code);
+          if (p.referral_count) setReferralCount(parseInt(p.referral_count) || 0);
+          if (p.plan) setPlan(p.plan);
         }
       } catch { /* graceful */ }
     })();
@@ -259,10 +266,41 @@ export default function Settings() {
               <div style={s.sectionTitle}>Current plan</div>
               <div style={s.planCard}>
                 <div>
-                  <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>Free Plan</div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>1 itinerary per month · PDF download included</div>
+                  <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>
+                    {plan === 'subscriber' ? 'Wanderer Plan' : plan === 'paid_once' ? 'Single Trip' : 'Free Plan'}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
+                    {plan === 'subscriber' ? 'Unlimited itineraries · priority generation'
+                     : plan === 'paid_once' ? 'Extra itinerary purchased'
+                     : '1 itinerary per month · PDF download included'}
+                  </div>
                 </div>
-                <span style={s.planBadge(true)}>Active</span>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <span style={s.planBadge(true)}>Active</span>
+                  {(plan === 'subscriber' || plan === 'paid_once') && (
+                    <button
+                      style={{ ...s.dangerBtn, fontSize: 12, padding: '6px 14px' }}
+                      disabled={portalLoading}
+                      onClick={async () => {
+                        setPortalLoading(true);
+                        try {
+                          const token = await getIdToken();
+                          const res = await fetch(`${API_URL}/customer-portal`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                            body: JSON.stringify({ returnUrl: window.location.href }),
+                          });
+                          const d = await res.json();
+                          if (d.url) window.location.href = d.url;
+                          else showMsg('error', 'Could not open billing portal. Try again.');
+                        } catch { showMsg('error', 'Could not open billing portal.'); }
+                        setPortalLoading(false);
+                      }}
+                    >
+                      {portalLoading ? '…' : 'Manage billing'}
+                    </button>
+                  )}
+                </div>
               </div>
               <div style={s.planCard}>
                 <div>
@@ -297,6 +335,43 @@ export default function Settings() {
                     : '—'}
                 </span>
               </div>
+            </div>
+            {/* Referral section */}
+            <div style={s.section}>
+              <div style={s.sectionTitle}>Refer a friend — get 1 free trip each</div>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', lineHeight: 1.6, marginBottom: 16 }}>
+                Share your link. When your friend makes their first paid purchase, you both get <strong style={{ color: '#00d4aa' }}>1 free itinerary</strong>.
+              </div>
+              {referralCode ? (
+                <>
+                  <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 12 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', letterSpacing: '0.05em' }}>
+                      wanderzenai.com/signup?ref={referralCode}
+                    </div>
+                    <button
+                      onClick={async () => {
+                        try { await navigator.clipboard.writeText(`https://www.wanderzenai.com/signup?ref=${referralCode}`); showMsg('success', 'Referral link copied!'); }
+                        catch { showMsg('error', 'Copy failed'); }
+                      }}
+                      style={{ padding: '7px 16px', background: 'linear-gradient(135deg,#00d4aa,#00a87e)', border: 'none', borderRadius: 8, color: '#06090f', fontFamily: 'inherit', fontSize: 12, fontWeight: 800, cursor: 'pointer', flexShrink: 0 }}
+                    >
+                      Copy link
+                    </button>
+                  </div>
+                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
+                      Your code: <strong style={{ color: '#00d4aa' }}>{referralCode}</strong>
+                    </div>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
+                      Friends referred: <strong style={{ color: '#fff' }}>{referralCount}</strong>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', fontStyle: 'italic' }}>
+                  Your referral code is being generated — check back in a moment.
+                </div>
+              )}
             </div>
           </>
         )}

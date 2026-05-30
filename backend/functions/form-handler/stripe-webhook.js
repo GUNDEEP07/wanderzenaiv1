@@ -63,6 +63,39 @@ exports.handler = async (event) => {
         );
 
         log.info('User plan upgraded', { email, plan, itinerariesGranted });
+
+        // ── Referral reward ──────────────────────────────────────────────
+        // If this is the purchaser's first paid transaction, reward both them and their referrer
+        try {
+          const userRow = await db.query(
+            `SELECT referred_by, referral_rewarded FROM users WHERE email = $1`,
+            [email]
+          );
+          const user = userRow.rows[0];
+          if (user?.referred_by && !user?.referral_rewarded) {
+            // Find referrer by their referral_code
+            const referrerRow = await db.query(
+              `SELECT email FROM users WHERE referral_code = $1`,
+              [user.referred_by]
+            );
+            if (referrerRow.rows.length > 0) {
+              const referrerEmail = referrerRow.rows[0].email;
+              // Give referrer 1 free itinerary
+              await db.query(
+                `UPDATE users SET itineraries_remaining = itineraries_remaining + 1, updated_at = NOW() WHERE email = $1`,
+                [referrerEmail]
+              );
+              // Give referee 1 free itinerary bonus
+              await db.query(
+                `UPDATE users SET itineraries_remaining = itineraries_remaining + 1, referral_rewarded = TRUE, updated_at = NOW() WHERE email = $1`,
+                [email]
+              );
+              log.info('Referral reward granted', { referrerEmail, refereeEmail: email });
+            }
+          }
+        } catch (refErr) {
+          log.warn('Referral reward failed', { error: refErr.message });
+        }
         break;
       }
 
