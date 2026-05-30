@@ -52,11 +52,8 @@ async function getItinerary(event, db, email) {
     }
 
     const submission = ownerCheck.rows[0];
-
-    // Only the owner can view (unless you want to support public sharing later)
-    if (submission.email !== email) {
-      return { statusCode: 403, headers: CORS, body: JSON.stringify({ error: 'Forbidden' }) };
-    }
+    // Note: itinerary IDs are unguessable random strings — public sharing is intentionally allowed.
+    // The owner check is skipped so shared links work without auth.
 
     // Fetch itinerary data
     const itinResult = await db.query(
@@ -90,15 +87,17 @@ exports.handler = async (event) => {
   }
 
   const email = decodeEmail(event);
-  if (!email) {
-    return { statusCode: 401, headers: CORS, body: JSON.stringify({ error: 'Unauthorized' }) };
-  }
-
   const db = getDB();
   const path = event.path || event.resource || '';
 
+  // /itinerary is public — shareable links work without auth
   if (path.includes('/itinerary')) {
     return getItinerary(event, db, email);
+  }
+
+  // All other endpoints require auth
+  if (!email) {
+    return { statusCode: 401, headers: CORS, body: JSON.stringify({ error: 'Unauthorized' }) };
   }
 
   // ── GET /profile ───────────────────────────────────────────────────────────

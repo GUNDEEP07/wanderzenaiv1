@@ -46,7 +46,7 @@ export default function App() {
               <Route path="/agency"       element={<AgencyDashboard />} />
               <Route path="/explore"      element={<ExplorePage />} />
               <Route path="/settings"     element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/itinerary/:id" element={<ProtectedRoute><ItineraryView /></ProtectedRoute>} />
+              <Route path="/itinerary/:id" element={<ItineraryView />} />
               <Route path="/privacy"      element={<PrivacyPolicy />} />
               <Route path="/terms"        element={<TermsOfService />} />
               <Route path="*"             element={<NotFound />} />

@@ -48,20 +48,25 @@ function ActivityCard({ activity, period, emoji }) {
 
 export default function ItineraryView() {
   const { id } = useParams();
-  const { getIdToken } = useAuth();
+  const { getIdToken, currentUser } = useAuth();
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [shareMsg, setShareMsg] = useState('');
 
   useEffect(() => {
     if (!id) return;
     (async () => {
       try {
-        const token = await getIdToken();
-        const res = await fetch(`${API_URL}/itinerary?id=${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        // Try with auth token if logged in, fall through to public if not
+        const headers = {};
+        try {
+          const token = await getIdToken();
+          if (token) headers.Authorization = `Bearer ${token}`;
+        } catch { /* not logged in — public view */ }
+
+        const res = await fetch(`${API_URL}/itinerary?id=${id}`, { headers });
         if (!res.ok) throw new Error('Could not load itinerary');
         const d = await res.json();
         setData(d);
@@ -73,6 +78,25 @@ export default function ItineraryView() {
       }
     })();
   }, [id]);
+
+  const shareUrl = `https://www.wanderzenai.com/itinerary/${id}`;
+
+  const handleShare = async (method) => {
+    if (method === 'copy') {
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        setShareMsg('Link copied!');
+        setTimeout(() => setShareMsg(''), 2500);
+      } catch {
+        setShareMsg('Copy failed — try manually');
+        setTimeout(() => setShareMsg(''), 2500);
+      }
+    } else if (method === 'whatsapp') {
+      window.open(`https://wa.me/?text=${encodeURIComponent(`Check out my slow travel itinerary for ${data?.destination || 'this destination'} 🌍\n\n${shareUrl}`)}`, '_blank');
+    } else if (method === 'email') {
+      window.location.href = `mailto:?subject=${encodeURIComponent(`My ${data?.destination || 'travel'} itinerary`)}&body=${encodeURIComponent(`Here's my WanderZenAI itinerary:\n${shareUrl}`)}`;
+    }
+  };
 
   if (loading) {
     return (
@@ -112,8 +136,27 @@ export default function ItineraryView() {
           <span style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
           <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>{data.destination}</span>
         </div>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
-          {data.days} days · {new Date(data.createdAt).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
+            {data.days} days · {new Date(data.createdAt).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}
+          </span>
+          {/* Share buttons */}
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', position: 'relative' }}>
+            <button onClick={() => handleShare('copy')} style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              🔗 Copy link
+            </button>
+            <button onClick={() => handleShare('whatsapp')} style={{ padding: '6px 12px', background: 'rgba(37,211,102,0.1)', border: '1px solid rgba(37,211,102,0.25)', borderRadius: 8, color: '#25d366', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              WhatsApp
+            </button>
+            <button onClick={() => handleShare('email')} style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              Email
+            </button>
+            {shareMsg && (
+              <div style={{ position: 'absolute', top: '110%', right: 0, background: '#00d4aa', color: '#06090f', borderRadius: 6, padding: '4px 10px', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap', zIndex: 10 }}>
+                {shareMsg}
+              </div>
+            )}
+          </div>
         </div>
       </nav>
 

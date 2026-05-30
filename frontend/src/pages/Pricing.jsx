@@ -123,8 +123,35 @@ export default function Pricing() {
 
       <div style={s.inner}>
         {reason === 'free_limit' && (
-          <div style={s.notice}>
-            You have used your free itinerary this month. Upgrade to keep planning.
+          <div style={{
+            background: 'linear-gradient(135deg,rgba(0,212,170,0.1),rgba(0,168,126,0.06))',
+            border: '1px solid rgba(0,212,170,0.3)',
+            borderRadius: 16,
+            padding: '24px 28px',
+            marginBottom: 40,
+            position: 'relative',
+            overflow: 'hidden',
+          }}>
+            <div style={{ position: 'absolute', right: 24, top: '50%', transform: 'translateY(-50%)', fontSize: 64, color: 'rgba(0,212,170,0.06)', pointerEvents: 'none' }}>✦</div>
+            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#00d4aa', marginBottom: 8 }}>
+              Free plan limit reached
+            </div>
+            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 900, color: '#fff', marginBottom: 6, lineHeight: 1.2 }}>
+              {location.state?.destination
+                ? <>Your {location.state.destination} itinerary is waiting</>
+                : <>Your itinerary is ready to be built</>}
+            </div>
+            <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', marginBottom: 18, lineHeight: 1.6 }}>
+              You've used your free itinerary this month.
+              Upgrade to unlock unlimited trips — your {location.state?.destination || 'next destination'} itinerary will generate immediately after.
+            </div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              {['Unlimited itineraries', 'Priority generation', 'All destinations', 'Keep all PDFs'].map(f => (
+                <span key={f} style={{ padding: '5px 12px', background: 'rgba(0,212,170,0.1)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 20, fontSize: 12, fontWeight: 600, color: '#00d4aa' }}>
+                  ✓ {f}
+                </span>
+              ))}
+            </div>
           </div>
         )}
 

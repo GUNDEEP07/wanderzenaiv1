@@ -238,7 +238,12 @@ export default function PlanTrip() {
     setSubmitError('');
     try {
       const { status, data } = await submitItinerary(form);
-      if (status === 402) { analytics.freeLimitHit(); navigate('/pricing', { state: { reason: 'free_limit' } }); return; }
+      if (status === 402) {
+        analytics.freeLimitHit();
+        const dest = form.destinations.length > 0 ? form.destinations[0].name : null;
+        navigate('/pricing', { state: { reason: 'free_limit', destination: dest } });
+        return;
+      }
       if (!data.success) throw new Error(data.message || 'Submission failed');
       const destinationName = form.destinations.length > 0 ? form.destinations[0].name : 'Unknown';
       analytics.tripSubmitted({ destination: destinationName, days: form.days, travelStyle: form.travelStyle });

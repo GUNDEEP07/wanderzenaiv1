@@ -521,12 +521,28 @@ export default function Dashboard() {
                   </div>
                   <div style={{ display: 'flex', gap: 8, padding: '0 20px', alignItems: 'center', flexShrink: 0 }}>
                     {trip.hasItinerary && (
-                      <button
-                        style={{ padding: '7px 14px', background: 'rgba(0,212,170,0.08)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 8, fontSize: 11, fontWeight: 700, color: '#00d4aa', cursor: 'pointer', fontFamily: 'inherit' }}
-                        onClick={e => { e.stopPropagation(); navigate(`/itinerary/${trip.id}`); }}
-                      >
-                        View →
-                      </button>
+                      <>
+                        <button
+                          style={{ padding: '7px 14px', background: 'rgba(0,212,170,0.08)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 8, fontSize: 11, fontWeight: 700, color: '#00d4aa', cursor: 'pointer', fontFamily: 'inherit' }}
+                          onClick={e => { e.stopPropagation(); navigate(`/itinerary/${trip.id}`); }}
+                        >
+                          View →
+                        </button>
+                        <button
+                          style={{ padding: '7px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontFamily: 'inherit' }}
+                          onClick={async e => {
+                            e.stopPropagation();
+                            const url = `https://www.wanderzenai.com/itinerary/${trip.id}`;
+                            try { await navigator.clipboard.writeText(url); } catch { }
+                            const btn = e.currentTarget;
+                            btn.textContent = '✓ Copied!';
+                            btn.style.color = '#00d4aa';
+                            setTimeout(() => { btn.textContent = '🔗 Share'; btn.style.color = 'rgba(255,255,255,0.5)'; }, 2000);
+                          }}
+                        >
+                          🔗 Share
+                        </button>
+                      </>
                     )}
                     {trip.pdfUrl && (
                       <a
