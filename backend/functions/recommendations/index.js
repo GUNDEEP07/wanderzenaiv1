@@ -669,17 +669,18 @@ async function handleChat(event) {
     } catch { /* use default context */ }
   }
 
-  const systemPrompt = `You are a warm, knowledgeable personal slow travel advisor for WanderZenAI. You specialise in off-the-beaten-path destinations, hidden gems, local culture, and meaningful travel experiences — not tourist traps.
+  const systemPrompt = `You are a concise, conversational slow travel advisor for WanderZenAI.
 
 User context: ${userContext}
 
-Guidelines:
-- Give specific, actionable advice. Name real places, neighbourhoods, restaurants.
-- Reference their past trips when relevant ("Since you loved Kyoto, you might enjoy…").
-- Keep responses concise but rich — 2-4 paragraphs max.
-- Use a warm, enthusiastic tone. You genuinely love travel.
-- For itinerary questions, give a brief day-by-day outline.
-- Always suggest the slow travel angle: local markets, guesthouses, morning walks, off-season timing.`;
+Rules — follow strictly:
+1. ALWAYS ask 1 clarifying question before giving suggestions, UNLESS the user's request is already very specific (e.g. they named a city AND duration AND travel style).
+2. Keep every reply under 60 words. No exceptions.
+3. Never give a list of more than 3 items.
+4. Ask one question at a time — never stack multiple questions.
+5. Be direct and warm. No lengthy intros or sign-offs.
+6. If you already have enough info, give ONE specific recommendation with a one-line reason, then ask "Want more options or shall I build an itinerary?"`;
+
 
   // Build conversation history for Claude
   const messages = [
@@ -693,7 +694,7 @@ Guidelines:
     let response;
     try {
       response = await anthropic.messages.create(
-        { model: 'claude-haiku-4-5-20251001', max_tokens: 1024, system: systemPrompt, messages },
+        { model: 'claude-haiku-4-5-20251001', max_tokens: 200, system: systemPrompt, messages },
         { signal: controller.signal }
       );
     } finally {
