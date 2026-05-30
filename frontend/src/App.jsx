@@ -13,6 +13,7 @@ const ExplorePage   = lazy(() => import('./pages/ExplorePage'));
 const Login         = lazy(() => import('./pages/Login'));
 const Signup        = lazy(() => import('./pages/Signup'));
 const Onboarding    = lazy(() => import('./pages/Onboarding'));
+const Settings      = lazy(() => import('./pages/Settings'));
 
 const Spinner = () => (
   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#06090f' }}>
@@ -37,6 +38,7 @@ export default function App() {
             <Route path="/dashboard"    element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/agency"       element={<AgencyDashboard />} />
             <Route path="/explore"      element={<ExplorePage />} />
+            <Route path="/settings"     element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           </Routes>
         </Suspense>
       </BrowserRouter>
