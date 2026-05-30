@@ -588,83 +588,86 @@ export default function Dashboard() {
               </div>
             );
             return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px,1fr))', gap: 14 }}>
               {filtered.map(trip => (
                 <div
                   key={trip.id}
-                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, overflow: 'hidden', display: 'flex', alignItems: 'center', transition: 'all 0.2s', cursor: 'pointer' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; }}
+                  style={{ borderRadius: 18, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)', transition: 'all 0.25s', cursor: 'pointer' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(0,212,170,0.25)'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 32px rgba(0,0,0,0.3)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
                 >
-                  <div style={{ width: 5, height: isMobile ? 52 : 72, background: tripAccentColor(trip.destination), flexShrink: 0 }} />
-                  <div style={{ width: isMobile ? 52 : 72, height: isMobile ? 52 : 72, flexShrink: 0, overflow: 'hidden', position: 'relative' }}>
+                  {/* Photo header */}
+                  <div style={{ height: 140, position: 'relative', overflow: 'hidden' }}>
                     <img
                       src={getDestinationPhotoUrl(trip.destination)}
                       alt={trip.destination}
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex'; }}
+                      onError={e => { e.target.style.display = 'none'; }}
                     />
-                    <div style={{ display: 'none', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', fontSize: 28, background: 'rgba(255,255,255,0.03)' }}>
-                      {getFlag(trip.destination)}
+                    {/* Gradient overlay */}
+                    <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(to top, rgba(6,9,15,0.85) 0%, rgba(6,9,15,0.1) 60%)` }} />
+                    {/* Status badge top-right */}
+                    <div style={{ position: 'absolute', top: 10, right: 10 }}>
+                      <span style={{
+                        padding: '3px 10px', borderRadius: 20, fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase',
+                        background: trip.status === 'email_sent' ? 'rgba(0,212,170,0.9)' : 'rgba(255,217,61,0.9)',
+                        color: trip.status === 'email_sent' ? '#06090f' : '#06090f',
+                      }}>
+                        {trip.status === 'email_sent' ? '✓ Done' : '⏳ Processing'}
+                      </span>
+                    </div>
+                    {/* Flag + destination overlaid on photo */}
+                    <div style={{ position: 'absolute', bottom: 10, left: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 22 }}>{getFlag(trip.destination)}</span>
+                      <div>
+                        <div style={{ fontFamily: "'Fraunces', serif", fontSize: 17, fontWeight: 900, color: '#fff', lineHeight: 1.1 }}>{trip.destination}</div>
+                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', marginTop: 1 }}>
+                          {trip.days} day{trip.days !== 1 ? 's' : ''} · {formatDate(trip.createdAt)}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div style={{ flex: 1, padding: '14px 0' }}>
-                    <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 3 }}>{trip.destination}</div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>
-                      {trip.days} day{trip.days !== 1 ? 's' : ''} · {formatDate(trip.createdAt)}
-                    </div>
-                  </div>
-                  <div style={{ padding: '0 8px' }}>
-                    <span style={{
-                      padding: '3px 9px', borderRadius: 5, fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase',
-                      ...(trip.status === 'email_sent'
-                        ? { background: 'rgba(0,212,170,0.1)', color: '#00d4aa', border: '1px solid rgba(0,212,170,0.2)' }
-                        : { background: 'rgba(255,217,61,0.08)', color: '#ffd93d', border: '1px solid rgba(255,217,61,0.15)' })
-                    }}>
-                      {trip.status === 'email_sent' ? 'Completed' : 'Processing'}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', gap: 6, padding: isMobile ? '0 8px' : '0 20px', alignItems: 'center', flexShrink: 0, flexWrap: 'wrap' }}>
+
+                  {/* Actions row */}
+                  <div style={{ padding: '12px 14px', display: 'flex', gap: 7, flexWrap: 'wrap' }}>
                     {trip.hasItinerary && (
-                      <>
-                        <button
-                          style={{ padding: '7px 14px', background: 'rgba(0,212,170,0.08)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 8, fontSize: 11, fontWeight: 700, color: '#00d4aa', cursor: 'pointer', fontFamily: 'inherit' }}
-                          onClick={e => { e.stopPropagation(); navigate(`/itinerary/${trip.id}`); }}
-                        >
-                          View →
-                        </button>
-                        <button
-                          style={{ padding: '7px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontFamily: 'inherit' }}
-                          onClick={async e => {
-                            e.stopPropagation();
-                            const url = `https://www.wanderzenai.com/itinerary/${trip.id}`;
-                            try { await navigator.clipboard.writeText(url); } catch { }
-                            const btn = e.currentTarget;
-                            btn.textContent = '✓ Copied!';
-                            btn.style.color = '#00d4aa';
-                            setTimeout(() => { btn.textContent = '🔗 Share'; btn.style.color = 'rgba(255,255,255,0.5)'; }, 2000);
-                          }}
-                        >
-                          🔗 Share
-                        </button>
-                      </>
+                      <button
+                        style={{ padding: '7px 14px', background: 'linear-gradient(135deg,#00d4aa,#00a87e)', border: 'none', borderRadius: 8, fontSize: 11, fontWeight: 800, color: '#06090f', cursor: 'pointer', fontFamily: 'inherit' }}
+                        onClick={e => { e.stopPropagation(); navigate(`/itinerary/${trip.id}`); }}
+                      >
+                        View itinerary →
+                      </button>
                     )}
                     {trip.pdfUrl && (
-                      <a
-                        href={trip.pdfUrl} target="_blank" rel="noreferrer"
-                        onClick={e => e.stopPropagation()}
-                        style={{ padding: '7px 14px', background: 'rgba(0,212,170,0.08)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 8, fontSize: 11, fontWeight: 700, color: '#00d4aa', textDecoration: 'none', cursor: 'pointer' }}
-                      >
+                      <a href={trip.pdfUrl} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}
+                        style={{ padding: '7px 12px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.7)', textDecoration: 'none', cursor: 'pointer' }}>
                         📥 PDF
                       </a>
                     )}
+                    {trip.hasItinerary && (
+                      <button
+                        style={{ padding: '7px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.45)', cursor: 'pointer', fontFamily: 'inherit' }}
+                        onClick={async e => {
+                          e.stopPropagation();
+                          const url = `https://www.wanderzenai.com/itinerary/${trip.id}`;
+                          try { await navigator.clipboard.writeText(url); } catch { }
+                          const btn = e.currentTarget;
+                          btn.textContent = '✓ Copied';
+                          btn.style.color = '#00d4aa';
+                          setTimeout(() => { btn.textContent = '🔗 Share'; btn.style.color = 'rgba(255,255,255,0.45)'; }, 2000);
+                        }}
+                      >
+                        🔗 Share
+                      </button>
+                    )}
                     <button
+                      style={{ padding: '7px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.45)', cursor: 'pointer', fontFamily: 'inherit', marginLeft: 'auto' }}
                       onClick={() => navigate('/plan', { state: { prefill: { destinations: [{ name: trip.destination?.split(',')[0]?.trim(), lat: 0, lng: 0 }] } } })}
-                      style={{ padding: '7px 14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontFamily: 'inherit' }}
                     >
                       Re-plan
                     </button>
                   </div>
+
                 </div>
               ))}
             </div>

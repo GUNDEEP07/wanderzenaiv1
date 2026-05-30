@@ -597,22 +597,27 @@ Return JSON array ONLY — no explanation:
     const match = text.match(/\[[\s\S]*\]/);
     const recommendations = match ? JSON.parse(match[0]).slice(0, 3) : [];
 
-    // Compute preferred activities
+    // Compute preferred activities from travel_style column
     const activitiesResult = await getDB().query(
-      `SELECT form_data FROM submissions WHERE email = $1 AND form_data IS NOT NULL LIMIT 10`,
+      `SELECT travel_style, traveler_type FROM submissions WHERE email = $1 AND travel_style IS NOT NULL LIMIT 15`,
       [email]
     );
     const counts = {};
     for (const row of activitiesResult.rows) {
       try {
-        const fd = typeof row.form_data === 'string' ? JSON.parse(row.form_data) : row.form_data;
-        (fd?.travelStyle || []).forEach(s => { counts[s] = (counts[s] || 0) + 1; });
+        const styles = Array.isArray(row.travel_style) ? row.travel_style : JSON.parse(row.travel_style || '[]');
+        styles.forEach(s => { if (s) counts[s] = (counts[s] || 0) + 1; });
       } catch { /* skip */ }
     }
     const preferred_activities = Object.entries(counts)
-      .sort((a, b) => b[1] - a[1]).slice(0, 3).map(([s]) => s);
+      .sort((a, b) => b[1] - a[1]).slice(0, 4).map(([s]) => s);
 
-    const result = { recommendations, preferred_activities };
+    // Most common traveler type
+    const travelerCounts = {};
+    activitiesResult.rows.forEach(r => { if (r.traveler_type) travelerCounts[r.traveler_type] = (travelerCounts[r.traveler_type] || 0) + 1; });
+    const top_traveler_type = Object.entries(travelerCounts).sort((a,b) => b[1]-a[1])[0]?.[0] || null;
+
+    const result = { recommendations, preferred_activities, top_traveler_type };
 
     // Cache result
     try {
