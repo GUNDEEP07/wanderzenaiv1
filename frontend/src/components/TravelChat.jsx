@@ -49,14 +49,32 @@ export function TravelChat() {
         body: JSON.stringify({ message: msg, history: newHistory.slice(-10) }),
       });
       const data = await res.json();
-      setHistory(h => [...h, { role: 'assistant', content: data.reply || 'Sorry, something went wrong.' }]);
+      const fullReply = data.reply || 'Sorry, something went wrong.';
+
+      // Re-enable input before streaming so user can type while text appears
+      setLoading(false);
+
+      // Simulate streaming: add assistant message with empty content, then fill word by word
+      setHistory(h => [...h, { role: 'assistant', content: '' }]);
+      const words = fullReply.split(' ');
+      for (let i = 0; i < words.length; i++) {
+        await new Promise(r => setTimeout(r, 35));
+        setHistory(h => {
+          const updated = [...h];
+          updated[updated.length - 1] = {
+            role: 'assistant',
+            content: words.slice(0, i + 1).join(' '),
+          };
+          return updated;
+        });
+      }
+
       if (data.readyToPlan && data.tripData) {
         setPendingTrip(data.tripData);
       }
     } catch {
-      setHistory(h => [...h, { role: 'assistant', content: 'I\'m having trouble connecting right now. Try again in a moment.' }]);
-    } finally {
       setLoading(false);
+      setHistory(h => [...h, { role: 'assistant', content: 'I\'m having trouble connecting right now. Try again in a moment.' }]);
     }
   };
 

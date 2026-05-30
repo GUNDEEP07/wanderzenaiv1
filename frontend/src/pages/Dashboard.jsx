@@ -71,6 +71,46 @@ function recCardGradient(i) {
   return g[i % g.length];
 }
 
+function getDestinationPhotoUrl(destination) {
+  if (!destination) return null;
+  const name = destination.split(',')[0].trim().toLowerCase().replace(/\s+/g, '-');
+  // Use specific reliable Unsplash photo IDs per popular destination
+  const photoMap = {
+    'kyoto': 'photo-1493976040374-85c8e12f0c0e',
+    'tokyo': 'photo-1540959733332-eab4deabeeaf',
+    'bali': 'photo-1537996194471-e657df975ab4',
+    'paris': 'photo-1499856871958-5b9627545d1a',
+    'rome': 'photo-1552832230-c0197dd311b5',
+    'barcelona': 'photo-1539037116277-4db20889f2d4',
+    'amsterdam': 'photo-1534351590666-13e3e96b5017',
+    'london': 'photo-1513635269975-59663e0ac1ad',
+    'bangkok': 'photo-1563492065599-3520f775eeed',
+    'singapore': 'photo-1525625293386-3f8f99389edd',
+    'dubai': 'photo-1512453979798-5ea266f8880c',
+    'new-york': 'photo-1485738422979-f5c462d49f74',
+    'oaxaca': 'photo-1518638150340-f706e86654de',
+    'mexico': 'photo-1518638150340-f706e86654de',
+    'vietnam': 'photo-1528360983277-13d401cdc186',
+    'shimla': 'photo-1605649461784-bbb68578a55e',
+    'goa': 'photo-1512343879784-a960bf40e7f2',
+    'manali': 'photo-1626516011116-33bba50ec8ce',
+    'bir': 'photo-1626516011116-33bba50ec8ce',
+    'indonesia': 'photo-1537996194471-e657df975ab4',
+    'morocco': 'photo-1539020140153-e479b8c22e70',
+    'portugal': 'photo-1555881400-74d7acaacd8b',
+    'greece': 'photo-1533105079780-92b9be482077',
+    'nepal': 'photo-1544735716-392fe2489ffa',
+    'peru': 'photo-1526392060635-9d6019884377',
+  };
+  for (const [key, id] of Object.entries(photoMap)) {
+    if (name.includes(key)) {
+      return `https://images.unsplash.com/${id}?w=320&h=180&fit=crop&auto=format&q=60`;
+    }
+  }
+  // Generic travel fallback
+  return `https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=320&h=180&fit=crop&auto=format&q=60`;
+}
+
 function Avatar({ user }) {
   const init = (user?.displayName || user?.email || 'U')[0].toUpperCase();
   if (user?.photoURL) {
@@ -167,6 +207,16 @@ export default function Dashboard() {
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;0,9..144,900;1,9..144,300;1,9..144,400&display=swap');
         * { box-sizing: border-box; }
         ::-webkit-scrollbar { display: none; }
+        @keyframes shimmer {
+          0% { background-position: -400px 0; }
+          100% { background-position: 400px 0; }
+        }
+        .skeleton {
+          background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
+          background-size: 800px 100%;
+          animation: shimmer 1.4s ease-in-out infinite;
+          border-radius: 8px;
+        }
       `}</style>
 
       {/* NAV */}
@@ -205,7 +255,16 @@ export default function Dashboard() {
         </div>
 
         {/* Stats */}
-        {!loading && (
+        {loading ? (
+          <div style={{ display: 'flex', gap: 0, border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, overflow: 'hidden', maxWidth: 600 }}>
+            {[1,2,3,4].map(i => (
+              <div key={i} style={{ flex: 1, padding: '16px 20px', borderRight: i < 4 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+                <div className="skeleton" style={{ height: 28, width: '50%', marginBottom: 8 }} />
+                <div className="skeleton" style={{ height: 10, width: '70%' }} />
+              </div>
+            ))}
+          </div>
+        ) : (
           <div style={s.statsStrip}>
             <div style={{ ...s.stat }}>
               <div style={{ ...s.statNum, color: '#00d4aa' }}>{totalTrips}</div>
@@ -280,8 +339,17 @@ export default function Dashboard() {
                   onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.borderColor = 'rgba(0,212,170,0.3)'; e.currentTarget.style.boxShadow = '0 12px 36px rgba(0,0,0,0.3)'; }}
                   onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.boxShadow = 'none'; }}
                 >
-                  <div style={{ height: 130, background: recCardGradient(i), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 52, filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.4))' }}>
-                    {rec.emoji || getFlag(rec.destination)}
+                  <div style={{ height: 130, position: 'relative', overflow: 'hidden' }}>
+                    <img
+                      src={getDestinationPhotoUrl(rec.destination)}
+                      alt={rec.destination}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={e => { e.target.style.display='none'; }}
+                    />
+                    <div style={{ position: 'absolute', inset: 0, background: recCardGradient(i), opacity: 0.6 }} />
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 52, filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.4))' }}>
+                      {rec.emoji || getFlag(rec.destination)}
+                    </div>
                   </div>
                   <div style={{ padding: '16px 18px' }}>
                     <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>{rec.destination}</div>
@@ -392,7 +460,18 @@ export default function Dashboard() {
           </div>
 
           {loading ? (
-            <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>Loading your trips…</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[1,2,3].map(i => (
+                <div key={i} style={{ height: 72, borderRadius: 16, overflow: 'hidden', display: 'flex', alignItems: 'center', gap: 0, border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div className="skeleton" style={{ width: 5, height: '100%', flexShrink: 0, borderRadius: 0 }} />
+                  <div className="skeleton" style={{ width: 64, height: 40, margin: '0 8px', borderRadius: 10, flexShrink: 0 }} />
+                  <div style={{ flex: 1, padding: '14px 0', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div className="skeleton" style={{ height: 14, width: '55%' }} />
+                    <div className="skeleton" style={{ height: 10, width: '35%' }} />
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : pastTrips.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255,255,255,0.3)' }}>
               <div style={{ fontSize: 40, marginBottom: 12 }}>🌍</div>
@@ -412,8 +491,16 @@ export default function Dashboard() {
                   onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; }}
                 >
                   <div style={{ width: 5, height: 72, background: tripAccentColor(trip.destination), flexShrink: 0 }} />
-                  <div style={{ width: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, flexShrink: 0 }}>
-                    {getFlag(trip.destination)}
+                  <div style={{ width: 72, height: 72, flexShrink: 0, overflow: 'hidden', position: 'relative' }}>
+                    <img
+                      src={getDestinationPhotoUrl(trip.destination)}
+                      alt={trip.destination}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex'; }}
+                    />
+                    <div style={{ display: 'none', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', fontSize: 28, background: 'rgba(255,255,255,0.03)' }}>
+                      {getFlag(trip.destination)}
+                    </div>
                   </div>
                   <div style={{ flex: 1, padding: '14px 0' }}>
                     <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 3 }}>{trip.destination}</div>
