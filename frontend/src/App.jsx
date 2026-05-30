@@ -2,6 +2,8 @@ import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { CookieBanner } from './components/CookieBanner';
 
 const Landing       = lazy(() => import('./pages/Landing'));
 const PlanTrip      = lazy(() => import('./pages/PlanTrip'));
@@ -14,6 +16,9 @@ const Login         = lazy(() => import('./pages/Login'));
 const Signup        = lazy(() => import('./pages/Signup'));
 const Onboarding    = lazy(() => import('./pages/Onboarding'));
 const Settings      = lazy(() => import('./pages/Settings'));
+const PrivacyPolicy  = lazy(() => import('./pages/PrivacyPolicy'));
+const TermsOfService = lazy(() => import('./pages/TermsOfService'));
+const NotFound       = lazy(() => import('./pages/NotFound'));
 
 const Spinner = () => (
   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#06090f' }}>
@@ -24,24 +29,30 @@ const Spinner = () => (
 
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Suspense fallback={<Spinner />}>
-          <Routes>
-            <Route path="/"             element={<Landing />} />
-            <Route path="/login"        element={<Login />} />
-            <Route path="/signup"       element={<Signup />} />
-            <Route path="/onboarding"   element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
-            <Route path="/plan"         element={<ProtectedRoute><PlanTrip /></ProtectedRoute>} />
-            <Route path="/confirmation" element={<Confirmation />} />
-            <Route path="/pricing"      element={<Pricing />} />
-            <Route path="/dashboard"    element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/agency"       element={<AgencyDashboard />} />
-            <Route path="/explore"      element={<ExplorePage />} />
-            <Route path="/settings"     element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          </Routes>
-        </Suspense>
-      </BrowserRouter>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <BrowserRouter>
+          <Suspense fallback={<Spinner />}>
+            <Routes>
+              <Route path="/"             element={<Landing />} />
+              <Route path="/login"        element={<Login />} />
+              <Route path="/signup"       element={<Signup />} />
+              <Route path="/onboarding"   element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+              <Route path="/plan"         element={<ProtectedRoute><PlanTrip /></ProtectedRoute>} />
+              <Route path="/confirmation" element={<Confirmation />} />
+              <Route path="/pricing"      element={<Pricing />} />
+              <Route path="/dashboard"    element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/agency"       element={<AgencyDashboard />} />
+              <Route path="/explore"      element={<ExplorePage />} />
+              <Route path="/settings"     element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              <Route path="/privacy"      element={<PrivacyPolicy />} />
+              <Route path="/terms"        element={<TermsOfService />} />
+              <Route path="*"             element={<NotFound />} />
+            </Routes>
+          </Suspense>
+          <CookieBanner />
+        </BrowserRouter>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }

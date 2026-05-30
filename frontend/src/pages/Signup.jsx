@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { updateProfile } from 'firebase/auth';
+import { updateProfile, sendEmailVerification } from 'firebase/auth';
 import { auth, FIREBASE_CONFIGURED } from '../firebase';
 
 const s = {
@@ -61,6 +61,10 @@ export default function Signup() {
       if (FIREBASE_CONFIGURED && auth?.currentUser) {
         await updateProfile(auth.currentUser, { displayName: fullName.trim() });
       }
+      // Send email verification
+      if (FIREBASE_CONFIGURED && auth?.currentUser && !auth.currentUser.emailVerified) {
+        try { await sendEmailVerification(auth.currentUser); } catch { /* non-blocking */ }
+      }
       navigate('/onboarding');
     } catch (err) {
       if (err?.code === 'auth/email-already-in-use') setError('An account with this email already exists.');
@@ -115,6 +119,11 @@ export default function Signup() {
 
         <div style={s.footer}>
           Already have an account? <Link to="/login" style={s.link}>Sign in</Link>
+        </div>
+        <div style={{ textAlign: 'center', marginTop: 24, fontSize: 11, color: 'rgba(255,255,255,0.2)' }}>
+          <Link to="/privacy" style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'none' }}>Privacy Policy</Link>
+          {' · '}
+          <Link to="/terms" style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'none' }}>Terms</Link>
         </div>
       </div>
     </div>

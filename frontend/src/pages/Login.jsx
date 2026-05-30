@@ -109,6 +109,11 @@ export default function Login() {
             Forgot password?
           </span>
         </div>
+        <div style={{ textAlign: 'center', marginTop: 24, fontSize: 11, color: 'rgba(255,255,255,0.2)' }}>
+          <Link to="/privacy" style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'none' }}>Privacy Policy</Link>
+          {' · '}
+          <Link to="/terms" style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'none' }}>Terms</Link>
+        </div>
 
         {/* Inline password reset */}
         {showReset && (
