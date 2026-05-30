@@ -144,6 +144,30 @@ Resources:
               Action: [lambda:InvokeFunction]
               Resource: !GetAtt ItineraryGenFunction.Arn
 
+  # ─── Welcome Email Lambda ─────────────────────────────────────────────────
+  WelcomeEmailFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub wanderzenai-welcome-email-${Stage}
+      CodeUri: ../backend/functions/form-handler
+      Handler: welcome-email.handler
+      Timeout: 10
+      MemorySize: 256
+      Description: Sends welcome email via SES when a new user signs up
+      Events:
+        WelcomeEmail:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /welcome-email
+            Method: POST
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action: [ses:SendEmail, ses:SendRawEmail]
+              Resource: '*'
+
   # ─── Itinerary Generator Lambda ────────────────────────────────────────────
   ItineraryGenFunction:
     Type: AWS::Serverless::Function

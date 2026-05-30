@@ -46,7 +46,20 @@ export default function Signup() {
 
   const handleGoogle = async () => {
     setError(''); setLoading(true);
-    try { await signInWithGoogle(); analytics.signUp('google'); navigate('/onboarding'); }
+    try {
+      const result = await signInWithGoogle();
+      analytics.signUp('google');
+      // Fire-and-forget welcome email
+      const u = result?.user || {};
+      if (u.email) {
+        fetch(`${import.meta.env.VITE_API_URL}/welcome-email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: u.email, name: u.displayName || '' }),
+        }).catch(() => {});
+      }
+      navigate('/onboarding');
+    }
     catch { setError('Google sign-in failed. Try again.'); }
     finally { setLoading(false); }
   };
@@ -67,6 +80,12 @@ export default function Signup() {
         try { await sendEmailVerification(auth.currentUser); } catch { /* non-blocking */ }
       }
       analytics.signUp('email');
+      // Fire-and-forget welcome email — non-blocking
+      fetch(`${import.meta.env.VITE_API_URL}/welcome-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, name: fullName.trim() }),
+      }).catch(() => {});
       navigate('/onboarding');
     } catch (err) {
       if (err?.code === 'auth/email-already-in-use') setError('An account with this email already exists.');
