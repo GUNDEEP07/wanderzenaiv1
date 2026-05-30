@@ -121,7 +121,7 @@ export default function PlanTrip() {
   const location = useLocation();
   const prefill = location.state?.prefill || {};
 
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(location.state?.startStep || 0);
   const [form, setForm] = useState({ ...INITIAL_FORM, ...prefill });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);

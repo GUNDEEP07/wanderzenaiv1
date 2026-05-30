@@ -183,15 +183,17 @@ export function TravelChat() {
             <button
               onClick={() => {
                 const dest = pendingTrip.destination?.split(',')[0]?.trim();
+                const budgetMap = { Budget: '1500', 'Mid-range': '3000', Luxury: '6000' };
                 navigate('/plan', {
                   state: {
+                    startStep: 1,   // skip Step 0 — chat already collected it
                     prefill: {
                       destinations: dest ? [{ name: dest, lat: 0, lng: 0 }] : [],
                       days: pendingTrip.days || 5,
                       travelDate: pendingTrip.travelDate || '',
                       travelerType: pendingTrip.travelerType || '',
-                      travelStyle: pendingTrip.travelStyle || [],
-                      budget: pendingTrip.budget === 'Budget' ? '1500' : pendingTrip.budget === 'Mid-range' ? '3000' : '6000',
+                      travelStyle: Array.isArray(pendingTrip.travelStyle) ? pendingTrip.travelStyle : [],
+                      budget: budgetMap[pendingTrip.budget] || '3000',
                       currency: pendingTrip.currency || 'USD',
                     },
                   },
