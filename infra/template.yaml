@@ -292,6 +292,12 @@ Resources:
             RestApiId: !Ref WanderZenApi
             Path: /recommendations/personalised
             Method: GET
+        PostChat:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /recommendations/chat
+            Method: POST
 
   # ─── Destination Insights Lambda ──────────────────────────────────────────
   DestinationInsightsFunction:

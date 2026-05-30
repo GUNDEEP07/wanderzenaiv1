@@ -65,6 +65,8 @@ exports.handler = async (event) => {
       return await handleVenues(event);
     } else if (path.includes('/personalised')) {
       return await handlePersonalised(event);
+    } else if (path.includes('/chat')) {
+      return await handleChat(event);
     } else if (path.includes('/categories')) {
       return await handleCategories(event);
     } else {
@@ -624,6 +626,84 @@ Return JSON array ONLY — no explanation:
   } catch (err) {
     log.error('Personalised recs failed', { error: err.message });
     return ok({ recommendations: [], preferred_activities: [] }, event);
+  }
+}
+
+async function handleChat(event) {
+  if (!anthropic) return ok({ reply: 'AI advisor is not configured yet.' }, event);
+
+  // Decode user email from JWT
+  const authHeader = event.headers?.Authorization || event.headers?.authorization || '';
+  const token = authHeader.replace('Bearer ', '');
+  let email = null;
+  try {
+    if (token && token !== 'demo-token') {
+      const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString());
+      email = payload.email;
+    }
+  } catch { /* skip */ }
+
+  const body = JSON.parse(event.body || '{}');
+  const { message, history = [] } = body;
+
+  if (!message?.trim()) return ok({ reply: 'Please send a message.' }, event);
+
+  // Load user context
+  let userContext = 'The user is a WanderZenAI member who loves slow travel.';
+  if (email) {
+    try {
+      const [profileRes, tripsRes] = await Promise.all([
+        getDB().query('SELECT name, home_city, age, language FROM users WHERE email = $1', [email]),
+        getDB().query('SELECT DISTINCT destination FROM submissions WHERE email = $1 ORDER BY destination LIMIT 15', [email]),
+      ]);
+      const p = profileRes.rows[0] || {};
+      const destinations = tripsRes.rows.map(r => r.destination).filter(Boolean);
+      userContext = [
+        p.name ? `The user's name is ${p.name}.` : '',
+        p.home_city ? `They are based in ${p.home_city}.` : '',
+        p.age ? `They are ${p.age} years old.` : '',
+        destinations.length > 0
+          ? `Past trips: ${destinations.join(', ')}.`
+          : 'They haven\'t planned any trips yet.',
+      ].filter(Boolean).join(' ');
+    } catch { /* use default context */ }
+  }
+
+  const systemPrompt = `You are a warm, knowledgeable personal slow travel advisor for WanderZenAI. You specialise in off-the-beaten-path destinations, hidden gems, local culture, and meaningful travel experiences — not tourist traps.
+
+User context: ${userContext}
+
+Guidelines:
+- Give specific, actionable advice. Name real places, neighbourhoods, restaurants.
+- Reference their past trips when relevant ("Since you loved Kyoto, you might enjoy…").
+- Keep responses concise but rich — 2-4 paragraphs max.
+- Use a warm, enthusiastic tone. You genuinely love travel.
+- For itinerary questions, give a brief day-by-day outline.
+- Always suggest the slow travel angle: local markets, guesthouses, morning walks, off-season timing.`;
+
+  // Build conversation history for Claude
+  const messages = [
+    ...history.slice(-8).map(m => ({ role: m.role, content: m.content })),
+    { role: 'user', content: message.trim() },
+  ];
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 20000);
+    let response;
+    try {
+      response = await anthropic.messages.create(
+        { model: 'claude-haiku-4-5-20251001', max_tokens: 1024, system: systemPrompt, messages },
+        { signal: controller.signal }
+      );
+    } finally {
+      clearTimeout(timer);
+    }
+    const reply = response.content[0]?.text || 'Sorry, I couldn\'t generate a response. Try again.';
+    return ok({ reply }, event);
+  } catch (err) {
+    log.error('Chat failed', { error: err.message });
+    return ok({ reply: 'I\'m having trouble connecting right now. Please try again in a moment.' }, event);
   }
 }
 
