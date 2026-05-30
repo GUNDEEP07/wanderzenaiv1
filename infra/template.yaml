@@ -316,6 +316,12 @@ Resources:
             RestApiId: !Ref WanderZenApi
             Path: /recommendations/public/stats
             Method: GET
+        GetTrending:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /recommendations/trending
+            Method: GET
         GetPersonalised:
           Type: Api
           Properties:

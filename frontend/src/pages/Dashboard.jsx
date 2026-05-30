@@ -127,6 +127,8 @@ export default function Dashboard() {
   const [pastTrips, setPastTrips]   = useState([]);
   const [recs, setRecs]             = useState([]);
   const [prefActivities, setPrefActivities] = useState([]);
+  const [trending, setTrending]     = useState([]);
+  const [trendingCountry, setTrendingCountry] = useState('');
   const [loading, setLoading]       = useState(true);
   const [search, setSearch]         = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -138,9 +140,10 @@ export default function Dashboard() {
       try {
         const token = await getIdToken();
         const h = { Authorization: `Bearer ${token}` };
-        const [pRes, rRes] = await Promise.allSettled([
+        const [pRes, rRes, tRes] = await Promise.allSettled([
           fetch(`${API_URL}/profile`, { headers: h }),
           fetch(`${API_URL}/recommendations/personalised`, { headers: h }),
+          fetch(`${API_URL}/recommendations/trending`, { headers: h }),
         ]);
         if (pRes.status === 'fulfilled' && pRes.value.ok) {
           const d = await pRes.value.json();
@@ -151,6 +154,11 @@ export default function Dashboard() {
           const d = await rRes.value.json();
           if (d.recommendations) setRecs(d.recommendations);
           if (d.preferred_activities) setPrefActivities(d.preferred_activities);
+        }
+        if (tRes.status === 'fulfilled' && tRes.value.ok) {
+          const d = await tRes.value.json();
+          if (d.trending) setTrending(d.trending);
+          if (d.country) setTrendingCountry(d.country);
         }
       } catch { /* graceful */ }
       setLoading(false);
@@ -363,6 +371,45 @@ export default function Dashboard() {
                       </span>
                       <span style={{ fontSize: 16, color: '#00d4aa' }}>→</span>
                     </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── TRENDING IN YOUR COUNTRY ── */}
+        {!loading && trending.length > 0 && (
+          <div>
+            <div style={s.secHeader}>
+              <div style={s.secTitle}>
+                Trending among travelers from {trendingCountry || 'your country'}
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+              {trending.map((item, i) => (
+                <div
+                  key={i}
+                  onClick={() => navigate('/plan', { state: { prefill: { destinations: [{ name: item.destination?.split(',')[0]?.trim(), lat: 0, lng: 0 }] } } })}
+                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, padding: '16px 18px', cursor: 'pointer', transition: 'all 0.2s' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(0,212,170,0.25)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; e.currentTarget.style.transform = 'none'; }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <span style={{ fontSize: 28 }}>{item.emoji}</span>
+                    <span style={{
+                      fontSize: 9, fontWeight: 800, padding: '3px 8px', borderRadius: 20,
+                      background: item.badge?.includes('🔥') ? 'rgba(255,107,107,0.12)' : item.badge?.includes('↑') ? 'rgba(0,212,170,0.1)' : 'rgba(255,255,255,0.06)',
+                      color: item.badge?.includes('🔥') ? '#ff6b6b' : item.badge?.includes('↑') ? '#00d4aa' : 'rgba(255,255,255,0.5)',
+                      border: `1px solid ${item.badge?.includes('🔥') ? 'rgba(255,107,107,0.2)' : item.badge?.includes('↑') ? 'rgba(0,212,170,0.2)' : 'rgba(255,255,255,0.1)'}`,
+                    }}>
+                      {item.badge || '✦ Trending'}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 4 }}>{item.destination}</div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', lineHeight: 1.45, marginBottom: 10 }}>{item.why}</div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)' }}>
+                    ~{item.count} travelers this month
                   </div>
                 </div>
               ))}

@@ -63,6 +63,8 @@ exports.handler = async (event) => {
       return await handleAutocomplete(event);
     } else if (path.includes('/venues')) {
       return await handleVenues(event);
+    } else if (path.includes('/trending')) {
+      return await handleTrending(event);
     } else if (path.includes('/public/stats')) {
       return await handlePublicStats(event);
     } else if (path.includes('/personalised')) {
@@ -732,6 +734,105 @@ Rules:
   } catch (err) {
     log.error('Chat failed', { error: err.message });
     return ok({ reply: 'I\'m having trouble connecting right now. Please try again in a moment.' }, event);
+  }
+}
+
+async function handleTrending(event) {
+  const authHeader = event.headers?.Authorization || event.headers?.authorization || '';
+  const token = authHeader.replace('Bearer ', '');
+  let email = null;
+  try {
+    if (token && token !== 'demo-token') {
+      const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString());
+      email = payload.email;
+    }
+  } catch { /* public fallback */ }
+
+  // Get user country from profile if logged in
+  let country = event.queryStringParameters?.country || 'India';
+  let interests = event.queryStringParameters?.interests || '';
+
+  if (email) {
+    try {
+      const profileRow = await getDB().query(
+        'SELECT home_city FROM users WHERE email = $1',
+        [email]
+      );
+      const homeCity = profileRow.rows[0]?.home_city;
+      if (homeCity) {
+        // Extract country from "Sydney, Australia" → "Australia"
+        const parts = homeCity.split(',');
+        if (parts.length > 1) country = parts[parts.length - 1].trim();
+      }
+    } catch { /* use default */ }
+  }
+
+  const month = new Date().toLocaleString('en-US', { month: 'long' });
+  const cacheKey = `trending:${country}:${month}`;
+
+  // Check cache (24 hours)
+  try {
+    const cached = await getDB().query(
+      `SELECT recommendations FROM recommendation_cache
+       WHERE email = $1 AND created_at > NOW() - INTERVAL '24 hours'`,
+      [cacheKey]
+    );
+    if (cached.rows.length > 0) {
+      return ok(cached.rows[0].recommendations, event);
+    }
+  } catch { /* skip cache */ }
+
+  if (!anthropic) {
+    return ok({ trending: [] }, event);
+  }
+
+  try {
+    const interestText = interests ? `Their interests include: ${interests}.` : '';
+    const prompt = `You are a slow travel expert. List 6 trending slow-travel destinations popular among travelers from ${country} in ${month}. ${interestText}
+
+Focus on: under-the-radar places gaining popularity, seasonal highlights, and off-the-beaten-path gems.
+
+Return JSON ONLY:
+[
+  {
+    "destination": "City, Country",
+    "emoji": "🇯🇵",
+    "why": "One sentence — why this is trending now for travelers from ${country}",
+    "badge": "🔥 Hot" | "↑ Rising" | "✦ Hidden gem",
+    "count": "estimated number like 142"
+  }
+]`;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10000);
+    let message;
+    try {
+      message = await anthropic.messages.create(
+        { model: 'claude-haiku-4-5-20251001', max_tokens: 800, messages: [{ role: 'user', content: prompt }] },
+        { signal: controller.signal }
+      );
+    } finally {
+      clearTimeout(timer);
+    }
+
+    const text = message.content[0]?.text || '';
+    const match = text.match(/\[[\s\S]*\]/);
+    const trending = match ? JSON.parse(match[0]).slice(0, 6) : [];
+
+    const result = { trending, country, month };
+
+    try {
+      await getDB().query(
+        `INSERT INTO recommendation_cache (email, recommendations) VALUES ($1, $2)
+         ON CONFLICT (email) DO UPDATE SET recommendations = $2, created_at = NOW()`,
+        [cacheKey, JSON.stringify(result)]
+      );
+    } catch { /* skip cache write */ }
+
+    return ok(result, event);
+  } catch (err) {
+    log.error('Trending failed', { error: err.message });
+    return ok({ trending: [], country, month: '' }, event);
   }
 }
 

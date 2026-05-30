@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import './Landing.css';
 
 const DESTINATIONS = [
@@ -56,6 +57,8 @@ const SAMPLES = [
 
 export default function Landing() {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
+  const planRoute = () => navigate(currentUser ? '/plan' : '/signup');
   const sectionsRef = useRef([]);
 
   const [stats, setStats] = useState({
@@ -96,7 +99,7 @@ export default function Landing() {
           <a href="#sample" className="nav-link">Sample plan</a>
           <a href="/pricing" className="nav-link">Pricing</a>
           <a href="/agency" className="nav-link">For agencies</a>
-          <button className="nav-cta" onClick={() => navigate('/plan')}>Plan my trip</button>
+          <button className="nav-cta" onClick={planRoute}>Plan my trip</button>
         </div>
       </nav>
 
@@ -131,7 +134,7 @@ export default function Landing() {
         </p>
 
         <div className="hero-actions">
-          <button className="btn-primary" onClick={() => navigate('/plan')}>
+          <button className="btn-primary" onClick={planRoute}>
             Plan my trip — free <span>→</span>
           </button>
           <button className="btn-ghost" onClick={() => document.getElementById('sample').scrollIntoView({ behavior: 'smooth' })}>
@@ -267,7 +270,7 @@ export default function Landing() {
           </div>
 
           <div style={{ textAlign: 'center', marginTop: '3rem' }} className="reveal" ref={addRef}>
-            <button className="btn-primary" onClick={() => navigate('/plan')}>
+            <button className="btn-primary" onClick={planRoute}>
               Start planning — it's free →
             </button>
           </div>
@@ -418,7 +421,7 @@ export default function Landing() {
                   <li key={f}><span className="plan-check">✓</span>{f}</li>
                 ))}
               </ul>
-              <button className="plan-btn plan-btn-outline" onClick={() => navigate('/plan')}>Get started free</button>
+              <button className="plan-btn plan-btn-outline" onClick={planRoute}>Get started free</button>
             </div>
 
             <div className="plan-card plan-card-featured reveal reveal-delay-1" ref={addRef}>
@@ -470,7 +473,7 @@ export default function Landing() {
           <p className="cta-sub">
             No tourist traps. No crowded itineraries. Just you and the real destination.
           </p>
-          <button className="btn-primary" style={{ fontSize: '1.1rem', padding: '1.1rem 3rem' }} onClick={() => navigate('/plan')}>
+          <button className="btn-primary" style={{ fontSize: '1.1rem', padding: '1.1rem 3rem' }} onClick={planRoute}>
             Plan my trip — free →
           </button>
           <div style={{ marginTop: '1.5rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.3)' }}>
