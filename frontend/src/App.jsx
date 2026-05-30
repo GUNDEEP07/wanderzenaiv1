@@ -18,6 +18,7 @@ const Onboarding    = lazy(() => import('./pages/Onboarding'));
 const Settings      = lazy(() => import('./pages/Settings'));
 const PrivacyPolicy  = lazy(() => import('./pages/PrivacyPolicy'));
 const TermsOfService = lazy(() => import('./pages/TermsOfService'));
+const ItineraryView  = lazy(() => import('./pages/ItineraryView'));
 const NotFound       = lazy(() => import('./pages/NotFound'));
 
 const Spinner = () => (
@@ -45,6 +46,7 @@ export default function App() {
               <Route path="/agency"       element={<AgencyDashboard />} />
               <Route path="/explore"      element={<ExplorePage />} />
               <Route path="/settings"     element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              <Route path="/itinerary/:id" element={<ProtectedRoute><ItineraryView /></ProtectedRoute>} />
               <Route path="/privacy"      element={<PrivacyPolicy />} />
               <Route path="/terms"        element={<TermsOfService />} />
               <Route path="*"             element={<NotFound />} />

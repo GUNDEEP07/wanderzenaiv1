@@ -352,6 +352,12 @@ Resources:
             RestApiId: !Ref WanderZenApi
             Path: /profile
             Method: PUT
+        GetItinerary:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /itinerary
+            Method: GET
 
   # ─── S3 Bucket for PDFs ────────────────────────────────────────────────────
   PDFBucket:

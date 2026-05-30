@@ -520,6 +520,14 @@ export default function Dashboard() {
                     </span>
                   </div>
                   <div style={{ display: 'flex', gap: 8, padding: '0 20px', alignItems: 'center', flexShrink: 0 }}>
+                    {trip.hasItinerary && (
+                      <button
+                        style={{ padding: '7px 14px', background: 'rgba(0,212,170,0.08)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 8, fontSize: 11, fontWeight: 700, color: '#00d4aa', cursor: 'pointer', fontFamily: 'inherit' }}
+                        onClick={e => { e.stopPropagation(); navigate(`/itinerary/${trip.id}`); }}
+                      >
+                        View →
+                      </button>
+                    )}
                     {trip.pdfUrl && (
                       <a
                         href={trip.pdfUrl} target="_blank" rel="noreferrer"

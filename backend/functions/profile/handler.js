@@ -34,6 +34,56 @@ async function getPdfUrl(submissionId) {
   }
 }
 
+async function getItinerary(event, db, email) {
+  const submissionId = event.queryStringParameters?.id;
+  if (!submissionId) {
+    return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Missing id parameter' }) };
+  }
+
+  try {
+    // Verify the submission belongs to the requesting user
+    const ownerCheck = await db.query(
+      'SELECT email, destination, days, status, created_at FROM submissions WHERE id = $1',
+      [submissionId]
+    );
+
+    if (ownerCheck.rows.length === 0) {
+      return { statusCode: 404, headers: CORS, body: JSON.stringify({ error: 'Not found' }) };
+    }
+
+    const submission = ownerCheck.rows[0];
+
+    // Only the owner can view (unless you want to support public sharing later)
+    if (submission.email !== email) {
+      return { statusCode: 403, headers: CORS, body: JSON.stringify({ error: 'Forbidden' }) };
+    }
+
+    // Fetch itinerary data
+    const itinResult = await db.query(
+      'SELECT id, itinerary_data FROM itineraries WHERE submission_id = $1 LIMIT 1',
+      [submissionId]
+    );
+
+    if (itinResult.rows.length === 0) {
+      return { statusCode: 404, headers: CORS, body: JSON.stringify({ error: 'Itinerary not generated yet' }) };
+    }
+
+    return {
+      statusCode: 200, headers: CORS,
+      body: JSON.stringify({
+        submissionId,
+        destination: submission.destination,
+        days: submission.days,
+        status: submission.status,
+        createdAt: submission.created_at,
+        itinerary: itinResult.rows[0].itinerary_data,
+      }),
+    };
+  } catch (err) {
+    return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: err.message }) };
+  }
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers: { ...CORS, 'Access-Control-Allow-Methods': 'GET,PUT,OPTIONS' }, body: '' };
@@ -45,6 +95,11 @@ exports.handler = async (event) => {
   }
 
   const db = getDB();
+  const path = event.path || event.resource || '';
+
+  if (path.includes('/itinerary')) {
+    return getItinerary(event, db, email);
+  }
 
   // ── GET /profile ───────────────────────────────────────────────────────────
   if (event.httpMethod === 'GET') {
