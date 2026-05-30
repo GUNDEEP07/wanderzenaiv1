@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Landing.css';
 
@@ -57,6 +57,18 @@ const SAMPLES = [
 export default function Landing() {
   const navigate = useNavigate();
   const sectionsRef = useRef([]);
+
+  const [stats, setStats] = useState({
+    totalTrips: 22, totalDays: 75, uniqueDestinations: 14,
+    destinations: ['Kyoto, Japan', 'Kerala, India', 'Vietnam', 'Slovenia', 'Kashmir', 'Himachal Pradesh', 'Triund', 'Japan'],
+  });
+
+  useEffect(() => {
+    fetch(`${import.meta.env.VITE_API_URL}/recommendations/public/stats`)
+      .then(r => r.json())
+      .then(d => { if (d.totalTrips) setStats(d); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -137,9 +149,9 @@ export default function Landing() {
         </div>
 
         <div className="hero-proof reveal" ref={addRef}>
-          <div className="proof-item"><div className="proof-num">3 min</div><div className="proof-label">avg delivery time</div></div>
-          <div className="proof-item"><div className="proof-num">0</div><div className="proof-label">tourist traps included</div></div>
-          <div className="proof-item"><div className="proof-num">10+</div><div className="proof-label">languages supported</div></div>
+          <div className="proof-item"><div className="proof-num">{stats.totalTrips}+</div><div className="proof-label">itineraries generated</div></div>
+          <div className="proof-item"><div className="proof-num">{stats.uniqueDestinations}+</div><div className="proof-label">destinations explored</div></div>
+          <div className="proof-item"><div className="proof-num">{stats.totalDays}+</div><div className="proof-label">days of slow travel</div></div>
           <div className="proof-item"><div className="proof-num">$0</div><div className="proof-label">to get started</div></div>
         </div>
       </section>
@@ -152,6 +164,41 @@ export default function Landing() {
           <span>→</span>
         </a>
       </div>
+
+      {/* ── Destination Wall ── */}
+      <section style={{ background: '#0a0f1e', padding: '0 0 4rem' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 2rem' }}>
+          <div className="reveal" ref={addRef} style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            <div className="section-tag">Real trips planned</div>
+            <h2 className="section-title" style={{ fontSize: 'clamp(1.5rem,3vw,2.2rem)' }}>
+              Where our travelers have wandered
+            </h2>
+          </div>
+          <div className="reveal" ref={addRef} style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
+            {stats.destinations.map((dest, i) => {
+              const colors = ['rgba(0,212,170,0.12)', 'rgba(255,217,61,0.08)', 'rgba(96,165,250,0.08)', 'rgba(167,139,250,0.08)', 'rgba(251,146,60,0.08)'];
+              const borders = ['rgba(0,212,170,0.25)', 'rgba(255,217,61,0.2)', 'rgba(96,165,250,0.2)', 'rgba(167,139,250,0.2)', 'rgba(251,146,60,0.2)'];
+              const textColors = ['#00d4aa', '#ffd93d', '#60a5fa', '#a78bfa', '#fb923c'];
+              const ci = i % 5;
+              return (
+                <div key={dest} style={{
+                  padding: '8px 18px', borderRadius: 100,
+                  background: colors[ci], border: `1px solid ${borders[ci]}`,
+                  fontSize: 13, fontWeight: 600, color: textColors[ci],
+                  fontFamily: "'Plus Jakarta Sans', sans-serif",
+                }}>
+                  {dest}
+                </div>
+              );
+            })}
+            {stats.totalTrips > stats.destinations.length && (
+              <div style={{ padding: '8px 18px', borderRadius: 100, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.4)', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                +{stats.totalTrips - stats.destinations.length} more destinations
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
 
       {/* ── Photo strip ── */}
       <section style={{ background: '#0a0f1e', padding: '0 0 5rem', overflow: 'hidden' }}>
@@ -276,6 +323,9 @@ export default function Landing() {
             </div>
             <p className="section-sub" style={{ maxWidth: 320 }}>
               A real WanderZenAI excerpt. Notice what's missing — no Senso-ji crowds, no Shibuya crossing.
+            </p>
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '1rem', fontStyle: 'italic', marginTop: '0.5rem' }}>
+              From {stats.totalTrips}+ real itineraries generated for slow travelers like you
             </p>
           </div>
 
