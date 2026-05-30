@@ -692,11 +692,12 @@ Rules:
 - If they ask for recommendations without trip intent, give ONE specific suggestion + one-line reason, then ask "Want me to plan this trip for you?"`;
 
 
-  // Build conversation history for Claude
-  const messages = [
-    ...history.slice(-8).map(m => ({ role: m.role, content: m.content })),
-    { role: 'user', content: message.trim() },
-  ];
+  // Build conversation for Claude
+  // history already includes the current user message (sent from frontend)
+  // So we use it directly — no need to append message again
+  const messages = history.length > 0
+    ? history.slice(-10).map(m => ({ role: m.role, content: m.content }))
+    : [{ role: 'user', content: message.trim() }];
 
   try {
     const controller = new AbortController();
@@ -704,7 +705,7 @@ Rules:
     let response;
     try {
       response = await anthropic.messages.create(
-        { model: 'claude-haiku-4-5-20251001', max_tokens: 200, system: systemPrompt, messages },
+        { model: 'claude-haiku-4-5-20251001', max_tokens: 400, system: systemPrompt, messages },
         { signal: controller.signal }
       );
     } finally {

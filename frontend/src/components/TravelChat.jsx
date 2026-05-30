@@ -45,7 +45,8 @@ export function TravelChat() {
       const res = await fetch(`${API_URL}/recommendations/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ message: msg, history: history.slice(-8) }),
+        // Send newHistory (including current message) so Claude has full context
+        body: JSON.stringify({ message: msg, history: newHistory.slice(-10) }),
       });
       const data = await res.json();
       setHistory(h => [...h, { role: 'assistant', content: data.reply || 'Sorry, something went wrong.' }]);
