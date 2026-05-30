@@ -709,3 +709,92 @@
 .activity-card__emoji {
   filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6));
 }
+
+/* ─── Mobile responsive (< 768px) ───────────────────────────────────── */
+
+@media (max-width: 767px) {
+  .venue-split {
+    flex-direction: column;
+    height: auto;
+    overflow-y: auto;
+    min-height: 100%;
+  }
+
+  .venue-panel-left {
+    width: 100%;
+    max-height: none;
+    position: relative;
+    border-right: none;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    flex-shrink: 0;
+  }
+
+  .venue-panel-left::before {
+    display: none;
+  }
+
+  .venue-left-head {
+    padding: 20px 16px 12px;
+  }
+
+  .venue-headline {
+    font-size: 26px;
+  }
+
+  .venue-chips {
+    padding: 6px 16px 10px;
+  }
+
+  .venue-picks-scroll {
+    max-height: 280px;
+    padding: 0 12px 12px 16px;
+  }
+
+  .venue-panel-right {
+    width: 100%;
+    flex: none;
+    min-height: 0;
+  }
+
+  .venue-panel-right__scroll {
+    padding: 16px 16px 0;
+    overflow-y: visible;
+  }
+
+  .activity-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+
+  .activity-card {
+    padding: 10px 6px 8px;
+  }
+
+  .activity-card__emoji {
+    font-size: 20px;
+    margin-bottom: 5px;
+  }
+
+  .activity-card__label {
+    font-size: 9px;
+  }
+
+  .venue-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .venue-footer {
+    padding: 10px 16px 14px;
+  }
+
+  .venue-footer__continue {
+    padding: 10px 20px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .activity-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

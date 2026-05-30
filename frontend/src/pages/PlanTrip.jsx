@@ -281,7 +281,7 @@ export default function PlanTrip() {
           </button>
         </nav>
         <div style={{ padding: '12px 24px 0' }}>{progressBar}</div>
-        <div style={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>
+        <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
           <VenueSelection
             destinations={form.destinations}
             travelStyles={form.travelStyle}
