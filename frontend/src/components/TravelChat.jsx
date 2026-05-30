@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { analytics } from '../utils/analytics';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -82,7 +83,7 @@ export function TravelChat() {
     <>
       {/* Floating button */}
       <button
-        onClick={() => setOpen(o => !o)}
+        onClick={() => { const next = !open; setOpen(next); if (next) analytics.chatOpened(); }}
         style={{
           position: 'fixed', bottom: 28, right: 28, zIndex: 1000,
           width: 56, height: 56, borderRadius: '50%',

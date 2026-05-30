@@ -12,6 +12,7 @@ import { VenueSelection } from '../components/plantrip/VenueSelection';
 import StepReview from '../components/plantrip/StepReview';
 import { fetchPreview, submitItinerary } from '../api/itinerary';
 import { useAuth } from '../context/AuthContext';
+import { analytics } from '../utils/analytics';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -237,9 +238,10 @@ export default function PlanTrip() {
     setSubmitError('');
     try {
       const { status, data } = await submitItinerary(form);
-      if (status === 402) { navigate('/pricing', { state: { reason: 'free_limit' } }); return; }
+      if (status === 402) { analytics.freeLimitHit(); navigate('/pricing', { state: { reason: 'free_limit' } }); return; }
       if (!data.success) throw new Error(data.message || 'Submission failed');
       const destinationName = form.destinations.length > 0 ? form.destinations[0].name : 'Unknown';
+      analytics.tripSubmitted({ destination: destinationName, days: form.days, travelStyle: form.travelStyle });
       navigate('/confirmation', {
         state: { submissionId: data.data.submissionId, destination: destinationName, email: form.email },
       });

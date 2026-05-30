@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { updateProfile, sendEmailVerification } from 'firebase/auth';
 import { auth, FIREBASE_CONFIGURED } from '../firebase';
+import { analytics } from '../utils/analytics';
 
 const s = {
   page: { minHeight: '100vh', background: '#06090f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Plus Jakarta Sans', sans-serif", padding: '24px 0' },
@@ -45,7 +46,7 @@ export default function Signup() {
 
   const handleGoogle = async () => {
     setError(''); setLoading(true);
-    try { await signInWithGoogle(); navigate('/onboarding'); }
+    try { await signInWithGoogle(); analytics.signUp('google'); navigate('/onboarding'); }
     catch { setError('Google sign-in failed. Try again.'); }
     finally { setLoading(false); }
   };
@@ -65,6 +66,7 @@ export default function Signup() {
       if (FIREBASE_CONFIGURED && auth?.currentUser && !auth.currentUser.emailVerified) {
         try { await sendEmailVerification(auth.currentUser); } catch { /* non-blocking */ }
       }
+      analytics.signUp('email');
       navigate('/onboarding');
     } catch (err) {
       if (err?.code === 'auth/email-already-in-use') setError('An account with this email already exists.');

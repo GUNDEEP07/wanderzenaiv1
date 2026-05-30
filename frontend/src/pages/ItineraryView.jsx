@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { analytics } from '../utils/analytics';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -64,6 +65,7 @@ export default function ItineraryView() {
         if (!res.ok) throw new Error('Could not load itinerary');
         const d = await res.json();
         setData(d);
+        analytics.itineraryViewed(d.destination);
       } catch (e) {
         setError(e.message);
       } finally {

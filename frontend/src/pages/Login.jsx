@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { analytics } from '../utils/analytics';
 
 const s = {
   page: { minHeight: '100vh', background: '#06090f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Plus Jakarta Sans', sans-serif" },
@@ -47,7 +48,7 @@ export default function Login() {
 
   const handleGoogle = async () => {
     setError(''); setLoading(true);
-    try { await signInWithGoogle(); navigate('/dashboard'); }
+    try { await signInWithGoogle(); analytics.login('google'); navigate('/dashboard'); }
     catch { setError('Google sign-in failed. Try again.'); }
     finally { setLoading(false); }
   };
@@ -55,7 +56,7 @@ export default function Login() {
   const handleEmail = async (e) => {
     e.preventDefault();
     setError(''); setLoading(true);
-    try { await signInWithEmail(email, password); navigate('/dashboard'); }
+    try { await signInWithEmail(email, password); analytics.login('email'); navigate('/dashboard'); }
     catch (err) {
       setError(err?.code === 'auth/invalid-credential' ? 'Invalid email or password.' : 'Sign-in failed. Try again.');
     } finally { setLoading(false); }
