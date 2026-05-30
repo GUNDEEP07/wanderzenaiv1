@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { updateProfile, sendEmailVerification } from 'firebase/auth';
 import { auth, FIREBASE_CONFIGURED } from '../firebase';
@@ -43,6 +43,9 @@ export default function Signup() {
   const [loading, setLoading]   = useState(false);
   const { signInWithGoogle, signUpWithEmail, isDemo } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const refCode = searchParams.get('ref');
+  const onboardingPath = refCode ? `/onboarding?ref=${refCode}` : '/onboarding';
 
   const handleGoogle = async () => {
     setError(''); setLoading(true);
@@ -58,7 +61,7 @@ export default function Signup() {
           body: JSON.stringify({ email: u.email, name: u.displayName || '' }),
         }).catch(() => {});
       }
-      navigate('/onboarding');
+      navigate(onboardingPath);
     }
     catch { setError('Google sign-in failed. Try again.'); }
     finally { setLoading(false); }
@@ -86,7 +89,7 @@ export default function Signup() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, name: fullName.trim() }),
       }).catch(() => {});
-      navigate('/onboarding');
+      navigate(onboardingPath);
     } catch (err) {
       if (err?.code === 'auth/email-already-in-use') setError('An account with this email already exists.');
       else setError('Could not create account. Try again.');

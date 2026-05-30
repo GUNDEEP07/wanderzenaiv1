@@ -154,14 +154,26 @@ exports.handler = async (event) => {
           [email]
         );
 
+        // Create user record if it doesn't exist yet (first dashboard visit after auth)
+        if (userResult.rows.length === 0) {
+          try {
+            await db.query(
+              `INSERT INTO users (email) VALUES ($1) ON CONFLICT (email) DO NOTHING`,
+              [email]
+            );
+            userResult = await db.query(
+              `SELECT email, name, gender, age, whatsapp, home_city, language,
+                      onboarding_complete, plan, referral_code, itineraries_remaining,
+                      (SELECT COUNT(*) FROM users WHERE referred_by = users.referral_code) as referral_count
+               FROM users WHERE email = $1`,
+              [email]
+            );
+          } catch { /* graceful */ }
+        }
+
         // Generate referral code if user doesn't have one yet
         if (userResult.rows.length > 0 && !userResult.rows[0].referral_code) {
-          let code;
-          let attempts = 0;
-          do {
-            code = generateReferralCode();
-            attempts++;
-          } while (attempts < 10);
+          const code = generateReferralCode();
           try {
             await db.query('UPDATE users SET referral_code = $1 WHERE email = $2', [code, email]);
             userResult.rows[0].referral_code = code;
