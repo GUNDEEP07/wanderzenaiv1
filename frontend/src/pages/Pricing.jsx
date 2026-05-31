@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import './Pricing.css';
 
 const SINGLE_LINK = import.meta.env.VITE_STRIPE_SINGLE_PLAN_LINK;
 const WANDERER_LINK = import.meta.env.VITE_STRIPE_WANDERER_LINK;
@@ -106,7 +107,6 @@ export default function Pricing() {
   return (
     <div style={{...s.page, margin: 0, padding: 0, minHeight: '100vh', background: '#0a0f1e'}}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,700;1,9..144,400&display=swap');
         * { box-sizing: border-box; }
         .plan-card:hover { transform: translateY(-4px); box-shadow: 0 24px 48px rgba(0,0,0,0.4); }
         .faq-item:hover { border-color: rgba(0,212,170,0.25) !important; }
@@ -114,10 +114,13 @@ export default function Pricing() {
         .btn-filled:hover { background: #fff !important; transform: translateY(-1px); }
       `}</style>
 
-      <nav style={s.nav}>
-        <button style={s.backBtn} onClick={() => navigate('/')}>
-          <div style={s.logoMark}>W</div>
-          WanderZenAI
+      <nav className="pricing-nav" style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 var(--desktop-pad, 2.5rem)', background: 'rgba(10,15,30,0.92)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.06)', position: 'sticky', top: 0, zIndex: 100 }}>
+        <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
+          <div style={{ width: 24, height: 24, borderRadius: 6, background: 'linear-gradient(135deg,#00d4aa,#00916a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: '#0a0f1e', boxShadow: '0 0 12px rgba(0,212,170,0.3)' }}>W</div>
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em' }}>WanderZenAI</span>
+        </a>
+        <button onClick={() => navigate('/plan')} style={{ padding: '6px 14px', borderRadius: 8, background: '#00d4aa', color: '#0a0f1e', border: 'none', fontFamily: 'inherit', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
+          Plan trip →
         </button>
       </nav>
 
@@ -161,7 +164,7 @@ export default function Pricing() {
           <p style={s.sub}>No hidden fees. No tourist-trap pricing. Your PDF is yours to keep forever.</p>
         </div>
 
-        <div style={s.grid}>
+        <div style={s.grid} className="pricing-cards-grid">
           {PLANS.map(plan => (
             <div
               key={plan.name}
@@ -200,7 +203,7 @@ export default function Pricing() {
 
         <div style={s.faqSection}>
           <h2 style={s.faqTitle}>Common questions</h2>
-          <div style={s.faqGrid}>
+          <div style={s.faqGrid} className="pricing-faq-grid">
             {FAQS.map((faq, i) => (
               <div
                 key={faq.q}
