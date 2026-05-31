@@ -123,28 +123,36 @@ export default function ExplorePage() {
   return (
     <div style={{ background: navy, minHeight: '100vh', fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#fff', margin: 0, padding: 0 }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,400&display=swap');
         * { box-sizing: border-box; }
         @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+        @media (max-width: 768px) {
+          .explore-nav-links { display: none !important; }
+        }
+        @media (max-width: 640px) {
+          .explore-nav { padding: 0 1rem !important; }
+          .explore-hero { padding: 2rem 1rem 1.5rem !important; }
+          .explore-country-grid { grid-template-columns: 1fr !important; }
+          .explore-trending-grid { grid-template-columns: 1fr !important; }
+        }
       `}</style>
 
       {/* Nav */}
-      <nav style={{ height: 58, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2.5rem', background: navy2, borderBottom: `1px solid ${border}`, position: 'sticky', top: 0, zIndex: 100 }}>
+      <nav className="explore-nav" style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2.5rem', background: navy2, borderBottom: `1px solid ${border}`, position: 'sticky', top: 0, zIndex: 100, backdropFilter: 'blur(20px)' }}>
         <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
           <div style={{ width: 28, height: 28, borderRadius: 7, background: teal, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, color: navy }}>W</div>
           <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em' }}>WanderZenAI</span>
         </a>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+        <div className="explore-nav-links" style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
           <a href="/" style={{ fontSize: 12, color: w40, textDecoration: 'none' }}>Home</a>
           <a href="/pricing" style={{ fontSize: 12, color: w40, textDecoration: 'none' }}>Pricing</a>
-          <button onClick={() => navigate('/plan')} style={{ background: teal, color: navy, border: 'none', padding: '7px 18px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-            Plan my trip
-          </button>
         </div>
+        <button onClick={() => navigate('/plan')} style={{ background: teal, color: navy, border: 'none', padding: '7px 18px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+          Plan my trip
+        </button>
       </nav>
 
       {/* Page hero */}
-      <div style={{ padding: '3rem 2rem 2rem', maxWidth: 1200, margin: '0 auto' }}>
+      <div className="explore-hero" style={{ padding: '3rem 2rem 2rem', maxWidth: 1200, margin: '0 auto' }}>
         <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: teal, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
           <span style={{ width: 24, height: 1, background: teal, display: 'inline-block' }} />
           Explore destinations
@@ -172,7 +180,7 @@ export default function ExplorePage() {
             </div>
             <div style={{ fontSize: '0.8rem', color: w40, fontStyle: 'italic' }}>Updated weekly</div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
+          <div className="explore-trending-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
             {(apiTrending.length ? apiTrending.map(t => ({ dest: t.destination + ', ' + t.country, img: t.image_url, trend: t.amadeus_score > 80 ? `Score ${t.amadeus_score}/100` : 'Recommended' })) : TRENDING).map(t => (
               <div
                 key={t.dest}
@@ -211,16 +219,27 @@ export default function ExplorePage() {
           </div>
 
           {/* Continent tabs */}
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: '2rem' }}>
+          <div style={{
+            display: 'flex', gap: 8, marginBottom: '2rem',
+            overflowX: 'auto', WebkitOverflowScrolling: 'touch',
+            msOverflowStyle: 'none', scrollbarWidth: 'none',
+          }}>
             {CONTINENTS.map(c => (
-              <button
+              <div
                 key={c.id}
                 onClick={() => handleContinent(c.id)}
-                style={{ padding: '8px 18px', borderRadius: 100, border: `1px solid ${activeContinent === c.id ? teal : border}`, background: activeContinent === c.id ? tealGlow : 'transparent', color: activeContinent === c.id ? teal : w60, fontSize: '0.875rem', fontWeight: activeContinent === c.id ? 700 : 400, cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif", transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 6 }}
+                style={{
+                  flexShrink: 0, whiteSpace: 'nowrap',
+                  padding: '8px 16px', borderRadius: 100, cursor: 'pointer',
+                  fontSize: '0.875rem', fontWeight: 600,
+                  border: `1px solid ${activeContinent === c.id ? tealBorder : border}`,
+                  background: activeContinent === c.id ? tealGlow : w08,
+                  color: activeContinent === c.id ? teal : w40,
+                  transition: 'all 0.2s',
+                }}
               >
-                <span>{c.emoji}</span>
-                {c.name}
-              </button>
+                {c.emoji} {c.name}
+              </div>
             ))}
           </div>
 
@@ -229,7 +248,7 @@ export default function ExplorePage() {
           </div>
 
           {/* Country grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16, marginBottom: '1.5rem' }}>
+          <div className="explore-country-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16, marginBottom: '1.5rem' }}>
             {countries.map(c => (
               <div
                 key={c.name}
