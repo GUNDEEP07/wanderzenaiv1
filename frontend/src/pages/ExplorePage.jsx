@@ -125,6 +125,7 @@ export default function ExplorePage() {
       <style>{`
         * { box-sizing: border-box; }
         @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+        .explore-tabs::-webkit-scrollbar { display: none; }
         @media (max-width: 768px) {
           .explore-nav-links { display: none !important; }
         }
@@ -219,7 +220,7 @@ export default function ExplorePage() {
           </div>
 
           {/* Continent tabs */}
-          <div style={{
+          <div className="explore-tabs" style={{
             display: 'flex', gap: 8, marginBottom: '2rem',
             overflowX: 'auto', WebkitOverflowScrolling: 'touch',
             msOverflowStyle: 'none', scrollbarWidth: 'none',
