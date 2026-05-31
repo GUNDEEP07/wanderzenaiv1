@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { TravelChat } from '../components/TravelChat';
+import './Dashboard.css';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -134,13 +135,6 @@ export default function Dashboard() {
   const [filterStatus, setFilterStatus] = useState('all');
   const navigate = useNavigate();
 
-  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
-  useEffect(() => {
-    const handler = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handler);
-    return () => window.removeEventListener('resize', handler);
-  }, []);
-
   useEffect(() => {
     if (!currentUser) return;
     (async () => {
@@ -195,8 +189,8 @@ export default function Dashboard() {
 
   // ── Styles ───────────────────────────────────────────────────────────────────
   const s = {
-    page: { minHeight: '100vh', background: '#06090f', fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#fff' },
-    nav: { padding: '14px 36px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', position: 'sticky', top: 0, zIndex: 10, background: 'rgba(6,9,15,0.92)', backdropFilter: 'blur(16px)' },
+    page: { minHeight: '100vh', background: '#0a0f1e', fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#fff' },
+    nav: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', position: 'sticky', top: 0, zIndex: 10, background: 'rgba(10,15,30,0.92)', backdropFilter: 'blur(16px)' },
     logo: { display: 'flex', alignItems: 'center', gap: 10 },
     logoMark: { width: 32, height: 32, background: 'linear-gradient(135deg,#00d4aa,#00916a)', borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: '#06090f', boxShadow: '0 0 20px rgba(0,212,170,0.3)' },
     logoText: { fontSize: 15, fontWeight: 700 },
@@ -204,15 +198,15 @@ export default function Dashboard() {
     avatar: { width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#00d4aa,#00916a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: '#06090f', overflow: 'hidden', flexShrink: 0 },
     navName: { fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.75)' },
     signOut: { background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12 },
-    hero: { padding: '52px 36px 44px', position: 'relative', overflow: 'hidden' },
+    hero: { position: 'relative', overflow: 'hidden' },
     eyebrow: { fontSize: 11, fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#00d4aa', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 },
-    heroTitle: { fontFamily: "'Fraunces', serif", fontSize: 48, fontWeight: 900, lineHeight: 1.05, letterSpacing: '-0.025em', marginBottom: 6 },
+    heroTitle: { fontFamily: "'Fraunces', serif", fontWeight: 900, lineHeight: 1.05, letterSpacing: '-0.025em', marginBottom: 6 },
     heroSub: { fontSize: 15, color: 'rgba(255,255,255,0.4)', marginBottom: 36, fontStyle: 'italic' },
-    statsStrip: { display: 'flex', gap: 0, border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, overflow: 'hidden', background: 'rgba(255,255,255,0.02)', maxWidth: 600 },
-    stat: { flex: 1, padding: '16px 20px', borderRight: '1px solid rgba(255,255,255,0.06)' },
+    statsStrip: { display: 'flex', gap: 0, overflow: 'hidden' },
+    stat: { flex: 1, padding: '16px 20px' },
     statNum: { fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 900, lineHeight: 1, marginBottom: 4 },
     statLabel: { fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)' },
-    main: { padding: '0 36px 60px', display: 'grid', gap: 44 },
+    main: { display: 'grid', gap: 44 },
     secHeader: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 18 },
     secTitle: { fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 700 },
     secLink: { fontSize: 12, color: '#00d4aa', textDecoration: 'none', fontWeight: 600, cursor: 'pointer', background: 'none', border: 'none', fontFamily: 'inherit' },
@@ -221,7 +215,6 @@ export default function Dashboard() {
   return (
     <div style={s.page}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;0,9..144,900;1,9..144,300;1,9..144,400&display=swap');
         * { box-sizing: border-box; }
         ::-webkit-scrollbar { display: none; }
         @keyframes shimmer {
@@ -237,7 +230,7 @@ export default function Dashboard() {
       `}</style>
 
       {/* NAV */}
-      <nav style={{ ...s.nav, padding: isMobile ? '12px 16px' : '14px 36px' }}>
+      <nav style={s.nav} className="dash-nav">
         <div style={s.logo}>
           <div style={s.logoMark}>W</div>
           <span style={s.logoText}>WanderZenAI</span>
@@ -251,7 +244,7 @@ export default function Dashboard() {
       </nav>
 
       {/* HERO */}
-      <div style={{ padding: isMobile ? '28px 16px 32px' : '52px 36px 44px', position: 'relative', overflow: 'hidden' }}>
+      <div className="dash-hero" style={{ position: 'relative', overflow: 'hidden' }}>
         {/* Ambient glows */}
         <div style={{ position: 'absolute', top: -100, left: -100, width: 600, height: 500, background: 'radial-gradient(ellipse,rgba(0,212,170,0.07) 0%,transparent 65%)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', top: 0, right: 0, width: 400, height: 400, background: 'radial-gradient(ellipse,rgba(96,165,250,0.04) 0%,transparent 65%)', pointerEvents: 'none' }} />
@@ -260,7 +253,7 @@ export default function Dashboard() {
           <span style={{ display: 'inline-block', width: 20, height: 1.5, background: '#00d4aa', borderRadius: 2 }} />
           {greeting}
         </div>
-        <div style={{ ...s.heroTitle, fontSize: isMobile ? 28 : 48 }}>
+        <div style={s.heroTitle} className="dash-hero-title">
           {loading ? 'Loading…' : `${firstName},`}<br />
           <em style={{ fontStyle: 'italic', fontWeight: 300, color: 'transparent', background: 'linear-gradient(135deg,rgba(255,255,255,0.55),rgba(255,255,255,0.2))', WebkitBackgroundClip: 'text', backgroundClip: 'text' }}>
             where next?
@@ -283,20 +276,20 @@ export default function Dashboard() {
             ))}
           </div>
         ) : (
-          <div style={{ ...s.statsStrip, maxWidth: isMobile ? '100%' : 600, flexDirection: isMobile ? 'column' : 'row' }}>
-            <div style={{ ...s.stat, borderRight: isMobile ? 'none' : '1px solid rgba(255,255,255,0.06)', borderBottom: isMobile ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+          <div style={s.statsStrip} className="dash-stats">
+            <div style={s.stat} className="dash-stat">
               <div style={{ ...s.statNum, color: '#00d4aa' }}>{totalTrips}</div>
               <div style={s.statLabel}>Itineraries</div>
             </div>
-            <div style={{ ...s.stat, borderRight: isMobile ? 'none' : '1px solid rgba(255,255,255,0.06)', borderBottom: isMobile ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+            <div style={s.stat} className="dash-stat">
               <div style={s.statNum}>{countryCount}</div>
               <div style={s.statLabel}>Countries</div>
             </div>
-            <div style={{ ...s.stat, borderRight: isMobile ? 'none' : '1px solid rgba(255,255,255,0.06)', borderBottom: isMobile ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+            <div style={s.stat} className="dash-stat">
               <div style={s.statNum}>{totalDays}</div>
               <div style={s.statLabel}>Days planned</div>
             </div>
-            <div style={{ ...s.stat, borderRight: 'none', borderBottom: 'none' }}>
+            <div style={s.stat} className="dash-stat">
               <div style={{ ...s.statNum, fontSize: sinceLastTrip ? 18 : 28 }}>{sinceLastTrip || '–'}</div>
               <div style={s.statLabel}>Since last trip</div>
             </div>
@@ -304,7 +297,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      <div style={{ ...s.main, padding: isMobile ? '0 16px 60px' : '0 36px 60px' }}>
+      <div style={s.main} className="dash-main">
 
         {/* ── READY FOR NEXT ADVENTURE ── */}
         {!loading && (
@@ -312,7 +305,7 @@ export default function Dashboard() {
             <div style={s.secHeader}>
               <div style={s.secTitle}>Ready for your next adventure?</div>
             </div>
-            <div style={{ background: 'linear-gradient(135deg,rgba(0,212,170,0.08),rgba(96,165,250,0.05))', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 20, padding: '28px 32px', display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', gap: 24, position: 'relative', overflow: 'hidden', flexDirection: isMobile ? 'column' : 'row' }}>
+            <div className="dash-cta-card" style={{ background: 'linear-gradient(135deg,rgba(0,212,170,0.08),rgba(96,165,250,0.05))', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 20, padding: '28px 32px', position: 'relative', overflow: 'hidden' }}>
               <div style={{ position: 'absolute', right: 32, top: '50%', transform: 'translateY(-50%)', fontSize: 80, color: 'rgba(0,212,170,0.04)', pointerEvents: 'none' }}>✦</div>
               <div style={{ position: 'relative', zIndex: 1 }}>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(0,212,170,0.1)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 100, padding: '4px 12px', fontSize: 10, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#00d4aa', marginBottom: 12 }}>
@@ -333,7 +326,8 @@ export default function Dashboard() {
               </div>
               <button
                 onClick={() => navigate('/plan')}
-                style={{ padding: '14px 28px', background: 'linear-gradient(135deg,#00d4aa,#00a87e)', border: 'none', borderRadius: 12, color: '#06090f', fontFamily: 'inherit', fontSize: 14, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 4px 20px rgba(0,212,170,0.3)', flexShrink: 0, position: 'relative', zIndex: 1, width: isMobile ? '100%' : 'auto', textAlign: 'center' }}
+                className="dash-cta-btn"
+                style={{ padding: '14px 28px', background: 'linear-gradient(135deg,#00d4aa,#00a87e)', border: 'none', borderRadius: 12, color: '#06090f', fontFamily: 'inherit', fontSize: 14, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 4px 20px rgba(0,212,170,0.3)', flexShrink: 0, position: 'relative', zIndex: 1, textAlign: 'center' }}
               >
                 Plan my next trip →
               </button>
@@ -348,7 +342,7 @@ export default function Dashboard() {
               <div style={s.secTitle}>Picked for you</div>
               <button style={s.secLink} onClick={() => navigate('/explore')}>Explore all →</button>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: 14 }}>
+            <div className="dash-recs-grid">
               {recs.map((rec, i) => (
                 <div
                   key={i}
@@ -393,7 +387,7 @@ export default function Dashboard() {
                 Trending among travelers from {trendingCountry || 'your country'}
               </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+            <div className="dash-trending-grid">
               {trending.map((item, i) => (
                 <div
                   key={i}
@@ -431,7 +425,7 @@ export default function Dashboard() {
               <div style={s.secTitle}>Your travel DNA</div>
               <button style={s.secLink} onClick={() => navigate('/onboarding')}>Edit preferences →</button>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: 14 }}>
+            <div className="dash-dna-grid">
 
               {/* Top activities */}
               <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '20px 22px' }}>
@@ -517,7 +511,7 @@ export default function Dashboard() {
           {/* Search + filter bar — only show when there are trips */}
           {!loading && pastTrips.length > 0 && (
             <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-              <div style={{ flex: 1, minWidth: isMobile ? 0 : 180, display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '8px 12px' }}>
+              <div className="dash-search-input" style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '8px 12px' }}>
                 <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', flexShrink: 0 }}>🔍</span>
                 <input
                   type="text"
@@ -588,7 +582,7 @@ export default function Dashboard() {
               </div>
             );
             return (
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px,1fr))', gap: 14 }}>
+            <div className="dash-trips-grid">
               {filtered.map(trip => (
                 <div
                   key={trip.id}
@@ -605,7 +599,7 @@ export default function Dashboard() {
                       onError={e => { e.target.style.display = 'none'; }}
                     />
                     {/* Gradient overlay */}
-                    <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(to top, rgba(6,9,15,0.85) 0%, rgba(6,9,15,0.1) 60%)` }} />
+                    <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(to top, rgba(10,15,30,0.85) 0%, rgba(10,15,30,0.1) 60%)` }} />
                     {/* Status badge top-right */}
                     <div style={{ position: 'absolute', top: 10, right: 10 }}>
                       <span style={{

@@ -1,0 +1,55 @@
+/* Dashboard responsive layout — replaces all isMobile JS logic */
+
+.dash-nav { height: 52px; padding: 0 36px; }
+.dash-hero { padding: 52px 36px 44px; }
+.dash-hero-title { font-size: 48px; }
+
+.dash-stats {
+  display: flex;
+  max-width: 600px;
+  flex-direction: row;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.02);
+}
+.dash-stat { flex: 1; padding: 16px 20px; border-right: 1px solid rgba(255,255,255,0.06); }
+.dash-stat:last-child { border-right: none; }
+
+.dash-main { padding: 0 36px 60px; display: grid; gap: 44px; }
+
+.dash-cta-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-direction: row;
+  gap: 24px;
+}
+.dash-cta-btn { width: auto; }
+
+.dash-recs-grid   { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.dash-trending-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.dash-dna-grid    { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+.dash-trips-grid  { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.dash-search-input { flex: 1; min-width: 180px; }
+
+@media (max-width: 640px) {
+  .dash-nav { height: 52px; padding: 0 16px; }
+  .dash-hero { padding: 28px 16px 32px; }
+  .dash-hero-title { font-size: 28px; }
+
+  .dash-stats { flex-direction: column; max-width: 100%; }
+  .dash-stat { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .dash-stat:last-child { border-bottom: none; }
+
+  .dash-main { padding: 0 16px 60px; }
+
+  .dash-cta-card { flex-direction: column; align-items: flex-start; }
+  .dash-cta-btn { width: 100%; text-align: center; }
+
+  .dash-recs-grid   { grid-template-columns: 1fr; }
+  .dash-trending-grid { grid-template-columns: 1fr 1fr; }
+  .dash-dna-grid    { grid-template-columns: 1fr; }
+  .dash-trips-grid  { grid-template-columns: 1fr; }
+  .dash-search-input { min-width: 0; }
+}
