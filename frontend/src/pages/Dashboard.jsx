@@ -198,15 +198,12 @@ export default function Dashboard() {
     avatar: { width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#00d4aa,#00916a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: '#06090f', overflow: 'hidden', flexShrink: 0 },
     navName: { fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.75)' },
     signOut: { background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12 },
-    hero: { position: 'relative', overflow: 'hidden' },
     eyebrow: { fontSize: 11, fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#00d4aa', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 },
     heroTitle: { fontFamily: "'Fraunces', serif", fontWeight: 900, lineHeight: 1.05, letterSpacing: '-0.025em', marginBottom: 6 },
     heroSub: { fontSize: 15, color: 'rgba(255,255,255,0.4)', marginBottom: 36, fontStyle: 'italic' },
-    statsStrip: { display: 'flex', gap: 0, overflow: 'hidden' },
-    stat: { flex: 1, padding: '16px 20px' },
+    stat: { flex: 1 },
     statNum: { fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 900, lineHeight: 1, marginBottom: 4 },
     statLabel: { fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)' },
-    main: { display: 'grid', gap: 44 },
     secHeader: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 18 },
     secTitle: { fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 700 },
     secLink: { fontSize: 12, color: '#00d4aa', textDecoration: 'none', fontWeight: 600, cursor: 'pointer', background: 'none', border: 'none', fontFamily: 'inherit' },
@@ -276,7 +273,7 @@ export default function Dashboard() {
             ))}
           </div>
         ) : (
-          <div style={s.statsStrip} className="dash-stats">
+          <div className="dash-stats">
             <div style={s.stat} className="dash-stat">
               <div style={{ ...s.statNum, color: '#00d4aa' }}>{totalTrips}</div>
               <div style={s.statLabel}>Itineraries</div>
@@ -297,7 +294,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      <div style={s.main} className="dash-main">
+      <div className="dash-main">
 
         {/* ── READY FOR NEXT ADVENTURE ── */}
         {!loading && (
