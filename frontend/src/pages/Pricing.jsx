@@ -7,9 +7,6 @@ const WANDERER_LINK = import.meta.env.VITE_STRIPE_WANDERER_LINK;
 
 const s = {
   page: { minHeight: '100vh', background: '#0a0f1e', fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#fff' },
-  nav: { padding: '1.25rem 2.5rem', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(10,15,30,0.9)', backdropFilter: 'blur(20px)' },
-  backBtn: { background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '8px' },
-  logoMark: { width: 28, height: 28, borderRadius: 7, background: '#00d4aa', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, color: '#0a0f1e' },
   inner: { maxWidth: 1100, margin: '0 auto', padding: '5rem 1.5rem 6rem' },
   notice: { background: 'rgba(255,107,107,0.08)', border: '1px solid rgba(255,107,107,0.2)', borderRadius: 12, padding: '1rem 1.5rem', marginBottom: '2.5rem', fontSize: '0.95rem', color: 'rgba(255,255,255,0.7)', textAlign: 'center' },
   header: { textAlign: 'center', marginBottom: '4rem' },

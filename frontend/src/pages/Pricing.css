@@ -4,4 +4,5 @@
   .pricing-nav { padding: 0 var(--mobile-pad, 1rem) !important; }
   .pricing-cards-grid { grid-template-columns: 1fr !important; }
   .pricing-faq-grid { grid-template-columns: 1fr !important; }
+  .pricing-cards-grid > * { padding: 1.5rem !important; }
 }
