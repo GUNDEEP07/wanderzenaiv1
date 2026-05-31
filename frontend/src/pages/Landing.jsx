@@ -35,12 +35,12 @@ const SAMPLE_IMAGES = [
 ];
 
 const FEATURES = [
-  { icon: '◈', title: 'Zero tourist traps', body: 'Every itinerary avoids the top-10 lists. We find the spots locals keep to themselves.' },
-  { icon: '◈', title: 'Slow travel by design', body: 'Hidden cafes, morning trails, village markets — not 8 sights before noon.' },
-  { icon: '◈', title: 'Nature-first stays', body: 'Farmhouses, forest retreats and residential homestays — never city-centre chain hotels.' },
-  { icon: '◈', title: 'One hidden gem daily', body: 'Every single day includes something most tourists never find. That\'s a promise.' },
-  { icon: '◈', title: 'Your language', body: 'English, Hindi, Spanish, French, Japanese and 6 more languages supported.' },
-  { icon: '◈', title: 'Beautiful PDF, forever', body: 'Print-ready PDF with day cards, local eats, insider tips and cost breakdown.' },
+  { icon: '⊘', title: 'Zero tourist traps', body: 'Every itinerary avoids the top-10 lists. We find the spots locals keep to themselves.' },
+  { icon: '◎', title: 'Slow travel by design', body: 'Hidden cafes, morning trails, village markets — not 8 sights before noon.' },
+  { icon: '△', title: 'Nature-first stays', body: 'Farmhouses, forest retreats and residential homestays — never city-centre chain hotels.' },
+  { icon: '◆', title: 'One hidden gem daily', body: 'Every single day includes something most tourists never find. That\'s a promise.' },
+  { icon: '◑', title: 'Your language', body: 'English, Hindi, Spanish, French, Japanese and 6 more languages supported.' },
+  { icon: '▦', title: 'Beautiful PDF, forever', body: 'Print-ready PDF with day cards, local eats, insider tips and cost breakdown.' },
 ];
 
 const STEPS = [
@@ -116,6 +116,7 @@ export default function Landing() {
           <div className="hero-grid" />
           <div className="hero-glow-1" />
           <div className="hero-glow-2" />
+          <div className="hero-glow-3" />
         </div>
 
         <div className="hero-eyebrow">
@@ -123,7 +124,7 @@ export default function Landing() {
           AI-powered slow travel planning
         </div>
 
-        <h1 className="hero-title">
+        <h1 className="hero-title hero-title-gradient">
           Find the <span className="hero-title-teal">real</span> destination<br />
           <span className="hero-title-dim">hiding behind the tourist trail</span>
         </h1>
@@ -172,7 +173,6 @@ export default function Landing() {
       <section style={{ background: '#0a0f1e', padding: '0 0 4rem' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 2rem' }}>
           <div className="reveal" ref={addRef} style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <div className="section-tag">Real trips planned</div>
             <h2 className="section-title" style={{ fontSize: 'clamp(1.5rem,3vw,2.2rem)' }}>
               Where our travelers have wandered
             </h2>
@@ -207,7 +207,6 @@ export default function Landing() {
       <section style={{ background: '#0a0f1e', padding: '0 0 5rem', overflow: 'hidden' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 2rem' }}>
           <div className="reveal" ref={addRef} style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-            <div className="section-tag">Real destinations</div>
             <h2 className="section-title" style={{ fontSize: 'clamp(1.5rem,3vw,2.5rem)' }}>The places we actually send you to</h2>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0,1fr))', gap: 8 }} className="reveal" ref={addRef}>
@@ -367,7 +366,6 @@ export default function Landing() {
       <section style={{ background: '#0a0f1e', padding: '0 0 5rem' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 2rem' }}>
           <div className="reveal" ref={addRef} style={{ textAlign: 'center', marginBottom: '3rem' }}>
-            <div className="section-tag">What slow travelers say</div>
             <h2 className="section-title" style={{ fontSize: 'clamp(1.5rem,3vw,2.2rem)' }}>Built for people who travel differently</h2>
           </div>
           <div className="reveal" ref={addRef} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20 }}>
@@ -466,7 +464,6 @@ export default function Landing() {
         <div style={{ position: 'absolute', inset: 0, zIndex: 1, background: 'radial-gradient(ellipse at center, rgba(0,212,170,0.08) 0%, transparent 70%)' }} />
 
         <div style={{ position: 'relative', zIndex: 2, maxWidth: 700, margin: '0 auto' }} className="reveal" ref={addRef}>
-          <div className="section-tag" style={{ justifyContent: 'center', display: 'flex', marginBottom: '1.5rem' }}>Your next adventure</div>
           <h2 className="cta-title">
             Your next adventure<br />starts <em style={{ color: '#00d4aa', fontStyle: 'italic' }}>here.</em>
           </h2>
