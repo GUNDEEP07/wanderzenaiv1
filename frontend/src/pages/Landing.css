@@ -140,8 +140,8 @@ body {
   max-width: 900px;
 }
 
-.hero-title-teal { color: var(--teal); font-style: italic; }
-.hero-title-dim { color: var(--white-60); }
+.hero-title-teal { color: var(--teal); font-style: italic; -webkit-text-fill-color: var(--teal); }
+.hero-title-dim { color: var(--white-60); -webkit-text-fill-color: var(--white-60); }
 
 .hero-sub {
   font-size: clamp(1rem, 2vw, 1.2rem);
@@ -564,8 +564,8 @@ body {
 @media (max-width: 640px) {
   .hero { padding: 5rem 1rem 3rem; }
   .hero-actions { flex-direction: column; width: 100%; }
-  .btn-primary { width: 100%; justify-content: center; min-height: 52px; }
-  .btn-ghost { width: 100%; justify-content: center; min-height: 48px; }
+  .hero-actions .btn-primary { width: 100%; justify-content: center; min-height: 52px; }
+  .hero-actions .btn-ghost { width: 100%; justify-content: center; min-height: 48px; }
 }
 
 /* ── Mobile ── */
