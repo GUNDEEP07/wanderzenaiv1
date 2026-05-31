@@ -604,5 +604,5 @@ body {
 @media (max-width: 480px) {
   .hero-tags { display: none; }
   .nav-links { display: none; }
-  .proof-grid, .hero-proof { flex-direction: column; gap: 12px; }
+  .proof-grid { flex-direction: column; gap: 12px; }
 }
