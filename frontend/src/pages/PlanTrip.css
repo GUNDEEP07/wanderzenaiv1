@@ -343,4 +343,5 @@ body { background: var(--cream-dark); }
   .pt-currency-grid { grid-template-columns: repeat(2, 1fr); }
   .pt-pace-grid { grid-template-columns: 1fr; }
   .pt-choice-grid { grid-template-columns: 1fr; }
+  .plantrip-nav { padding: 0 var(--mobile-pad, 1rem) !important; }
 }
