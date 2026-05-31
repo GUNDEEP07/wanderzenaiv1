@@ -209,7 +209,7 @@ export default function Landing() {
           <div className="reveal" ref={addRef} style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
             <h2 className="section-title" style={{ fontSize: 'clamp(1.5rem,3vw,2.5rem)' }}>The places we actually send you to</h2>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0,1fr))', gap: 8 }} className="reveal" ref={addRef}>
+          <div className="reveal photo-strip-grid" ref={addRef}>
             {PHOTO_STRIP.map((photo, i) => (
               <div key={photo.label} style={{
                 position: 'relative', borderRadius: 12, overflow: 'hidden',
@@ -368,7 +368,7 @@ export default function Landing() {
           <div className="reveal" ref={addRef} style={{ textAlign: 'center', marginBottom: '3rem' }}>
             <h2 className="section-title" style={{ fontSize: 'clamp(1.5rem,3vw,2.2rem)' }}>Built for people who travel differently</h2>
           </div>
-          <div className="reveal" ref={addRef} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20 }}>
+          <div className="reveal testimonials-grid" ref={addRef}>
             {[
               { quote: "Finally a travel app that doesn't just list the Eiffel Tower. My Kyoto itinerary had me at a 6am temple before any tourists arrived — that's the kind of thing I can never find on my own.", name: 'Prabhsimran K.', location: 'Sydney, Australia', dest: '🇯🇵 Kyoto' },
               { quote: "I've used every travel planner out there. This is the first one that actually understood I don't want tourist traps — the Kerala backwaters route it gave me was completely off the usual trail.", name: 'Meena C.', location: 'Melbourne, Australia', dest: '🇮🇳 Kerala' },
