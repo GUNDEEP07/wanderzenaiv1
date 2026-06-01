@@ -144,18 +144,27 @@ export function TravelChat() {
                 <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 4 }}>Your personal travel advisor</div>
                 <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>Ask me anything — itineraries, tips,<br />hidden gems, best times to visit</div>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div
+                className="travel-chat-suggestions"
+                style={{
+                  display: 'flex', flexDirection: 'row', gap: 8,
+                  overflowX: 'auto', WebkitOverflowScrolling: 'touch',
+                  scrollbarWidth: 'none', paddingBottom: 4,
+                }}
+              >
                 {SUGGESTIONS.map((s, i) => (
                   <button
                     key={i}
+                    type="button"
                     onClick={() => send(s)}
                     style={{
-                      padding: '9px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                      borderRadius: 10, fontSize: 12, color: 'rgba(255,255,255,0.65)', cursor: 'pointer',
+                      padding: '8px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+                      borderRadius: 20, fontSize: 12, color: 'rgba(255,255,255,0.65)', cursor: 'pointer',
                       fontFamily: 'inherit', textAlign: 'left', transition: 'all 0.15s',
+                      flexShrink: 0, whiteSpace: 'nowrap',
                     }}
-                    onMouseEnter={e => { e.target.style.background = 'rgba(0,212,170,0.07)'; e.target.style.borderColor = 'rgba(0,212,170,0.2)'; e.target.style.color = '#fff'; }}
-                    onMouseLeave={e => { e.target.style.background = 'rgba(255,255,255,0.04)'; e.target.style.borderColor = 'rgba(255,255,255,0.08)'; e.target.style.color = 'rgba(255,255,255,0.65)'; }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,212,170,0.07)'; e.currentTarget.style.borderColor = 'rgba(0,212,170,0.2)'; e.currentTarget.style.color = '#fff'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'rgba(255,255,255,0.65)'; }}
                   >
                     {s}
                   </button>
@@ -277,6 +286,7 @@ export function TravelChat() {
       <style>{`
         @keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-6px)} }
         @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.75)} }
+        .travel-chat-suggestions::-webkit-scrollbar { display: none; }
       `}</style>
     </>
   );
