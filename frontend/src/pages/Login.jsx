@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { analytics } from '../utils/analytics';
 
 const s = {
-  page: { minHeight: '100vh', background: '#06090f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Plus Jakarta Sans', sans-serif" },
+  page: { minHeight: '100vh', background: '#0a0f1e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Plus Jakarta Sans', sans-serif" },
   box: { width: '100%', maxWidth: 400, padding: '0 24px' },
   logo: { width: 40, height: 40, background: 'linear-gradient(135deg,#00d4aa,#00916a)', borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 800, color: '#06090f', margin: '0 auto 16px' },
   headline: { fontFamily: "'Fraunces', serif", fontSize: 32, fontWeight: 900, color: '#fff', textAlign: 'center', lineHeight: 1.1, marginBottom: 6 },
@@ -77,7 +77,6 @@ export default function Login() {
   return (
     <div style={s.page}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,900;1,9..144,300&display=swap');
         input::placeholder { color: rgba(255,255,255,0.2); }
         input:focus { border-color: rgba(0,212,170,0.4) !important; }
       `}</style>
