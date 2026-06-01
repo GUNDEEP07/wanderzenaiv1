@@ -143,6 +143,10 @@ export default function Landing() {
           </button>
         </div>
 
+        <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', fontStyle: 'italic', marginBottom: '1.5rem' }}>
+          Trusted by {stats.totalTrips}+ slow travelers · Free to start
+        </div>
+
         <div className="hero-tags">
           {DESTINATIONS.map((d, i) => (
             <div key={d.name} className="dest-tag" style={{ animationDelay: `${i * 0.08}s` }}>
