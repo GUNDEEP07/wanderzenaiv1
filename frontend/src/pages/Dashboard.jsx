@@ -643,7 +643,7 @@ export default function Dashboard() {
                       <div data-trip-menu style={{ position: 'relative', marginLeft: 'auto' }}>
                         <button
                           type="button"
-                          onClick={e => { e.stopPropagation(); setOpenMenuId(openMenuId === trip.id ? null : trip.id); }}
+                          onClick={e => { e.stopPropagation(); setOpenMenuId(prev => prev === trip.id ? null : trip.id); }}
                           style={{ width: 30, height: 30, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, cursor: 'pointer', color: 'rgba(255,255,255,0.5)', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit' }}
                         >
                           ···
