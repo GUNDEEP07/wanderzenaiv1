@@ -345,3 +345,19 @@ body { background: var(--cream-dark); }
   .pt-choice-grid { grid-template-columns: 1fr; }
   .plantrip-nav { padding: 0 var(--mobile-pad, 1rem) !important; }
 }
+
+/* ── Progress bar (dark theme) ─────────────────────────────────── */
+.plantrip-progress {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 2rem;
+}
+.plantrip-progress__seg {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.12);
+  transition: background 0.3s;
+}
+.plantrip-progress__seg--done    { background: rgba(0,212,170,0.5); }
+.plantrip-progress__seg--active  { background: #00d4aa; }
