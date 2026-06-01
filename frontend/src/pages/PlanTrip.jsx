@@ -13,6 +13,8 @@ import StepReview from '../components/plantrip/StepReview';
 import { fetchPreview, submitItinerary } from '../api/itinerary';
 import { useAuth } from '../context/AuthContext';
 import { analytics } from '../utils/analytics';
+import { getUserLocationFromIP } from '../utils/geolocation';
+import { getCurrencyForCountry } from '../utils/countryToCurrency';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -51,7 +53,8 @@ const STEPS = ['Destination', 'Venues', 'Budget & dates', 'Travel style', 'Your 
 
 // Initial form state — all fields null-safe
 const INITIAL_FORM = {
-  destinations: [], days: 5, budget: '', currency: 'USD',
+  destinations: [], days: 5, budget: '',
+  currency: (typeof localStorage !== 'undefined' && localStorage.getItem('wz_currency')) || 'USD',
   travelerType: '', travelStyle: [], interests: '',
   travelDate: '', travelPace: 'balanced', wantsHotelRecs: true,
   startTime: '09:00', userMustDos: '',
@@ -163,10 +166,31 @@ export default function PlanTrip() {
     })();
   }, [currentUser]);
 
+  // Auto-detect currency from IP if no saved preference
+  useEffect(() => {
+    if (typeof localStorage !== 'undefined' && localStorage.getItem('wz_currency')) return;
+    const SUPPORTED = ['USD', 'EUR', 'GBP', 'INR', 'AUD', 'CAD', 'SGD', 'JPY'];
+    getUserLocationFromIP()
+      .then(({ countryCode }) => {
+        const detected = getCurrencyForCountry(countryCode);
+        if (SUPPORTED.includes(detected)) {
+          setForm(f => ({ ...f, currency: detected }));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   // Field setter — clears error on change
   const set = (key, val) => {
     setForm(f => ({ ...f, [key]: val }));
     setErrors(e => ({ ...e, [key]: '' }));
+  };
+
+  const setCurrency = (code) => {
+    set('currency', code);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('wz_currency', code);
+    }
   };
 
   const toggleStyle = (style) => {
@@ -396,7 +420,7 @@ export default function PlanTrip() {
                 <label style={s.label}>Currency</label>
                 <div style={s.grid4}>
                   {CURRENCIES.map(c => (
-                    <button key={c.code} style={s.choiceBtn(form.currency === c.code)} onClick={() => set('currency', c.code)}>
+                    <button type="button" key={c.code} style={s.choiceBtn(form.currency === c.code)} onClick={() => setCurrency(c.code)}>
                       {c.label}
                     </button>
                   ))}
