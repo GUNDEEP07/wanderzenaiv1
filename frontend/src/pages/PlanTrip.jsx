@@ -71,7 +71,7 @@ const s = {
   inner: { maxWidth: 680, margin: '0 auto', padding: '3rem 1.5rem 4rem' },
   card: { background: '#111827', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '2.5rem', marginBottom: '1rem' },
   stepLabel: { fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#00d4aa', marginBottom: '0.5rem' },
-  stepTitle: { fontFamily: "'Fraunces', serif", fontSize: '2rem', color: '#fff', marginBottom: '0.5rem', lineHeight: 1.2, letterSpacing: '-0.02em' },
+  stepTitle: { fontFamily: "'Fraunces', serif", fontSize: '2rem', color: '#fff', marginBottom: '0.5rem', lineHeight: 1.35, letterSpacing: '-0.02em' },
   stepSub: { color: 'rgba(255,255,255,0.5)', fontSize: '0.95rem', marginBottom: '2rem', fontStyle: 'italic' },
   fieldWrap: { marginBottom: '1.75rem' },
   label: { display: 'block', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', marginBottom: '0.75rem' },
@@ -80,15 +80,15 @@ const s = {
   error: { fontSize: '0.8rem', color: '#ff6b6b', marginTop: '0.4rem' },
   daysRow: { display: 'flex', alignItems: 'center', gap: '1rem' },
   daysBtn: { width: 44, height: 44, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.04)', color: '#fff', fontSize: '1.25rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' },
-  daysNum: { fontFamily: "'Fraunces', serif", fontSize: '2.5rem', fontWeight: 700, color: '#00d4aa', minWidth: 60, textAlign: 'center' },
+  daysNum: { fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '2.5rem', fontWeight: 800, color: '#00d4aa', minWidth: 60, textAlign: 'center' },
   grid4: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' },
   grid2: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' },
   grid3: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' },
   choiceBtn: (sel) => ({
     padding: '0.75rem 1rem',
-    border: `1px solid ${sel ? '#00d4aa' : 'rgba(255,255,255,0.1)'}`,
+    border: `${sel ? '2px' : '1px'} solid ${sel ? '#00d4aa' : 'rgba(255,255,255,0.1)'}`,
     borderRadius: 10,
-    background: sel ? 'rgba(0,212,170,0.1)' : 'rgba(255,255,255,0.04)',
+    background: sel ? 'rgba(0,212,170,0.1)' : 'rgba(255,255,255,0.07)',
     color: sel ? '#00d4aa' : 'rgba(255,255,255,0.6)',
     cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif",
     fontSize: '0.875rem', fontWeight: sel ? 700 : 400,
@@ -290,7 +290,7 @@ export default function PlanTrip() {
   );
 
   const sharedStyles = `
-    input::placeholder, textarea::placeholder { color: rgba(255,255,255,0.2); }
+    input::placeholder, textarea::placeholder { color: rgba(255,255,255,0.4); }
     input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.4); }
     select option { background: #111827; color: #fff; }
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -413,7 +413,7 @@ export default function PlanTrip() {
           {step === 2 && (
             <div>
               <div style={s.stepLabel}>Step 3 of 6</div>
-              <h2 style={s.stepTitle}>Budget & dates</h2>
+              <h2 style={s.stepTitle}>Budget <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 400 }}>&</span> dates</h2>
               <p style={s.stepSub}>A rough estimate helps us plan realistic activities and stays.</p>
 
               <div style={s.fieldWrap}>
@@ -451,7 +451,7 @@ export default function PlanTrip() {
             <div>
               <div style={s.stepLabel}>Step 4 of 6</div>
               <h2 style={s.stepTitle}>How do you travel?</h2>
-              <p style={s.stepSub}>This shapes the entire plan — activities, pace, food and accommodation.</p>
+              <p style={s.stepSub}>This shapes the entire plan: activities, pace, food and accommodation.</p>
 
               <div style={s.fieldWrap}>
                 <label style={s.label}>Pace</label>
