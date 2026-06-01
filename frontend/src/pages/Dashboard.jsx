@@ -133,6 +133,7 @@ export default function Dashboard() {
   const [loading, setLoading]       = useState(true);
   const [search, setSearch]         = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [openMenuId, setOpenMenuId] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -165,6 +166,14 @@ export default function Dashboard() {
       setLoading(false);
     })();
   }, [currentUser]);
+
+  useEffect(() => {
+    const close = (e) => {
+      if (!e.target.closest('[data-trip-menu]')) setOpenMenuId(null);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, []);
 
   // ── Derived stats ────────────────────────────────────────────────────────────
   const displayName   = profile?.name || currentUser?.displayName || currentUser?.email?.split('@')[0] || 'Explorer';
@@ -601,8 +610,8 @@ export default function Dashboard() {
                     <div style={{ position: 'absolute', top: 10, right: 10 }}>
                       <span style={{
                         padding: '3px 10px', borderRadius: 20, fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase',
-                        background: trip.status === 'email_sent' ? 'rgba(0,212,170,0.9)' : 'rgba(255,217,61,0.9)',
-                        color: trip.status === 'email_sent' ? '#06090f' : '#06090f',
+                        background: trip.status === 'email_sent' ? '#00d4aa' : '#ffd93d',
+                        color: '#06090f',
                       }}>
                         {trip.status === 'email_sent' ? '✓ Done' : '⏳ Processing'}
                       </span>
@@ -620,43 +629,64 @@ export default function Dashboard() {
                   </div>
 
                   {/* Actions row */}
-                  <div style={{ padding: '12px 14px', display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+                  <div style={{ padding: '10px 14px', display: 'flex', gap: 7, alignItems: 'center' }}>
                     {trip.hasItinerary && (
                       <button
+                        type="button"
                         style={{ padding: '7px 14px', background: 'linear-gradient(135deg,#00d4aa,#00a87e)', border: 'none', borderRadius: 8, fontSize: 11, fontWeight: 800, color: '#06090f', cursor: 'pointer', fontFamily: 'inherit' }}
                         onClick={e => { e.stopPropagation(); navigate(`/itinerary/${trip.id}`); }}
                       >
                         View itinerary →
                       </button>
                     )}
-                    {trip.pdfUrl && (
-                      <a href={trip.pdfUrl} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}
-                        style={{ padding: '7px 12px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.7)', textDecoration: 'none', cursor: 'pointer' }}>
-                        📥 PDF
-                      </a>
+                    {(trip.pdfUrl || trip.hasItinerary) && (
+                      <div data-trip-menu style={{ position: 'relative', marginLeft: 'auto' }}>
+                        <button
+                          type="button"
+                          onClick={e => { e.stopPropagation(); setOpenMenuId(openMenuId === trip.id ? null : trip.id); }}
+                          style={{ width: 30, height: 30, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, cursor: 'pointer', color: 'rgba(255,255,255,0.5)', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit' }}
+                        >
+                          ···
+                        </button>
+                        {openMenuId === trip.id && (
+                          <div style={{ position: 'absolute', bottom: 36, right: 0, background: '#1a2540', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: '4px 0', minWidth: 140, zIndex: 20, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
+                            {trip.pdfUrl && (
+                              <a
+                                href={trip.pdfUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={e => e.stopPropagation()}
+                                style={{ display: 'block', padding: '9px 14px', fontSize: 12, color: 'rgba(255,255,255,0.75)', textDecoration: 'none', fontFamily: 'inherit' }}
+                              >
+                                📥 Download PDF
+                              </a>
+                            )}
+                            {trip.hasItinerary && (
+                              <button
+                                type="button"
+                                style={{ display: 'block', width: '100%', padding: '9px 14px', background: 'none', border: 'none', fontSize: 12, color: 'rgba(255,255,255,0.75)', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
+                                onClick={async e => {
+                                  e.stopPropagation();
+                                  const url = `https://www.wanderzenai.com/itinerary/${trip.id}`;
+                                  try { await navigator.clipboard.writeText(url); } catch { }
+                                  e.currentTarget.textContent = '✓ Link copied';
+                                  setTimeout(() => { if (e.currentTarget) e.currentTarget.textContent = '🔗 Share link'; }, 2000);
+                                }}
+                              >
+                                🔗 Share link
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              style={{ display: 'block', width: '100%', padding: '9px 14px', background: 'none', border: 'none', fontSize: 12, color: 'rgba(255,255,255,0.75)', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
+                              onClick={e => { e.stopPropagation(); setOpenMenuId(null); navigate('/plan', { state: { prefill: { destinations: [{ name: trip.destination?.split(',')[0]?.trim(), lat: 0, lng: 0 }] } } }); }}
+                            >
+                              ↺ Re-plan trip
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     )}
-                    {trip.hasItinerary && (
-                      <button
-                        style={{ padding: '7px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.45)', cursor: 'pointer', fontFamily: 'inherit' }}
-                        onClick={async e => {
-                          e.stopPropagation();
-                          const url = `https://www.wanderzenai.com/itinerary/${trip.id}`;
-                          try { await navigator.clipboard.writeText(url); } catch { }
-                          const btn = e.currentTarget;
-                          btn.textContent = '✓ Copied';
-                          btn.style.color = '#00d4aa';
-                          setTimeout(() => { btn.textContent = '🔗 Share'; btn.style.color = 'rgba(255,255,255,0.45)'; }, 2000);
-                        }}
-                      >
-                        🔗 Share
-                      </button>
-                    )}
-                    <button
-                      style={{ padding: '7px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.45)', cursor: 'pointer', fontFamily: 'inherit', marginLeft: 'auto' }}
-                      onClick={() => navigate('/plan', { state: { prefill: { destinations: [{ name: trip.destination?.split(',')[0]?.trim(), lat: 0, lng: 0 }] } } })}
-                    >
-                      Re-plan
-                    </button>
                   </div>
 
                 </div>
