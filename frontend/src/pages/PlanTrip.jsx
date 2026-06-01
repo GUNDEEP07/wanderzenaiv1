@@ -203,18 +203,18 @@ export default function PlanTrip() {
   };
 
   const handleDestinationSelect = (destinations) => {
-    setForm({
-      ...form,
+    setForm(f => ({
+      ...f,
       destinations: Array.isArray(destinations) ? destinations : [destinations],
-    });
+    }));
   };
 
   const handleVenueSelect = (venueData) => {
-    setForm({
-      ...form,
+    setForm(f => ({
+      ...f,
       selected_venues: venueData.venues || venueData,
       day_assignments: venueData.dayAssignments || {},
-    });
+    }));
     setStep(2);
   };
 
@@ -306,7 +306,7 @@ export default function PlanTrip() {
             <div style={{ width: 24, height: 24, borderRadius: 6, background: 'linear-gradient(135deg,#00d4aa,#00916a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: '#0a0f1e' }}>W</div>
             <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em' }}>WanderZenAI</span>
           </a>
-          <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontFamily: 'inherit', fontSize: 12, cursor: 'pointer' }}>✕ Exit</button>
+          <button type="button" onClick={() => navigate('/')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontFamily: 'inherit', fontSize: 12, cursor: 'pointer' }}>✕ Exit</button>
         </nav>
         <div style={{ padding: '12px 24px 0' }}>{progressBar}</div>
         <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
@@ -340,7 +340,7 @@ export default function PlanTrip() {
           <div style={{ width: 24, height: 24, borderRadius: 6, background: 'linear-gradient(135deg,#00d4aa,#00916a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: '#0a0f1e' }}>W</div>
           <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em' }}>WanderZenAI</span>
         </a>
-        <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontFamily: 'inherit', fontSize: 12, cursor: 'pointer' }}>✕ Exit</button>
+        <button type="button" onClick={() => navigate('/')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontFamily: 'inherit', fontSize: 12, cursor: 'pointer' }}>✕ Exit</button>
       </nav>
 
       <div style={s.inner}>
@@ -365,7 +365,7 @@ export default function PlanTrip() {
                     <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)', marginBottom: 8 }}>Based on your travels</div>
                     <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
                       {personalRecs.map((rec, i) => (
-                        <button key={i} onClick={() => handleDestinationSelect({ name: rec.destination.split(',')[0].trim(), lat: 0, lng: 0 })} style={{ padding: '6px 12px', borderRadius: 20, border: '1px solid rgba(0,212,170,0.25)', background: 'rgba(0,212,170,0.07)', color: '#00d4aa', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        <button type="button" key={i} onClick={() => handleDestinationSelect({ name: rec.destination.split(',')[0].trim(), lat: 0, lng: 0 })} style={{ padding: '6px 12px', borderRadius: 20, border: '1px solid rgba(0,212,170,0.25)', background: 'rgba(0,212,170,0.07)', color: '#00d4aa', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                           {rec.emoji} {rec.destination.split(',')[0].trim()}
                         </button>
                       ))}
@@ -377,9 +377,9 @@ export default function PlanTrip() {
               <div style={s.fieldWrap}>
                 <label style={s.label}>How many days?</label>
                 <div style={s.daysRow}>
-                  <button style={s.daysBtn} onClick={() => set('days', Math.max(1, form.days - 1))}>−</button>
+                  <button type="button" style={s.daysBtn} onClick={() => set('days', Math.max(1, form.days - 1))}>−</button>
                   <div style={s.daysNum}>{form.days}</div>
-                  <button style={s.daysBtn} onClick={() => set('days', Math.min(30, form.days + 1))}>+</button>
+                  <button type="button" style={s.daysBtn} onClick={() => set('days', Math.min(30, form.days + 1))}>+</button>
                   <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem' }}>days</span>
                 </div>
               </div>
@@ -393,7 +393,7 @@ export default function PlanTrip() {
                 <label style={s.label}>Travelling as</label>
                 <div style={s.grid2}>
                   {TRAVELER_TYPES.map(t => (
-                    <button key={t} style={s.choiceBtn(form.travelerType === t)} onClick={() => set('travelerType', t)}>{t}</button>
+                    <button type="button" key={t} style={s.choiceBtn(form.travelerType === t)} onClick={() => set('travelerType', t)}>{t}</button>
                   ))}
                 </div>
               </div>
@@ -402,7 +402,7 @@ export default function PlanTrip() {
                 <label style={s.label}>Travel style <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(pick any)</span></label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                   {TRAVEL_STYLES.map(st => (
-                    <button key={st} style={s.tag(form.travelStyle.includes(st))} onClick={() => toggleStyle(st)}>{st}</button>
+                    <button type="button" key={st} style={s.tag(form.travelStyle.includes(st))} onClick={() => toggleStyle(st)}>{st}</button>
                   ))}
                 </div>
               </div>
@@ -457,7 +457,7 @@ export default function PlanTrip() {
                 <label style={s.label}>Pace</label>
                 <div style={s.grid3}>
                   {PACE_OPTIONS.map(p => (
-                    <button key={p.val} style={{ ...s.choiceBtn(form.travelPace === p.val), padding: '0.875rem' }} onClick={() => set('travelPace', p.val)}>
+                    <button type="button" key={p.val} style={{ ...s.choiceBtn(form.travelPace === p.val), padding: '0.875rem' }} onClick={() => set('travelPace', p.val)}>
                       <div style={{ fontWeight: 700, marginBottom: 4 }}>{p.label}</div>
                       <div style={{ fontSize: '0.75rem', opacity: 0.6, fontWeight: 400 }}>{p.sub}</div>
                     </button>
@@ -571,10 +571,11 @@ export default function PlanTrip() {
           {step < 5 && (
             <div style={s.navBtns}>
               {step > 0 && (
-                <button style={s.backBtnForm} onClick={back} disabled={submitting}>← Back</button>
+                <button type="button" style={s.backBtnForm} onClick={back} disabled={submitting}>← Back</button>
               )}
               <div style={{ flex: 1 }} />
               <button
+                type="button"
                 style={{
                   ...s.nextBtn,
                   ...(submitting ? { background: 'rgba(0,212,170,0.5)', cursor: 'not-allowed' } : {}),
