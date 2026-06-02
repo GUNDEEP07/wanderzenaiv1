@@ -99,7 +99,9 @@ export default function Landing() {
           <a href="#sample" className="nav-link">Sample plan</a>
           <a href="/pricing" className="nav-link">Pricing</a>
           <a href="/agency" className="nav-link">For agencies</a>
-          {!currentUser && (
+          {currentUser ? (
+            <a href="/dashboard" className="nav-link">Dashboard</a>
+          ) : (
             <a href="/login" className="nav-link nav-signin">Sign in</a>
           )}
           <button className="nav-cta" onClick={planRoute}>
