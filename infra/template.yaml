@@ -23,6 +23,7 @@ Globals:
         STRIPE_WANDERER_LINK: !Ref StripeWandererLink
         FRONTEND_URL: !Ref FrontendUrl
         FOURSQUARE_API_KEY: !Ref FoursquareApiKey
+        FOURSQUARE_ENABLED: !Ref FoursquareEnabled
         GOOGLE_PLACES_API_KEY: !Ref GooglePlacesApiKey
 
     Layers:
@@ -72,6 +73,11 @@ Parameters:
     NoEcho: true
     Default: ''
     Description: Foursquare Places API key for local venue enrichment
+  FoursquareEnabled:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+    Description: Set to 'false' to disable Foursquare and use Claude-only for venue enrichment
   GooglePlacesApiKey:
     Type: String
     NoEcho: true
@@ -344,10 +350,7 @@ Resources:
       Handler: handler.handler
       Timeout: 30
       MemorySize: 512
-      Description: Generates and caches destination insights using Claude API
-      Environment:
-        Variables:
-          CLAUDE_API_KEY: !Ref ClaudeApiKey
+      Description: Generates destination insights via Foursquare (primary) and Claude (fallback)
       Events:
         GetDestinationInsights:
           Type: Api
