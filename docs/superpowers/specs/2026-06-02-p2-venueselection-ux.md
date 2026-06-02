@@ -167,8 +167,55 @@ Replace with:
 
 ---
 
+## Fix 4: Venue images + Google Maps links in left-panel cards
+
+**File:** `frontend/src/components/plantrip/subcomponents/DestinationInsightsPanel.jsx`
+
+The `insights.thingsToDo` data already contains `unsplashKeyword` (e.g. `"tegallalang rice terraces bali"`) and `name` + destination context. We can add images and map links to each expanded card without any new API keys.
+
+### 4a. Venue image using unsplashKeyword
+
+Add an image at the top of the expanded detail block (inside the `{(isOpen || isAdded) && (...)}` block, before the category colour bar):
+
+```jsx
+{thing.unsplashKeyword && (
+  <img
+    src={`https://source.unsplash.com/320x200/?${encodeURIComponent(thing.unsplashKeyword)}`}
+    alt={thing.name}
+    loading="lazy"
+    style={{
+      width: '100%', height: 120, objectFit: 'cover',
+      borderRadius: 8, marginBottom: 10, display: 'block',
+    }}
+    onError={e => { e.target.style.display = 'none'; }}
+  />
+)}
+```
+
+Note: `source.unsplash.com` redirects to a relevant photo based on the keyword. The `onError` handler hides the image if Unsplash fails (graceful degradation).
+
+### 4b. Google Maps link
+
+Add a "View on map →" link at the bottom of the expanded detail block, after the category tag and before the day picker. Use a Google Maps search URL — no API key needed:
+
+```jsx
+<a
+  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(thing.name + ' ' + destName)}`}
+  target="_blank"
+  rel="noopener noreferrer"
+  onClick={e => e.stopPropagation()}
+  style={{
+    display: 'inline-flex', alignItems: 'center', gap: 5,
+    fontSize: 11, color: '#60a5fa', textDecoration: 'none',
+    marginBottom: 10,
+  }}
+>
+  📍 View on Google Maps →
+</a>
+```
+
+---
+
 ## Out of scope
 
-- Venue images from Unsplash (requires frontend fetch by `unsplashKeyword` field — separate enhancement)
-- Google Maps links (requires Google Maps API key — separate enhancement)
 - Day assignment hint overlay (day picker already inline in left panel cards after Fix 2)
