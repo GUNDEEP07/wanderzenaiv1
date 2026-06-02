@@ -204,8 +204,9 @@ export default function PlanTrip() {
 
   // Wrapper for setStep that also persists to sessionStorage
   const goToStep = (n) => {
-    setStep(n);
-    try { sessionStorage.setItem('wz_plan_step', String(n)); } catch { /* ignore */ }
+    const clamped = Math.max(0, Math.min(n, STEPS.length - 1));
+    setStep(clamped);
+    try { sessionStorage.setItem('wz_plan_step', String(clamped)); } catch { /* ignore */ }
   };
 
   // Field setter — clears error on change
@@ -385,7 +386,7 @@ export default function PlanTrip() {
           <div style={{ width: 24, height: 24, borderRadius: 6, background: 'linear-gradient(135deg,#00d4aa,#00916a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: '#0a0f1e' }}>W</div>
           <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em' }}>WanderZenAI</span>
         </a>
-        <button type="button" onClick={() => navigate('/')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontFamily: 'inherit', fontSize: 12, cursor: 'pointer' }}>✕ Exit</button>
+        <button type="button" onClick={() => { sessionStorage.removeItem('wz_plan_step'); sessionStorage.removeItem('wz_plan_form'); navigate('/'); }} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontFamily: 'inherit', fontSize: 12, cursor: 'pointer' }}>✕ Exit</button>
       </nav>
 
       <div style={s.inner}>
