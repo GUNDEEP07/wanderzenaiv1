@@ -31,7 +31,6 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
   const [videoLoading, setVideoLoading] = useState({});
   const [venueLoading, setVenueLoading] = useState({});
   const [countryCode, setCountryCode] = useState('US');
-  const [aiSuggestions, setAiSuggestions] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -205,7 +204,6 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
                 endDate={endDate}
                 selectedActivities={currentActivities}
                 onActivityToggle={handleActivityToggle}
-                onInsightsLoaded={setAiSuggestions}
                 onDayAssign={handleDayAssign}
                 days={days}
               />
@@ -218,7 +216,7 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
                 <button
                   key={dest.name}
                   className={`venue-dest-tab${selectedDestination === idx ? ' venue-dest-tab--active' : ''}`}
-                  onClick={() => { setSelectedDestination(idx); setActiveTab(null); setAiSuggestions([]); }}
+                  onClick={() => { setSelectedDestination(idx); setActiveTab(null); }}
                 >
                   {dest.name}
                 </button>
@@ -230,26 +228,6 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
         {/* RIGHT PANEL */}
         <div className="venue-panel-right">
           <div className="venue-panel-right__scroll">
-            {aiSuggestions.length > 0 && (
-              <div className="venue-picks-scroll">
-                <div className="venue-picks-label">
-                  <span className="venue-picks-label__text">AI Picks — tap to add</span>
-                  <div className="venue-picks-label__line"></div>
-                </div>
-                <div className="venue-chips">
-                  {aiSuggestions.map((thing, idx) => (
-                    <button
-                      key={idx}
-                      className={`venue-chip--teal${currentActivities.includes(thing.name) ? ' venue-chip--selected' : ''}`}
-                      onClick={() => handleActivityToggle(thing.name)}
-                    >
-                      {thing.emoji} {thing.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             <div className="venue-sec-row">
               <div className="venue-sec-label">Explore by category</div>
               <div className="venue-sec-line"></div>
