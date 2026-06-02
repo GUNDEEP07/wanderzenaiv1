@@ -328,6 +328,7 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
                 selectedActivities={currentActivities}
                 activeTab={activeTab}
                 onTabChange={setActiveTab}
+                onActivityToggle={handleActivityToggle}
               />
             )}
 

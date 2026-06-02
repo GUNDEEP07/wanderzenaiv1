@@ -42,7 +42,7 @@ const s = {
   },
 };
 
-export function ActivityTabs({ selectedActivities, activeTab, onTabChange }) {
+export function ActivityTabs({ selectedActivities, activeTab, onTabChange, onActivityToggle }) {
   const [hoveredTab, setHoveredTab] = useState(null);
 
   if (selectedActivities.length === 0) {
@@ -60,13 +60,25 @@ export function ActivityTabs({ selectedActivities, activeTab, onTabChange }) {
             style={{
               ...s.tab(isActive),
               ...(isHovered && !isActive && s.tabHover),
+              display: 'inline-flex', alignItems: 'center', gap: 6,
             }}
             onClick={() => onTabChange(activity)}
             onMouseEnter={() => setHoveredTab(activity)}
             onMouseLeave={() => setHoveredTab(null)}
           >
-            <span style={{ marginRight: '6px' }}>{ACTIVITY_EMOJIS[activity] || '📍'}</span>
+            <span>{ACTIVITY_EMOJIS[activity] || '📍'}</span>
             {activity}
+            <span
+              onClick={(e) => { e.stopPropagation(); onActivityToggle?.(activity); }}
+              style={{
+                marginLeft: 2, fontSize: 10, opacity: 0.5, cursor: 'pointer',
+                lineHeight: 1, padding: '1px 3px', borderRadius: 3,
+                background: 'rgba(255,255,255,0.08)',
+              }}
+              title={`Remove ${activity}`}
+            >
+              ×
+            </span>
           </button>
         );
       })}
