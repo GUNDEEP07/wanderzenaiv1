@@ -38,21 +38,21 @@ ALTER TABLE submissions ADD COLUMN IF NOT EXISTS selected_venues JSONB DEFAULT '
 
 -- ─── Destination insights cache ───────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS destination_insights_cache (
-  id           UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  destination  VARCHAR(255) NOT NULL,
-  start_date   DATE NOT NULL,
-  end_date     DATE NOT NULL,
-  travel_styles JSONB DEFAULT '[]',
-  insights     JSONB NOT NULL,
-  expires_at   TIMESTAMPTZ NOT NULL,
-  created_at   TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(destination, start_date, end_date)
+  id                UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  destination       VARCHAR(255) NOT NULL,
+  start_date        DATE NOT NULL,
+  end_date          DATE NOT NULL,
+  travel_styles_key VARCHAR(500) NOT NULL DEFAULT 'general',
+  insights          JSONB NOT NULL,
+  expires_at        TIMESTAMPTZ NOT NULL,
+  created_at        TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(destination, start_date, end_date, travel_styles_key)
 );
 CREATE INDEX IF NOT EXISTS idx_insights_cache_dest    ON destination_insights_cache(destination);
 CREATE INDEX IF NOT EXISTS idx_insights_cache_expires ON destination_insights_cache(expires_at);
 ```
 
-Note: UNIQUE on `(destination, start_date, end_date)` only — JSONB cannot be part of a unique index. Travel styles are stored but not part of the cache key; different style selections for the same destination + dates share a cache entry.
+**Cache key strategy:** `travel_styles_key` is a `VARCHAR(500)` computed as the sorted, lowercased, comma-joined travel styles array (e.g. `["Nature","Parks"]` → `"nature,parks"`). This lets users with different style preferences for the same destination + dates get their own correct cached results, while still reusing entries for identical requests. JSONB cannot be part of a unique index in Postgres — the string key solves this cleanly.
 
 **Run migration:** `npm run db:migrate` (from repo root)
 
@@ -121,10 +121,11 @@ export async function handler(event) {
   }
 
   // ── 1. Cache check ──────────────────────────────────────────────────────────
+  const stylesKey = [...travelStyles].sort().join(',').toLowerCase() || 'general';
   try {
-    const cached = await getFromCache(destination, startDate, endDate);
+    const cached = await getFromCache(destination, startDate, endDate, stylesKey);
     if (cached) {
-      console.log(`Cache hit for ${destination}`);
+      console.log(`Cache hit for ${destination} [${stylesKey}]`);
       return { statusCode: 200, headers: CORS_HEADERS, body: JSON.stringify({ insights: cached, cached: true }) };
     }
   } catch (cacheErr) {
@@ -160,7 +161,7 @@ export async function handler(event) {
 
   // ── 4. Save to cache (non-fatal) ────────────────────────────────────────────
   try {
-    await saveToCache(destination, startDate, endDate, travelStyles, insights);
+    await saveToCache(destination, startDate, endDate, stylesKey, insights);
   } catch (saveErr) {
     console.warn('Cache save failed (non-fatal):', saveErr.message);
   }
@@ -170,24 +171,25 @@ export async function handler(event) {
 
 // ── Cache helpers ────────────────────────────────────────────────────────────
 
-async function getFromCache(destination, startDate, endDate) {
+async function getFromCache(destination, startDate, endDate, stylesKey) {
   const result = await pool.query(
     `SELECT insights FROM destination_insights_cache
-     WHERE destination = $1 AND start_date = $2 AND end_date = $3 AND expires_at > NOW()
+     WHERE destination = $1 AND start_date = $2 AND end_date = $3
+       AND travel_styles_key = $4 AND expires_at > NOW()
      LIMIT 1`,
-    [destination, startDate, endDate]
+    [destination, startDate, endDate, stylesKey]
   );
   return result.rows.length > 0 ? result.rows[0].insights : null;
 }
 
-async function saveToCache(destination, startDate, endDate, travelStyles, insights) {
+async function saveToCache(destination, startDate, endDate, stylesKey, insights) {
   await pool.query(
     `INSERT INTO destination_insights_cache
-       (destination, start_date, end_date, travel_styles, insights, expires_at)
+       (destination, start_date, end_date, travel_styles_key, insights, expires_at)
      VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL '30 days')
-     ON CONFLICT (destination, start_date, end_date) DO UPDATE SET
-       insights = $5, travel_styles = $4, expires_at = NOW() + INTERVAL '30 days'`,
-    [destination, startDate, endDate, JSON.stringify(travelStyles), JSON.stringify(insights)]
+     ON CONFLICT (destination, start_date, end_date, travel_styles_key) DO UPDATE SET
+       insights = $5, expires_at = NOW() + INTERVAL '30 days'`,
+    [destination, startDate, endDate, stylesKey, JSON.stringify(insights)]
   );
 }
 
