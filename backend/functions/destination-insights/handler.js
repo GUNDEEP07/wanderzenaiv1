@@ -2,17 +2,20 @@ import { Anthropic } from '@anthropic-ai/sdk';
 import pkg from 'pg';
 const { Pool } = pkg;
 
+// ── DB + API clients ──────────────────────────────────────────────────────────
 const pool = new Pool({
   host: process.env.DB_HOST,
   database: process.env.DB_NAME,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  ssl: { rejectUnauthorized: false },
+  ssl: { rejectUnauthorized: false }, // RDS SSL — use CA bundle in future for full chain validation
 });
 
-const client = new Anthropic({
-  apiKey: process.env.CLAUDE_API_KEY,
-});
+const anthropic = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY });
+
+// ── Config ────────────────────────────────────────────────────────────────────
+const FOURSQUARE_ENABLED = process.env.FOURSQUARE_ENABLED !== 'false';
+const FOURSQUARE_API_KEY = process.env.FOURSQUARE_API_KEY;
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -20,14 +23,34 @@ const CORS_HEADERS = {
   'Content-Type': 'application/json',
 };
 
-export async function handler(event) {
-  console.log('Destination Insights request:', JSON.stringify(event));
+// ── Category emoji map ────────────────────────────────────────────────────────
+const CATEGORY_EMOJI = {
+  restaurant: '🍽️', cafe: '☕', bar: '🍸', park: '🌳', garden: '🌿',
+  museum: '🏛️', temple: '⛩️', beach: '🏖️', market: '🏪', hiking: '🥾',
+  hotel: '🏨', spa: '🧘', shopping: '🛍️', viewpoint: '⛰️', nature: '🌿',
+  nightlife: '🎵', adventure: '🚀', wellness: '🌿', culture: '🏛️',
+};
 
-  const queryParams = event.queryStringParameters || {};
-  const destination = queryParams.destination;
-  const startDate = queryParams.startDate;
-  const endDate = queryParams.endDate;
-  const travelStyles = queryParams.travelStyles ? queryParams.travelStyles.split(',').map(s => s.trim()) : [];
+function getCategoryEmoji(categoryName) {
+  if (!categoryName) return '📍';
+  const lower = categoryName.toLowerCase();
+  for (const [key, emoji] of Object.entries(CATEGORY_EMOJI)) {
+    if (lower.includes(key)) return emoji;
+  }
+  return '📍';
+}
+
+// ── Main handler ──────────────────────────────────────────────────────────────
+export async function handler(event) {
+  console.log('Destination Insights request:', JSON.stringify(event.queryStringParameters));
+
+  const q = event.queryStringParameters || {};
+  const destination = q.destination;
+  const startDate = q.startDate;
+  const endDate = q.endDate;
+  const travelStyles = q.travelStyles
+    ? q.travelStyles.split(',').map(s => s.trim()).filter(Boolean)
+    : [];
 
   if (!destination || !startDate || !endDate) {
     return {
@@ -37,124 +60,194 @@ export async function handler(event) {
     };
   }
 
+  // Sorted lowercase key — e.g. ["Nature","Parks"] → "nature,parks"
+  const stylesKey = [...travelStyles].sort().join(',').toLowerCase() || 'general';
+
+  // ── 1. Cache check (non-fatal) ───────────────────────────────────────────────
   try {
-    const cacheKey = { destination, startDate, endDate };
-    const cached = await getFromCache(cacheKey, travelStyles);
+    const cached = await getFromCache(destination, startDate, endDate, stylesKey);
     if (cached) {
-      console.log(`Cache hit for ${destination} [${startDate} to ${endDate}]`);
+      console.log(`Cache hit: ${destination} [${stylesKey}]`);
       return {
         statusCode: 200,
         headers: CORS_HEADERS,
         body: JSON.stringify({ insights: cached, cached: true }),
       };
     }
-
-    console.log(`Cache miss for ${destination} [${startDate} to ${endDate}], calling Claude...`);
-
-    const insights = await generateInsights(destination, travelStyles, startDate, endDate);
-    await saveToCache(cacheKey, travelStyles, insights);
-
-    return {
-      statusCode: 200,
-      headers: CORS_HEADERS,
-      body: JSON.stringify({ insights, cached: false }),
-    };
-  } catch (error) {
-    console.error('Error:', error);
-    return {
-      statusCode: 500,
-      headers: CORS_HEADERS,
-      body: JSON.stringify({ error: error.message }),
-    };
+  } catch (cacheErr) {
+    console.warn('Cache read failed (non-fatal):', cacheErr.message);
   }
+
+  // ── 2. Foursquare primary (if enabled and key present) ───────────────────────
+  let insights = null;
+
+  if (FOURSQUARE_ENABLED && FOURSQUARE_API_KEY) {
+    try {
+      insights = await getFromFoursquare(destination, travelStyles);
+      if (insights) {
+        console.log(`Foursquare: ${insights.thingsToDo.length} venues for ${destination} [${stylesKey}]`);
+      } else {
+        console.log(`Foursquare: no results for ${destination} [${stylesKey}], falling back to Claude`);
+      }
+    } catch (fsqErr) {
+      console.warn('Foursquare failed (falling back to Claude):', fsqErr.message);
+    }
+  }
+
+  // ── 3. Claude fallback ───────────────────────────────────────────────────────
+  if (!insights) {
+    try {
+      insights = await generateFromClaude(destination, travelStyles, startDate, endDate);
+      console.log(`Claude insights generated for ${destination} [${stylesKey}]`);
+    } catch (claudeErr) {
+      console.error('Claude generation failed:', claudeErr.message);
+      return {
+        statusCode: 500,
+        headers: CORS_HEADERS,
+        body: JSON.stringify({ error: 'Failed to generate destination insights. Please try again.' }),
+      };
+    }
+  }
+
+  // ── 4. Save to cache (non-fatal) ─────────────────────────────────────────────
+  try {
+    await saveToCache(destination, startDate, endDate, stylesKey, insights);
+  } catch (saveErr) {
+    console.warn('Cache save failed (non-fatal):', saveErr.message);
+  }
+
+  return {
+    statusCode: 200,
+    headers: CORS_HEADERS,
+    body: JSON.stringify({ insights, cached: false }),
+  };
 }
 
-async function getFromCache(cacheKey, travelStyles) {
-  const query = `
-    SELECT insights FROM destination_insights_cache
-    WHERE destination = $1
-      AND start_date = $2
-      AND end_date = $3
-      AND expires_at > NOW()
-    LIMIT 1
-  `;
+// ── Cache helpers ─────────────────────────────────────────────────────────────
 
-  const result = await pool.query(query, [cacheKey.destination, cacheKey.startDate, cacheKey.endDate]);
+async function getFromCache(destination, startDate, endDate, stylesKey) {
+  const result = await pool.query(
+    `SELECT insights FROM destination_insights_cache
+     WHERE destination = $1 AND start_date = $2 AND end_date = $3
+       AND travel_styles_key = $4 AND expires_at > NOW()
+     LIMIT 1`,
+    [destination, startDate, endDate, stylesKey]
+  );
   return result.rows.length > 0 ? result.rows[0].insights : null;
 }
 
-async function saveToCache(cacheKey, travelStyles, insights) {
-  const query = `
-    INSERT INTO destination_insights_cache
-      (destination, start_date, end_date, travel_styles, insights, expires_at)
-    VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL '30 days')
-    ON CONFLICT (destination, start_date, end_date, travel_styles) DO UPDATE SET
-      insights = $5,
-      expires_at = NOW() + INTERVAL '30 days'
-    RETURNING id
-  `;
-
-  const result = await pool.query(query, [
-    cacheKey.destination,
-    cacheKey.startDate,
-    cacheKey.endDate,
-    JSON.stringify(travelStyles),
-    JSON.stringify(insights),
-  ]);
-
-  console.log(`Cached insights for ${cacheKey.destination} with ID: ${result.rows[0].id}`);
+async function saveToCache(destination, startDate, endDate, stylesKey, insights) {
+  await pool.query(
+    `INSERT INTO destination_insights_cache
+       (destination, start_date, end_date, travel_styles_key, insights, expires_at)
+     VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL '30 days')
+     ON CONFLICT (destination, start_date, end_date, travel_styles_key) DO UPDATE SET
+       insights = $5, expires_at = NOW() + INTERVAL '30 days'`,
+    [destination, startDate, endDate, stylesKey, JSON.stringify(insights)]
+  );
 }
 
-async function generateInsights(destination, travelStyles, startDate, endDate) {
-  const stylesText = travelStyles.length > 0 ? travelStyles.join(', ') : 'general travel';
+// ── Foursquare venue fetch ─────────────────────────────────────────────────────
 
-  const prompt = `You are a travel expert providing insights about destinations.
-Generate travel insights for ${destination} for travel styles: ${stylesText}.
-Travel dates: ${startDate} to ${endDate}.
+async function getFromFoursquare(destination, travelStyles) {
+  const queries = travelStyles.length > 0 ? travelStyles.slice(0, 3) : ['attractions', 'restaurants'];
+  const allVenues = [];
 
-Return a JSON object with this exact structure:
-{
-  "bestMonths": ["month1", "month2"],
-  "whyThisMonth": "Brief explanation of why these months are best",
-  "thingsToDo": [
-    {
-      "name": "Specific place or activity name",
-      "category": "Category (e.g., Food, Culture, Nature, Adventure, Wellness)",
-      "reason": "One sentence on why this matches the travel style",
-      "emoji": "🏛️",
-      "openingHours": "e.g. Daily 9am–6pm, or Tue–Sun 10am–5pm, or 24 hours",
-      "distanceFromCenter": "e.g. 2km from city centre or In the old town",
-      "bestTime": "e.g. Early morning to avoid crowds, or Sunset for best views",
-      "visitorTip": "One specific insider tip — a detail most tourists miss",
-      "unsplashKeyword": "2-3 word search term for a photo of this place, e.g. english garden munich"
-    }
-  ],
-  "seasonalHighlights": "What makes this season special in this destination",
-  "weather": "Expected weather conditions during travel dates",
-  "crowdLevel": "Peak/High/Moderate/Low - estimated crowd level",
-  "travelTip": "One specific, actionable tip for this destination and travel style"
-}
+  for (const style of queries) {
+    const url = new URL('https://api.foursquare.com/v3/places/search');
+    url.searchParams.set('query', style);
+    url.searchParams.set('near', destination);
+    url.searchParams.set('limit', '6');
+    url.searchParams.set('sort', 'RATING');
+    url.searchParams.set('fields', 'name,categories,rating,distance,hours,tips,location,fsq_id');
 
-Return 5–7 thingsToDo. Be specific — use real place names, real opening hours, real distances. Keep all fields concise (1 sentence max each).`;
-
-  const response = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 2048,
-    messages: [
-      {
-        role: 'user',
-        content: prompt,
+    const res = await fetch(url.toString(), {
+      headers: {
+        'Authorization': FOURSQUARE_API_KEY,
+        'Accept': 'application/json',
       },
-    ],
-  });
+    });
 
-  const responseText = response.content[0].type === 'text' ? response.content[0].text : '';
+    if (!res.ok) {
+      console.warn(`Foursquare "${style}" query → HTTP ${res.status}`);
+      continue;
+    }
 
-  // Extract JSON from response (Claude might wrap it in markdown code blocks)
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error('Could not extract JSON from Claude response');
+    const data = await res.json();
+    const venues = (data.results || []).map(v => ({
+      name: v.name,
+      category: v.categories?.[0]?.name || style,
+      reason: `A top-rated ${style.toLowerCase()} spot in ${destination}`,
+      emoji: getCategoryEmoji(v.categories?.[0]?.name),
+      openingHours: v.hours?.display || 'Check locally for current hours',
+      distanceFromCenter: v.distance != null
+        ? `${(v.distance / 1000).toFixed(1)}km from centre`
+        : 'In the area',
+      bestTime: 'Morning or early evening for fewer crowds',
+      visitorTip: v.tips?.[0]?.text || `Rated ${v.rating ? v.rating.toFixed(1) : 'highly'} — worth the visit`,
+      unsplashKeyword: `${v.name.toLowerCase().split(' ').slice(0, 2).join(' ')} ${destination.toLowerCase()}`,
+      foursquareId: v.fsq_id || null,
+    }));
+
+    allVenues.push(...venues);
   }
 
-  return JSON.parse(jsonMatch[0]);
+  if (allVenues.length === 0) return null;
+
+  return {
+    thingsToDo: allVenues.slice(0, 8),
+    weather: 'Check local forecast for your travel dates',
+    crowdLevel: 'Moderate',
+    seasonalHighlights: `Curated top spots in ${destination} for ${travelStyles.join(', ') || 'all interests'}`,
+    travelTip: `Book popular venues in ${destination} ahead of time during peak season`,
+    bestMonths: [],
+    whyThisMonth: '',
+  };
+}
+
+// ── Claude fallback generation ────────────────────────────────────────────────
+
+async function generateFromClaude(destination, travelStyles, startDate, endDate) {
+  const stylesText = travelStyles.length > 0 ? travelStyles.join(', ') : 'general travel';
+
+  const prompt = `You are a travel expert. Generate destination insights as a JSON object.
+Destination: ${destination}
+Travel styles: ${stylesText}
+Travel dates: ${startDate} to ${endDate}
+
+Return this EXACT JSON structure. No markdown, no code blocks, no explanation — raw JSON only:
+{
+  "bestMonths": ["June", "July"],
+  "whyThisMonth": "Brief explanation of why these months are ideal",
+  "thingsToDo": [
+    {
+      "name": "Specific real place or activity name",
+      "category": "Category e.g. Nature, Food, Culture, Adventure, Wellness",
+      "reason": "One sentence why this matches the travel style",
+      "emoji": "🏛️",
+      "openingHours": "Daily 9am–6pm",
+      "distanceFromCenter": "2km from city centre",
+      "bestTime": "Early morning to avoid crowds",
+      "visitorTip": "One specific insider tip most tourists miss",
+      "unsplashKeyword": "2-3 word photo search term e.g. ubud rice terraces"
+    }
+  ],
+  "seasonalHighlights": "What makes this season special at this destination",
+  "weather": "Expected weather conditions during the travel dates",
+  "crowdLevel": "Peak or High or Moderate or Low",
+  "travelTip": "One specific actionable tip for this destination and travel style"
+}
+
+Return 5–7 thingsToDo. Use real place names, real opening hours, real distances. Keep all text concise.`;
+
+  const response = await anthropic.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 2048,
+    messages: [{ role: 'user', content: prompt }],
+  });
+
+  const text = response.content[0].type === 'text' ? response.content[0].text : '';
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error(`Could not parse Claude response as JSON. Raw: ${text.slice(0, 200)}`);
+  return JSON.parse(match[0]);
 }
