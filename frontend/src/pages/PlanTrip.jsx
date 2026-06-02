@@ -122,8 +122,23 @@ export default function PlanTrip() {
   const location = useLocation();
   const prefill = location.state?.prefill || {};
 
-  const [step, setStep] = useState(location.state?.startStep || 0);
-  const [form, setForm] = useState({ ...INITIAL_FORM, ...prefill });
+  const [step, setStep] = useState(() => {
+    if (location.state?.startStep != null) return location.state.startStep;
+    try {
+      const saved = sessionStorage.getItem('wz_plan_step');
+      if (saved != null) return parseInt(saved, 10);
+    } catch { /* ignore */ }
+    return 0;
+  });
+
+  const [form, setForm] = useState(() => {
+    if (Object.keys(prefill).length > 0) return { ...INITIAL_FORM, ...prefill };
+    try {
+      const saved = sessionStorage.getItem('wz_plan_form');
+      if (saved) return { ...INITIAL_FORM, ...JSON.parse(saved) };
+    } catch { /* ignore corrupt storage */ }
+    return { ...INITIAL_FORM };
+  });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
@@ -180,6 +195,19 @@ export default function PlanTrip() {
       .catch(() => {});
   }, []);
 
+  // Persist form to sessionStorage whenever it changes
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('wz_plan_form', JSON.stringify(form));
+    } catch { /* ignore */ }
+  }, [form]);
+
+  // Wrapper for setStep that also persists to sessionStorage
+  const goToStep = (n) => {
+    setStep(n);
+    try { sessionStorage.setItem('wz_plan_step', String(n)); } catch { /* ignore */ }
+  };
+
   // Field setter — clears error on change
   const set = (key, val) => {
     setForm(f => ({ ...f, [key]: val }));
@@ -215,7 +243,7 @@ export default function PlanTrip() {
       selected_venues: venueData.venues || venueData,
       day_assignments: venueData.dayAssignments || {},
     }));
-    setStep(2);
+    goToStep(2);
   };
 
   // Calls /preview and stores result on form._preview
@@ -247,12 +275,12 @@ export default function PlanTrip() {
   const next = () => {
     if (!validate()) return;
     const nextStep = step + 1;
-    setStep(nextStep);
+    goToStep(nextStep);
     // Trigger preview when entering step 5
     if (nextStep === 5) loadPreview(form);
   };
 
-  const back = () => setStep(s => s - 1);
+  const back = () => goToStep(step - 1);
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -268,6 +296,8 @@ export default function PlanTrip() {
       if (!data.success) throw new Error(data.message || 'Submission failed');
       const destinationName = form.destinations.length > 0 ? form.destinations[0].name : 'Unknown';
       analytics.tripSubmitted({ destination: destinationName, days: form.days, travelStyle: form.travelStyle });
+      sessionStorage.removeItem('wz_plan_step');
+      sessionStorage.removeItem('wz_plan_form');
       navigate('/confirmation', {
         state: { submissionId: data.data.submissionId, destination: destinationName, email: form.email },
       });
@@ -281,10 +311,20 @@ export default function PlanTrip() {
   const progressBar = (
     <div className="plantrip-progress">
       {STEPS.map((_, i) => {
+        const isDone = i < step;
+        const isActive = i === step;
         let cls = 'plantrip-progress__seg';
-        if (i < step) cls += ' plantrip-progress__seg--done';
-        else if (i === step) cls += ' plantrip-progress__seg--active';
-        return <div key={i} className={cls}></div>;
+        if (isDone) cls += ' plantrip-progress__seg--done';
+        else if (isActive) cls += ' plantrip-progress__seg--active';
+        return (
+          <div
+            key={i}
+            className={cls}
+            onClick={isDone ? () => goToStep(i) : undefined}
+            style={isDone ? { cursor: 'pointer' } : undefined}
+            title={isDone ? `Go back to ${STEPS[i]}` : undefined}
+          />
+        );
       })}
     </div>
   );
@@ -306,9 +346,14 @@ export default function PlanTrip() {
             <div style={{ width: 24, height: 24, borderRadius: 6, background: 'linear-gradient(135deg,#00d4aa,#00916a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: '#0a0f1e' }}>W</div>
             <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em' }}>WanderZenAI</span>
           </a>
-          <button type="button" onClick={() => navigate('/')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontFamily: 'inherit', fontSize: 12, cursor: 'pointer' }}>✕ Exit</button>
+          <button type="button" onClick={() => { sessionStorage.removeItem('wz_plan_step'); sessionStorage.removeItem('wz_plan_form'); navigate('/'); }} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontFamily: 'inherit', fontSize: 12, cursor: 'pointer' }}>✕ Exit</button>
         </nav>
-        <div style={{ padding: '12px 24px 0' }}>{progressBar}</div>
+        <div style={{ padding: '12px 24px 0' }}>
+          {progressBar}
+          <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#00d4aa', marginTop: 8, paddingBottom: 4 }}>
+            Step 2 of 6 — Choose your experiences
+          </div>
+        </div>
         <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
           <VenueSelection
             destinations={form.destinations}
@@ -320,8 +365,8 @@ export default function PlanTrip() {
               : null}
             days={form.days}
             onSubmit={handleVenueSelect}
-            onSkip={() => setStep(2)}
-            onBack={() => setStep(0)}
+            onSkip={() => goToStep(2)}
+            onBack={() => goToStep(0)}
             savedState={venueSelState}
             onSave={setVenueSelState}
             preferredActivities={preferredActivities}
