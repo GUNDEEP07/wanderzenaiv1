@@ -146,3 +146,28 @@ CREATE TABLE IF NOT EXISTS recommendation_cache (
   recommendations JSONB NOT NULL,
   created_at      TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- ─── Submissions: missing columns added post-launch ───────────────────────────
+ALTER TABLE submissions ADD COLUMN IF NOT EXISTS language      VARCHAR(50)  DEFAULT 'English';
+ALTER TABLE submissions ADD COLUMN IF NOT EXISTS user_age      INTEGER;
+ALTER TABLE submissions ADD COLUMN IF NOT EXISTS user_location VARCHAR(255);
+ALTER TABLE submissions ADD COLUMN IF NOT EXISTS start_time    VARCHAR(10)  DEFAULT '09:00';
+ALTER TABLE submissions ADD COLUMN IF NOT EXISTS user_must_dos TEXT;
+ALTER TABLE submissions ADD COLUMN IF NOT EXISTS selected_venues JSONB      DEFAULT '{}';
+
+-- ─── Destination insights cache ───────────────────────────────────────────────
+-- travel_styles_key: sorted lowercased comma-joined styles, e.g. "nature,parks"
+-- Unique per (destination, dates, style combination) so different interests get separate entries
+CREATE TABLE IF NOT EXISTS destination_insights_cache (
+  id                UUID         DEFAULT gen_random_uuid() PRIMARY KEY,
+  destination       VARCHAR(255) NOT NULL,
+  start_date        DATE         NOT NULL,
+  end_date          DATE         NOT NULL,
+  travel_styles_key VARCHAR(500) NOT NULL DEFAULT 'general',
+  insights          JSONB        NOT NULL,
+  expires_at        TIMESTAMPTZ  NOT NULL,
+  created_at        TIMESTAMPTZ  DEFAULT NOW(),
+  UNIQUE(destination, start_date, end_date, travel_styles_key)
+);
+CREATE INDEX IF NOT EXISTS idx_insights_cache_dest    ON destination_insights_cache(destination);
+CREATE INDEX IF NOT EXISTS idx_insights_cache_expires ON destination_insights_cache(expires_at);
