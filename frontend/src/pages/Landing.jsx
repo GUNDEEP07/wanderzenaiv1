@@ -99,7 +99,12 @@ export default function Landing() {
           <a href="#sample" className="nav-link">Sample plan</a>
           <a href="/pricing" className="nav-link">Pricing</a>
           <a href="/agency" className="nav-link">For agencies</a>
-          <button className="nav-cta" onClick={planRoute}>Plan my trip</button>
+          {!currentUser && (
+            <a href="/login" className="nav-link nav-signin">Sign in</a>
+          )}
+          <button className="nav-cta" onClick={planRoute}>
+            {currentUser ? 'Plan my trip' : 'Sign up free'}
+          </button>
         </div>
       </nav>
 
@@ -136,7 +141,7 @@ export default function Landing() {
 
         <div className="hero-actions">
           <button className="btn-primary" onClick={planRoute}>
-            Plan my trip — free <span>→</span>
+            {currentUser ? 'Plan my trip' : 'Get started — free'} <span>→</span>
           </button>
           <button className="btn-ghost" onClick={() => document.getElementById('sample').scrollIntoView({ behavior: 'smooth' })}>
             See a sample plan

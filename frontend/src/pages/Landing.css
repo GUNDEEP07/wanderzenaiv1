@@ -587,9 +587,13 @@ body {
   .photo-strip-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 }
 
+/* Sign-in link — visible at all widths for non-authenticated users */
+.nav-signin { color: rgba(255,255,255,0.7) !important; }
+
 /* ── Mobile ── */
 @media (max-width: 768px) {
   .nav-link { display: none; }
+  .nav-signin { display: flex !important; }
   .steps { grid-template-columns: 1fr; gap: 12px; }
   .sample-header { flex-direction: column; align-items: flex-start; }
   .footer-inner { flex-direction: column; }
