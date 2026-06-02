@@ -140,7 +140,7 @@ export function DestinationInsightsPanel({
               return (
                 <div key={thing.name} className={cardClass}>
                   {/* Header — always visible */}
-                  <div className="item-card__header">
+                  <div className="item-card__header" onClick={(e) => handleChevronClick(e, thing.name)} style={{ cursor: 'pointer' }}>
                     <div className="item-card__icon">{thing.emoji}</div>
                     <div className="item-card__text">
                       <div className="item-card__name">{thing.name}</div>
@@ -166,6 +166,20 @@ export function DestinationInsightsPanel({
                   {/* Expanded detail — shown when open or added */}
                   {(isOpen || isAdded) && (
                     <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '10px 12px 12px 12px' }}>
+
+                      {/* Venue photo */}
+                      {thing.unsplashKeyword && (
+                        <img
+                          src={`https://source.unsplash.com/320x200/?${encodeURIComponent(thing.unsplashKeyword)}`}
+                          alt={thing.name}
+                          loading="lazy"
+                          style={{
+                            width: '100%', height: 120, objectFit: 'cover',
+                            borderRadius: 8, marginBottom: 10, display: 'block',
+                          }}
+                          onError={e => { e.target.style.display = 'none'; }}
+                        />
+                      )}
 
                       {/* Category colour bar */}
                       <div style={{
@@ -222,6 +236,21 @@ export function DestinationInsightsPanel({
                           <span className="item-tag">{thing.category}</span>
                         </div>
                       )}
+
+                      {/* Google Maps link */}
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(thing.name + ' ' + destName)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={e => e.stopPropagation()}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 5,
+                          fontSize: 11, color: '#60a5fa', textDecoration: 'none',
+                          marginBottom: 10,
+                        }}
+                      >
+                        📍 View on Google Maps →
+                      </a>
 
                       {/* Day picker or confirmation */}
                       {!isAdded || changingDay.has(thing.name) ? (
