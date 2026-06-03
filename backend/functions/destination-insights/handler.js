@@ -133,7 +133,14 @@ async function getFromCache(destination, startDate, endDate, stylesKey) {
      LIMIT 1`,
     [destination, startDate, endDate, stylesKey]
   );
-  return result.rows.length > 0 ? result.rows[0].insights : null;
+  if (result.rows.length === 0) return null;
+  const insights = result.rows[0].insights;
+  // Invalidate cache entries created before accommodation field was added
+  if (!insights.accommodation || insights.accommodation.length === 0) {
+    console.log(`Cache miss (stale — no accommodation): ${destination}`);
+    return null;
+  }
+  return insights;
 }
 
 async function saveToCache(destination, startDate, endDate, stylesKey, insights) {

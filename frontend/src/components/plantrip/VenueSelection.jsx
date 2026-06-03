@@ -17,6 +17,7 @@ const PRESET_ACTIVITIES = ['Hiking', 'Food', 'Views', 'Culture', 'Nature', 'Nigh
 
 export function VenueSelection({ destinations, travelStyles, startDate, endDate, days = 5, onSubmit, onSkip, onBack, savedState, onSave, preferredActivities = [], currency = 'USD', budget = 0, userLocation = '' }) {
   const [activeMode, setActiveMode] = useState('experiences');
+  const [detectedOriginCity, setDetectedOriginCity] = useState('');
   const [selectedDestination, setSelectedDestination] = useState(0);
   const [selectedActivities, setSelectedActivities] = useState(() => savedState?.activities || {});
   const [activeTab, setActiveTab] = useState(() => savedState?.activeTab || null);
@@ -48,7 +49,14 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
 
   useEffect(() => {
     getUserLocationFromIP()
-      .then(loc => { setCountryCode(loc.countryCode); setLoading(false); })
+      .then(loc => {
+        setCountryCode(loc.countryCode);
+        setLoading(false);
+        // Use detected city as origin fallback if user hasn't set their home city
+        if (!userLocation && loc.city && loc.city !== 'Unknown') {
+          setDetectedOriginCity(`${loc.city}, ${loc.country}`);
+        }
+      })
       .catch(() => setLoading(false));
   }, []);
 
@@ -233,7 +241,7 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
 
           <FlightsSection
             destination={destination}
-            origin={userLocation}
+            origin={userLocation || detectedOriginCity}
             travelDate={startDate}
             budgetEstimateUSD={destinationInsights?.budgetEstimateUSD || null}
             currency={currency}
