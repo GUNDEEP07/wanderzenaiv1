@@ -21,6 +21,7 @@ export function DestinationInsightsPanel({
   selectedActivities = [],
   onActivityToggle,
   onInsightsLoaded,
+  onFullInsightsLoaded,
   onDayAssign,
   days = 5,
 }) {
@@ -44,6 +45,7 @@ export function DestinationInsightsPanel({
         if (cancelled) return;
         setInsights(result);
         if (result.thingsToDo) onInsightsLoaded?.(result.thingsToDo);
+        onFullInsightsLoaded?.(result);
       } catch (err) {
         if (!cancelled) setError('Could not load destination insights');
       } finally {

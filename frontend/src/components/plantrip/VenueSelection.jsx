@@ -6,6 +6,8 @@ import { YouTubeCarousel } from './subcomponents/YouTubeCarousel';
 import { VenuesList } from './subcomponents/VenuesList';
 import { CustomInterestModal } from './subcomponents/CustomInterestModal';
 import { DestinationInsightsPanel } from './subcomponents/DestinationInsightsPanel';
+import { FlightsSection } from './subcomponents/FlightsSection';
+import { AccommodationSection } from './subcomponents/AccommodationSection';
 import { getUserLocationFromIP } from '../../utils/geolocation';
 import { fetchTrendingVideos } from '../../utils/youtube';
 import { fetchVenuesForActivity, getActivitiesForTravelStyle } from '../../utils/foursquare';
@@ -13,7 +15,7 @@ import './styles/venueselection-redesign.css';
 
 const PRESET_ACTIVITIES = ['Hiking', 'Food', 'Views', 'Culture', 'Nature', 'Nightlife', 'Wellness'];
 
-export function VenueSelection({ destinations, travelStyles, startDate, endDate, days = 5, onSubmit, onSkip, onBack, savedState, onSave, preferredActivities = [] }) {
+export function VenueSelection({ destinations, travelStyles, startDate, endDate, days = 5, onSubmit, onSkip, onBack, savedState, onSave, preferredActivities = [], currency = 'USD', budget = 0, userLocation = '' }) {
   const [selectedDestination, setSelectedDestination] = useState(0);
   const [selectedActivities, setSelectedActivities] = useState(() => savedState?.activities || {});
   const [activeTab, setActiveTab] = useState(() => savedState?.activeTab || null);
@@ -34,6 +36,7 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [destinationInsights, setDestinationInsights] = useState(null);
 
   const destination = destinations?.[selectedDestination];
   const destKey = destination?.name || `destination_${selectedDestination}`;
@@ -205,6 +208,7 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
                 selectedActivities={currentActivities}
                 onActivityToggle={handleActivityToggle}
                 onDayAssign={handleDayAssign}
+                onFullInsightsLoaded={setDestinationInsights}
                 days={days}
               />
             )}
@@ -228,6 +232,28 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
         {/* RIGHT PANEL */}
         <div className="venue-panel-right">
           <div className="venue-panel-right__scroll">
+            {/* ── Flights + Stays ── */}
+            {destination && (
+              <div style={{ padding: '12px 12px 4px' }}>
+                <FlightsSection
+                  destination={destination}
+                  origin={userLocation}
+                  travelDate={startDate}
+                  budgetEstimateUSD={destinationInsights?.budgetEstimateUSD || null}
+                  currency={currency}
+                  budget={budget}
+                  onOriginChange={() => {}}
+                />
+                <AccommodationSection
+                  destination={destination}
+                  insights={destinationInsights}
+                  budget={budget}
+                  currency={currency}
+                  days={days}
+                  travelStyle={travelStyles}
+                />
+              </div>
+            )}
             <div className="venue-sec-row">
               <div className="venue-sec-label">Explore by category</div>
               <div className="venue-sec-line"></div>
