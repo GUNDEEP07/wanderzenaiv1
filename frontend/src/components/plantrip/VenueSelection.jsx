@@ -184,32 +184,53 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
   return (
     <>
       {/* ── Mode tabs ── */}
-      <div style={{ display: 'flex', gap: 4, padding: '10px 20px 0', background: '#0d1628', borderBottom: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
-        {[
-          { key: 'experiences', label: '🎯 Experiences' },
-          { key: 'stays', label: '✈️ Stays & Flights' },
-        ].map(({ key, label }) => (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '12px 20px', background: '#0a0f1e', borderBottom: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
+        <div style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: 3, gap: 3 }}>
+          {[
+            { key: 'experiences', label: '🎯 Experiences' },
+            { key: 'stays', label: '✈️ Stays & Flights' },
+          ].map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setActiveMode(key)}
+              style={{
+                padding: '7px 16px', borderRadius: 8, fontFamily: 'inherit',
+                fontSize: 12, fontWeight: 700, cursor: 'pointer', border: 'none',
+                background: activeMode === key ? 'rgba(0,212,170,0.15)' : 'transparent',
+                color: activeMode === key ? '#00d4aa' : 'rgba(255,255,255,0.55)',
+                transition: 'all 0.18s',
+                boxShadow: activeMode === key ? '0 0 0 1px rgba(0,212,170,0.3)' : 'none',
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {activeMode === 'experiences' && (
           <button
-            key={key}
             type="button"
-            onClick={() => setActiveMode(key)}
-            style={{
-              padding: '8px 18px', borderRadius: '8px 8px 0 0', fontFamily: 'inherit',
-              fontSize: 12, fontWeight: 700, cursor: 'pointer', border: 'none',
-              background: activeMode === key ? 'rgba(0,212,170,0.12)' : 'transparent',
-              borderBottom: activeMode === key ? '2px solid #00d4aa' : '2px solid transparent',
-              color: activeMode === key ? '#00d4aa' : 'rgba(255,255,255,0.4)',
-              transition: 'all 0.2s',
-            }}
+            onClick={() => setActiveMode('stays')}
+            style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, color: '#60a5fa', background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.2)', borderRadius: 20, padding: '4px 10px', cursor: 'pointer', fontFamily: 'inherit' }}
           >
-            {label}
+            ✈️ Plan stays →
           </button>
-        ))}
+        )}
       </div>
 
       {/* ── Stays & Flights tab (full width) ── */}
       {activeMode === 'stays' && (
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', scrollbarWidth: 'none' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px 32px', scrollbarWidth: 'none', maxWidth: 720, margin: '0 auto', width: '100%' }}>
+          {/* Header */}
+          <div style={{ marginBottom: 28 }}>
+            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em', marginBottom: 4 }}>
+              Plan your trip logistics
+            </div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6 }}>
+              {destination?.name ? `Get to ${destination.name} and find the right place to stay.` : 'Find your flights and accommodation.'}
+            </div>
+          </div>
+
           <FlightsSection
             destination={destination}
             origin={userLocation}
@@ -217,7 +238,9 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
             budgetEstimateUSD={destinationInsights?.budgetEstimateUSD || null}
             currency={currency}
             onOriginChange={() => {}}
+            alwaysOpen
           />
+          <div style={{ marginTop: 20 }} />
           <AccommodationSection
             destination={destination}
             insights={destinationInsights}
@@ -225,6 +248,7 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
             currency={currency}
             days={days}
             travelStyle={travelStyles}
+            alwaysOpen
           />
           {/* Keep DestinationInsightsPanel mounted (hidden) so insights still load for AccommodationSection */}
           {destination && startDate && endDate && (

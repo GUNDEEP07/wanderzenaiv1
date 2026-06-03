@@ -38,8 +38,9 @@ function getBudgetHealth(budget, currency, days, budgetEstimateUSD, accomType) {
   };
 }
 
-export function AccommodationSection({ destination, insights, budget, currency, days, travelStyle }) {
+export function AccommodationSection({ destination, insights, budget, currency, days, travelStyle, alwaysOpen = false }) {
   const [open, setOpen] = useState(true);
+  const isOpen = alwaysOpen || open;
   const [accomType, setAccomType] = useState('surprise');
   const destName = destination?.name || '';
 
@@ -62,23 +63,23 @@ export function AccommodationSection({ destination, insights, budget, currency, 
   return (
     <div style={{ marginBottom: 10 }}>
       <div
-        onClick={() => setOpen(o => !o)}
+        onClick={alwaysOpen ? undefined : () => setOpen(o => !o)}
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '8px 12px', cursor: 'pointer',
-          background: open ? 'rgba(0,212,170,0.06)' : 'rgba(255,255,255,0.03)',
-          border: `1px solid ${open ? 'rgba(0,212,170,0.25)' : 'rgba(255,255,255,0.08)'}`,
-          borderRadius: open ? '8px 8px 0 0' : 8,
+          padding: '8px 12px', cursor: alwaysOpen ? 'default' : 'pointer',
+          background: isOpen ? 'rgba(0,212,170,0.06)' : 'rgba(255,255,255,0.03)',
+          border: `1px solid ${isOpen ? 'rgba(0,212,170,0.25)' : 'rgba(255,255,255,0.08)'}`,
+          borderRadius: isOpen ? '8px 8px 0 0' : 8,
           transition: 'all 0.2s',
         }}
       >
         <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: 6 }}>
           🏡 Where to stay
         </span>
-        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>{open ? '▲' : '▼'}</span>
+        {!alwaysOpen && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>{isOpen ? '▲' : '▼'}</span>}
       </div>
 
-      {open && (
+      {isOpen && (
         <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderTop: 'none', borderRadius: '0 0 8px 8px', padding: '10px 12px' }}>
 
           {/* Type selector */}

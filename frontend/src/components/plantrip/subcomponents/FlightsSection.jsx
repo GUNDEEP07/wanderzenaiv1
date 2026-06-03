@@ -10,8 +10,9 @@ function fmt(amount, currency) {
   return `${SYMBOLS[currency] || currency}${amount.toLocaleString()}`;
 }
 
-export function FlightsSection({ destination, origin, travelDate, budgetEstimateUSD, currency, onOriginChange }) {
+export function FlightsSection({ destination, origin, travelDate, budgetEstimateUSD, currency, onOriginChange, alwaysOpen = false }) {
   const [open, setOpen] = useState(true);
+  const isOpen = alwaysOpen || open;
   const [localOrigin, setLocalOrigin] = useState(origin || '');
   const destName = destination?.name || '';
   const effectiveOrigin = origin || localOrigin;
@@ -29,23 +30,23 @@ export function FlightsSection({ destination, origin, travelDate, budgetEstimate
   return (
     <div style={{ marginBottom: 10 }}>
       <div
-        onClick={() => setOpen(o => !o)}
+        onClick={alwaysOpen ? undefined : () => setOpen(o => !o)}
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '8px 12px', cursor: 'pointer',
-          background: open ? 'rgba(96,165,250,0.08)' : 'rgba(255,255,255,0.03)',
-          border: `1px solid ${open ? 'rgba(96,165,250,0.3)' : 'rgba(255,255,255,0.08)'}`,
-          borderRadius: open ? '8px 8px 0 0' : 8,
+          padding: '8px 12px', cursor: alwaysOpen ? 'default' : 'pointer',
+          background: isOpen ? 'rgba(96,165,250,0.08)' : 'rgba(255,255,255,0.03)',
+          border: `1px solid ${isOpen ? 'rgba(96,165,250,0.3)' : 'rgba(255,255,255,0.08)'}`,
+          borderRadius: isOpen ? '8px 8px 0 0' : 8,
           transition: 'all 0.2s',
         }}
       >
         <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: 6 }}>
           ✈️ Flights {originCity ? `from ${originCity}` : '— where are you flying from?'}
         </span>
-        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>{open ? '▲' : '▼'}</span>
+        {!alwaysOpen && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>{isOpen ? '▲' : '▼'}</span>}
       </div>
 
-      {open && (
+      {isOpen && (
         <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderTop: 'none', borderRadius: '0 0 8px 8px', padding: '10px 12px' }}>
 
           {!origin && (
