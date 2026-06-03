@@ -241,7 +241,6 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
                   travelDate={startDate}
                   budgetEstimateUSD={destinationInsights?.budgetEstimateUSD || null}
                   currency={currency}
-                  budget={budget}
                   onOriginChange={() => {}}
                 />
                 <AccommodationSection
