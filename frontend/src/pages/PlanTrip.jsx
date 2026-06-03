@@ -49,7 +49,7 @@ const LANGUAGES = [
 ];
 
 // Step names drive the progress bar — keep in sync with step indices
-const STEPS = ['Destination', 'Venues', 'Budget & dates', 'Travel style', 'Your details', 'Review'];
+const STEPS = ['Destination', 'Venues', 'Travel dates', 'Travel style', 'Your details', 'Review'];
 
 // Initial form state — all fields null-safe
 const INITIAL_FORM = {
