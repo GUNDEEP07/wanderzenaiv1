@@ -202,6 +202,8 @@ async function getFromFoursquare(destination, travelStyles) {
     travelTip: `Book popular venues in ${destination} ahead of time during peak season`,
     bestMonths: [],
     whyThisMonth: '',
+    accommodation: [],
+    budgetEstimateUSD: null,
   };
 }
 
@@ -235,10 +237,32 @@ Return this EXACT JSON structure. No markdown, no code blocks, no explanation �
   "seasonalHighlights": "What makes this season special at this destination",
   "weather": "Expected weather conditions during the travel dates",
   "crowdLevel": "Peak or High or Moderate or Low",
-  "travelTip": "One specific actionable tip for this destination and travel style"
+  "travelTip": "One specific actionable tip for this destination and travel style",
+  "accommodation": [
+    {
+      "type": "Eco-lodge",
+      "style": "homestay",
+      "priceRangePerNightUSD": { "low": 35, "high": 70 },
+      "description": "One sentence describing this accommodation type at this destination",
+      "searchKeyword": "eco lodge bali ubud",
+      "whyItFits": "One sentence on why this matches the travel style"
+    }
+  ],
+  "budgetEstimateUSD": {
+    "flightsLow": 300,
+    "flightsHigh": 600,
+    "accommodationPerNightLow": 25,
+    "accommodationPerNightHigh": 120,
+    "activitiesPerDayLow": 20,
+    "activitiesPerDayHigh": 60,
+    "cheaperMonths": ["April", "May"],
+    "peakMonths": ["July", "August"],
+    "flightTip": "Book 6-8 weeks in advance for best prices"
+  }
 }
 
-Return 5–7 thingsToDo. Use real place names, real opening hours, real distances. Keep all text concise.`;
+Return 5–7 thingsToDo. Use real place names, real opening hours, real distances. Keep all text concise.
+Return exactly 4 accommodation options — one each for style values: "hotel", "airbnb", "homestay", "surprise". The "surprise" entry should be the most unique slow-travel option for this destination. For budgetEstimateUSD, provide typical ranges in USD for international travel to this destination.`;
 
   const response = await anthropic.messages.create({
     model: 'claude-haiku-4-5-20251001',
