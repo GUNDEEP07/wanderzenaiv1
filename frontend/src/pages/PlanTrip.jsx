@@ -264,7 +264,6 @@ export default function PlanTrip() {
   const validate = () => {
     const errs = {};
     if (step === 0 && form.destinations.length === 0) errs.destination = 'Select at least one destination';
-    if (step === 2 && (!form.budget || isNaN(form.budget) || +form.budget <= 0)) errs.budget = 'Enter your total budget';
     if (step === 4) {
       if (!form.email.trim()) errs.email = 'We need your email to send the itinerary';
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = 'Invalid email address';
@@ -371,6 +370,9 @@ export default function PlanTrip() {
             savedState={venueSelState}
             onSave={setVenueSelState}
             preferredActivities={preferredActivities}
+            currency={form.currency}
+            budget={form.budget}
+            userLocation={form.userLocation}
           />
         </div>
       </div>
@@ -431,8 +433,22 @@ export default function PlanTrip() {
               </div>
 
               <div style={s.fieldWrap}>
-                <label style={s.label}>Start date <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontSize: '0.7rem' }}>(optional)</span></label>
-                <input style={s.input} type="date" value={form.travelDate} onChange={e => set('travelDate', e.target.value)} />
+                <label style={s.label}>Total budget <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontSize: '0.7rem' }}>(optional)</span></label>
+                <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.04)', border: `1px solid ${errors.budget ? '#ff6b6b' : 'rgba(255,255,255,0.1)'}`, borderRadius: 10, overflow: 'hidden' }}>
+                  <select
+                    style={{ padding: '0.875rem 0.75rem', background: 'rgba(255,255,255,0.02)', border: 'none', color: 'rgba(255,255,255,0.7)', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '0.85rem', outline: 'none', cursor: 'pointer', borderRight: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}
+                    value={form.currency}
+                    onChange={e => setCurrency(e.target.value)}
+                  >
+                    {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.label.match(/\((.+)\)/)?.[1] || c.code}</option>)}
+                  </select>
+                  <input
+                    style={{ ...s.input, border: 'none', borderRadius: 0, flex: 1 }}
+                    type="number" min="0" placeholder="e.g. 5000"
+                    value={form.budget}
+                    onChange={e => set('budget', e.target.value)}
+                  />
+                </div>
               </div>
 
               <div style={s.fieldWrap}>
@@ -455,40 +471,16 @@ export default function PlanTrip() {
             </div>
           )}
 
-          {/* ── Step 2: Budget & dates ──────────────────────────────── */}
+          {/* ── Step 2: Travel dates ──────────────────────────────── */}
           {step === 2 && (
             <div>
               <div style={s.stepLabel}>Step 3 of 6</div>
-              <h2 style={s.stepTitle}>Budget <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 400 }}>&</span> dates</h2>
-              <p style={s.stepSub}>A rough estimate helps us plan realistic activities and stays.</p>
-
+              <h2 style={s.stepTitle}>Travel dates</h2>
+              <p style={s.stepSub}>When are you heading off? This helps us check flight options and seasonal highlights.</p>
               <div style={s.fieldWrap}>
-                <label style={s.label}>Currency</label>
-                <div style={s.grid4}>
-                  {CURRENCIES.map(c => (
-                    <button type="button" key={c.code} style={s.choiceBtn(form.currency === c.code)} onClick={() => setCurrency(c.code)}>
-                      {c.label}
-                    </button>
-                  ))}
-                </div>
+                <label style={s.label}>Start date <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontSize: '0.7rem' }}>(optional)</span></label>
+                <input style={s.input} type="date" value={form.travelDate} onChange={e => set('travelDate', e.target.value)} />
               </div>
-
-              <div style={s.fieldWrap}>
-                <label style={s.label}>Total trip budget</label>
-                <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.04)', border: `1px solid ${errors.budget ? '#ff6b6b' : 'rgba(255,255,255,0.1)'}`, borderRadius: 10, overflow: 'hidden' }}>
-                  <span style={{ padding: '0 1rem', color: 'rgba(255,255,255,0.3)', fontSize: '0.9rem', borderRight: '1px solid rgba(255,255,255,0.08)', whiteSpace: 'nowrap', background: 'rgba(255,255,255,0.02)' }}>
-                    {CURRENCIES.find(c => c.code === form.currency)?.label.match(/\((.+)\)/)?.[1] || form.currency}
-                  </span>
-                  <input
-                    style={{ ...s.input, border: 'none', borderRadius: 0, flex: 1 }}
-                    type="number" min="0" placeholder="5000"
-                    value={form.budget}
-                    onChange={e => set('budget', e.target.value)}
-                  />
-                </div>
-                {errors.budget && <div style={s.error}>{errors.budget}</div>}
-              </div>
-
             </div>
           )}
 
