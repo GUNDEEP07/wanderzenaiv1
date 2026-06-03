@@ -23,8 +23,41 @@ function timeAgo(iso) {
   return `${months} month${months !== 1 ? 's' : ''} ago`;
 }
 
+// City → canonical country name (so "Bali" and "Bali, Indonesia" both resolve to "Indonesia")
+const CITY_TO_COUNTRY = {
+  bali: 'Indonesia', lombok: 'Indonesia', flores: 'Indonesia', java: 'Indonesia',
+  goa: 'India', shimla: 'India', manali: 'India', bir: 'India', delhi: 'India',
+  'new delhi': 'India', mumbai: 'India', bangalore: 'India', kerala: 'India',
+  kashmir: 'India', himachal: 'India', triund: 'India', coorg: 'India',
+  kyoto: 'Japan', tokyo: 'Japan', osaka: 'Japan', hiroshima: 'Japan',
+  oaxaca: 'Mexico', 'mexico city': 'Mexico',
+  bangkok: 'Thailand', 'chiang mai': 'Thailand', phuket: 'Thailand',
+  barcelona: 'Spain', madrid: 'Spain',
+  amsterdam: 'Netherlands',
+  rome: 'Italy', milan: 'Italy', florence: 'Italy', venice: 'Italy',
+  dubai: 'UAE', 'abu dhabi': 'UAE',
+  singapore: 'Singapore',
+  'hong kong': 'Hong Kong',
+  lisbon: 'Portugal', porto: 'Portugal',
+  berlin: 'Germany', munich: 'Germany',
+  paris: 'France', nice: 'France',
+  prague: 'Czech Republic',
+  budapest: 'Hungary',
+  reykjavik: 'Iceland',
+  tbilisi: 'Georgia',
+  marrakech: 'Morocco', casablanca: 'Morocco',
+  petra: 'Jordan',
+  muscat: 'Oman',
+};
+
 function extractCountry(destination) {
   if (!destination) return null;
+  const lower = destination.toLowerCase();
+  // Check if any known city name appears in the destination string
+  for (const [city, country] of Object.entries(CITY_TO_COUNTRY)) {
+    if (lower.includes(city)) return country;
+  }
+  // Fall back to last comma segment
   const parts = destination.split(',');
   return parts[parts.length - 1].trim();
 }
@@ -133,6 +166,7 @@ export default function Dashboard() {
   const [loading, setLoading]       = useState(true);
   const [search, setSearch]         = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [filterCountry, setFilterCountry] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
   const navigate = useNavigate();
 
@@ -487,15 +521,29 @@ export default function Dashboard() {
                 <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: 14 }}>Countries visited</div>
                 {countryCount > 0 ? (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {[...countries].slice(0, 8).map(c => (
-                      <span key={c} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 20, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>
-                        {getFlag(c)} {c}
-                      </span>
-                    ))}
+                    {[...countries].slice(0, 8).map(c => {
+                      const isActive = filterCountry === c;
+                      return (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => setFilterCountry(isActive ? null : c)}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 20, cursor: 'pointer', fontFamily: 'inherit', fontSize: 11, fontWeight: 600, transition: 'all 0.15s', border: `1px solid ${isActive ? '#00d4aa' : 'rgba(255,255,255,0.08)'}`, background: isActive ? 'rgba(0,212,170,0.12)' : 'rgba(255,255,255,0.04)', color: isActive ? '#00d4aa' : 'rgba(255,255,255,0.7)' }}
+                          title={isActive ? `Clear ${c} filter` : `Show trips to ${c}`}
+                        >
+                          {getFlag(c)} {c}
+                        </button>
+                      );
+                    })}
                     {countryCount > 8 && (
                       <span style={{ padding: '5px 10px', borderRadius: 20, background: 'rgba(0,212,170,0.08)', border: '1px solid rgba(0,212,170,0.15)', fontSize: 11, fontWeight: 600, color: '#00d4aa' }}>
                         +{countryCount - 8} more
                       </span>
+                    )}
+                    {filterCountry && (
+                      <button type="button" onClick={() => setFilterCountry(null)} style={{ padding: '5px 10px', borderRadius: 20, background: 'none', border: '1px solid rgba(255,255,255,0.1)', fontSize: 10, color: 'rgba(255,255,255,0.35)', cursor: 'pointer', fontFamily: 'inherit' }}>
+                        Clear ✕
+                      </button>
                     )}
                   </div>
                 ) : (
@@ -576,13 +624,14 @@ export default function Dashboard() {
             const filtered = pastTrips.filter(trip => {
               const matchSearch = !search || trip.destination?.toLowerCase().includes(search.toLowerCase());
               const matchStatus = filterStatus === 'all' || (filterStatus === 'email_sent' ? trip.status === 'email_sent' : trip.status !== 'email_sent');
-              return matchSearch && matchStatus;
+              const matchCountry = !filterCountry || extractCountry(trip.destination) === filterCountry;
+              return matchSearch && matchStatus && matchCountry;
             });
             if (filtered.length === 0) return (
               <div style={{ textAlign: 'center', padding: '40px 0', color: 'rgba(255,255,255,0.3)' }}>
                 <div style={{ fontSize: 24, marginBottom: 8 }}>🔍</div>
                 <div style={{ fontSize: 14 }}>No trips match your search</div>
-                <button onClick={() => { setSearch(''); setFilterStatus('all'); }} style={{ marginTop: 12, background: 'none', border: 'none', color: '#00d4aa', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, textDecoration: 'underline' }}>
+                <button onClick={() => { setSearch(''); setFilterStatus('all'); setFilterCountry(null); }} style={{ marginTop: 12, background: 'none', border: 'none', color: '#00d4aa', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, textDecoration: 'underline' }}>
                   Clear filters
                 </button>
               </div>
