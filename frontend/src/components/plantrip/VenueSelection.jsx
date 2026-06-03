@@ -16,6 +16,7 @@ import './styles/venueselection-redesign.css';
 const PRESET_ACTIVITIES = ['Hiking', 'Food', 'Views', 'Culture', 'Nature', 'Nightlife', 'Wellness'];
 
 export function VenueSelection({ destinations, travelStyles, startDate, endDate, days = 5, onSubmit, onSkip, onBack, savedState, onSave, preferredActivities = [], currency = 'USD', budget = 0, userLocation = '' }) {
+  const [activeMode, setActiveMode] = useState('experiences');
   const [selectedDestination, setSelectedDestination] = useState(0);
   const [selectedActivities, setSelectedActivities] = useState(() => savedState?.activities || {});
   const [activeTab, setActiveTab] = useState(() => savedState?.activeTab || null);
@@ -182,6 +183,70 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
 
   return (
     <>
+      {/* ── Mode tabs ── */}
+      <div style={{ display: 'flex', gap: 4, padding: '10px 20px 0', background: '#0d1628', borderBottom: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
+        {[
+          { key: 'experiences', label: '🎯 Experiences' },
+          { key: 'stays', label: '✈️ Stays & Flights' },
+        ].map(({ key, label }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setActiveMode(key)}
+            style={{
+              padding: '8px 18px', borderRadius: '8px 8px 0 0', fontFamily: 'inherit',
+              fontSize: 12, fontWeight: 700, cursor: 'pointer', border: 'none',
+              background: activeMode === key ? 'rgba(0,212,170,0.12)' : 'transparent',
+              borderBottom: activeMode === key ? '2px solid #00d4aa' : '2px solid transparent',
+              color: activeMode === key ? '#00d4aa' : 'rgba(255,255,255,0.4)',
+              transition: 'all 0.2s',
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Stays & Flights tab (full width) ── */}
+      {activeMode === 'stays' && (
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', scrollbarWidth: 'none' }}>
+          <FlightsSection
+            destination={destination}
+            origin={userLocation}
+            travelDate={startDate}
+            budgetEstimateUSD={destinationInsights?.budgetEstimateUSD || null}
+            currency={currency}
+            onOriginChange={() => {}}
+          />
+          <AccommodationSection
+            destination={destination}
+            insights={destinationInsights}
+            budget={budget}
+            currency={currency}
+            days={days}
+            travelStyle={travelStyles}
+          />
+          {/* Keep DestinationInsightsPanel mounted (hidden) so insights still load for AccommodationSection */}
+          {destination && startDate && endDate && (
+            <div style={{ display: 'none' }}>
+              <DestinationInsightsPanel
+                destination={destination}
+                travelStyles={travelStyles}
+                startDate={startDate}
+                endDate={endDate}
+                selectedActivities={currentActivities}
+                onActivityToggle={handleActivityToggle}
+                onDayAssign={handleDayAssign}
+                onFullInsightsLoaded={setDestinationInsights}
+                days={days}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Experiences tab (split panel) ── */}
+      {activeMode === 'experiences' && (
       <div className="venue-split">
         {/* LEFT PANEL */}
         <div className="venue-panel-left">
@@ -195,22 +260,6 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
                 <div className="venue-dest-pill__dot"></div>
                 {destination.name}{startDate ? ` · ${days} days` : ''}
               </div>
-            )}
-          </div>
-
-          <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', scrollbarWidth: 'none', padding: '0 14px 16px 24px', position: 'relative', zIndex: 1 }}>
-            {destination && startDate && endDate && (
-              <DestinationInsightsPanel
-                destination={destination}
-                travelStyles={travelStyles}
-                startDate={startDate}
-                endDate={endDate}
-                selectedActivities={currentActivities}
-                onActivityToggle={handleActivityToggle}
-                onDayAssign={handleDayAssign}
-                onFullInsightsLoaded={setDestinationInsights}
-                days={days}
-              />
             )}
           </div>
 
@@ -232,26 +281,19 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
         {/* RIGHT PANEL */}
         <div className="venue-panel-right">
           <div className="venue-panel-right__scroll">
-            {/* ── Flights + Stays ── */}
-            {destination && (
-              <div style={{ padding: '12px 12px 4px' }}>
-                <FlightsSection
-                  destination={destination}
-                  origin={userLocation}
-                  travelDate={startDate}
-                  budgetEstimateUSD={destinationInsights?.budgetEstimateUSD || null}
-                  currency={currency}
-                  onOriginChange={() => {}}
-                />
-                <AccommodationSection
-                  destination={destination}
-                  insights={destinationInsights}
-                  budget={budget}
-                  currency={currency}
-                  days={days}
-                  travelStyle={travelStyles}
-                />
-              </div>
+            {/* AI Suggestions (moved from left panel) */}
+            {destination && startDate && endDate && (
+              <DestinationInsightsPanel
+                destination={destination}
+                travelStyles={travelStyles}
+                startDate={startDate}
+                endDate={endDate}
+                selectedActivities={currentActivities}
+                onActivityToggle={handleActivityToggle}
+                onDayAssign={handleDayAssign}
+                onFullInsightsLoaded={setDestinationInsights}
+                days={days}
+              />
             )}
             <div className="venue-sec-row">
               <div className="venue-sec-label">Explore by category</div>
@@ -377,22 +419,24 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
               </div>
             )}
           </div>
+        </div>
+      </div>
+      )}
 
-          <div className="venue-footer">
-            <button className="venue-footer__skip" onClick={() => { onSave?.(buildSnapshot()); onBack?.(); }}>← Back</button>
-            <div className="venue-footer__count">
-              <b>{selectedCount}</b> selected{scheduledCount > 0 && <> · <b>{scheduledCount}</b> scheduled</>}
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button className="venue-footer__skip" onClick={() => { onSave?.(buildSnapshot()); onSkip?.(); }}>Skip</button>
-              <button
-                className="venue-footer__continue"
-                onClick={handleContinue}
-              >
-                Continue →
-              </button>
-            </div>
-          </div>
+      {/* ── Footer (always visible) ── */}
+      <div className="venue-footer">
+        <button className="venue-footer__skip" onClick={() => { onSave?.(buildSnapshot()); onBack?.(); }}>← Back</button>
+        <div className="venue-footer__count">
+          <b>{selectedCount}</b> selected{scheduledCount > 0 && <> · <b>{scheduledCount}</b> scheduled</>}
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="venue-footer__skip" onClick={() => { onSave?.(buildSnapshot()); onSkip?.(); }}>Skip</button>
+          <button
+            className="venue-footer__continue"
+            onClick={handleContinue}
+          >
+            Continue →
+          </button>
         </div>
       </div>
 
