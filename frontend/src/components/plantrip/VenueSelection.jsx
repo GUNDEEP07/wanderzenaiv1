@@ -42,6 +42,16 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
 
   const destination = destinations?.[selectedDestination];
   const destKey = destination?.name || `destination_${selectedDestination}`;
+
+  // Default dates when user hasn't set travel dates yet — use 30 days from now
+  const effectiveStartDate = startDate || (() => {
+    const d = new Date(); d.setDate(d.getDate() + 30);
+    return d.toISOString().split('T')[0];
+  })();
+  const effectiveEndDate = endDate || (() => {
+    const d = new Date(); d.setDate(d.getDate() + 30 + days);
+    return d.toISOString().split('T')[0];
+  })();
   const currentActivities = selectedActivities[destKey] || [];
   const availableActivities = travelStyles?.length > 0
     ? getActivitiesForTravelStyle(travelStyles)
@@ -258,14 +268,14 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
             travelStyle={travelStyles}
             alwaysOpen
           />
-          {/* Keep DestinationInsightsPanel mounted (hidden) so insights still load for AccommodationSection */}
-          {destination && startDate && endDate && (
+          {/* Always mount insights panel — uses default dates if user hasn't set travel dates */}
+          {destination && (
             <div style={{ display: 'none' }}>
               <DestinationInsightsPanel
                 destination={destination}
                 travelStyles={travelStyles}
-                startDate={startDate}
-                endDate={endDate}
+                startDate={effectiveStartDate}
+                endDate={effectiveEndDate}
                 selectedActivities={currentActivities}
                 onActivityToggle={handleActivityToggle}
                 onDayAssign={handleDayAssign}
@@ -313,13 +323,13 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
         {/* RIGHT PANEL */}
         <div className="venue-panel-right">
           <div className="venue-panel-right__scroll">
-            {/* AI Suggestions (moved from left panel) */}
-            {destination && startDate && endDate && (
+            {/* AI Suggestions — uses effective dates so panel always loads */}
+            {destination && (
               <DestinationInsightsPanel
                 destination={destination}
                 travelStyles={travelStyles}
-                startDate={startDate}
-                endDate={endDate}
+                startDate={effectiveStartDate}
+                endDate={effectiveEndDate}
                 selectedActivities={currentActivities}
                 onActivityToggle={handleActivityToggle}
                 onDayAssign={handleDayAssign}
