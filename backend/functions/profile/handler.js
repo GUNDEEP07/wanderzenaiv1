@@ -185,7 +185,7 @@ exports.handler = async (event) => {
           [email]
         );
       }
-      const [, tripsResult] = await Promise.all([
+      const [, tripsResult, rolesResult] = await Promise.all([
         Promise.resolve(),
         db.query(
           `SELECT s.id, s.destination, s.days, s.status, s.created_at,
@@ -196,6 +196,13 @@ exports.handler = async (event) => {
            ORDER BY s.created_at DESC LIMIT 20`,
           [email]
         ),
+        db.query(
+          `SELECT r.name FROM user_roles ur
+           JOIN roles r ON r.id = ur.role_id
+           JOIN users u ON u.id = ur.user_id
+           WHERE u.email = $1`,
+          [email]
+        ).catch(() => ({ rows: [] })),
       ]);
 
       const pastTrips = await Promise.all(
@@ -216,7 +223,7 @@ exports.handler = async (event) => {
 
       return {
         statusCode: 200, headers: CORS,
-        body: JSON.stringify({ exists: true, profile: userResult.rows[0], pastTrips }),
+        body: JSON.stringify({ exists: true, profile: userResult.rows[0], pastTrips, roles: rolesResult.rows.map(r => r.name) }),
       };
     } catch (err) {
       log.error('Profile GET failed', { error: err.message });
