@@ -19,6 +19,7 @@ const DEMO_USER = {
 
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
+  const [userRoles, setUserRoles] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -27,8 +28,22 @@ export function AuthProvider({ children }) {
       setLoading(false);
       return;
     }
-    const unsub = onAuthStateChanged(auth, (user) => {
+    const unsub = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
+      if (user) {
+        try {
+          const token = await user.getIdToken();
+          const res = await fetch(`${import.meta.env.VITE_API_URL}/profile`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (res.ok) {
+            const d = await res.json();
+            setUserRoles(d.roles || []);
+          }
+        } catch { /* graceful */ }
+      } else {
+        setUserRoles([]);
+      }
       setLoading(false);
     });
     return unsub;
@@ -65,12 +80,20 @@ export function AuthProvider({ children }) {
     return currentUser.getIdToken();
   };
 
+  const ROLE_PRIORITY = { superadmin: 5, admin: 4, agency: 3, support: 2, user: 1 };
+  const hasRole = (role) => userRoles.includes(role);
+  const primaryRole = userRoles.reduce(
+    (best, r) => (ROLE_PRIORITY[r] || 0) > (ROLE_PRIORITY[best] || 0) ? r : best,
+    'user'
+  );
+
   return (
     <AuthContext.Provider value={{
       currentUser, loading,
       signInWithGoogle, signInWithEmail, signUpWithEmail,
       signOut, resetPassword, getIdToken,
       isDemo: !FIREBASE_CONFIGURED,
+      userRoles, hasRole, primaryRole,
     }}>
       {!loading && children}
     </AuthContext.Provider>

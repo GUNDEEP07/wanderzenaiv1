@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { RoleGate } from './components/RoleGate';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CookieBanner } from './components/CookieBanner';
 
@@ -20,6 +21,7 @@ const PrivacyPolicy  = lazy(() => import('./pages/PrivacyPolicy'));
 const TermsOfService = lazy(() => import('./pages/TermsOfService'));
 const ItineraryView  = lazy(() => import('./pages/ItineraryView'));
 const NotFound       = lazy(() => import('./pages/NotFound'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 
 const Spinner = () => (
   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#06090f' }}>
@@ -44,6 +46,7 @@ export default function App() {
               <Route path="/pricing"      element={<Pricing />} />
               <Route path="/dashboard"    element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/agency"       element={<AgencyDashboard />} />
+              <Route path="/admin"        element={<RoleGate requiredRoles={['admin','superadmin','support']}><AdminDashboard /></RoleGate>} />
               <Route path="/explore"      element={<ExplorePage />} />
               <Route path="/settings"     element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="/itinerary/:id" element={<ItineraryView />} />
