@@ -1,5 +1,38 @@
 import pkg from 'pg';
 const { Pool } = pkg;
+import jwt from 'jsonwebtoken';
+import https from 'https';
+
+// ── Firebase JWT verification ──────────────────────────────────────────────────
+// Firebase signs ID tokens with RS256. We verify the signature against their
+// public keys before trusting any claim (incl. email). Never skip verification
+// on an admin endpoint — an unsigned/forged token could otherwise bypass auth.
+const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID;
+let _jwksCache = null;
+let _jwksCacheExpiry = 0;
+
+function fetchFirebasePublicKeys() {
+  return new Promise((resolve, reject) => {
+    https.get(
+      'https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com',
+      (res) => {
+        let data = '';
+        res.on('data', chunk => { data += chunk; });
+        res.on('end', () => {
+          try { resolve(JSON.parse(data)); }
+          catch (e) { reject(e); }
+        });
+      }
+    ).on('error', reject);
+  });
+}
+
+async function getFirebasePublicKeys() {
+  if (_jwksCache && Date.now() < _jwksCacheExpiry) return _jwksCache;
+  _jwksCache = await fetchFirebasePublicKeys();
+  _jwksCacheExpiry = Date.now() + 3600 * 1000; // cache 1 hour
+  return _jwksCache;
+}
 
 const pool = new Pool({
   host: process.env.DB_HOST,
@@ -20,7 +53,18 @@ async function getAdminEmail(event) {
   const token = auth.replace('Bearer ', '');
   if (!token || token === 'demo-token') return null;
   try {
-    const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString());
+    // Decode header to find the key ID (kid)
+    const header = JSON.parse(Buffer.from(token.split('.')[0], 'base64url').toString());
+    // Fetch Firebase's public keys (RS256 certs, cached 1h)
+    const keys = await getFirebasePublicKeys();
+    const cert = keys[header.kid];
+    if (!cert) return null; // unknown key ID — reject
+    // Verify signature + expiry + issuer. Throws if invalid.
+    const payload = jwt.verify(token, cert, {
+      algorithms: ['RS256'],
+      issuer: FIREBASE_PROJECT_ID ? `https://securetoken.google.com/${FIREBASE_PROJECT_ID}` : undefined,
+      audience: FIREBASE_PROJECT_ID || undefined,
+    });
     return payload.email || null;
   } catch { return null; }
 }

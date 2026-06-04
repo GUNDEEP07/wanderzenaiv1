@@ -83,6 +83,10 @@ Parameters:
     NoEcho: true
     Default: ''
     Description: Google Places API key for city autocomplete
+  FirebaseProjectId:
+    Type: String
+    Default: ''
+    Description: Firebase project ID — used to verify JWT issuer/audience in admin Lambda
   AllowedOrigins:
     Type: String
     Default: 'https://www.wanderzenai.com,http://localhost:5173,https://localhost:5173,https://web.postman.co'
@@ -415,7 +419,10 @@ Resources:
       Handler: handler.handler
       Timeout: 30
       MemorySize: 512
-      Description: Admin monitoring portal API — role-protected
+      Description: Admin monitoring portal API — role-protected with verified Firebase JWT
+      Environment:
+        Variables:
+          FIREBASE_PROJECT_ID: !Ref FirebaseProjectId
       Events:
         AdminProxy:
           Type: Api
