@@ -20,7 +20,7 @@ export function RoleGate({ requiredRoles, children, fallback = null }) {
     if (requiredRoles && !requiredRoles.some(r => userRoles.includes(r))) {
       navigate(ROLE_LANDING[primaryRole] || '/dashboard');
     }
-  }, [loading, currentUser, userRoles]);
+  }, [loading, currentUser, userRoles, primaryRole, navigate]);
 
   if (loading || !currentUser) return fallback;
   if (requiredRoles && !requiredRoles.some(r => userRoles.includes(r))) return fallback;

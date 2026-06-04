@@ -28,25 +28,29 @@ export function AuthProvider({ children }) {
       setLoading(false);
       return;
     }
+    let controller = new AbortController();
     const unsub = onAuthStateChanged(auth, async (user) => {
+      controller.abort();
+      controller = new AbortController();
       setCurrentUser(user);
       if (user) {
         try {
           const token = await user.getIdToken();
           const res = await fetch(`${import.meta.env.VITE_API_URL}/profile`, {
             headers: { Authorization: `Bearer ${token}` },
+            signal: controller.signal,
           });
           if (res.ok) {
             const d = await res.json();
             setUserRoles(d.roles || []);
           }
-        } catch { /* graceful */ }
+        } catch { /* graceful — includes AbortError on sign-out */ }
       } else {
         setUserRoles([]);
       }
       setLoading(false);
     });
-    return unsub;
+    return () => { unsub(); controller.abort(); };
   }, []);
 
   const signInWithGoogle = async () => {
