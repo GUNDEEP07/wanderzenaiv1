@@ -68,6 +68,17 @@ export const analytics = {
 
   // ── Navigation ────────────────────────────────────────────────────────────
 
+  /** GA4 funnel event — fired each time the user advances to a new step */
+  stepReached: (stepName, stepIndex) => {
+    if (typeof window !== 'undefined' && window.gtag) {
+      window.gtag('event', 'step_reached', {
+        event_category: 'PlanTrip',
+        step_name: stepName,
+        step_index: stepIndex,
+      });
+    }
+  },
+
   /** User clicked CTA on landing page */
   ctaClicked: (location) => track('cta_clicked', { location }),
 

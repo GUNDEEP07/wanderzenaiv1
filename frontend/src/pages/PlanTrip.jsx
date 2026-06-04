@@ -276,7 +276,7 @@ export default function PlanTrip() {
     if (!validate()) return;
     const nextStep = step + 1;
     goToStep(nextStep);
-    // Trigger preview when entering step 5
+    analytics.stepReached(STEPS[nextStep], nextStep);
     if (nextStep === 5) loadPreview(form);
   };
 
