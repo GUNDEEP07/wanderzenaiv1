@@ -84,6 +84,26 @@ No activity detail. Titles and atmosphere only. Exactly ${days} items.`;
     }
   }
 
+  // ─── POST /feedback ─────────────────────────────────────────────────────────
+  if (event.path === '/feedback' || event.path?.endsWith('/feedback')) {
+    let body;
+    try { body = JSON.parse(event.body || '{}'); } catch { return badRequest('Invalid JSON'); }
+    const { submission_id, rating, comment, destination, source = 'post_delivery', email: fbEmail } = body;
+    if (!rating || +rating < 1 || +rating > 5) return badRequest('rating must be 1-5');
+    const db = getDB();
+    try {
+      await db.query(
+        `INSERT INTO feedback (submission_id, email, rating, comment, destination, source)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [submission_id || null, fbEmail || null, +rating, comment || null, destination || null, source]
+      );
+      return ok({ saved: true });
+    } catch (err) {
+      log.error('Feedback save failed', { error: err.message });
+      return serverError('Failed to save feedback');
+    }
+  }
+
   // ─── POST /submit ───────────────────────────────────────────────────────────
 
   let body;

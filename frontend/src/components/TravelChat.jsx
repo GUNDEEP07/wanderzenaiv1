@@ -1,4 +1,35 @@
 import { useState, useRef, useEffect } from 'react';
+import React from 'react';
+
+function ChatFeedback({ destination }) {
+  const [rating, setRating] = React.useState(0);
+  const [done, setDone] = React.useState(false);
+  if (done) return (
+    <div style={{ fontSize: 12, color: '#00d4aa', padding: '8px 12px', background: 'rgba(0,212,170,0.08)', borderRadius: 10 }}>
+      Thanks for the feedback! ✓
+    </div>
+  );
+  return (
+    <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px 14px 14px 4px', padding: '10px 14px' }}>
+      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', marginBottom: 8 }}>✨ How has our chat been so far?</div>
+      <div style={{ display: 'flex', gap: 6 }}>
+        {[1,2,3,4,5].map(n => (
+          <button key={n} type="button" onClick={async () => {
+            setRating(n); setDone(true);
+            try {
+              await fetch(`${import.meta.env.VITE_API_URL}/feedback`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rating: n, destination, source: 'chat' }),
+              });
+            } catch { /* silent */ }
+          }} style={{ fontSize: 20, background: 'none', border: 'none', cursor: 'pointer', opacity: n <= rating ? 1 : 0.4, transition: 'opacity 0.1s' }}>
+            ⭐
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { analytics } from '../utils/analytics';
@@ -72,6 +103,9 @@ export function TravelChat() {
 
       if (data.readyToPlan && data.tripData) {
         setPendingTrip(data.tripData);
+        setTimeout(() => {
+          setHistory(h => [...h, { role: 'assistant', content: '✨ How has our chat been?', isFeedbackPrompt: true, destination: data.tripData?.destination }]);
+        }, 800);
       }
     } catch {
       setLoading(false);
@@ -178,17 +212,21 @@ export function TravelChat() {
               {msg.role === 'assistant' && (
                 <div style={{ width: 24, height: 24, background: 'linear-gradient(135deg,#00d4aa,#00916a)', borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, flexShrink: 0, marginRight: 8, marginTop: 2 }}>✦</div>
               )}
-              <div style={{
-                maxWidth: '78%', padding: '10px 13px', borderRadius: msg.role === 'user' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
-                background: msg.role === 'user' ? 'linear-gradient(135deg,#00d4aa,#00a87e)' : 'rgba(255,255,255,0.06)',
-                border: msg.role === 'user' ? 'none' : '1px solid rgba(255,255,255,0.08)',
-                fontSize: 13, lineHeight: 1.55,
-                color: msg.role === 'user' ? '#06090f' : 'rgba(255,255,255,0.85)',
-                fontWeight: msg.role === 'user' ? 600 : 400,
-                whiteSpace: 'pre-wrap',
-              }}>
-                {msg.content}
-              </div>
+              {msg.isFeedbackPrompt ? (
+                <ChatFeedback destination={msg.destination} />
+              ) : (
+                <div style={{
+                  maxWidth: '78%', padding: '10px 13px', borderRadius: msg.role === 'user' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
+                  background: msg.role === 'user' ? 'linear-gradient(135deg,#00d4aa,#00a87e)' : 'rgba(255,255,255,0.06)',
+                  border: msg.role === 'user' ? 'none' : '1px solid rgba(255,255,255,0.08)',
+                  fontSize: 13, lineHeight: 1.55,
+                  color: msg.role === 'user' ? '#06090f' : 'rgba(255,255,255,0.85)',
+                  fontWeight: msg.role === 'user' ? 600 : 400,
+                  whiteSpace: 'pre-wrap',
+                }}>
+                  {msg.content}
+                </div>
+              )}
             </div>
           ))}
 

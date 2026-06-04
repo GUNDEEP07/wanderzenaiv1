@@ -1,4 +1,63 @@
 import React, { useEffect, useState } from "react"
+
+function FeedbackWidget({ submissionId, destination }) {
+  const [rating, setRating] = React.useState(0);
+  const [comment, setComment] = React.useState('');
+  const [submitted, setSubmitted] = React.useState(false);
+  const [hovering, setHovering] = React.useState(0);
+
+  const submit = async () => {
+    if (!rating) return;
+    try {
+      await fetch(`${import.meta.env.VITE_API_URL}/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ submission_id: submissionId, rating, comment, destination, source: 'post_delivery' }),
+      });
+    } catch { /* silent */ }
+    setSubmitted(true);
+  };
+
+  if (submitted) return (
+    <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(0,212,170,0.06)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 12, marginTop: 24 }}>
+      <div style={{ fontSize: 24, marginBottom: 6 }}>🙏</div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: '#00d4aa' }}>Thank you for your feedback!</div>
+    </div>
+  );
+
+  return (
+    <div style={{ marginTop: 28, padding: '20px 24px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, textAlign: 'center' }}>
+      <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 4 }}>How was your planning experience?</div>
+      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginBottom: 14 }}>Takes 10 seconds — helps us improve</div>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 14 }}>
+        {[1,2,3,4,5].map(n => (
+          <button
+            key={n}
+            type="button"
+            onClick={() => setRating(n)}
+            onMouseEnter={() => setHovering(n)}
+            onMouseLeave={() => setHovering(0)}
+            style={{ fontSize: 28, background: 'none', border: 'none', cursor: 'pointer', opacity: n <= (hovering || rating) ? 1 : 0.3, transition: 'all 0.1s', transform: n <= (hovering || rating) ? 'scale(1.1)' : 'scale(1)' }}
+          >⭐</button>
+        ))}
+      </div>
+      {rating > 0 && (
+        <>
+          <textarea
+            value={comment}
+            onChange={e => setComment(e.target.value)}
+            placeholder="Any comments? (optional)"
+            rows={2}
+            style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#fff', fontFamily: 'inherit', fontSize: 13, padding: '8px 12px', resize: 'none', outline: 'none', marginBottom: 10 }}
+          />
+          <button type="button" onClick={submit} style={{ padding: '9px 24px', background: '#00d4aa', border: 'none', borderRadius: 8, color: '#0a0f1e', fontFamily: 'inherit', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>
+            Submit →
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
 import { useLocation, useNavigate } from "react-router-dom"
 
 const API_URL = import.meta.env.VITE_API_URL
@@ -127,6 +186,7 @@ export default function Confirmation() {
             <button onClick={() => navigate("/pricing")} style={{ background: "none", border: "1px solid #c8b89a", padding: "0.85rem 2rem", borderRadius: "4px", fontFamily: "Source Serif 4, serif", fontSize: "0.95rem", color: "#6a5e48", cursor: "pointer" }}>
               See pricing
             </button>
+            <FeedbackWidget submissionId={submissionId} destination={destination} />
           </>
         ) : displayStatus === "failed" ? (
           <>
