@@ -171,3 +171,59 @@ CREATE TABLE IF NOT EXISTS destination_insights_cache (
 );
 CREATE INDEX IF NOT EXISTS idx_insights_cache_dest    ON destination_insights_cache(destination);
 CREATE INDEX IF NOT EXISTS idx_insights_cache_expires ON destination_insights_cache(expires_at);
+
+-- ─── RBAC: roles catalogue ────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS roles (
+  id          SERIAL PRIMARY KEY,
+  name        VARCHAR(50) UNIQUE NOT NULL,
+  description TEXT,
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+INSERT INTO roles (name, description) VALUES
+  ('user',       'Standard customer — trip planning access'),
+  ('admin',      'Internal team — full monitoring dashboard'),
+  ('agency',     'B2B partner — white-label itinerary portal'),
+  ('support',    'Support team — view submissions, no revenue/cost data'),
+  ('superadmin', 'Owner — full access including role management')
+ON CONFLICT (name) DO NOTHING;
+
+-- ─── RBAC: user → role join ───────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS user_roles (
+  id          SERIAL PRIMARY KEY,
+  user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role_id     INTEGER NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+  assigned_by UUID REFERENCES users(id),
+  assigned_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, role_id)
+);
+CREATE INDEX IF NOT EXISTS idx_user_roles_user ON user_roles(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_roles_role ON user_roles(role_id);
+
+-- ─── Chat session tracking ────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS chat_sessions (
+  id             UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id        UUID REFERENCES users(id),
+  firebase_uid   VARCHAR(255),
+  messages_count INTEGER DEFAULT 0,
+  led_to_plan    BOOLEAN DEFAULT FALSE,
+  destination    VARCHAR(255),
+  created_at     TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_chat_sessions_user    ON chat_sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_chat_sessions_created ON chat_sessions(created_at DESC);
+
+-- ─── User feedback ────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS feedback (
+  id            UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  submission_id VARCHAR(50) REFERENCES submissions(id),
+  user_id       UUID REFERENCES users(id),
+  email         VARCHAR(255),
+  rating        INTEGER CHECK (rating BETWEEN 1 AND 5),
+  comment       TEXT,
+  destination   VARCHAR(255),
+  source        VARCHAR(50) DEFAULT 'post_delivery',
+  created_at    TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_feedback_created ON feedback(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_feedback_rating  ON feedback(rating);
