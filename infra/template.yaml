@@ -406,6 +406,30 @@ Resources:
             Path: /customer-portal
             Method: POST
 
+  # ─── Admin Lambda ─────────────────────────────────────────────────────────
+  AdminFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub wanderzenai-admin-${Stage}
+      CodeUri: ../backend/functions/admin
+      Handler: handler.handler
+      Timeout: 30
+      MemorySize: 512
+      Description: Admin monitoring portal API — role-protected
+      Events:
+        AdminProxy:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /admin/{proxy+}
+            Method: ANY
+        AdminRoot:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /admin
+            Method: ANY
+
   # ─── S3 Bucket for PDFs ────────────────────────────────────────────────────
   PDFBucket:
     Type: AWS::S3::Bucket
