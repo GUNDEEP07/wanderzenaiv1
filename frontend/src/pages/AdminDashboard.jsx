@@ -145,8 +145,8 @@ export default function AdminDashboard() {
               {!tabData.activity ? <Loader /> : <>
                 <div style={{ marginBottom: 24 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Top destinations</div>
-                  {tabData.activity[1]?.slice(0, 12).map((d, i) => (
-                    <div key={i} style={s.barRow}>
+                  {tabData.activity[1]?.slice(0, 12).map((d) => (
+                    <div key={d.destination} style={s.barRow}>
                       <div style={s.barLabel}>{d.destination}</div>
                       <div style={s.barBg}><div style={s.barFill(Math.round(100 * d.count / (tabData.activity[1][0]?.count || 1)))} /></div>
                       <div style={s.barCount}>{d.count}</div>
@@ -157,8 +157,8 @@ export default function AdminDashboard() {
                 <table style={s.table}>
                   <thead><tr>{['Destination','Email','Plan','Status','Date'].map(h => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
                   <tbody>
-                    {tabData.activity[2]?.slice(0, 30).map((r, i) => (
-                      <tr key={i}>
+                    {tabData.activity[2]?.slice(0, 30).map((r) => (
+                      <tr key={r.id}>
                         <td style={s.td}>{r.destination}</td>
                         <td style={s.td}>{r.email?.replace(/(.{3}).*(@.*)/, '$1***$2')}</td>
                         <td style={s.td}><span style={{ color: r.plan === 'paid' ? '#ffd93d' : 'rgba(255,255,255,0.35)', fontSize: 11, fontWeight: 700 }}>{r.plan}</span></td>
@@ -177,8 +177,8 @@ export default function AdminDashboard() {
             <div>
               <div style={s.secTitle}>Top travel interests</div>
               {!tabData.interests ? <Loader /> :
-                tabData.interests[0]?.map((d, i) => (
-                  <div key={i} style={s.barRow}>
+                tabData.interests[0]?.map((d) => (
+                  <div key={d.interest} style={s.barRow}>
                     <div style={{ ...s.barLabel, width: 110 }}>{d.interest}</div>
                     <div style={s.barBg}><div style={s.barFill(Math.round(100 * d.count / (tabData.interests[0][0]?.count || 1)), 'linear-gradient(90deg,#00d4aa,#00916a)')} /></div>
                     <div style={s.barCount}>{d.count}</div>
@@ -195,8 +195,8 @@ export default function AdminDashboard() {
                 <table style={s.table}>
                   <thead><tr>{['Month','Itineraries','Input tokens','Output tokens','Cost (USD)'].map(h => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
                   <tbody>
-                    {tabData.tokens[0]?.map((r, i) => (
-                      <tr key={i}>
+                    {tabData.tokens[0]?.map((r) => (
+                      <tr key={r.month}>
                         <td style={s.td}>{new Date(r.month).toLocaleDateString('en-GB',{month:'short',year:'numeric'})}</td>
                         <td style={s.td}>{r.itineraries}</td>
                         <td style={s.td}>{(+r.input_tokens).toLocaleString()}</td>
@@ -234,7 +234,7 @@ export default function AdminDashboard() {
               <div style={s.secTitle}>User funnel</div>
               {!tabData.funnel ? <Loader /> :
                 tabData.funnel[0]?.map((stage, i, arr) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
+                  <div key={stage.stage} style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
                     <div style={{ width: 90, fontSize: 13, color: '#fff' }}>{stage.stage}</div>
                     <div style={s.barBg}><div style={{ ...s.barFill(Math.round(100 * stage.count / (arr[0]?.count || 1))), background: `linear-gradient(90deg, #00d4aa, #00916a)`, opacity: 1 - i * 0.2 }} /></div>
                     <div style={{ width: 60, fontSize: 13, fontWeight: 700, color: '#00d4aa' }}>{stage.count?.toLocaleString()}</div>
@@ -263,7 +263,7 @@ export default function AdminDashboard() {
                   <thead><tr>{['Rating','Comment','Destination','Source','Date'].map(h => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
                   <tbody>
                     {tabData.feedback[0]?.recent?.map((r, i) => (
-                      <tr key={i}>
+                      <tr key={`${r.created_at}-${i}`}>
                         <td style={s.td}>{'★'.repeat(r.rating)}</td>
                         <td style={{ ...s.td, maxWidth: 260, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.comment || '—'}</td>
                         <td style={s.td}>{r.destination || '—'}</td>
@@ -285,8 +285,8 @@ export default function AdminDashboard() {
                 <table style={s.table}>
                   <thead><tr>{['Email','Name','Plan','Roles','Itineraries','Joined'].map(h => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
                   <tbody>
-                    {tabData.users[0]?.map((u, i) => (
-                      <tr key={i}>
+                    {tabData.users[0]?.map((u) => (
+                      <tr key={u.id}>
                         <td style={s.td}>{u.email}</td>
                         <td style={s.td}>{u.name || '—'}</td>
                         <td style={s.td}><span style={{ color: u.plan !== 'free' ? '#ffd93d' : 'rgba(255,255,255,0.35)', fontWeight: 700, fontSize: 11 }}>{u.plan}</span></td>
@@ -312,8 +312,8 @@ export default function AdminDashboard() {
                 <table style={s.table}>
                   <thead><tr>{['Email','Current roles','Assign role'].map(h => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
                   <tbody>
-                    {tabData.roles[0]?.map((u, i) => (
-                      <RoleRow key={i} user={u} getIdToken={getIdToken} API={API} />
+                    {tabData.roles[0]?.map((u) => (
+                      <RoleRow key={u.id} user={u} getIdToken={getIdToken} API={API} />
                     ))}
                   </tbody>
                 </table>
