@@ -102,10 +102,6 @@ export function useDestinationPhoto(destination = '', keyword = '', size = 'card
     setSrc(getDestinationPhoto(destination, keyword, size));
     const query = keyword || destination.split(',')[0].trim();
     if (!query) return;
-    // Only hit Unsplash API for destinations not already in the known map
-    const name = query.toLowerCase();
-    const isKnown = Object.keys(KNOWN_PHOTOS).some(k => name.includes(k) || k.includes(name));
-    if (isKnown) return;
     fetchFromUnsplash(query, size).then(url => { if (url) setSrc(url); });
   }, [destination, keyword, size]);
 

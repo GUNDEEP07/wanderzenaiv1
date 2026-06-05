@@ -96,6 +96,28 @@ function ThingPhoto({ name, keyword, style }) {
   return <img src={src} alt={name} style={style} onError={e => { e.target.src = getFallbackPhoto('thumb'); }} />;
 }
 
+function TrendingCard({ t, onClick }) {
+  const src = useDestinationPhoto(t.dest || '', '', 'card');
+  return (
+    <div
+      onClick={onClick}
+      style={{ borderRadius: 12, overflow: 'hidden', cursor: 'pointer', position: 'relative', aspectRatio: '3/2', transition: 'transform 0.3s' }}
+      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; }}
+      onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
+    >
+      <img src={src} alt={t.dest} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} loading="lazy" onError={e => { e.target.src = getFallbackPhoto('card'); }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(10,15,30,0.95) 0%, rgba(10,15,30,0.2) 60%, transparent 100%)' }} />
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px 14px' }}>
+        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff', marginBottom: 3 }}>{t.dest}</div>
+        <div style={{ fontSize: '0.7rem', color: teal, fontWeight: 600 }}>{t.trend}</div>
+      </div>
+      <div style={{ position: 'absolute', top: 10, right: 10, background: tealGlow, border: `1px solid ${tealBorder}`, borderRadius: 6, padding: '3px 8px', fontSize: '0.65rem', fontWeight: 700, color: teal }}>
+        Plan this
+      </div>
+    </div>
+  );
+}
+
 export default function ExplorePage() {
   const navigate = useNavigate();
   const [activeContinent, setActiveContinent] = useState('asia');
@@ -294,23 +316,7 @@ export default function ExplorePage() {
           </div>
           <div className="explore-trending-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
             {(apiTrending.length ? apiTrending : TRENDING).map(t => (
-              <div
-                key={t.dest}
-                onClick={() => startPlan(t.dest)}
-                style={{ borderRadius: 12, overflow: 'hidden', cursor: 'pointer', position: 'relative', aspectRatio: '3/2', transition: 'transform 0.3s' }}
-                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
-              >
-                <img src={t.img || getDestinationPhoto(t.dest, '', 'card')} alt={t.dest} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} loading="lazy" onError={e => { e.target.src = getFallbackPhoto('card'); }} />
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(10,15,30,0.95) 0%, rgba(10,15,30,0.2) 60%, transparent 100%)' }} />
-                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px 14px' }}>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff', marginBottom: 3 }}>{t.dest}</div>
-                  <div style={{ fontSize: '0.7rem', color: teal, fontWeight: 600 }}>{t.trend}</div>
-                </div>
-                <div style={{ position: 'absolute', top: 10, right: 10, background: tealGlow, border: `1px solid ${tealBorder}`, borderRadius: 6, padding: '3px 8px', fontSize: '0.65rem', fontWeight: 700, color: teal }}>
-                  Plan this
-                </div>
-              </div>
+              <TrendingCard key={t.dest} t={t} onClick={() => startPlan(t.dest)} />
             ))}
           </div>
         </div>
