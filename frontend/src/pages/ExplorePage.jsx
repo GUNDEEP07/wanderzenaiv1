@@ -54,13 +54,14 @@ const COUNTRIES = {
   ],
 };
 
+// TRENDING uses getDestinationPhoto — no hardcoded URLs that can rot when Unsplash deletes photos
 const TRENDING = [
-  { dest: 'Kyoto, Japan', img: 'https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=300&h=200&fit=crop', trend: '+34% this month' },
-  { dest: 'Oaxaca, Mexico', img: 'https://images.unsplash.com/photo-1518638150340-f706e86654de?w=300&h=200&fit=crop', trend: '+28% this month' },
-  { dest: 'Bali, Indonesia', img: 'https://images.unsplash.com/photo-1539635278303-d4002c07eae3?w=300&h=200&fit=crop', trend: '+22% this month' },
-  { dest: 'Tbilisi, Georgia', img: 'https://images.unsplash.com/photo-1601974984960-4e1d498e3b2f?w=300&h=200&fit=crop', trend: '+41% this month' },
-  { dest: 'Matera, Italy', img: 'https://images.unsplash.com/photo-1516483638261-f4dbaf036963?w=300&h=200&fit=crop', trend: '+19% this month' },
-  { dest: 'Chefchaouen, Morocco', img: 'https://images.unsplash.com/photo-1539020140153-e479b8c22e70?w=300&h=200&fit=crop', trend: '+31% this month' },
+  { dest: 'Kyoto, Japan',         trend: 'Slow travel favourite' },
+  { dest: 'Oaxaca, Mexico',       trend: 'Hidden gem' },
+  { dest: 'Bali, Indonesia',      trend: 'Nature first' },
+  { dest: 'Tbilisi, Georgia',     trend: 'Undiscovered' },
+  { dest: 'Matera, Italy',        trend: 'Slow travel icon' },
+  { dest: 'Chefchaouen, Morocco', trend: 'Sensory overload' },
 ];
 
 const MONTH_PICKS = {

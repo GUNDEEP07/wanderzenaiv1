@@ -219,57 +219,11 @@ async function getFromFoursquare(destination, travelStyles) {
 async function generateFromClaude(destination, travelStyles, startDate, endDate) {
   const stylesText = travelStyles.length > 0 ? travelStyles.join(', ') : 'general travel';
 
-  const prompt = `You are a travel expert. Generate destination insights as a JSON object.
-Destination: ${destination}
-Travel styles: ${stylesText}
-Travel dates: ${startDate} to ${endDate}
+  const prompt = `Travel expert. Return ONLY raw JSON, no markdown:
+{"bestMonths":["Jun","Jul"],"seasonalHighlights":"10 words max","weather":"10 words max","crowdLevel":"Peak|High|Moderate|Low","travelTip":"one tip","thingsToDo":[{"name":"Real place","category":"Nature","reason":"one sentence","emoji":"🏛️","visitorTip":"one insider tip","unsplashKeyword":"2-3 words"}],"accommodation":[{"type":"Eco-lodge","style":"homestay","priceRangePerNightUSD":{"low":35,"high":70},"description":"one sentence","searchKeyword":"eco lodge ${destination.toLowerCase()}"}],"budgetEstimateUSD":{"flightsLow":300,"flightsHigh":600,"accommodationPerNightLow":25,"accommodationPerNightHigh":120,"activitiesPerDayLow":20,"activitiesPerDayHigh":60,"cheaperMonths":["Apr","May"]}}
 
-Return this EXACT JSON structure. No markdown, no code blocks, no explanation — raw JSON only:
-{
-  "bestMonths": ["June", "July"],
-  "whyThisMonth": "Brief explanation of why these months are ideal",
-  "thingsToDo": [
-    {
-      "name": "Specific real place or activity name",
-      "category": "Category e.g. Nature, Food, Culture, Adventure, Wellness",
-      "reason": "One sentence why this matches the travel style",
-      "emoji": "🏛️",
-      "openingHours": "Daily 9am–6pm",
-      "distanceFromCenter": "2km from city centre",
-      "bestTime": "Early morning to avoid crowds",
-      "visitorTip": "One specific insider tip most tourists miss",
-      "unsplashKeyword": "2-3 word photo search term e.g. ubud rice terraces"
-    }
-  ],
-  "seasonalHighlights": "What makes this season special at this destination",
-  "weather": "Expected weather conditions during the travel dates",
-  "crowdLevel": "Peak or High or Moderate or Low",
-  "travelTip": "One specific actionable tip for this destination and travel style",
-  "accommodation": [
-    {
-      "type": "Eco-lodge",
-      "style": "homestay",
-      "priceRangePerNightUSD": { "low": 35, "high": 70 },
-      "description": "One sentence describing this accommodation type at this destination",
-      "searchKeyword": "eco lodge bali ubud",
-      "whyItFits": "One sentence on why this matches the travel style"
-    }
-  ],
-  "budgetEstimateUSD": {
-    "flightsLow": 300,
-    "flightsHigh": 600,
-    "accommodationPerNightLow": 25,
-    "accommodationPerNightHigh": 120,
-    "activitiesPerDayLow": 20,
-    "activitiesPerDayHigh": 60,
-    "cheaperMonths": ["April", "May"],
-    "peakMonths": ["July", "August"],
-    "flightTip": "Book 6-8 weeks in advance for best prices"
-  }
-}
-
-Return 5–7 thingsToDo. Use real place names, real opening hours, real distances. Keep all text concise.
-Return exactly 4 accommodation options — one each for style values: "hotel", "airbnb", "homestay", "surprise". The "surprise" entry should be the most unique slow-travel option for this destination. For budgetEstimateUSD, provide typical ranges in USD for international travel to this destination.`;
+Destination: ${destination}. Travel styles: ${stylesText}. Dates: ${startDate} to ${endDate}.
+Rules: exactly 3 thingsToDo, exactly 4 accommodation (styles: hotel/airbnb/homestay/surprise), all values concise. Real place names.`;
 
   const response = await anthropic.messages.create({
     model: 'claude-haiku-4-5-20251001',

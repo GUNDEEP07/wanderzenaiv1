@@ -227,3 +227,7 @@ CREATE TABLE IF NOT EXISTS feedback (
 );
 CREATE INDEX IF NOT EXISTS idx_feedback_created ON feedback(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_feedback_rating  ON feedback(rating);
+
+-- ─── destination_insights_cache: add travel_styles_key if missing (table existed without it) ───
+ALTER TABLE destination_insights_cache ADD COLUMN IF NOT EXISTS travel_styles_key VARCHAR(500) NOT NULL DEFAULT 'general';
+CREATE UNIQUE INDEX IF NOT EXISTS idx_insights_unique ON destination_insights_cache(destination, start_date, end_date, travel_styles_key);
