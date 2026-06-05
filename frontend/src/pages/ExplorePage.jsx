@@ -101,6 +101,7 @@ export default function ExplorePage() {
   const [personalRecs, setPersonalRecs] = useState([]);
   const [countryInsights, setCountryInsights] = useState(null);
   const [insightsLoading, setInsightsLoading] = useState(false);
+  const [selectedPlaces, setSelectedPlaces] = useState(new Set());
 
   // Fetch trending destinations — uses /recommendations/trending (existing route)
   useEffect(() => {
@@ -141,8 +142,9 @@ export default function ExplorePage() {
 
   // Live destination insights when a country is expanded
   useEffect(() => {
-    if (!activeCountry) { setCountryInsights(null); setInsightsLoading(false); return; }
+    if (!activeCountry) { setCountryInsights(null); setInsightsLoading(false); setSelectedPlaces(new Set()); return; }
     setCountryInsights(null);
+    setSelectedPlaces(new Set());
     setInsightsLoading(true);
     const start = new Date(Date.now() + 60 * 86400000).toISOString().split('T')[0];
     const end   = new Date(Date.now() + 67 * 86400000).toISOString().split('T')[0];
@@ -384,75 +386,137 @@ export default function ExplorePage() {
             ))}
           </div>
 
-          {/* Expanded country detail */}
+          {/* ── Destination Brief — unified panel with multi-select ── */}
           {country && (
             <div style={{ background: navy3, border: `1px solid ${teal}`, borderRadius: 16, padding: '1.75rem 2rem', marginBottom: '2rem', animation: 'fadeIn 0.3s ease' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
+
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
                 <div>
-                  <div style={{ fontFamily: "'Fraunces', serif", fontSize: '1.5rem', fontWeight: 700, color: '#fff', marginBottom: 6, letterSpacing: '-0.02em' }}>
-                    Top places in {country.name}
+                  <div style={{ fontFamily: "'Fraunces', serif", fontSize: '1.75rem', fontWeight: 700, color: '#fff', marginBottom: 5, letterSpacing: '-0.02em' }}>
+                    {country.name}
                   </div>
-                  <div style={{ fontSize: '0.9rem', color: w40, fontStyle: 'italic' }}>
-                    Our top slow-travel picks — hidden from the usual guidebooks
-                  </div>
+                  {countryInsights?.seasonalHighlights && (
+                    <div style={{ fontSize: '0.875rem', color: w40, fontStyle: 'italic', maxWidth: 400 }}>
+                      {countryInsights.seasonalHighlights}
+                    </div>
+                  )}
+                  {!countryInsights && !insightsLoading && (
+                    <div style={{ fontSize: '0.875rem', color: w40, fontStyle: 'italic' }}>
+                      {country.desc}
+                    </div>
+                  )}
                 </div>
-                <button
-                  onClick={() => startPlan(country.name)}
-                  style={{ background: teal, color: navy, border: 'none', padding: '10px 22px', borderRadius: 10, fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif", whiteSpace: 'nowrap' }}
-                >
+                <button onClick={() => startPlan(country.name)}
+                  style={{ background: teal, color: navy, border: 'none', padding: '10px 22px', borderRadius: 10, fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif", whiteSpace: 'nowrap' }}>
                   Plan {country.name} trip
                 </button>
               </div>
-              {/* Loading indicator while insights fetch */}
+
+              {/* Insight badges */}
               {insightsLoading && !countryInsights && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, padding: '8px 12px', background: 'rgba(0,212,170,0.06)', border: '1px solid rgba(0,212,170,0.15)', borderRadius: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, padding: '8px 12px', background: 'rgba(0,212,170,0.06)', border: '1px solid rgba(0,212,170,0.15)', borderRadius: 8 }}>
                   <div style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid rgba(0,212,170,0.3)', borderTopColor: '#00d4aa', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
                   <span style={{ fontSize: 12, color: 'rgba(0,212,170,0.8)' }}>Loading destination insights…</span>
                 </div>
               )}
               {countryInsights && (
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
                   {countryInsights.weather && <span style={{ padding: '4px 12px', borderRadius: 20, background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.25)', fontSize: 11, fontWeight: 700, color: '#60a5fa' }}>☀️ {countryInsights.weather.split(/[,(]/)[0].trim()}</span>}
                   {countryInsights.crowdLevel && <span style={{ padding: '4px 12px', borderRadius: 20, background: 'rgba(255,217,61,0.08)', border: '1px solid rgba(255,217,61,0.2)', fontSize: 11, fontWeight: 700, color: '#ffd93d' }}>👥 {countryInsights.crowdLevel} crowds</span>}
                   {countryInsights.bestMonths?.slice(0, 2).length > 0 && <span style={{ padding: '4px 12px', borderRadius: 20, background: 'rgba(0,212,170,0.08)', border: '1px solid rgba(0,212,170,0.2)', fontSize: 11, fontWeight: 700, color: teal }}>🗓 Best: {countryInsights.bestMonths.slice(0, 2).join(' & ')}</span>}
                 </div>
               )}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10, marginBottom: countryInsights?.thingsToDo?.length ? 16 : 0 }}>
-                {country.places.map((place) => (
-                  <div key={place} onClick={() => startPlan(`${place}, ${country.name}`)}
-                    style={{ borderRadius: 12, overflow: 'hidden', cursor: 'pointer', border: `1px solid ${border}`, transition: 'all 0.2s', position: 'relative', aspectRatio: '4/3' }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = teal; e.currentTarget.style.transform = 'translateY(-2px)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = border; e.currentTarget.style.transform = 'none'; }}>
-                    <img src={getDestinationPhoto(`${place}, ${country.name}`, place.toLowerCase(), 'thumb')} alt={place} loading="lazy"
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                      onError={e => { e.target.src = getFallbackPhoto('thumb'); }} />
-                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(10,15,30,0.9) 0%, rgba(10,15,30,0.1) 60%, transparent 100%)' }} />
-                    <div style={{ position: 'absolute', bottom: 8, left: 10, right: 10 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{place}</div>
-                      <div style={{ fontSize: 10, color: teal, marginTop: 2 }}>Plan this →</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+
+              {/* AI experience cards — selectable */}
               {countryInsights?.thingsToDo?.length > 0 && (
-                <div style={{ marginTop: 14 }}>
-                  <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: 10 }}>AI curated experiences</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {countryInsights.thingsToDo.slice(0, 3).map((thing, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', background: 'rgba(255,255,255,0.03)', border: `1px solid ${border}`, borderRadius: 10 }}>
-                        <div style={{ width: 48, height: 48, borderRadius: 8, overflow: 'hidden', flexShrink: 0 }}>
-                          <img src={getDestinationPhoto(thing.name || '', thing.unsplashKeyword || '', 'thumb')} alt={thing.name}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                            onError={e => { e.target.src = getFallbackPhoto('thumb'); }} />
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 2 }}>{thing.emoji} {thing.name}</div>
-                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', lineHeight: 1.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{thing.reason}</div>
-                        </div>
-                        {thing.openingHours && <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', flexShrink: 0, paddingTop: 2 }}>🕐 {thing.openingHours.split(',')[0]}</div>}
-                      </div>
-                    ))}
+                <div style={{ marginBottom: 18 }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: 10 }}>
+                    Select experiences — tap to add to your trip
                   </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {countryInsights.thingsToDo.slice(0, 3).map((thing) => {
+                      const isSelected = selectedPlaces.has(thing.name);
+                      return (
+                        <div
+                          key={thing.name}
+                          onClick={() => setSelectedPlaces(prev => { const s = new Set(prev); s.has(thing.name) ? s.delete(thing.name) : s.add(thing.name); return s; })}
+                          style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', background: isSelected ? 'rgba(0,212,170,0.07)' : 'rgba(255,255,255,0.03)', border: `1.5px solid ${isSelected ? teal : border}`, borderRadius: 12, cursor: 'pointer', transition: 'all 0.15s' }}
+                        >
+                          <div style={{ width: 64, height: 64, borderRadius: 10, overflow: 'hidden', flexShrink: 0 }}>
+                            <img src={getDestinationPhoto(thing.name || '', thing.unsplashKeyword || '', 'thumb')} alt={thing.name}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                              onError={e => { e.target.src = getFallbackPhoto('thumb'); }} />
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 4 }}>{thing.emoji} {thing.name}</div>
+                            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 1.4, marginBottom: thing.visitorTip ? 5 : 0 }}>{thing.reason}</div>
+                            {thing.visitorTip && (
+                              <div style={{ fontSize: 11, color: teal, display: 'flex', alignItems: 'flex-start', gap: 4 }}>
+                                <span style={{ flexShrink: 0 }}>💡</span><span>{thing.visitorTip}</span>
+                              </div>
+                            )}
+                          </div>
+                          <div style={{ width: 22, height: 22, borderRadius: 6, flexShrink: 0, marginTop: 3, border: `2px solid ${isSelected ? teal : 'rgba(255,255,255,0.2)'}`, background: isSelected ? teal : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}>
+                            {isSelected && <span style={{ color: '#0a0f1e', fontSize: 12, fontWeight: 900, lineHeight: 1 }}>✓</span>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Budget teaser */}
+              {countryInsights?.budgetEstimateUSD && (
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginBottom: 12, padding: '8px 12px', background: 'rgba(255,255,255,0.02)', border: `1px solid ${border}`, borderRadius: 8 }}>
+                  💰 Est. <strong style={{ color: 'rgba(255,255,255,0.6)' }}>${countryInsights.budgetEstimateUSD.flightsLow}–${countryInsights.budgetEstimateUSD.flightsHigh}</strong> flights · <strong style={{ color: 'rgba(255,255,255,0.6)' }}>${countryInsights.budgetEstimateUSD.accommodationPerNightLow}–${countryInsights.budgetEstimateUSD.accommodationPerNightHigh}/night</strong> stays
+                </div>
+              )}
+
+              {/* Travel tip */}
+              {countryInsights?.travelTip && (
+                <div style={{ fontSize: 12, color: 'rgba(0,212,170,0.85)', marginBottom: 18, padding: '8px 12px', background: 'rgba(0,212,170,0.04)', border: '1px solid rgba(0,212,170,0.18)', borderRadius: 8 }}>
+                  ✦ {countryInsights.travelTip}
+                </div>
+              )}
+
+              {/* Region pills — selectable */}
+              <div style={{ marginBottom: selectedPlaces.size > 0 ? 14 : 0 }}>
+                <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: 8 }}>
+                  Or pick a region
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {country.places.map((place) => {
+                    const isSelected = selectedPlaces.has(place);
+                    return (
+                      <button key={place} type="button"
+                        onClick={() => setSelectedPlaces(prev => { const s = new Set(prev); s.has(place) ? s.delete(place) : s.add(place); return s; })}
+                        style={{ padding: '6px 14px', borderRadius: 20, fontFamily: 'inherit', fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s', border: `1px solid ${isSelected ? teal : 'rgba(255,255,255,0.15)'}`, background: isSelected ? 'rgba(0,212,170,0.12)' : 'rgba(255,255,255,0.04)', color: isSelected ? teal : w60 }}>
+                        {isSelected && '✓ '}{place}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Plan bar — appears when items are selected */}
+              {selectedPlaces.size > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 16px', background: 'linear-gradient(135deg,rgba(0,212,170,0.12),rgba(0,212,170,0.06))', border: '1px solid rgba(0,212,170,0.3)', borderRadius: 12, marginTop: 10, flexWrap: 'wrap' }}>
+                  <div style={{ fontSize: 13, color: '#fff', minWidth: 0 }}>
+                    <span style={{ fontWeight: 800, color: teal }}>{selectedPlaces.size}</span>
+                    <span style={{ color: 'rgba(255,255,255,0.5)', marginLeft: 6 }}>{selectedPlaces.size === 1 ? 'stop' : 'stops'} selected</span>
+                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginLeft: 8, wordBreak: 'break-word' }}>{[...selectedPlaces].join(' · ')}</span>
+                  </div>
+                  <button type="button"
+                    onClick={() => {
+                      const destinations = [...selectedPlaces].map(name => ({ name, lat: 0, lng: 0 }));
+                      navigate('/plan', { state: { prefill: { destinations } } });
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    style={{ padding: '10px 22px', background: '#00d4aa', border: 'none', borderRadius: 10, color: '#0a0f1e', fontFamily: 'inherit', fontSize: 13, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    Plan {selectedPlaces.size} {selectedPlaces.size === 1 ? 'stop' : 'stops'} →
+                  </button>
                 </div>
               )}
             </div>
