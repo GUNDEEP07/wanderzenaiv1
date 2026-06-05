@@ -101,6 +101,26 @@ function CountryPhoto({ name, style }) {
   return <img src={src} alt={name} style={style} loading="lazy" onError={e => { e.target.src = getFallbackPhoto('card'); }} />;
 }
 
+function PersonalRecCard({ rec, onClick }) {
+  const src = useDestinationPhoto(rec.destination || '', '', 'card');
+  return (
+    <div onClick={onClick}
+      style={{ borderRadius: 14, overflow: 'hidden', cursor: 'pointer', border: `1px solid ${border}`, background: navy3, transition: 'all 0.2s' }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = tealBorder; e.currentTarget.style.transform = 'translateY(-3px)'; }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = border; e.currentTarget.style.transform = 'none'; }}>
+      <div style={{ height: 120, position: 'relative', overflow: 'hidden' }}>
+        <img src={src} alt={rec.destination} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={e => { e.target.src = getFallbackPhoto('card'); }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(10,15,30,0.9), transparent 60%)' }} />
+        <div style={{ position: 'absolute', bottom: 8, left: 12, fontSize: 14, fontWeight: 700, color: '#fff' }}>{rec.destination?.split(',')[0]}</div>
+      </div>
+      <div style={{ padding: '10px 12px' }}>
+        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5, marginBottom: 8 }}>{rec.reason}</div>
+        <div style={{ fontSize: 10, fontWeight: 700, color: teal }}>Plan this →</div>
+      </div>
+    </div>
+  );
+}
+
 function TrendingCard({ t, onClick }) {
   const src = useDestinationPhoto(t.dest || '', '', 'card');
   return (
@@ -282,22 +302,7 @@ export default function ExplorePage() {
             </h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 14 }}>
               {personalRecs.map((rec, i) => (
-                <div key={i} onClick={() => startPlan(rec.destination)}
-                  style={{ borderRadius: 14, overflow: 'hidden', cursor: 'pointer', border: `1px solid ${border}`, background: navy3, transition: 'all 0.2s' }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = tealBorder; e.currentTarget.style.transform = 'translateY(-3px)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = border; e.currentTarget.style.transform = 'none'; }}>
-                  <div style={{ height: 120, position: 'relative', overflow: 'hidden' }}>
-                    <img src={getDestinationPhoto(rec.destination || '', '', 'card')} alt={rec.destination}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                      onError={e => { e.target.src = getFallbackPhoto('card'); }} />
-                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(10,15,30,0.9), transparent 60%)' }} />
-                    <div style={{ position: 'absolute', bottom: 8, left: 12, fontSize: 14, fontWeight: 700, color: '#fff' }}>{rec.destination?.split(',')[0]}</div>
-                  </div>
-                  <div style={{ padding: '10px 12px' }}>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5, marginBottom: 8 }}>{rec.reason}</div>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: teal }}>Plan this →</div>
-                  </div>
-                </div>
+                <PersonalRecCard key={i} rec={rec} onClick={() => startPlan(rec.destination)} />
               ))}
             </div>
           </div>
