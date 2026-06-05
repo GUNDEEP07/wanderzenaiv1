@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 
 const API_URL = import.meta.env.VITE_API_URL;
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { getDestinationPhoto, getFallbackPhoto } from '../utils/destinationPhotos';
 
 const CONTINENTS = [
   { id: 'asia', name: 'Asia', emoji: '🏯', tagline: 'Ancient temples, mountain villages, street food' },
@@ -61,6 +63,21 @@ const TRENDING = [
   { dest: 'Chefchaouen, Morocco', img: 'https://images.unsplash.com/photo-1539020140153-e479b8c22e70?w=300&h=200&fit=crop', trend: '+31% this month' },
 ];
 
+const MONTH_PICKS = {
+  0:  { label: 'January',   picks: ['Morocco', 'Thailand', 'New Zealand'],    tip: 'Escape winter — North Africa and Southeast Asia are at their best' },
+  1:  { label: 'February',  picks: ['Japan', 'Jordan', 'Colombia'],           tip: 'Cherry blossom season begins in Japan' },
+  2:  { label: 'March',     picks: ['Portugal', 'Vietnam', 'Peru'],           tip: 'Shoulder season gold — before the crowds arrive' },
+  3:  { label: 'April',     picks: ['Japan', 'Italy', 'Nepal'],               tip: 'Ideal hiking weather in Nepal and Tuscany' },
+  4:  { label: 'May',       picks: ['Greece', 'Georgia', 'Ireland'],          tip: 'Peak wildflower season before summer crowds' },
+  5:  { label: 'June',      picks: ['Iceland', 'Norway', 'Albania'],          tip: 'Endless daylight in Scandinavia, the Balkans opening up' },
+  6:  { label: 'July',      picks: ['Chile', 'Morocco', 'Oman'],              tip: 'Southern hemisphere winter is perfect for Patagonia' },
+  7:  { label: 'August',    picks: ['Croatia', 'Slovenia', 'Colombia'],       tip: 'The Balkans are quieter than Italy this month' },
+  8:  { label: 'September', picks: ['Bali', 'Nepal', 'Portugal'],             tip: 'Dry season returns to Southeast Asia — best month for Bali' },
+  9:  { label: 'October',   picks: ['Japan', 'Vietnam', 'Ethiopia'],          tip: 'Autumn foliage in Japan, cool season in Vietnam' },
+  10: { label: 'November',  picks: ['India', 'Tanzania', 'Peru'],             tip: 'Post-monsoon magic in India and East Africa' },
+  11: { label: 'December',  picks: ['New Zealand', 'Colombia', 'Thailand'],   tip: 'Southern summer — New Zealand is at its absolute best' },
+};
+
 const navy = '#0a0f1e';
 const navy2 = '#111827';
 const navy3 = '#141d33';
@@ -79,6 +96,9 @@ export default function ExplorePage() {
   const [activeCountry, setActiveCountry] = useState(null);
   const [apiTrending, setApiTrending]   = useState([]);
   const [apiCountries, setApiCountries] = useState({});
+  const { currentUser, getIdToken } = useAuth();
+  const [personalRecs, setPersonalRecs] = useState([]);
+  const [countryInsights, setCountryInsights] = useState(null);
 
   // Fetch recommendations from API — falls back to hardcoded data if unavailable
   useEffect(() => {
@@ -106,6 +126,32 @@ export default function ExplorePage() {
     };
     if (!apiCountries[activeContinent]) fetchContinent();
   }, [activeContinent]);
+
+  // Personalised recommendations for logged-in users
+  useEffect(() => {
+    if (!currentUser) return;
+    (async () => {
+      try {
+        const token = await getIdToken();
+        const res = await fetch(`${API_URL}/recommendations/personalised`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const d = await res.json();
+        if (d.recommendations?.length) setPersonalRecs(d.recommendations.slice(0, 4));
+      } catch { /* graceful */ }
+    })();
+  }, [currentUser]);
+
+  // Live destination insights when a country is expanded
+  useEffect(() => {
+    if (!activeCountry) { setCountryInsights(null); return; }
+    const start = new Date(Date.now() + 60 * 86400000).toISOString().split('T')[0];
+    const end   = new Date(Date.now() + 67 * 86400000).toISOString().split('T')[0];
+    fetch(`${API_URL}/destination-insights?destination=${encodeURIComponent(activeCountry)}&startDate=${start}&endDate=${end}`)
+      .then(r => r.json())
+      .then(d => { if (d.insights) setCountryInsights(d.insights); })
+      .catch(() => {});
+  }, [activeCountry]);
 
   const countries = COUNTRIES[activeContinent] || [];
   const country = activeCountry ? countries.find(c => c.name === activeCountry) : null;
@@ -166,6 +212,61 @@ export default function ExplorePage() {
         </p>
       </div>
 
+      {/* Seasonal context banner */}
+      {(() => {
+        const month = MONTH_PICKS[new Date().getMonth()];
+        return (
+          <div style={{ background: 'rgba(0,212,170,0.04)', borderTop: `1px solid ${border}`, borderBottom: `1px solid ${border}`, padding: '12px 2rem' }}>
+            <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: teal, flexShrink: 0 }}>🗓 {month.label} picks</div>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', fontStyle: 'italic', flex: 1, minWidth: 200 }}>{month.tip}</div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {month.picks.map(p => (
+                  <button key={p} type="button" onClick={() => startPlan(p)}
+                    style={{ padding: '5px 12px', borderRadius: 20, background: tealGlow, border: `1px solid ${tealBorder}`, fontSize: 12, fontWeight: 700, color: teal, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Personalised for logged-in users */}
+      {personalRecs.length > 0 && (
+        <div style={{ padding: '3rem 2rem', borderBottom: `1px solid ${border}` }}>
+          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+            <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: teal, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <span style={{ width: 24, height: 1, background: teal, display: 'inline-block' }} />✦ Picked for you
+            </div>
+            <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(1.25rem,2.5vw,1.75rem)', fontWeight: 700, color: '#fff', letterSpacing: '-0.03em', marginBottom: '1.25rem', lineHeight: 1.1 }}>
+              Based on your travel history
+            </h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 14 }}>
+              {personalRecs.map((rec, i) => (
+                <div key={i} onClick={() => startPlan(rec.destination)}
+                  style={{ borderRadius: 14, overflow: 'hidden', cursor: 'pointer', border: `1px solid ${border}`, background: navy3, transition: 'all 0.2s' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = tealBorder; e.currentTarget.style.transform = 'translateY(-3px)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = border; e.currentTarget.style.transform = 'none'; }}>
+                  <div style={{ height: 120, position: 'relative', overflow: 'hidden' }}>
+                    <img src={getDestinationPhoto(rec.destination || '', '', 'card')} alt={rec.destination}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                      onError={e => { e.target.src = getFallbackPhoto('card'); }} />
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(10,15,30,0.9), transparent 60%)' }} />
+                    <div style={{ position: 'absolute', bottom: 8, left: 12, fontSize: 14, fontWeight: 700, color: '#fff' }}>{rec.destination?.split(',')[0]}</div>
+                  </div>
+                  <div style={{ padding: '10px 12px' }}>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5, marginBottom: 8 }}>{rec.reason}</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: teal }}>Plan this →</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Trending */}
       <div style={{ padding: '0 2rem 4rem', borderBottom: `1px solid ${border}` }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
@@ -182,7 +283,7 @@ export default function ExplorePage() {
             <div style={{ fontSize: '0.8rem', color: w40, fontStyle: 'italic' }}>Updated weekly</div>
           </div>
           <div className="explore-trending-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
-            {(apiTrending.length ? apiTrending.map(t => ({ dest: t.destination + ', ' + t.country, img: t.image_url, trend: t.amadeus_score > 80 ? `Score ${t.amadeus_score}/100` : 'Recommended' })) : TRENDING).map(t => (
+            {(apiTrending.length ? apiTrending.map(t => ({ dest: t.destination + (t.country ? `, ${t.country}` : ''), img: t.image_url || getDestinationPhoto(t.destination || '', '', 'card'), trend: t.count ? `${t.count} travelers` : 'Trending' })) : TRENDING).map(t => (
               <div
                 key={t.dest}
                 onClick={() => startPlan(t.dest)}
@@ -190,7 +291,7 @@ export default function ExplorePage() {
                 onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; }}
                 onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
               >
-                <img src={t.img} alt={t.dest} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} loading="lazy" />
+                <img src={t.img || getDestinationPhoto(t.dest, '', 'card')} alt={t.dest} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} loading="lazy" onError={e => { e.target.src = getFallbackPhoto('card'); }} />
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(10,15,30,0.95) 0%, rgba(10,15,30,0.2) 60%, transparent 100%)' }} />
                 <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px 14px' }}>
                   <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff', marginBottom: 3 }}>{t.dest}</div>
@@ -299,25 +400,51 @@ export default function ExplorePage() {
                   Plan {country.name} trip
                 </button>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
-                {country.places.map((place, i) => (
-                  <div
-                    key={place}
-                    onClick={() => startPlan(`${place}, ${country.name}`)}
-                    style={{ background: w08, border: `1px solid ${border}`, borderRadius: 10, padding: '12px 14px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 10 }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = tealBorder; e.currentTarget.style.background = tealGlow; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = border; e.currentTarget.style.background = w08; }}
-                  >
-                    <div style={{ width: 24, height: 24, borderRadius: '50%', background: tealGlow, border: `1px solid ${tealBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 800, color: teal, flexShrink: 0 }}>
-                      {i + 1}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#fff', marginBottom: 2 }}>{place}</div>
-                      <div style={{ fontSize: '0.7rem', color: teal }}>Plan this</div>
+              {countryInsights && (
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+                  {countryInsights.weather && <span style={{ padding: '4px 12px', borderRadius: 20, background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.25)', fontSize: 11, fontWeight: 700, color: '#60a5fa' }}>☀️ {countryInsights.weather.split(/[,(]/)[0].trim()}</span>}
+                  {countryInsights.crowdLevel && <span style={{ padding: '4px 12px', borderRadius: 20, background: 'rgba(255,217,61,0.08)', border: '1px solid rgba(255,217,61,0.2)', fontSize: 11, fontWeight: 700, color: '#ffd93d' }}>👥 {countryInsights.crowdLevel} crowds</span>}
+                  {countryInsights.bestMonths?.slice(0, 2).length > 0 && <span style={{ padding: '4px 12px', borderRadius: 20, background: 'rgba(0,212,170,0.08)', border: '1px solid rgba(0,212,170,0.2)', fontSize: 11, fontWeight: 700, color: teal }}>🗓 Best: {countryInsights.bestMonths.slice(0, 2).join(' & ')}</span>}
+                </div>
+              )}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10, marginBottom: countryInsights?.thingsToDo?.length ? 16 : 0 }}>
+                {country.places.map((place) => (
+                  <div key={place} onClick={() => startPlan(`${place}, ${country.name}`)}
+                    style={{ borderRadius: 12, overflow: 'hidden', cursor: 'pointer', border: `1px solid ${border}`, transition: 'all 0.2s', position: 'relative', aspectRatio: '4/3' }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = teal; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = border; e.currentTarget.style.transform = 'none'; }}>
+                    <img src={getDestinationPhoto(`${place}, ${country.name}`, place.toLowerCase(), 'thumb')} alt={place} loading="lazy"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                      onError={e => { e.target.src = getFallbackPhoto('thumb'); }} />
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(10,15,30,0.9) 0%, rgba(10,15,30,0.1) 60%, transparent 100%)' }} />
+                    <div style={{ position: 'absolute', bottom: 8, left: 10, right: 10 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{place}</div>
+                      <div style={{ fontSize: 10, color: teal, marginTop: 2 }}>Plan this →</div>
                     </div>
                   </div>
                 ))}
               </div>
+              {countryInsights?.thingsToDo?.length > 0 && (
+                <div style={{ marginTop: 14 }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: 10 }}>AI curated experiences</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {countryInsights.thingsToDo.slice(0, 3).map((thing, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', background: 'rgba(255,255,255,0.03)', border: `1px solid ${border}`, borderRadius: 10 }}>
+                        <div style={{ width: 48, height: 48, borderRadius: 8, overflow: 'hidden', flexShrink: 0 }}>
+                          <img src={getDestinationPhoto(thing.name || '', thing.unsplashKeyword || '', 'thumb')} alt={thing.name}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                            onError={e => { e.target.src = getFallbackPhoto('thumb'); }} />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 2 }}>{thing.emoji} {thing.name}</div>
+                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', lineHeight: 1.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{thing.reason}</div>
+                        </div>
+                        {thing.openingHours && <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', flexShrink: 0, paddingTop: 2 }}>🕐 {thing.openingHours.split(',')[0]}</div>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
