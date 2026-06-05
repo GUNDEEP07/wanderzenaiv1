@@ -1,12 +1,7 @@
-// Unsplash photo utility
-// Set VITE_UNSPLASH_ACCESS_KEY in .env.local when API key is available
-// TODO: implement async API version using:
-//   GET https://api.unsplash.com/search/photos?query={keyword}&per_page=1
-//   Header: Authorization: Client-ID {VITE_UNSPLASH_ACCESS_KEY}
-// Until then: uses known photo IDs map + source.unsplash.com fallback
+import { useState, useEffect } from 'react';
 
 const BASE = 'https://images.unsplash.com';
-const SOURCE = 'https://source.unsplash.com';
+const UNSPLASH_KEY = import.meta.env.VITE_UNSPLASH_ACCESS_KEY || '';
 
 const KNOWN_PHOTOS = {
   kyoto:      'photo-1493976040374-85c8e12f0c0e',
@@ -37,7 +32,7 @@ const KNOWN_PHOTOS = {
   italy:      'photo-1516483638261-f4dbaf036963',
   spain:      'photo-1539037116277-4db20889f2d4',
   france:     'photo-1499856871958-5b9627545d1a',
-  georgia:    'photo-1601974984960-4e1d498e3b2f',
+  georgia:    'photo-1573739022854-abceaeb585dc',
   jordan:     'photo-1548199973-03cce0bbc87b',
   oman:       'photo-1578662996442-48f60103fc96',
   chile:      'photo-1501854140801-50d01698950b',
@@ -52,24 +47,67 @@ const KNOWN_PHOTOS = {
 };
 
 const SIZES = { card: [320, 180], hero: [800, 500], thumb: [200, 130] };
+const FALLBACK_ID = 'photo-1469854523086-cc02fe5d8800';
 
-export function getDestinationPhoto(destination = '', keyword = '', size = 'card') {
+// Module-level cache so repeated renders don't duplicate API calls
+const _apiCache = new Map();
+
+function buildUrl(id, size) {
   const [w, h] = SIZES[size] || SIZES.card;
+  return `${BASE}/${id}?w=${w}&h=${h}&fit=crop&auto=format&q=70`;
+}
+
+// Sync lookup — returns known or fallback URL instantly
+export function getDestinationPhoto(destination = '', keyword = '', size = 'card') {
   const name = (destination.split(',')[0].trim() || keyword.split(' ')[0] || '').toLowerCase();
-
   for (const [key, id] of Object.entries(KNOWN_PHOTOS)) {
-    if (name.includes(key) || key.includes(name)) {
-      return `${BASE}/${id}?w=${w}&h=${h}&fit=crop&auto=format&q=70`;
-    }
+    if (name.includes(key) || key.includes(name)) return buildUrl(id, size);
   }
-
-  // source.unsplash.com redirects cause ERR_BLOCKED_BY_ORB in browsers.
-  // Use static fallback until VITE_UNSPLASH_ACCESS_KEY is provided.
-  // TODO: replace with: GET https://api.unsplash.com/search/photos?query={keyword}&per_page=1
-  return `${BASE}/photo-1469854523086-cc02fe5d8800?w=${w}&h=${h}&fit=crop&auto=format&q=70`;
+  return buildUrl(FALLBACK_ID, size);
 }
 
 export function getFallbackPhoto(size = 'card') {
-  const [w, h] = SIZES[size] || SIZES.card;
-  return `${BASE}/photo-1469854523086-cc02fe5d8800?w=${w}&h=${h}&fit=crop&auto=format&q=70`;
+  return buildUrl(FALLBACK_ID, size);
+}
+
+// Async Unsplash search — caches results per keyword+size
+async function fetchFromUnsplash(query, size) {
+  if (!UNSPLASH_KEY || !query) return null;
+  const cacheKey = `${query.toLowerCase()}_${size}`;
+  if (_apiCache.has(cacheKey)) return _apiCache.get(cacheKey);
+
+  try {
+    const [w, h] = SIZES[size] || SIZES.card;
+    const res = await fetch(
+      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=1&orientation=landscape`,
+      { headers: { Authorization: `Client-ID ${UNSPLASH_KEY}` } }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const baseUrl = data.results?.[0]?.urls?.regular;
+    if (!baseUrl) return null;
+    const url = `${baseUrl}&w=${w}&h=${h}&fit=crop&q=70`;
+    _apiCache.set(cacheKey, url);
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+// React hook — returns sync fallback immediately, upgrades to Unsplash URL once fetched
+export function useDestinationPhoto(destination = '', keyword = '', size = 'card') {
+  const [src, setSrc] = useState(() => getDestinationPhoto(destination, keyword, size));
+
+  useEffect(() => {
+    setSrc(getDestinationPhoto(destination, keyword, size));
+    const query = keyword || destination.split(',')[0].trim();
+    if (!query) return;
+    // Only hit Unsplash API for destinations not already in the known map
+    const name = query.toLowerCase();
+    const isKnown = Object.keys(KNOWN_PHOTOS).some(k => name.includes(k) || k.includes(name));
+    if (isKnown) return;
+    fetchFromUnsplash(query, size).then(url => { if (url) setSrc(url); });
+  }, [destination, keyword, size]);
+
+  return src;
 }

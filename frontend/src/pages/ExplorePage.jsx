@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 const API_URL = import.meta.env.VITE_API_URL;
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getDestinationPhoto, getFallbackPhoto } from '../utils/destinationPhotos';
+import { getDestinationPhoto, getFallbackPhoto, useDestinationPhoto } from '../utils/destinationPhotos';
 
 const CONTINENTS = [
   { id: 'asia', name: 'Asia', emoji: '🏯', tagline: 'Ancient temples, mountain villages, street food' },
@@ -90,6 +90,11 @@ const border2 = 'rgba(255,255,255,0.12)';
 const w60 = 'rgba(255,255,255,0.6)';
 const w40 = 'rgba(255,255,255,0.4)';
 const w08 = 'rgba(255,255,255,0.06)';
+
+function ThingPhoto({ name, keyword, style }) {
+  const src = useDestinationPhoto(name || '', keyword || '', 'thumb');
+  return <img src={src} alt={name} style={style} onError={e => { e.target.src = getFallbackPhoto('thumb'); }} />;
+}
 
 export default function ExplorePage() {
   const navigate = useNavigate();
@@ -444,9 +449,7 @@ export default function ExplorePage() {
                           style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', background: isSelected ? 'rgba(0,212,170,0.07)' : 'rgba(255,255,255,0.03)', border: `1.5px solid ${isSelected ? teal : border}`, borderRadius: 12, cursor: 'pointer', transition: 'all 0.15s' }}
                         >
                           <div style={{ width: 64, height: 64, borderRadius: 10, overflow: 'hidden', flexShrink: 0 }}>
-                            <img src={getDestinationPhoto(thing.name || '', thing.unsplashKeyword || '', 'thumb')} alt={thing.name}
-                              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                              onError={e => { e.target.src = getFallbackPhoto('thumb'); }} />
+                            <ThingPhoto name={thing.name} keyword={thing.unsplashKeyword} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 4 }}>{thing.emoji} {thing.name}</div>
