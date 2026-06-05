@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { fetchDestinationInsights } from '../../../api/destinationInsights';
 import { DayList } from './DayList';
+import { useDestinationPhoto, getFallbackPhoto } from '../../../utils/destinationPhotos';
 
 const CATEGORY_COLOURS = {
   'Food':      'rgba(251,146,60,0.5)',
@@ -12,6 +13,11 @@ const CATEGORY_COLOURS = {
   'Hiking':    'rgba(34,197,94,0.5)',
   'Views':     'rgba(96,165,250,0.5)',
 };
+
+function VenuePhoto({ keyword, style }) {
+  const src = useDestinationPhoto('', keyword || '', 'card');
+  return <img src={src} alt={keyword} loading="lazy" style={style} onError={e => { e.target.src = getFallbackPhoto('card'); }} />;
+}
 
 export function DestinationInsightsPanel({
   destination,
@@ -171,15 +177,9 @@ export function DestinationInsightsPanel({
 
                       {/* Venue photo */}
                       {thing.unsplashKeyword && (
-                        <img
-                          src={`https://source.unsplash.com/320x200/?${encodeURIComponent(thing.unsplashKeyword)}`}
-                          alt={thing.name}
-                          loading="lazy"
-                          style={{
-                            width: '100%', height: 120, objectFit: 'cover',
-                            borderRadius: 8, marginBottom: 10, display: 'block',
-                          }}
-                          onError={e => { e.target.style.display = 'none'; }}
+                        <VenuePhoto
+                          keyword={thing.unsplashKeyword}
+                          style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 8, marginBottom: 10, display: 'block' }}
                         />
                       )}
 

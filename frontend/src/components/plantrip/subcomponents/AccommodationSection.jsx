@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useDestinationPhoto, getFallbackPhoto } from '../../../utils/destinationPhotos';
 
 const USD_RATES = { USD:1, EUR:1.09, GBP:1.28, INR:0.012, AUD:0.65, CAD:0.72, SGD:0.74, JPY:0.0065 };
 const SYMBOLS = { USD:'$', EUR:'€', GBP:'£', INR:'₹', AUD:'A$', CAD:'C$', SGD:'S$', JPY:'¥' };
@@ -8,6 +9,11 @@ function toUserCurrency(usd, currency) {
 }
 function fmt(amount, currency) {
   return `${SYMBOLS[currency] || currency}${amount.toLocaleString()}`;
+}
+
+function AccomPhoto({ keyword, destination, style }) {
+  const src = useDestinationPhoto('', keyword || destination || '', 'card');
+  return <img src={src} alt={keyword} loading="lazy" style={style} onError={e => { e.target.src = getFallbackPhoto('card'); }} />;
 }
 
 const TYPE_OPTIONS = [
@@ -115,19 +121,16 @@ export function AccommodationSection({ destination, insights, budget, currency, 
               {cards.map((a, i) => {
                 const low = toUserCurrency(a.priceRangePerNightUSD?.low || 30, currency);
                 const high = toUserCurrency(a.priceRangePerNightUSD?.high || 80, currency);
-                const imgUrl = `https://source.unsplash.com/320x200/?${encodeURIComponent(a.searchKeyword || destName)}`;
                 const airbnbUrl = `https://www.airbnb.com/s/${encodeURIComponent(destName)}/homes?query=${encodeURIComponent(a.searchKeyword || destName)}`;
                 const bookingUrl = `https://www.booking.com/search.html?ss=${encodeURIComponent(destName + ' ' + (a.searchKeyword || ''))}`;
                 return (
                   <div key={i} style={{ borderRadius: 12, overflow: 'hidden', background: '#0f1a2e', border: '1px solid rgba(255,255,255,0.07)' }}>
                     {/* Photo */}
                     <div style={{ height: 90, position: 'relative', overflow: 'hidden' }}>
-                      <img
-                        src={imgUrl}
-                        alt={a.type}
-                        loading="lazy"
+                      <AccomPhoto
+                        keyword={a.searchKeyword}
+                        destination={destName}
                         style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                        onError={e => { e.target.style.display = 'none'; }}
                       />
                       <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(10,15,30,0.9) 0%, rgba(10,15,30,0.2) 60%, transparent 100%)' }} />
                       {/* Price overlay */}

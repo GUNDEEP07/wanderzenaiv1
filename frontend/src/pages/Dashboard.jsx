@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useDestinationPhoto, getFallbackPhoto } from '../utils/destinationPhotos';
 import { TravelChat } from '../components/TravelChat';
 import './Dashboard.css';
 
@@ -105,44 +106,14 @@ function recCardGradient(i) {
   return g[i % g.length];
 }
 
-function getDestinationPhotoUrl(destination) {
-  if (!destination) return null;
-  const name = destination.split(',')[0].trim().toLowerCase().replace(/\s+/g, '-');
-  // Use specific reliable Unsplash photo IDs per popular destination
-  const photoMap = {
-    'kyoto': 'photo-1493976040374-85c8e12f0c0e',
-    'tokyo': 'photo-1540959733332-eab4deabeeaf',
-    'bali': 'photo-1537996194471-e657df975ab4',
-    'paris': 'photo-1499856871958-5b9627545d1a',
-    'rome': 'photo-1552832230-c0197dd311b5',
-    'barcelona': 'photo-1539037116277-4db20889f2d4',
-    'amsterdam': 'photo-1534351590666-13e3e96b5017',
-    'london': 'photo-1513635269975-59663e0ac1ad',
-    'bangkok': 'photo-1563492065599-3520f775eeed',
-    'singapore': 'photo-1525625293386-3f8f99389edd',
-    'dubai': 'photo-1512453979798-5ea266f8880c',
-    'new-york': 'photo-1485738422979-f5c462d49f74',
-    'oaxaca': 'photo-1518638150340-f706e86654de',
-    'mexico': 'photo-1518638150340-f706e86654de',
-    'vietnam': 'photo-1528360983277-13d401cdc186',
-    'shimla': 'photo-1605649461784-bbb68578a55e',
-    'goa': 'photo-1512343879784-a960bf40e7f2',
-    'manali': 'photo-1626516011116-33bba50ec8ce',
-    'bir': 'photo-1626516011116-33bba50ec8ce',
-    'indonesia': 'photo-1537996194471-e657df975ab4',
-    'morocco': 'photo-1539020140153-e479b8c22e70',
-    'portugal': 'photo-1555881400-74d7acaacd8b',
-    'greece': 'photo-1533105079780-92b9be482077',
-    'nepal': 'photo-1544735716-392fe2489ffa',
-    'peru': 'photo-1526392060635-9d6019884377',
-  };
-  for (const [key, id] of Object.entries(photoMap)) {
-    if (name.includes(key)) {
-      return `https://images.unsplash.com/${id}?w=320&h=180&fit=crop&auto=format&q=60`;
-    }
-  }
-  // Generic travel fallback
-  return `https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=320&h=180&fit=crop&auto=format&q=60`;
+function DestPhoto({ destination, height = 130, children }) {
+  const src = useDestinationPhoto(destination || '', '', 'card');
+  return (
+    <div style={{ height, position: 'relative', overflow: 'hidden' }}>
+      <img src={src} alt={destination} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.src = getFallbackPhoto('card'); }} />
+      {children}
+    </div>
+  );
 }
 
 function Avatar({ user }) {
@@ -391,18 +362,12 @@ export default function Dashboard() {
                   onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.borderColor = 'rgba(0,212,170,0.3)'; e.currentTarget.style.boxShadow = '0 12px 36px rgba(0,0,0,0.3)'; }}
                   onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.boxShadow = 'none'; }}
                 >
-                  <div style={{ height: 130, position: 'relative', overflow: 'hidden' }}>
-                    <img
-                      src={getDestinationPhotoUrl(rec.destination)}
-                      alt={rec.destination}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      onError={e => { e.target.style.display='none'; }}
-                    />
+                  <DestPhoto destination={rec.destination} height={130}>
                     <div style={{ position: 'absolute', inset: 0, background: recCardGradient(i), opacity: 0.6 }} />
                     <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 52, filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.4))' }}>
                       {rec.emoji || getFlag(rec.destination)}
                     </div>
-                  </div>
+                  </DestPhoto>
                   <div style={{ padding: '16px 18px' }}>
                     <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>{rec.destination}</div>
                     <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', lineHeight: 1.45, marginBottom: 12 }}>{rec.reason}</div>
@@ -646,14 +611,7 @@ export default function Dashboard() {
                   onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
                 >
                   {/* Photo header */}
-                  <div style={{ height: 140, position: 'relative', overflow: 'hidden' }}>
-                    <img
-                      src={getDestinationPhotoUrl(trip.destination)}
-                      alt={trip.destination}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      onError={e => { e.target.style.display = 'none'; }}
-                    />
-                    {/* Gradient overlay */}
+                  <DestPhoto destination={trip.destination} height={140}>
                     <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(to top, rgba(10,15,30,0.85) 0%, rgba(10,15,30,0.1) 60%)` }} />
                     {/* Status badge top-right */}
                     <div style={{ position: 'absolute', top: 10, right: 10 }}>
@@ -675,7 +633,7 @@ export default function Dashboard() {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </DestPhoto>
 
                   {/* Actions row */}
                   <div style={{ padding: '10px 14px', display: 'flex', gap: 7, alignItems: 'center' }}>
