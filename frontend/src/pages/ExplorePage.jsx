@@ -101,31 +101,26 @@ export default function ExplorePage() {
   const [countryInsights, setCountryInsights] = useState(null);
   const [insightsLoading, setInsightsLoading] = useState(false);
 
-  // Fetch recommendations from API — falls back to hardcoded data if unavailable
+  // Fetch trending destinations — uses /recommendations/trending (existing route)
   useEffect(() => {
-    const fetchAll = async () => {
-      try {
-        const res  = await fetch(`${API_URL}/recommendations?limit=6`);
-        const data = await res.json();
-        if (data.data?.destinations?.length) {
-          setApiTrending(data.data.destinations.slice(0, 6));
+    fetch(`${API_URL}/recommendations/trending`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d?.trending?.length) {
+          setApiTrending(d.trending.map(t => ({
+            dest: t.destination,
+            img: getDestinationPhoto(t.destination, '', 'card'),
+            trend: t.count ? `${t.count} travelers` : (t.badge || 'Trending'),
+          })));
         }
-      } catch { /* use hardcoded fallback */ }
-    };
-    fetchAll();
+      })
+      .catch(() => { /* fall back to hardcoded TRENDING */ });
   }, []);
 
+  // Continent data — hardcoded COUNTRIES is the source of truth (no API route exists for this)
+  // apiCountries kept as state in case a future endpoint is added
   useEffect(() => {
-    const fetchContinent = async () => {
-      try {
-        const res  = await fetch(`${API_URL}/recommendations?continent=${activeContinent}&limit=12`);
-        const data = await res.json();
-        if (data.data?.destinations?.length) {
-          setApiCountries(prev => ({ ...prev, [activeContinent]: data.data.destinations }));
-        }
-      } catch { /* use hardcoded fallback */ }
-    };
-    if (!apiCountries[activeContinent]) fetchContinent();
+    // Country grid uses hardcoded data — continent filter handled client-side
   }, [activeContinent]);
 
   // Personalised recommendations for logged-in users

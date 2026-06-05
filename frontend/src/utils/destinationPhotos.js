@@ -63,8 +63,10 @@ export function getDestinationPhoto(destination = '', keyword = '', size = 'card
     }
   }
 
-  const q = encodeURIComponent(keyword || name || 'travel landscape');
-  return `${SOURCE}/${w}x${h}/?${q}&auto=format`;
+  // source.unsplash.com redirects cause ERR_BLOCKED_BY_ORB in browsers.
+  // Use static fallback until VITE_UNSPLASH_ACCESS_KEY is provided.
+  // TODO: replace with: GET https://api.unsplash.com/search/photos?query={keyword}&per_page=1
+  return `${BASE}/photo-1469854523086-cc02fe5d8800?w=${w}&h=${h}&fit=crop&auto=format&q=70`;
 }
 
 export function getFallbackPhoto(size = 'card') {
