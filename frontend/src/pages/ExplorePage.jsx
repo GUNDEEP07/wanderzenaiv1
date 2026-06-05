@@ -293,7 +293,7 @@ export default function ExplorePage() {
             <div style={{ fontSize: '0.8rem', color: w40, fontStyle: 'italic' }}>Updated weekly</div>
           </div>
           <div className="explore-trending-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
-            {(apiTrending.length ? apiTrending.map(t => ({ dest: t.destination + (t.country ? `, ${t.country}` : ''), img: t.image_url || getDestinationPhoto(t.destination || '', '', 'card'), trend: t.count ? `${t.count} travelers` : 'Trending' })) : TRENDING).map(t => (
+            {(apiTrending.length ? apiTrending : TRENDING).map(t => (
               <div
                 key={t.dest}
                 onClick={() => startPlan(t.dest)}
