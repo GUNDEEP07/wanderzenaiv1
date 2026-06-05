@@ -99,6 +99,7 @@ export default function ExplorePage() {
   const { currentUser, getIdToken } = useAuth();
   const [personalRecs, setPersonalRecs] = useState([]);
   const [countryInsights, setCountryInsights] = useState(null);
+  const [insightsLoading, setInsightsLoading] = useState(false);
 
   // Fetch recommendations from API — falls back to hardcoded data if unavailable
   useEffect(() => {
@@ -144,13 +145,16 @@ export default function ExplorePage() {
 
   // Live destination insights when a country is expanded
   useEffect(() => {
-    if (!activeCountry) { setCountryInsights(null); return; }
+    if (!activeCountry) { setCountryInsights(null); setInsightsLoading(false); return; }
+    setCountryInsights(null);
+    setInsightsLoading(true);
     const start = new Date(Date.now() + 60 * 86400000).toISOString().split('T')[0];
     const end   = new Date(Date.now() + 67 * 86400000).toISOString().split('T')[0];
     fetch(`${API_URL}/destination-insights?destination=${encodeURIComponent(activeCountry)}&startDate=${start}&endDate=${end}`)
       .then(r => r.json())
       .then(d => { if (d.insights) setCountryInsights(d.insights); })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setInsightsLoading(false));
   }, [activeCountry]);
 
   const countries = COUNTRIES[activeContinent] || [];
@@ -162,7 +166,9 @@ export default function ExplorePage() {
   };
 
   const startPlan = (dest) => {
-    navigate('/plan', { state: { prefill: { destination: dest } } });
+    // destinations must be an array of { name, lat, lng } for PlanTrip to pre-fill
+    const destName = dest.split(',')[0].trim();
+    navigate('/plan', { state: { prefill: { destinations: [{ name: destName, lat: 0, lng: 0 }] } } });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -171,6 +177,7 @@ export default function ExplorePage() {
       <style>{`
         * { box-sizing: border-box; }
         @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+        @keyframes spin { to { transform: rotate(360deg); } }
         .explore-tabs::-webkit-scrollbar { display: none; }
         @media (max-width: 768px) {
           .explore-nav-links { display: none !important; }
@@ -400,6 +407,13 @@ export default function ExplorePage() {
                   Plan {country.name} trip
                 </button>
               </div>
+              {/* Loading indicator while insights fetch */}
+              {insightsLoading && !countryInsights && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, padding: '8px 12px', background: 'rgba(0,212,170,0.06)', border: '1px solid rgba(0,212,170,0.15)', borderRadius: 8 }}>
+                  <div style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid rgba(0,212,170,0.3)', borderTopColor: '#00d4aa', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
+                  <span style={{ fontSize: 12, color: 'rgba(0,212,170,0.8)' }}>Loading destination insights…</span>
+                </div>
+              )}
               {countryInsights && (
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
                   {countryInsights.weather && <span style={{ padding: '4px 12px', borderRadius: 20, background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.25)', fontSize: 11, fontWeight: 700, color: '#60a5fa' }}>☀️ {countryInsights.weather.split(/[,(]/)[0].trim()}</span>}
