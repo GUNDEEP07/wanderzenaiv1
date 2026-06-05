@@ -114,7 +114,8 @@ jobs:
               "StripeSinglePlanLink=${STRIPE_SINGLE_PLAN_LINK}" \
               "StripeWandererLink=${STRIPE_WANDERER_LINK}" \
               "FrontendUrl=${FRONTEND_URL}" \
-              "FoursquareApiKey=${FOURSQUARE_API_KEY}"
+              "FoursquareApiKey=${FOURSQUARE_API_KEY}" \
+              "FirebaseProjectId=wanderzenai-9c343"
 
       - name: Get stack outputs
         id: get-outputs

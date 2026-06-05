@@ -657,6 +657,26 @@ async function handleChat(event) {
 
   if (!message?.trim()) return ok({ reply: 'Please send a message.' }, event);
 
+  // Track chat session — upsert so multiple messages in one session increment the count
+  // Uses session fingerprint: email + date (one session per user per day)
+  const sessionDate = new Date().toISOString().split('T')[0];
+  const sessionKey = email ? `${email}_${sessionDate}` : null;
+  if (sessionKey) {
+    getDB().query(
+      `INSERT INTO chat_sessions (user_id, firebase_uid, messages_count, destination, created_at)
+       SELECT u.id, $2, 1, $3, NOW() FROM users u WHERE u.email = $1
+       ON CONFLICT DO NOTHING`,
+      [email, null, body.destination || null]
+    ).then(() =>
+      getDB().query(
+        `UPDATE chat_sessions SET messages_count = messages_count + 1
+         WHERE user_id = (SELECT id FROM users WHERE email = $1)
+           AND DATE(created_at) = $2::date AND led_to_plan = FALSE`,
+        [email, sessionDate]
+      )
+    ).catch(() => { /* non-fatal */ });
+  }
+
   // Load user context
   let userContext = 'The user is a WanderZenAI member who loves slow travel.';
   if (email) {
@@ -727,6 +747,16 @@ Rules:
     if (readyMatch) {
       try {
         const tripData = JSON.parse(readyMatch[1]);
+        // Mark this chat session as having led to planning
+        if (email) {
+          const today = new Date().toISOString().split('T')[0];
+          getDB().query(
+            `UPDATE chat_sessions SET led_to_plan = TRUE, destination = $3
+             WHERE user_id = (SELECT id FROM users WHERE email = $1)
+               AND DATE(created_at) = $2::date`,
+            [email, today, tripData.destination || null]
+          ).catch(() => { /* non-fatal */ });
+        }
         return ok({
           reply: `✦ I have everything I need! Here's your trip summary:\n\n📍 ${tripData.destination} · ${tripData.days} days · ${tripData.travelerType} · ${(tripData.travelStyle || []).join(', ')} · ${tripData.budget}\n\nReady to build your full itinerary?`,
           readyToPlan: true,
