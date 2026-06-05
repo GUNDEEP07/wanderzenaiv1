@@ -16,41 +16,41 @@ const CONTINENTS = [
 
 const COUNTRIES = {
   asia: [
-    { name: 'Japan', img: 'https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=400&h=280&fit=crop', tag: 'Slow travel favourite', desc: 'Backstreet Kyoto, mountain onsen towns, morning fish markets', places: ['Kyoto', 'Kanazawa', 'Yakushima', 'Naoshima', 'Takayama'] },
-    { name: 'Vietnam', img: 'https://images.unsplash.com/photo-1528127269322-539801943592?w=400&h=280&fit=crop', tag: 'Hidden gem', desc: 'Mekong villages, limestone karsts, lantern-lit old towns', places: ['Hoi An', 'Ha Giang', 'Ninh Binh', 'Phong Nha', 'Mui Ne'] },
-    { name: 'India', img: 'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=400&h=280&fit=crop', tag: 'Cultural depth', desc: 'Rajasthani villages, spice routes, Himalayan trails', places: ['Varanasi', 'Hampi', 'Coorg', 'Spiti Valley', 'Pondicherry'] },
-    { name: 'Sri Lanka', img: 'https://images.unsplash.com/photo-1553526665-dbfe31a25a55?w=400&h=280&fit=crop', tag: 'Rising star', desc: 'Tea plantation stays, whale watching, ancient rock temples', places: ['Ella', 'Galle', 'Sigiriya', 'Trincomalee', 'Kandy'] },
-    { name: 'Indonesia', img: 'https://images.unsplash.com/photo-1539635278303-d4002c07eae3?w=400&h=280&fit=crop', tag: 'Nature first', desc: 'Rice terrace villages, volcano hikes, surf towns', places: ['Ubud', 'Lombok', 'Flores', 'Nusa Penida', 'Sumba'] },
-    { name: 'Georgia', img: 'https://images.unsplash.com/photo-1601974984960-4e1d498e3b2f?w=400&h=280&fit=crop', tag: 'Undiscovered', desc: 'Wine country, Caucasus peaks, ancient cave cities', places: ['Tbilisi', 'Mestia', 'Sighnaghi', 'Kazbegi', 'Uplistsikhe'] },
+    { name: 'Japan',       tag: 'Slow travel favourite', desc: 'Backstreet Kyoto, mountain onsen towns, morning fish markets',  places: ['Kyoto', 'Kanazawa', 'Yakushima', 'Naoshima', 'Takayama'] },
+    { name: 'Vietnam',     tag: 'Hidden gem',            desc: 'Mekong villages, limestone karsts, lantern-lit old towns',      places: ['Hoi An', 'Ha Giang', 'Ninh Binh', 'Phong Nha', 'Mui Ne'] },
+    { name: 'India',       tag: 'Cultural depth',        desc: 'Rajasthani villages, spice routes, Himalayan trails',           places: ['Varanasi', 'Hampi', 'Coorg', 'Spiti Valley', 'Pondicherry'] },
+    { name: 'Sri Lanka',   tag: 'Rising star',           desc: 'Tea plantation stays, whale watching, ancient rock temples',    places: ['Ella', 'Galle', 'Sigiriya', 'Trincomalee', 'Kandy'] },
+    { name: 'Indonesia',   tag: 'Nature first',          desc: 'Rice terrace villages, volcano hikes, surf towns',              places: ['Ubud', 'Lombok', 'Flores', 'Nusa Penida', 'Sumba'] },
+    { name: 'Georgia',     tag: 'Undiscovered',          desc: 'Wine country, Caucasus peaks, ancient cave cities',             places: ['Tbilisi', 'Mestia', 'Sighnaghi', 'Kazbegi', 'Uplistsikhe'] },
   ],
   europe: [
-    { name: 'Italy', img: 'https://images.unsplash.com/photo-1516483638261-f4dbaf036963?w=400&h=280&fit=crop', tag: 'Slow travel icon', desc: 'Puglia farmhouses, Dolomite villages, Sicilian markets', places: ['Matera', 'Alberobello', 'Orvieto', 'Noto', 'Civita di Bagnoregio'] },
-    { name: 'Portugal', img: 'https://images.unsplash.com/photo-1555881400-74d7acaacd8b?w=400&h=280&fit=crop', tag: 'Crowd free', desc: 'Alentejo plains, fishing villages, azulejo-tiled towns', places: ['Evora', 'Obidos', 'Monsanto', 'Tavira', 'Peneda-Geres'] },
-    { name: 'Slovenia', img: 'https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?w=400&h=280&fit=crop', tag: 'Hidden gem', desc: 'Alpine lakes, karst caves, wine villages', places: ['Lake Bled', 'Piran', 'Soca Valley', 'Skocjan', 'Ptuj'] },
-    { name: 'Greece', img: 'https://images.unsplash.com/photo-1533105079780-92b9be482077?w=400&h=280&fit=crop', tag: 'Beyond the islands', desc: 'Mainland villages, Zagori trails, off-island life', places: ['Meteora', 'Zagori', 'Monemvasia', 'Pelion', 'Naxos'] },
-    { name: 'Croatia', img: 'https://images.unsplash.com/photo-1555990793-da11153b2473?w=400&h=280&fit=crop', tag: 'Coastal magic', desc: 'Dalmatian islands, walled towns, olive grove trails', places: ['Hvar', 'Vis', 'Plitvice', 'Rovinj', 'Korcula'] },
-    { name: 'Albania', img: 'https://images.unsplash.com/photo-1598300058816-b7cef6d4c90c?w=400&h=280&fit=crop', tag: 'Undiscovered', desc: 'Ottoman bazaars, Riviera bays, mountain villages', places: ['Berat', 'Gjirokaster', 'Theth', 'Ksamil', 'Valbona'] },
+    { name: 'Italy',       tag: 'Slow travel icon',      desc: 'Puglia farmhouses, Dolomite villages, Sicilian markets',        places: ['Matera', 'Alberobello', 'Orvieto', 'Noto', 'Civita di Bagnoregio'] },
+    { name: 'Portugal',    tag: 'Crowd free',            desc: 'Alentejo plains, fishing villages, azulejo-tiled towns',        places: ['Evora', 'Obidos', 'Monsanto', 'Tavira', 'Peneda-Geres'] },
+    { name: 'Slovenia',    tag: 'Hidden gem',            desc: 'Alpine lakes, karst caves, wine villages',                      places: ['Lake Bled', 'Piran', 'Soca Valley', 'Skocjan', 'Ptuj'] },
+    { name: 'Greece',      tag: 'Beyond the islands',    desc: 'Mainland villages, Zagori trails, off-island life',             places: ['Meteora', 'Zagori', 'Monemvasia', 'Pelion', 'Naxos'] },
+    { name: 'Croatia',     tag: 'Coastal magic',         desc: 'Dalmatian islands, walled towns, olive grove trails',           places: ['Hvar', 'Vis', 'Plitvice', 'Rovinj', 'Korcula'] },
+    { name: 'Albania',     tag: 'Undiscovered',          desc: 'Ottoman bazaars, Riviera bays, mountain villages',              places: ['Berat', 'Gjirokaster', 'Theth', 'Ksamil', 'Valbona'] },
   ],
   africa: [
-    { name: 'Morocco', img: 'https://images.unsplash.com/photo-1539020140153-e479b8c22e70?w=400&h=280&fit=crop', tag: 'Sensory overload', desc: 'Mountain Berber villages, Sahara camps, blue medinas', places: ['Chefchaouen', 'Merzouga', 'Essaouira', 'Ait Benhaddou', 'Imlil'] },
-    { name: 'Ethiopia', img: 'https://images.unsplash.com/photo-1523805009345-7448845a9e53?w=400&h=280&fit=crop', tag: 'Ancient world', desc: 'Rock-hewn churches, tribal cultures, coffee origins', places: ['Lalibela', 'Omo Valley', 'Simien Mountains', 'Axum', 'Harar'] },
-    { name: 'Tanzania', img: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400&h=280&fit=crop', tag: 'Wildlife + culture', desc: 'Maasai villages, spice islands, remote beaches', places: ['Zanzibar', 'Ngorongoro', 'Pemba Island', 'Usambara', 'Stone Town'] },
-    { name: 'Rwanda', img: 'https://images.unsplash.com/photo-1611348524140-53c9a25263d6?w=400&h=280&fit=crop', tag: 'Rising star', desc: 'Gorilla trekking, tea plantations, Lake Kivu villages', places: ['Volcanoes NP', 'Lake Kivu', 'Nyungwe', 'Musanze', 'Akagera'] },
+    { name: 'Morocco',     tag: 'Sensory overload',      desc: 'Mountain Berber villages, Sahara camps, blue medinas',          places: ['Chefchaouen', 'Merzouga', 'Essaouira', 'Ait Benhaddou', 'Imlil'] },
+    { name: 'Ethiopia',    tag: 'Ancient world',         desc: 'Rock-hewn churches, tribal cultures, coffee origins',           places: ['Lalibela', 'Omo Valley', 'Simien Mountains', 'Axum', 'Harar'] },
+    { name: 'Tanzania',    tag: 'Wildlife + culture',    desc: 'Maasai villages, spice islands, remote beaches',                places: ['Zanzibar', 'Ngorongoro', 'Pemba Island', 'Usambara', 'Stone Town'] },
+    { name: 'Rwanda',      tag: 'Rising star',           desc: 'Gorilla trekking, tea plantations, Lake Kivu villages',         places: ['Volcanoes NP', 'Lake Kivu', 'Nyungwe', 'Musanze', 'Akagera'] },
   ],
   americas: [
-    { name: 'Mexico', img: 'https://images.unsplash.com/photo-1518638150340-f706e86654de?w=400&h=280&fit=crop', tag: 'Beyond the resorts', desc: 'Colonial highland towns, cenote villages, Pacific coast', places: ['Oaxaca', 'San Cristobal', 'Guanajuato', 'Bacalar', 'Merida'] },
-    { name: 'Colombia', img: 'https://images.unsplash.com/photo-1576019280693-5a56c25d8dc6?w=400&h=280&fit=crop', tag: 'Transformation story', desc: 'Coffee region fincas, Caribbean coast, flower towns', places: ['Salento', 'Cartagena', 'Barichara', 'Palomino', 'Villa de Leyva'] },
-    { name: 'Peru', img: 'https://images.unsplash.com/photo-1526392060635-9d6019884377?w=400&h=280&fit=crop', tag: 'Beyond Machu Picchu', desc: 'Amazon villages, Lake Titicaca islands, Sacred Valley', places: ['Cusco', 'Huaraz', 'Chachapoyas', 'Colca Canyon', 'Pisac'] },
-    { name: 'Chile', img: 'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=400&h=280&fit=crop', tag: 'End of the world', desc: 'Patagonia trails, lake district towns, Atacama villages', places: ['Torres del Paine', 'Chiloe', 'Pucon', 'Valle de Elqui', 'Punta Arenas'] },
+    { name: 'Mexico',      tag: 'Beyond the resorts',    desc: 'Colonial highland towns, cenote villages, Pacific coast',       places: ['Oaxaca', 'San Cristobal', 'Guanajuato', 'Bacalar', 'Merida'] },
+    { name: 'Colombia',    tag: 'Transformation story',  desc: 'Coffee region fincas, Caribbean coast, flower towns',           places: ['Salento', 'Cartagena', 'Barichara', 'Palomino', 'Villa de Leyva'] },
+    { name: 'Peru',        tag: 'Beyond Machu Picchu',   desc: 'Amazon villages, Lake Titicaca islands, Sacred Valley',         places: ['Cusco', 'Huaraz', 'Chachapoyas', 'Colca Canyon', 'Pisac'] },
+    { name: 'Chile',       tag: 'End of the world',      desc: 'Patagonia trails, lake district towns, Atacama villages',       places: ['Torres del Paine', 'Chiloe', 'Pucon', 'Valle de Elqui', 'Punta Arenas'] },
   ],
   oceania: [
-    { name: 'New Zealand', img: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=400&h=280&fit=crop', tag: 'Nature paradise', desc: 'Fiordland walks, Maori culture, remote farmstays', places: ['Queenstown', 'Abel Tasman', 'Rotorua', 'Coromandel', 'Milford Sound'] },
-    { name: 'Australia', img: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=280&fit=crop', tag: 'Beyond the cities', desc: 'Outback stations, Cape York, Kimberley gorges', places: ['Blue Mountains', 'Margaret River', 'Daintree', 'Flinders Ranges', 'Byron Bay'] },
-    { name: 'Fiji', img: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=280&fit=crop', tag: 'Village life', desc: 'Off-grid island villages, coral reefs, local kava ceremonies', places: ['Yasawa Islands', 'Taveuni', 'Kadavu', 'Vanua Levu', 'Beqa'] },
+    { name: 'New Zealand', tag: 'Nature paradise',       desc: 'Fiordland walks, Maori culture, remote farmstays',              places: ['Queenstown', 'Abel Tasman', 'Rotorua', 'Coromandel', 'Milford Sound'] },
+    { name: 'Australia',   tag: 'Beyond the cities',     desc: 'Outback stations, Cape York, Kimberley gorges',                 places: ['Blue Mountains', 'Margaret River', 'Daintree', 'Flinders Ranges', 'Byron Bay'] },
+    { name: 'Fiji',        tag: 'Village life',          desc: 'Off-grid island villages, coral reefs, local kava ceremonies',  places: ['Yasawa Islands', 'Taveuni', 'Kadavu', 'Vanua Levu', 'Beqa'] },
   ],
   mideast: [
-    { name: 'Jordan', img: 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=400&h=280&fit=crop', tag: 'Ancient wonder', desc: 'Rose-red Petra, Wadi Rum camps, Dead Sea shores', places: ['Petra', 'Wadi Rum', 'Aqaba', 'Wadi Mujib', 'Dana Reserve'] },
-    { name: 'Oman', img: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=280&fit=crop', tag: 'Underrated gem', desc: 'Wadis, frankincense towns, dhow sailing, Bedouin camps', places: ['Muscat', 'Salalah', 'Nizwa', 'Wahiba Sands', 'Jebel Akhdar'] },
+    { name: 'Jordan',      tag: 'Ancient wonder',        desc: 'Rose-red Petra, Wadi Rum camps, Dead Sea shores',               places: ['Petra', 'Wadi Rum', 'Aqaba', 'Wadi Mujib', 'Dana Reserve'] },
+    { name: 'Oman',        tag: 'Underrated gem',        desc: 'Wadis, frankincense towns, dhow sailing, Bedouin camps',        places: ['Muscat', 'Salalah', 'Nizwa', 'Wahiba Sands', 'Jebel Akhdar'] },
   ],
 };
 
@@ -94,6 +94,11 @@ const w08 = 'rgba(255,255,255,0.06)';
 function ThingPhoto({ name, keyword, style }) {
   const src = useDestinationPhoto(name || '', keyword || '', 'thumb');
   return <img src={src} alt={name} style={style} onError={e => { e.target.src = getFallbackPhoto('thumb'); }} />;
+}
+
+function CountryPhoto({ name, style }) {
+  const src = useDestinationPhoto(name || '', '', 'card');
+  return <img src={src} alt={name} style={style} loading="lazy" onError={e => { e.target.src = getFallbackPhoto('card'); }} />;
 }
 
 function TrendingCard({ t, onClick }) {
@@ -376,7 +381,7 @@ export default function ExplorePage() {
                 onMouseLeave={e => { if (activeCountry !== c.name) e.currentTarget.style.borderColor = border; }}
               >
                 <div style={{ position: 'relative', height: 160 }}>
-                  <img src={c.img} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} loading="lazy" />
+                  <CountryPhoto name={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                   <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(20,29,51,1) 0%, rgba(20,29,51,0.1) 60%, transparent 100%)' }} />
                   <div style={{ position: 'absolute', top: 10, left: 12 }}>
                     <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: 'rgba(0,212,170,0.15)', color: teal, border: `1px solid ${tealBorder}`, letterSpacing: '0.08em' }}>
