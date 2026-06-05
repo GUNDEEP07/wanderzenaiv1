@@ -16,7 +16,7 @@ export default function TermsOfService() {
   const navigate = useNavigate();
   return (
     <div style={s.page}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=Fraunces:opsz,wght@9..144,700;9..144,900&display=swap');`}</style>
+      <style>{``}</style>
       <nav style={s.nav}>
         <button style={s.back} onClick={() => navigate(-1)}>← Back</button>
         <span style={{ color: 'rgba(255,255,255,0.2)' }}>·</span>

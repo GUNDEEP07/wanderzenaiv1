@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Accommodation + Flights Design</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #080c18; color: #fff; font-family: 'Plus Jakarta Sans', sans-serif; padding: 28px 20px 80px; }
+h1 { font-family: 'Fraunces', serif; font-size: clamp(1.4rem,4vw,2rem); font-weight: 700; letter-spacing: -0.03em; margin-bottom: 6px; }
+.sub { font-size: 13px; color: rgba(255,255,255,0.4); margin-bottom: 36px; line-height: 1.6; max-width: 680px; }
+
+.options-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; max-width: 1100px; margin-bottom: 48px; }
+.option-card {
+  border-radius: 16px; overflow: hidden; cursor: pointer;
+  border: 2px solid rgba(255,255,255,0.08);
+  background: #0d1628;
+  transition: all 0.25s;
+}
+.option-card:hover { transform: translateY(-3px); border-color: rgba(0,212,170,0.3); }
+.option-card.selected { border-color: #00d4aa; box-shadow: 0 0 0 3px rgba(0,212,170,0.15); }
+
+.option-preview {
+  padding: 16px;
+  background: #0a0f1e;
+  min-height: 320px;
+  position: relative;
+  overflow: hidden;
+}
+.option-info { padding: 14px 16px; background: #0d1628; border-top: 1px solid rgba(255,255,255,0.06); }
+.option-name { font-size: 15px; font-weight: 800; color: #fff; margin-bottom: 4px; }
+.option-desc { font-size: 12px; color: rgba(255,255,255,0.45); line-height: 1.5; margin-bottom: 8px; }
+.option-tradeoffs { display: flex; flex-direction: column; gap: 4px; }
+.pro { font-size: 11px; color: #00d4aa; }
+.con { font-size: 11px; color: rgba(255,107,107,0.8); }
+.rec-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; background: #00d4aa; color: #0a0f1e; font-size: 9px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+
+/* ── Mock UI elements ── */
+.mock-panel { background: #111827; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.07); }
+.mock-label { font-size: 8px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+.mock-label::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.07); }
+.mock-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; }
+.mock-card-title { font-size: 11px; font-weight: 700; color: #fff; margin-bottom: 2px; }
+.mock-card-sub { font-size: 9px; color: rgba(255,255,255,0.4); }
+.mock-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 20px; font-size: 9px; font-weight: 700; }
+.mock-teal { background: rgba(0,212,170,0.1); border: 1px solid rgba(0,212,170,0.25); color: #00d4aa; }
+.mock-blue { background: rgba(96,165,250,0.1); border: 1px solid rgba(96,165,250,0.25); color: #60a5fa; }
+.mock-btn { padding: 6px 12px; border-radius: 7px; font-size: 10px; font-weight: 800; border: none; cursor: pointer; }
+.mock-btn-teal { background: linear-gradient(135deg,#00d4aa,#00a87e); color: #0a0f1e; }
+.mock-btn-ghost { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.5); }
+
+.mock-tabs { display: flex; gap: 4px; margin-bottom: 10px; overflow: hidden; }
+.mock-tab { padding: 5px 10px; border-radius: 7px; font-size: 9px; font-weight: 700; }
+.mock-tab-active { background: rgba(0,212,170,0.12); border-bottom: 2px solid #00d4aa; color: #00d4aa; }
+.mock-tab-inactive { color: rgba(255,255,255,0.4); }
+.mock-tab-special { background: rgba(96,165,250,0.1); color: #60a5fa; border: 1px solid rgba(96,165,250,0.2); }
+
+.mock-collapse { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; cursor: pointer; margin-bottom: 6px; }
+.mock-collapse-open { background: rgba(0,212,170,0.06); border-color: rgba(0,212,170,0.2); }
+.mock-collapse-title { font-size: 11px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px; }
+.mock-collapse-arrow { font-size: 9px; color: rgba(255,255,255,0.3); }
+
+.arch-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1000px; margin-bottom: 40px; }
+.arch-card { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 16px 18px; }
+.arch-title { font-size: 13px; font-weight: 800; color: #fff; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+.arch-body { font-size: 12px; color: rgba(255,255,255,0.5); line-height: 1.7; }
+.arch-source { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.25); margin-top: 10px; margin-bottom: 4px; }
+.arch-pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; margin-right: 5px; margin-bottom: 5px; }
+.pill-free { background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.25); color: #34d399; }
+.pill-api { background: rgba(251,146,60,0.1); border: 1px solid rgba(251,146,60,0.25); color: #fb923c; }
+.pill-nokey { background: rgba(96,165,250,0.1); border: 1px solid rgba(96,165,250,0.25); color: #60a5fa; }
+.divider { height: 1px; background: rgba(255,255,255,0.06); margin: 36px 0; max-width: 1000px; }
+
+/* Selection */
+.selected-ring { display: none; }
+.option-card.selected .selected-ring { display: flex; position: absolute; top: 10px; left: 10px; width: 22px; height: 22px; border-radius: 50%; background: #00d4aa; align-items: center; justify-content: center; font-size: 11px; color: #0a0f1e; font-weight: 800; z-index: 10; }
+#pick-note { margin-top: 24px; padding: 14px 18px; background: rgba(0,212,170,0.06); border: 1px solid rgba(0,212,170,0.15); border-radius: 10px; font-size: 13px; color: rgba(255,255,255,0.6); display: none; max-width: 700px; }
+</style>
+</head>
+<body>
+<div style="max-width:1100px;margin:0 auto;">
+
+<h1>Accommodation + Flights — Where does it fit?</h1>
+<p class="sub">Three UI placement options for VenueSelection step. Click one to select. Data architecture is shown below all three options.</p>
+
+<div class="options-grid">
+
+  <!-- Option A: Collapsible cards top of right panel -->
+  <div class="option-card" id="card-a" onclick="pick('a')">
+    <div class="selected-ring">✓</div>
+    <div class="rec-badge" style="position:absolute;top:10px;right:10px;z-index:5;">★ Recommended</div>
+    <div class="option-preview">
+      <!-- RIGHT PANEL mockup -->
+      <div style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.25);margin-bottom:8px;">VenueSelection · Right panel</div>
+
+      <!-- Collapsible flights card -->
+      <div class="mock-collapse mock-collapse-open">
+        <div class="mock-collapse-title">✈️ Flights from Sydney</div>
+        <div class="mock-collapse-arrow">▲</div>
+      </div>
+      <div class="mock-card" style="margin-top:-2px;border-radius:0 0 8px 8px;border-top:none;margin-bottom:8px;">
+        <div style="font-size:10px;color:rgba(255,255,255,0.5);margin-bottom:6px;">SYD → DPS · Jun 28 · ~6h</div>
+        <div style="display:flex;gap:6px;">
+          <button class="mock-btn mock-btn-teal" style="flex:1;">Google Flights →</button>
+          <button class="mock-btn mock-btn-ghost">Skyscanner →</button>
+        </div>
+      </div>
+
+      <!-- Collapsible stays card -->
+      <div class="mock-collapse mock-collapse-open">
+        <div class="mock-collapse-title">🏡 Where to stay</div>
+        <div class="mock-collapse-arrow">▲</div>
+      </div>
+      <div style="margin-top:-2px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-top:none;border-radius:0 0 8px 8px;padding:8px;margin-bottom:10px;">
+        <div class="mock-card" style="margin-bottom:5px;">
+          <div class="mock-card-title">🌿 Eco-lodge · Ubud jungle</div>
+          <div class="mock-card-sub">$45–80/night · Perfect for Nature travel style</div>
+        </div>
+        <div class="mock-card">
+          <div class="mock-card-title">🏠 Local guesthouse</div>
+          <div class="mock-card-sub">$20–35/night · Walk to rice terraces</div>
+        </div>
+      </div>
+
+      <!-- Normal content below -->
+      <div class="mock-label">Explore by category</div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px;">
+        <span class="mock-badge mock-teal">🌳 Nature</span>
+        <span class="mock-badge" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.5);font-size:9px;padding:3px 8px;border-radius:20px;">🍜 Food</span>
+        <span class="mock-badge" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.5);font-size:9px;padding:3px 8px;border-radius:20px;">⛰️ Views</span>
+      </div>
+    </div>
+    <div class="option-info">
+      <div class="option-name">A — Collapsible cards in right panel</div>
+      <div class="option-desc">Flights + stays appear as collapsible accordions at the top of the right panel, above the activity categories. Collapsed by default, user expands when interested.</div>
+      <div class="option-tradeoffs">
+        <div class="pro">✓ No new step, no disruption to current flow</div>
+        <div class="pro">✓ Users can ignore it entirely and continue</div>
+        <div class="pro">✓ Consistent with existing collapsible patterns</div>
+        <div class="con">− Adds vertical height before activity content</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option B: New tabs in ActivityTabs -->
+  <div class="option-card" id="card-b" onclick="pick('b')">
+    <div class="selected-ring">✓</div>
+    <div class="option-preview">
+      <div style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.25);margin-bottom:8px;">VenueSelection · Right panel</div>
+
+      <!-- Activity grid -->
+      <div class="mock-label">Explore by category</div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px;">
+        <span class="mock-badge mock-teal">🌳 Nature</span>
+        <span class="mock-badge" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.5);font-size:9px;padding:3px 8px;border-radius:20px;">🍜 Food</span>
+      </div>
+
+      <!-- Tabs including Stays and Flights -->
+      <div class="mock-tabs">
+        <div class="mock-tab mock-tab-active">🌳 Nature</div>
+        <div class="mock-tab mock-tab-inactive">🍜 Food</div>
+        <div class="mock-tab mock-tab-special">🏡 Stays</div>
+        <div class="mock-tab mock-tab-special">✈️ Flights</div>
+      </div>
+
+      <!-- Stays content shown -->
+      <div class="mock-label">🏡 Accommodation picks</div>
+      <div class="mock-card">
+        <div class="mock-card-title">🌿 Eco-lodge · Ubud jungle</div>
+        <div class="mock-card-sub">$45–80/night · Nature style match</div>
+      </div>
+      <div class="mock-card">
+        <div class="mock-card-title">🏠 Boutique guesthouse</div>
+        <div class="mock-card-sub">$30–50/night · Near rice terraces</div>
+      </div>
+      <div class="mock-card">
+        <div class="mock-card-title">🏕️ Treehouse stay</div>
+        <div class="mock-card-sub">$55–90/night · Jungle immersion</div>
+      </div>
+    </div>
+    <div class="option-info">
+      <div class="option-name">B — New tabs alongside activities</div>
+      <div class="option-desc">Stays and Flights added as special tabs in the ActivityTabs row. Clicking them replaces the right panel content with accommodation or flight info.</div>
+      <div class="option-tradeoffs">
+        <div class="pro">✓ Feels native to the existing tab pattern</div>
+        <div class="pro">✓ Easy to discover alongside activity tabs</div>
+        <div class="con">− Conceptually mixed (activities vs services)</div>
+        <div class="con">− Tab row gets long on mobile</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option C: Dedicated section in LEFT panel -->
+  <div class="option-card" id="card-c" onclick="pick('c')">
+    <div class="selected-ring">✓</div>
+    <div class="option-preview">
+      <div style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.25);margin-bottom:8px;">VenueSelection · Left panel</div>
+
+      <!-- AI suggestions + day picker already there -->
+      <div class="mock-label">✦ Curated for you</div>
+      <div class="mock-card" style="margin-bottom:5px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div><div class="mock-card-title">🌿 Tegallalang Rice Terraces</div><div class="mock-card-sub">Nature · 15km north of Ubud</div></div>
+          <button class="mock-btn mock-btn-teal" style="font-size:8px;">✓</button>
+        </div>
+      </div>
+
+      <!-- Stays section below -->
+      <div class="mock-label" style="margin-top:10px;">🏡 Where to stay</div>
+      <div class="mock-card" style="margin-bottom:5px;">
+        <div class="mock-card-title">🌿 Eco-lodge · Ubud</div>
+        <div class="mock-card-sub">$45–80/night · Nature match</div>
+      </div>
+      <div class="mock-card" style="margin-bottom:10px;">
+        <div class="mock-card-title">🏠 Local guesthouse</div>
+        <div class="mock-card-sub">$20–35/night · Village centre</div>
+      </div>
+
+      <!-- Flights section -->
+      <div class="mock-label">✈️ Flights from Sydney</div>
+      <div class="mock-card">
+        <div style="font-size:10px;color:rgba(255,255,255,0.5);margin-bottom:5px;">SYD → DPS · Jun 28</div>
+        <button class="mock-btn mock-btn-teal" style="font-size:9px;width:100%;">Search on Google Flights →</button>
+      </div>
+    </div>
+    <div class="option-info">
+      <div class="option-name">C — Left panel sections</div>
+      <div class="option-desc">Stays and flights appear as sections below the AI-curated venue cards in the left panel, after the user has selected their experiences.</div>
+      <div class="option-tradeoffs">
+        <div class="pro">✓ Left panel is already planning-focused</div>
+        <div class="pro">✓ Natural progression: experiences → stays → flights</div>
+        <div class="con">− Left panel already has weather badges + venue cards</div>
+        <div class="con">− Pushes stays/flights below the fold</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="divider"></div>
+
+<!-- Data architecture -->
+<h1 style="font-size:1.5rem;margin-bottom:6px;">Data architecture</h1>
+<p class="sub" style="margin-bottom:24px;">How to pull the data for each section — no new paid APIs required.</p>
+
+<div class="arch-grid">
+  <div class="arch-card">
+    <div class="arch-title">✈️ Flights</div>
+    <div class="arch-body">
+      No API needed. Generate smart deep links using the user's <code style="background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:4px;">userLocation</code> (home city from profile) and the destination + travel date from the form.
+      <br><br>
+      Two links: Google Flights + Skyscanner. User clicks → opens in new tab pre-filled.
+    </div>
+    <div class="arch-source">Source</div>
+    <span class="arch-pill pill-nokey">🔗 Google Flights deep link</span>
+    <span class="arch-pill pill-nokey">🔗 Skyscanner deep link</span>
+    <div style="margin-top:8px;font-size:11px;color:rgba(255,255,255,0.35);">No API key · No backend changes · Pure frontend</div>
+  </div>
+
+  <div class="arch-card">
+    <div class="arch-title">🏡 Accommodation</div>
+    <div class="arch-body">
+      Two-tier: Claude generates style-matched accommodation TYPE suggestions (eco-lodge, riad, homestay, farm stay) as inspiration. Foursquare fills in real nearby venues for hotel/hostel/guesthouse.
+      <br><br>
+      Claude is already called for destination insights. Add an <code style="background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:4px;">accommodation</code> field to the existing <code style="background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:4px;">/destination-insights</code> response.
+    </div>
+    <div class="arch-source">Sources</div>
+    <span class="arch-pill pill-free">🤖 Claude (already integrated)</span>
+    <span class="arch-pill pill-free">📍 Foursquare (already integrated)</span>
+    <div style="margin-top:8px;font-size:11px;color:rgba(255,255,255,0.35);">Extend existing Lambda — no new endpoints</div>
+  </div>
+
+  <div class="arch-card">
+    <div class="arch-title">Backend change needed</div>
+    <div class="arch-body">
+      Add <code style="background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:4px;">accommodation</code> field to the Claude prompt in <code style="background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:4px;">destination-insights/handler.js</code>:
+      <br><br>
+      <code style="background:rgba(255,255,255,0.06);padding:3px 7px;border-radius:4px;font-size:11px;">{ type, priceRange, description, searchKeyword }</code>
+      <br><br>
+      Return 3–4 accommodation options matched to travel style. Frontend renders them as cards + links to Airbnb/Booking search with keyword pre-filled.
+    </div>
+    <div class="arch-source">Effort</div>
+    <span class="arch-pill pill-free">~20 lines in handler.js</span>
+    <span class="arch-pill pill-free">~50 lines new frontend component</span>
+  </div>
+
+  <div class="arch-card">
+    <div class="arch-title">What NOT to build</div>
+    <div class="arch-body">
+      <strong style="color:#ff6b6b;">Skip:</strong> Real-time flight prices (Amadeus removed, Skyscanner API requires partnership, Kiwi needs approval)
+      <br><br>
+      <strong style="color:#ff6b6b;">Skip:</strong> Booking.com / Airbnb API integration (both require commercial partnerships)
+      <br><br>
+      <strong style="color:#00d4aa;">Instead:</strong> Inspiration + deep links. User gets the context from WanderZenAI, books on their preferred platform.
+    </div>
+    <div style="margin-top:10px;font-size:11px;color:#00d4aa;">This matches the slow travel philosophy — guide, don't gatekeep.</div>
+  </div>
+</div>
+
+<div id="pick-note">
+  You selected: <strong id="pick-text" style="color:#00d4aa;"></strong>. Let me know in the terminal and I'll write the spec.
+</div>
+
+</div>
+<script>
+function pick(id) {
+  ['a','b','c'].forEach(n => document.getElementById('card-'+n).classList.remove('selected'));
+  document.getElementById('card-'+id).classList.add('selected');
+  const labels = { a: 'A — Collapsible cards in right panel', b: 'B — New tabs alongside activities', c: 'C — Left panel sections' };
+  document.getElementById('pick-text').textContent = labels[id];
+  document.getElementById('pick-note').style.display = 'block';
+  try { fetch('/event',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'click',choice:id,text:labels[id],timestamp:Date.now()})}).catch(()=>{}); } catch(e) {}
+}
+</script>
+</body>
+</html>

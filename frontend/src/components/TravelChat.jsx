@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
-import React from 'react';
 
 function ChatFeedback({ destination }) {
-  const [rating, setRating] = React.useState(0);
-  const [done, setDone] = React.useState(false);
+  const [rating, setRating] = useState(0);
+  const [done, setDone] = useState(false);
   if (done) return (
     <div style={{ fontSize: 12, color: '#00d4aa', padding: '8px 12px', background: 'rgba(0,212,170,0.08)', borderRadius: 10 }}>
       Thanks for the feedback! ✓

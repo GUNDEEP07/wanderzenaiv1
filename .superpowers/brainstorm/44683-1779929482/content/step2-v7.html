@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WanderZenAI Step 2 v7</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,300;1,9..144,400&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:#06090f;color:#fff;font-family:'Plus Jakarta Sans',sans-serif;height:100vh;overflow:hidden;}
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opacity:0.35;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");}
+
+  .nav{position:relative;z-index:2;padding:14px 28px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.05);}
+  .nav-logo{display:flex;align-items:center;gap:10px;}
+  .logo-mark{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#00d4aa,#00916a);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#06090f;box-shadow:0 0 16px rgba(0,212,170,0.28);}
+  .logo-text{font-size:14px;font-weight:700;color:rgba(255,255,255,0.88);}
+  .step-badge{font-size:11px;color:rgba(255,255,255,0.22);}
+  .progress-bar{position:relative;z-index:2;display:flex;gap:3px;height:3px;}
+  .seg{flex:1;height:3px;background:rgba(255,255,255,0.07);}
+  .seg.done{background:#00d4aa;}
+  .seg.active{background:linear-gradient(90deg,#00d4aa,#00b896);box-shadow:0 0 8px rgba(0,212,170,0.5);}
+  .layout{position:relative;z-index:1;display:grid;grid-template-columns:360px 1fr;height:calc(100vh - 59px - 3px);overflow:hidden;}
+
+  /* ═══ LEFT ═══ */
+  .left{border-right:1px solid rgba(255,255,255,0.05);display:flex;flex-direction:column;overflow:hidden;position:relative;}
+  .left::before{content:'';position:absolute;top:-60px;left:-80px;width:420px;height:360px;background:radial-gradient(ellipse at 40% 40%,rgba(0,212,170,0.09),transparent 68%);pointer-events:none;z-index:0;}
+  .left-head{padding:26px 28px 14px;flex-shrink:0;position:relative;z-index:1;}
+  .eyebrow{font-size:10px;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;color:#00d4aa;margin-bottom:9px;display:flex;align-items:center;gap:6px;}
+  .eyebrow::before{content:'';display:inline-block;width:16px;height:1.5px;background:#00d4aa;border-radius:2px;}
+  .headline{font-family:'Fraunces',serif;font-size:38px;font-weight:900;line-height:1.06;color:#fff;letter-spacing:-0.025em;margin-bottom:14px;}
+  .headline em{font-style:italic;font-weight:300;color:transparent;background:linear-gradient(135deg,rgba(255,255,255,0.5),rgba(255,255,255,0.22));-webkit-background-clip:text;background-clip:text;}
+  .dest-pill{display:inline-flex;align-items:center;gap:7px;background:rgba(0,212,170,0.07);border:1px solid rgba(0,212,170,0.2);border-radius:100px;padding:5px 13px 5px 9px;font-size:11px;color:#00d4aa;font-weight:600;}
+  .dest-pill .dot{width:6px;height:6px;background:#00d4aa;border-radius:50%;box-shadow:0 0 6px rgba(0,212,170,0.8);animation:pulse 2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.75)}}
+  .chips{display:flex;gap:5px;flex-wrap:wrap;padding:10px 28px 14px;flex-shrink:0;position:relative;z-index:1;}
+  .chip{padding:4px 10px;border-radius:20px;font-size:10px;font-weight:600;border:1px solid;}
+  .chip-t{background:rgba(0,212,170,0.07);border-color:rgba(0,212,170,0.18);color:#00d4aa;}
+  .chip-y{background:rgba(255,217,61,0.07);border-color:rgba(255,217,61,0.18);color:#ffd93d;}
+  .chip-w{background:rgba(255,255,255,0.03);border-color:rgba(255,255,255,0.09);color:rgba(255,255,255,0.4);}
+  .picks-label{padding:0 28px 8px;flex-shrink:0;position:relative;z-index:1;display:flex;align-items:center;gap:8px;}
+  .picks-label-text{font-size:9px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;color:rgba(255,255,255,0.18);}
+  .picks-label-line{flex:1;height:1px;background:rgba(255,255,255,0.05);}
+  .picks-scroll{flex:1;overflow-y:auto;padding:0 16px 16px 28px;display:flex;flex-direction:column;gap:6px;scrollbar-width:none;position:relative;z-index:1;}
+  .picks-scroll::-webkit-scrollbar{display:none;}
+
+  /* ── Unified card shell — same for picks AND venues ── */
+  .item-card{
+    border-radius:13px;border:1px solid rgba(255,255,255,0.07);
+    background:rgba(255,255,255,0.025);overflow:hidden;
+    transition:border-color 0.2s,background 0.2s;
+  }
+  .item-card.added{background:rgba(0,212,170,0.06);border-color:rgba(0,212,170,0.25);}
+  .item-card.picking{border-color:rgba(0,212,170,0.28);}
+
+  /* header row */
+  .item-header{display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;}
+  .item-ico{width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;transition:background 0.2s;}
+  .item-card.added .item-ico,.item-card.picking .item-ico{background:rgba(0,212,170,0.1);}
+  .item-txt{flex:1;min-width:0;}
+  .item-name{font-size:12px;font-weight:700;color:rgba(255,255,255,0.9);margin-bottom:1px;}
+  .item-sub{font-size:10px;color:rgba(255,255,255,0.3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .item-right{display:flex;align-items:center;gap:7px;flex-shrink:0;}
+
+  /* Day badge shown when added */
+  .day-badge{font-size:9px;font-weight:800;color:#00d4aa;background:rgba(0,212,170,0.1);border:1px solid rgba(0,212,170,0.25);border-radius:6px;padding:3px 7px;letter-spacing:0.02em;}
+
+  /* Rating (venues only) */
+  .v-rating{font-size:10px;font-weight:700;color:#00d4aa;}
+  .v-ai-tag{font-size:8px;font-weight:700;color:#00d4aa;background:rgba(0,212,170,0.1);border:1px solid rgba(0,212,170,0.18);border-radius:4px;padding:1px 5px;}
+
+  /* ── Unified + / ✓ button ── */
+  .add-btn{
+    width:24px;height:24px;border-radius:50%;
+    border:1.5px solid rgba(255,255,255,0.15);
+    background:rgba(255,255,255,0.04);
+    display:flex;align-items:center;justify-content:center;
+    font-size:15px;color:rgba(255,255,255,0.4);
+    cursor:pointer;flex-shrink:0;transition:all 0.18s;
+    font-family:inherit;
+  }
+  .add-btn:hover{border-color:rgba(0,212,170,0.5);color:#00d4aa;background:rgba(0,212,170,0.08);}
+  .add-btn.done{background:#00d4aa;border-color:#00d4aa;color:#06090f;font-size:11px;font-weight:800;}
+
+  /* chevron */
+  .chevron{width:20px;height:20px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:8px;color:rgba(255,255,255,0.25);transition:transform 0.25s,border-color 0.2s,background 0.2s;cursor:pointer;flex-shrink:0;}
+  .item-card.picking .chevron,.item-card.added .chevron{transform:rotate(180deg);border-color:rgba(0,212,170,0.3);color:#00d4aa;background:rgba(0,212,170,0.07);}
+
+  /* ── Detail panel — pick description ── */
+  .item-detail{max-height:0;overflow:hidden;transition:max-height 0.32s cubic-bezier(0.4,0,0.2,1);}
+  .item-card.picking .item-detail,.item-card.added .item-detail{max-height:280px;}
+  .detail-body{padding:0 12px 0 56px;border-top:1px solid rgba(255,255,255,0.05);}
+  .detail-desc{font-size:11px;color:rgba(255,255,255,0.5);line-height:1.55;padding:10px 0 8px;}
+  .detail-tags{display:flex;gap:5px;flex-wrap:wrap;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,0.05);}
+  .dtag{padding:3px 8px;border-radius:20px;font-size:9px;font-weight:600;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.36);}
+
+  /* ── Embedded day list ── */
+  .day-list-section{padding:10px 0 10px;}
+  .day-list-header{font-size:9px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:rgba(255,255,255,0.2);margin-bottom:8px;}
+
+  /* The custom embedded list — looks like part of the card */
+  .day-list{
+    background:rgba(0,0,0,0.25);
+    border-radius:10px;
+    border:1px solid rgba(255,255,255,0.06);
+    overflow:hidden;
+    max-height:130px;
+    overflow-y:auto;
+    scrollbar-width:thin;
+    scrollbar-color:rgba(255,255,255,0.08) transparent;
+  }
+  .day-list::-webkit-scrollbar{width:3px;}
+  .day-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px;}
+  .day-row{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:8px 12px;cursor:pointer;
+    border-bottom:1px solid rgba(255,255,255,0.04);
+    transition:background 0.15s;font-size:11px;font-weight:600;color:rgba(255,255,255,0.55);
+  }
+  .day-row:last-child{border-bottom:none;}
+  .day-row:hover{background:rgba(0,212,170,0.07);color:rgba(255,255,255,0.8);}
+  .day-row.chosen{background:rgba(0,212,170,0.1);color:#00d4aa;}
+  .day-row .day-num{font-weight:800;}
+  .day-row .day-date{font-size:9px;color:rgba(255,255,255,0.3);font-weight:500;}
+  .day-row.chosen .day-date{color:rgba(0,212,170,0.6);}
+  .day-row .day-tick{font-size:10px;color:#00d4aa;font-weight:800;opacity:0;}
+  .day-row.chosen .day-tick{opacity:1;}
+
+  /* Added state — replaces list with confirmation line */
+  .added-confirm{
+    display:none;align-items:center;justify-content:space-between;
+    padding:8px 10px;border-radius:9px;
+    background:rgba(0,212,170,0.07);border:1px solid rgba(0,212,170,0.18);
+    margin-top:10px;margin-bottom:2px;
+  }
+  .item-card.added .day-list-section .added-confirm{display:flex;}
+  .item-card.added .day-list-section .day-list-header,
+  .item-card.added .day-list-section .day-list{display:none;}
+  .added-confirm-text{font-size:11px;font-weight:700;color:#00d4aa;display:flex;align-items:center;gap:6px;}
+  .change-link{font-size:10px;color:rgba(255,255,255,0.28);background:none;border:none;cursor:pointer;font-family:inherit;text-decoration:underline;text-underline-offset:2px;}
+
+  /* RIGHT */
+  .right{display:flex;flex-direction:column;overflow:hidden;}
+  .right-body{flex:1;overflow-y:auto;padding:22px 28px 0;scrollbar-width:none;}
+  .right-body::-webkit-scrollbar{display:none;}
+  .sec-row{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+  .sec-lbl{font-size:9px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;color:rgba(255,255,255,0.18);white-space:nowrap;}
+  .sec-line{flex:1;height:1px;background:rgba(255,255,255,0.05);}
+
+  .act-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:20px;}
+  .act-card{border-radius:13px;padding:13px 8px 11px;text-align:center;border:1.5px solid;cursor:pointer;transition:all 0.2s;position:relative;}
+  .act-card:hover{transform:translateY(-1px);filter:brightness(1.15);}
+  .act-card.sel::before{content:'✓';position:absolute;top:5px;right:7px;font-size:8px;font-weight:800;color:#00d4aa;}
+  .act-hiking{background:rgba(34,197,94,0.06);border-color:rgba(34,197,94,0.15);}
+  .act-food{background:rgba(251,146,60,0.06);border-color:rgba(251,146,60,0.14);}
+  .act-views{background:rgba(96,165,250,0.06);border-color:rgba(96,165,250,0.14);}
+  .act-culture{background:rgba(167,139,250,0.06);border-color:rgba(167,139,250,0.14);}
+  .act-nature{background:rgba(52,211,153,0.06);border-color:rgba(52,211,153,0.14);}
+  .act-night{background:rgba(129,90,213,0.07);border-color:rgba(129,90,213,0.16);}
+  .act-well{background:rgba(251,113,133,0.06);border-color:rgba(251,113,133,0.14);}
+  .act-custom{background:rgba(255,217,61,0.04);border-color:rgba(255,217,61,0.12);}
+  .act-card.sel{background:rgba(0,212,170,0.08)!important;border-color:rgba(0,212,170,0.45)!important;box-shadow:0 0 14px rgba(0,212,170,0.1);}
+  .act-ico{font-size:23px;margin-bottom:7px;display:block;}
+  .act-lbl{font-size:10px;font-weight:700;color:rgba(255,255,255,0.42);}
+  .act-card.sel .act-lbl{color:#00d4aa;}
+  .act-custom .act-lbl{color:rgba(255,217,61,0.55);}
+
+  .yt-section{margin-bottom:20px;}
+  .yt-row{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px;}
+  .yt-row::-webkit-scrollbar{display:none;}
+  .yt-card{flex-shrink:0;width:155px;border-radius:11px;overflow:hidden;cursor:pointer;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);transition:all 0.2s;}
+  .yt-card:hover{transform:translateY(-2px);}
+  .yt-thumb{height:86px;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .yt-bg{position:absolute;inset:0;font-size:46px;display:flex;align-items:center;justify-content:center;opacity:0.12;filter:blur(2px);}
+  .yt-grad{position:absolute;inset:0;}
+  .yt-play{width:28px;height:28px;background:rgba(255,255,255,0.9);border-radius:50%;display:flex;align-items:center;justify-content:center;position:relative;z-index:1;box-shadow:0 2px 12px rgba(0,0,0,0.4);}
+  .yt-play::after{content:'▶';font-size:8px;color:#111;margin-left:2px;}
+  .yt-info{padding:7px 9px;}
+  .yt-title{font-size:10px;font-weight:600;color:rgba(255,255,255,0.72);line-height:1.35;margin-bottom:3px;}
+  .yt-ch{font-size:9px;color:rgba(255,255,255,0.24);}
+
+  /* Venue grid — same item-card shell */
+  .venue-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:24px;}
+
+  .footer{padding:11px 28px 15px;border-top:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:rgba(6,9,15,0.75);backdrop-filter:blur(12px);}
+  .btn-skip{font-size:12px;color:rgba(255,255,255,0.25);background:none;border:none;cursor:pointer;font-family:inherit;font-weight:500;}
+  .sel-count{font-size:11px;color:rgba(255,255,255,0.28);}
+  .sel-count b{color:#00d4aa;font-weight:800;}
+  .btn-go{padding:11px 28px;background:linear-gradient(135deg,#00d4aa,#00a87e);border:none;border-radius:11px;font-size:13px;font-weight:800;color:#06090f;cursor:pointer;font-family:inherit;letter-spacing:-0.01em;box-shadow:0 4px 22px rgba(0,212,170,0.28),0 1px 0 rgba(255,255,255,0.15) inset;transition:all 0.2s;}
+  .btn-go:hover{transform:translateY(-1px);}
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <div class="nav-logo"><div class="logo-mark">W</div><span class="logo-text">WanderZenAI</span></div>
+  <span class="step-badge">Step 2 of 6</span>
+</div>
+<div class="progress-bar">
+  <div class="seg done"></div><div class="seg active"></div>
+  <div class="seg"></div><div class="seg"></div><div class="seg"></div><div class="seg"></div>
+</div>
+
+<div class="layout">
+
+  <!-- ═══ LEFT: AI PICKS ═══ -->
+  <div class="left">
+    <div class="left-head">
+      <div class="eyebrow">Your journey awaits</div>
+      <div class="headline">What makes<br>you <em>come alive?</em></div>
+      <div class="dest-pill"><div class="dot"></div>Munich · 5 days · May 31</div>
+    </div>
+    <div class="chips">
+      <span class="chip chip-t">☀️ 18–24°C</span>
+      <span class="chip chip-y">👥 Moderate</span>
+      <span class="chip chip-w">🗓️ May &amp; June best</span>
+    </div>
+    <div class="picks-label">
+      <span class="picks-label-text">✦ Curated for you</span>
+      <div class="picks-label-line"></div>
+    </div>
+    <div class="picks-scroll">
+
+      <!-- PICK 1: Added to Day 2 -->
+      <div class="item-card added" id="lp-garden">
+        <div class="item-header" onclick="toggleCard('lp-garden')">
+          <div class="item-ico">🌿</div>
+          <div class="item-txt"><div class="item-name">English Garden</div><div class="item-sub">Urban oasis · 3.7km trails</div></div>
+          <div class="item-right">
+            <span class="day-badge">Day 2</span>
+            <button class="add-btn done" onclick="event.stopPropagation()">✓</button>
+            <div class="chevron">▾</div>
+          </div>
+        </div>
+        <div class="item-detail">
+          <div class="detail-body">
+            <div class="detail-desc">One of Europe's largest urban parks — 3.7km of trails, a Japanese tea house, and river swimming spots with zero tourist crowds on weekday mornings.</div>
+            <div class="detail-tags"><span class="dtag">🌳 Nature</span><span class="dtag">🚶 Walking</span><span class="dtag">Free entry</span></div>
+            <div class="day-list-section">
+              <div class="day-list-header">Scheduled for</div>
+              <div class="day-list">
+                <div class="day-row" onclick="pickDay('lp-garden',this,'Day 1')"><div><span class="day-num">Day 1</span></div><div class="day-date">Wed 31 May</div><span class="day-tick">✓</span></div>
+                <div class="day-row chosen" onclick="pickDay('lp-garden',this,'Day 2')"><div><span class="day-num">Day 2</span></div><div class="day-date">Thu 1 Jun</div><span class="day-tick">✓</span></div>
+                <div class="day-row" onclick="pickDay('lp-garden',this,'Day 3')"><div><span class="day-num">Day 3</span></div><div class="day-date">Fri 2 Jun</div><span class="day-tick">✓</span></div>
+                <div class="day-row" onclick="pickDay('lp-garden',this,'Day 4')"><div><span class="day-num">Day 4</span></div><div class="day-date">Sat 3 Jun</div><span class="day-tick">✓</span></div>
+                <div class="day-row" onclick="pickDay('lp-garden',this,'Day 5')"><div><span class="day-num">Day 5</span></div><div class="day-date">Sun 4 Jun</div><span class="day-tick">✓</span></div>
+              </div>
+              <div class="added-confirm">
+                <div class="added-confirm-text">✓ Added to <span class="day-badge" style="margin-left:2px;" id="lp-garden-tag">Day 2</span></div>
+                <button class="change-link" onclick="switchToList('lp-garden')">Change day</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PICK 2: Open — day list visible, Day 3 pre-highlighted -->
+      <div class="item-card picking" id="lp-palace">
+        <div class="item-header" onclick="toggleCard('lp-palace')">
+          <div class="item-ico">🏛️</div>
+          <div class="item-txt"><div class="item-name">Nymphenburg Palace</div><div class="item-sub">Baroque gardens at your pace</div></div>
+          <div class="item-right">
+            <button class="add-btn" onclick="event.stopPropagation()">+</button>
+            <div class="chevron">▾</div>
+          </div>
+        </div>
+        <div class="item-detail">
+          <div class="detail-body">
+            <div class="detail-desc">Stunning baroque palace with 200 hectares of gardens. Best visited on a weekday morning when light is perfect and crowds are thin.</div>
+            <div class="detail-tags"><span class="dtag">🏛️ Culture</span><span class="dtag">📸 Photography</span><span class="dtag">Half day</span></div>
+            <div class="day-list-section">
+              <div class="day-list-header">Which day will you visit?</div>
+              <div class="day-list">
+                <div class="day-row" onclick="pickDay('lp-palace',this,'Day 1')"><div><span class="day-num">Day 1</span></div><div class="day-date">Wed 31 May</div><span class="day-tick">✓</span></div>
+                <div class="day-row" onclick="pickDay('lp-palace',this,'Day 2')"><div><span class="day-num">Day 2</span></div><div class="day-date">Thu 1 Jun</div><span class="day-tick">✓</span></div>
+                <div class="day-row chosen" onclick="pickDay('lp-palace',this,'Day 3')"><div><span class="day-num">Day 3</span></div><div class="day-date">Fri 2 Jun</div><span class="day-tick">✓</span></div>
+                <div class="day-row" onclick="pickDay('lp-palace',this,'Day 4')"><div><span class="day-num">Day 4</span></div><div class="day-date">Sat 3 Jun</div><span class="day-tick">✓</span></div>
+                <div class="day-row" onclick="pickDay('lp-palace',this,'Day 5')"><div><span class="day-num">Day 5</span></div><div class="day-date">Sun 4 Jun</div><span class="day-tick">✓</span></div>
+              </div>
+              <div class="added-confirm"><div class="added-confirm-text">✓ Added to <span class="day-badge" style="margin-left:2px;" id="lp-palace-tag">—</span></div><button class="change-link" onclick="switchToList('lp-palace')">Change day</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PICK 3: Collapsed -->
+      <div class="item-card" id="lp-bier">
+        <div class="item-header" onclick="openCard('lp-bier')">
+          <div class="item-ico">🍺</div>
+          <div class="item-txt"><div class="item-name">Biergarten Culture</div><div class="item-sub">Augustiner · local haunts</div></div>
+          <div class="item-right"><button class="add-btn" onclick="event.stopPropagation();openCard('lp-bier')">+</button><div class="chevron">▾</div></div>
+        </div>
+        <div class="item-detail">
+          <div class="detail-body">
+            <div class="detail-desc">Augustiner am Dom and Hirschgarten are where locals go. Order a Mass (1L) and a Brez'n late afternoon on a sunny day.</div>
+            <div class="detail-tags"><span class="dtag">🍺 Food &amp; Drink</span><span class="dtag">🌇 Evening</span></div>
+            <div class="day-list-section">
+              <div class="day-list-header">Which day will you go?</div>
+              <div class="day-list">
+                <div class="day-row" onclick="pickDay('lp-bier',this,'Day 1')"><div><span class="day-num">Day 1</span></div><div class="day-date">Wed 31 May</div><span class="day-tick">✓</span></div>
+                <div class="day-row" onclick="pickDay('lp-bier',this,'Day 2')"><div><span class="day-num">Day 2</span></div><div class="day-date">Thu 1 Jun</div><span class="day-tick">✓</span></div>
+                <div class="day-row" onclick="pickDay('lp-bier',this,'Day 3')"><div><span class="day-num">Day 3</span></div><div class="day-date">Fri 2 Jun</div><span class="day-tick">✓</span></div>
+                <div class="day-row" onclick="pickDay('lp-bier',this,'Day 4')"><div><span class="day-num">Day 4</span></div><div class="day-date">Sat 3 Jun</div><span class="day-tick">✓</span></div>
+                <div class="day-row" onclick="pickDay('lp-bier',this,'Day 5')"><div><span class="day-num">Day 5</span></div><div class="day-date">Sun 4 Jun</div><span class="day-tick">✓</span></div>
+              </div>
+              <div class="added-confirm"><div class="added-confirm-text">✓ Added to <span class="day-badge" style="margin-left:2px;" id="lp-bier-tag">—</span></div><button class="change-link" onclick="switchToList('lp-bier')">Change day</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PICK 4 & 5: Collapsed -->
+      <div class="item-card" id="lp-spa">
+        <div class="item-header" onclick="openCard('lp-spa')">
+          <div class="item-ico">♨️</div>
+          <div class="item-txt"><div class="item-name">SPA Therme Erding</div><div class="item-sub">Europe's largest thermal spa</div></div>
+          <div class="item-right"><button class="add-btn" onclick="event.stopPropagation();openCard('lp-spa')">+</button><div class="chevron">▾</div></div>
+        </div>
+        <div class="item-detail"><div class="detail-body"><div class="detail-desc">25 minutes by S-Bahn. 35 pools, thermal baths, wave riding. Book the VitalOasis adults-only zone.</div><div class="detail-tags"><span class="dtag">🧘 Wellness</span><span class="dtag">🚂 S-Bahn direct</span></div><div class="day-list-section"><div class="day-list-header">Which day?</div><div class="day-list"><div class="day-row" onclick="pickDay('lp-spa',this,'Day 1')"><div><span class="day-num">Day 1</span></div><div class="day-date">Wed 31 May</div><span class="day-tick">✓</span></div><div class="day-row" onclick="pickDay('lp-spa',this,'Day 2')"><div><span class="day-num">Day 2</span></div><div class="day-date">Thu 1 Jun</div><span class="day-tick">✓</span></div><div class="day-row" onclick="pickDay('lp-spa',this,'Day 3')"><div><span class="day-num">Day 3</span></div><div class="day-date">Fri 2 Jun</div><span class="day-tick">✓</span></div><div class="day-row" onclick="pickDay('lp-spa',this,'Day 4')"><div><span class="day-num">Day 4</span></div><div class="day-date">Sat 3 Jun</div><span class="day-tick">✓</span></div><div class="day-row" onclick="pickDay('lp-spa',this,'Day 5')"><div><span class="day-num">Day 5</span></div><div class="day-date">Sun 4 Jun</div><span class="day-tick">✓</span></div></div><div class="added-confirm"><div class="added-confirm-text">✓ Added to <span class="day-badge" style="margin-left:2px;" id="lp-spa-tag">—</span></div><button class="change-link" onclick="switchToList('lp-spa')">Change day</button></div></div></div></div></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══ RIGHT ═══ -->
+  <div class="right">
+    <div class="right-body">
+      <div class="sec-row"><div class="sec-lbl">Explore by category</div><div class="sec-line"></div></div>
+      <div class="act-grid">
+        <div class="act-card act-hiking sel"><span class="act-ico">🥾</span><div class="act-lbl">Hiking</div></div>
+        <div class="act-card act-food"><span class="act-ico">🍜</span><div class="act-lbl">Food</div></div>
+        <div class="act-card act-views"><span class="act-ico">⛰️</span><div class="act-lbl">Views</div></div>
+        <div class="act-card act-culture"><span class="act-ico">🏛️</span><div class="act-lbl">Culture</div></div>
+        <div class="act-card act-nature"><span class="act-ico">🌳</span><div class="act-lbl">Nature</div></div>
+        <div class="act-card act-night"><span class="act-ico">🎵</span><div class="act-lbl">Nightlife</div></div>
+        <div class="act-card act-well"><span class="act-ico">🧘</span><div class="act-lbl">Wellness</div></div>
+        <div class="act-card act-custom"><span class="act-ico">✨</span><div class="act-lbl">Add own</div></div>
+      </div>
+
+      <div class="yt-section">
+        <div class="sec-row"><div class="sec-lbl">📺 Hiking — watch before you go</div><div class="sec-line"></div></div>
+        <div class="yt-row">
+          <div class="yt-card"><div class="yt-thumb"><div class="yt-grad" style="background:linear-gradient(135deg,rgba(34,197,94,0.25),rgba(6,60,30,0.7))"></div><div class="yt-bg">🥾</div><div class="yt-play"></div></div><div class="yt-info"><div class="yt-title">Zugspitze — Germany's highest peak trail</div><div class="yt-ch">Bavaria Outdoors</div></div></div>
+          <div class="yt-card"><div class="yt-thumb"><div class="yt-grad" style="background:linear-gradient(135deg,rgba(52,211,153,0.2),rgba(6,50,40,0.75))"></div><div class="yt-bg">🌲</div><div class="yt-play"></div></div><div class="yt-info"><div class="yt-title">English Garden hidden trails</div><div class="yt-ch">Munich Walks</div></div></div>
+          <div class="yt-card"><div class="yt-thumb"><div class="yt-grad" style="background:linear-gradient(135deg,rgba(96,165,250,0.2),rgba(6,20,60,0.75))"></div><div class="yt-bg">🏔️</div><div class="yt-play"></div></div><div class="yt-info"><div class="yt-title">Day hike from Munich — no car</div><div class="yt-ch">Slow Trails</div></div></div>
+          <div class="yt-card"><div class="yt-thumb"><div class="yt-grad" style="background:linear-gradient(135deg,rgba(251,146,60,0.2),rgba(60,20,6,0.75))"></div><div class="yt-bg">🌄</div><div class="yt-play"></div></div><div class="yt-info"><div class="yt-title">Isar valley sunrise hike</div><div class="yt-ch">Alpine Wanderer</div></div></div>
+        </div>
+      </div>
+
+      <!-- VENUES — same item-card, same + button, same day list -->
+      <div class="sec-row"><div class="sec-lbl">📍 Venues near Munich</div><div class="sec-line"></div></div>
+      <div class="venue-grid">
+
+        <!-- Venue added to Day 1 -->
+        <div class="item-card added" id="rp-zugspitze">
+          <div class="item-header" onclick="toggleCard('rp-zugspitze')">
+            <div class="item-ico" style="font-size:16px;">⛰️</div>
+            <div class="item-txt"><div class="item-name">Zugspitze Trail</div><div class="item-sub">Bavaria · 2962m summit</div></div>
+            <div class="item-right">
+              <span class="day-badge">Day 1</span>
+              <div class="v-rating" style="font-size:9px;margin-right:-4px;">⭐4.9</div>
+              <button class="add-btn done" onclick="event.stopPropagation()">✓</button>
+            </div>
+          </div>
+          <div class="item-detail">
+            <div class="detail-body">
+              <div class="detail-desc">Bavaria's highest peak. Summit cable car or full trail — both reward with panoramic Alps views. Book cable car in advance for weekends.</div>
+              <div class="detail-tags"><span class="dtag">🥾 Hiking</span><span class="dtag">🚡 Cable car</span></div>
+              <div class="day-list-section">
+                <div class="day-list-header">Scheduled for</div>
+                <div class="day-list">
+                  <div class="day-row chosen" onclick="pickDay('rp-zugspitze',this,'Day 1')"><div><span class="day-num">Day 1</span></div><div class="day-date">Wed 31 May</div><span class="day-tick">✓</span></div>
+                  <div class="day-row" onclick="pickDay('rp-zugspitze',this,'Day 2')"><div><span class="day-num">Day 2</span></div><div class="day-date">Thu 1 Jun</div><span class="day-tick">✓</span></div>
+                  <div class="day-row" onclick="pickDay('rp-zugspitze',this,'Day 3')"><div><span class="day-num">Day 3</span></div><div class="day-date">Fri 2 Jun</div><span class="day-tick">✓</span></div>
+                  <div class="day-row" onclick="pickDay('rp-zugspitze',this,'Day 4')"><div><span class="day-num">Day 4</span></div><div class="day-date">Sat 3 Jun</div><span class="day-tick">✓</span></div>
+                  <div class="day-row" onclick="pickDay('rp-zugspitze',this,'Day 5')"><div><span class="day-num">Day 5</span></div><div class="day-date">Sun 4 Jun</div><span class="day-tick">✓</span></div>
+                </div>
+                <div class="added-confirm"><div class="added-confirm-text">✓ Added to <span class="day-badge" style="margin-left:2px;" id="rp-zugspitze-tag">Day 1</span></div><button class="change-link" onclick="switchToList('rp-zugspitze')">Change day</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Venue open — day list shown -->
+        <div class="item-card picking" id="rp-isar">
+          <div class="item-header" onclick="toggleCard('rp-isar')">
+            <div class="item-ico" style="font-size:16px;">🏞️</div>
+            <div class="item-txt"><div class="item-name">Isar River Walk</div><div class="item-sub">Riverside · 12km trail</div></div>
+            <div class="item-right">
+              <div class="v-rating" style="font-size:9px;margin-right:-4px;">⭐4.5</div>
+              <button class="add-btn" onclick="event.stopPropagation()">+</button>
+            </div>
+          </div>
+          <div class="item-detail">
+            <div class="detail-body">
+              <div class="detail-desc">Peaceful riverside path running 12km through central Munich. Stop for a swim at Flaucher — the city's favourite local bathing spot.</div>
+              <div class="detail-tags"><span class="dtag">🚶 Walking</span><span class="dtag">🏊 Swimming</span></div>
+              <div class="day-list-section">
+                <div class="day-list-header">Which day will you go?</div>
+                <div class="day-list">
+                  <div class="day-row" onclick="pickDay('rp-isar',this,'Day 1')"><div><span class="day-num">Day 1</span></div><div class="day-date">Wed 31 May</div><span class="day-tick">✓</span></div>
+                  <div class="day-row" onclick="pickDay('rp-isar',this,'Day 2')"><div><span class="day-num">Day 2</span></div><div class="day-date">Thu 1 Jun</div><span class="day-tick">✓</span></div>
+                  <div class="day-row chosen" onclick="pickDay('rp-isar',this,'Day 3')"><div><span class="day-num">Day 3</span></div><div class="day-date">Fri 2 Jun</div><span class="day-tick">✓</span></div>
+                  <div class="day-row" onclick="pickDay('rp-isar',this,'Day 4')"><div><span class="day-num">Day 4</span></div><div class="day-date">Sat 3 Jun</div><span class="day-tick">✓</span></div>
+                  <div class="day-row" onclick="pickDay('rp-isar',this,'Day 5')"><div><span class="day-num">Day 5</span></div><div class="day-date">Sun 4 Jun</div><span class="day-tick">✓</span></div>
+                </div>
+                <div class="added-confirm"><div class="added-confirm-text">✓ Added to <span class="day-badge" style="margin-left:2px;" id="rp-isar-tag">—</span></div><button class="change-link" onclick="switchToList('rp-isar')">Change day</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Venue collapsed -->
+        <div class="item-card" id="rp-olympia">
+          <div class="item-header" onclick="openCard('rp-olympia')">
+            <div class="item-ico" style="font-size:16px;">🏟️</div>
+            <div class="item-txt"><div class="item-name">Olympia Park</div><div class="item-sub">North Munich · Paved paths</div></div>
+            <div class="item-right"><div class="v-rating" style="font-size:9px;margin-right:-4px;">⭐4.4</div><button class="add-btn" onclick="event.stopPropagation();openCard('rp-olympia')">+</button></div>
+          </div>
+          <div class="item-detail"><div class="detail-body"><div class="detail-desc">Park and stadium complex from the 1972 Olympics. Great for morning runs, cycling, and the lake walkway.</div><div class="detail-tags"><span class="dtag">🌳 Nature</span><span class="dtag">🏃 Running</span></div><div class="day-list-section"><div class="day-list-header">Which day?</div><div class="day-list"><div class="day-row" onclick="pickDay('rp-olympia',this,'Day 1')"><div><span class="day-num">Day 1</span></div><div class="day-date">Wed 31 May</div><span class="day-tick">✓</span></div><div class="day-row" onclick="pickDay('rp-olympia',this,'Day 2')"><div><span class="day-num">Day 2</span></div><div class="day-date">Thu 1 Jun</div><span class="day-tick">✓</span></div><div class="day-row" onclick="pickDay('rp-olympia',this,'Day 3')"><div><span class="day-num">Day 3</span></div><div class="day-date">Fri 2 Jun</div><span class="day-tick">✓</span></div><div class="day-row" onclick="pickDay('rp-olympia',this,'Day 4')"><div><span class="day-num">Day 4</span></div><div class="day-date">Sat 3 Jun</div><span class="day-tick">✓</span></div><div class="day-row" onclick="pickDay('rp-olympia',this,'Day 5')"><div><span class="day-num">Day 5</span></div><div class="day-date">Sun 4 Jun</div><span class="day-tick">✓</span></div></div><div class="added-confirm"><div class="added-confirm-text">✓ Added to <span class="day-badge" style="margin-left:2px;" id="rp-olympia-tag">—</span></div><button class="change-link" onclick="switchToList('rp-olympia')">Change day</button></div></div></div></div>
+        </div>
+
+        <div class="item-card" id="rp-schleiss">
+          <div class="item-header" onclick="openCard('rp-schleiss')">
+            <div class="item-ico" style="font-size:16px;">🏰</div>
+            <div class="item-txt"><div class="item-name">Schleißheim Palace</div><div class="item-sub">North suburb · Palace gardens</div></div>
+            <div class="item-right"><div class="v-rating" style="font-size:9px;margin-right:-4px;">⭐4.3</div><button class="add-btn" onclick="event.stopPropagation();openCard('rp-schleiss')">+</button></div>
+          </div>
+          <div class="item-detail"><div class="detail-body"><div class="detail-desc">Baroque palace with French formal gardens — often overlooked by tourists, peaceful on any weekday.</div><div class="detail-tags"><span class="dtag">🏛️ Culture</span><span class="dtag">🌿 Gardens</span></div><div class="day-list-section"><div class="day-list-header">Which day?</div><div class="day-list"><div class="day-row" onclick="pickDay('rp-schleiss',this,'Day 1')"><div><span class="day-num">Day 1</span></div><div class="day-date">Wed 31 May</div><span class="day-tick">✓</span></div><div class="day-row" onclick="pickDay('rp-schleiss',this,'Day 2')"><div><span class="day-num">Day 2</span></div><div class="day-date">Thu 1 Jun</div><span class="day-tick">✓</span></div><div class="day-row" onclick="pickDay('rp-schleiss',this,'Day 3')"><div><span class="day-num">Day 3</span></div><div class="day-date">Fri 2 Jun</div><span class="day-tick">✓</span></div><div class="day-row" onclick="pickDay('rp-schleiss',this,'Day 4')"><div><span class="day-num">Day 4</span></div><div class="day-date">Sat 3 Jun</div><span class="day-tick">✓</span></div><div class="day-row" onclick="pickDay('rp-schleiss',this,'Day 5')"><div><span class="day-num">Day 5</span></div><div class="day-date">Sun 4 Jun</div><span class="day-tick">✓</span></div></div><div class="added-confirm"><div class="added-confirm-text">✓ Added to <span class="day-badge" style="margin-left:2px;" id="rp-schleiss-tag">—</span></div><button class="change-link" onclick="switchToList('rp-schleiss')">Change day</button></div></div></div></div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="footer">
+      <button class="btn-skip">Skip this step</button>
+      <div class="sel-count"><b>3</b> placed · <b>2</b> days scheduled</div>
+      <button class="btn-go">Continue →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var DAYS = ['Day 1','Day 2','Day 3','Day 4','Day 5'];
+var DATES = ['Wed 31 May','Thu 1 Jun','Fri 2 Jun','Sat 3 Jun','Sun 4 Jun'];
+
+function toggleCard(id) {
+  var el = document.getElementById(id);
+  if (el.classList.contains('added')) { el.classList.toggle('picking'); return; }
+  el.classList.toggle('picking');
+}
+function openCard(id) {
+  document.getElementById(id).classList.add('picking');
+}
+
+function pickDay(cardId, row, day) {
+  var card = document.getElementById(cardId);
+  var list = row.closest('.day-list');
+  list.querySelectorAll('.day-row').forEach(function(r){ r.classList.remove('chosen'); });
+  row.classList.add('chosen');
+
+  // Update badge in header
+  var badge = card.querySelector('.item-right .day-badge');
+  if (!badge) {
+    badge = document.createElement('span');
+    badge.className = 'day-badge';
+    var addBtn = card.querySelector('.add-btn');
+    card.querySelector('.item-right').insertBefore(badge, addBtn);
+  }
+  badge.textContent = day;
+
+  // Update confirm tag
+  var tag = document.getElementById(cardId + '-tag');
+  if (tag) tag.textContent = day;
+
+  // Mark as added
+  card.classList.add('added');
+  var addBtn = card.querySelector('.add-btn');
+  addBtn.className = 'add-btn done';
+  addBtn.textContent = '✓';
+}
+
+function switchToList(cardId) {
+  var card = document.getElementById(cardId);
+  card.classList.remove('added');
+  card.classList.add('picking');
+}
+</script>
+</body>
+</html>

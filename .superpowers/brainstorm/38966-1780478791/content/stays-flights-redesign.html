@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stays & Flights Redesign</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #080c18; color: #fff; font-family: 'Plus Jakarta Sans', sans-serif; padding: 28px 16px 80px; }
+h1 { font-family: 'Fraunces', serif; font-size: clamp(1.4rem,4vw,2rem); font-weight: 700; letter-spacing: -0.03em; margin-bottom: 6px; }
+.sub { font-size: 13px; color: rgba(255,255,255,0.4); margin-bottom: 36px; line-height: 1.6; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; max-width: 1100px; margin-bottom: 48px; }
+.design-card { border-radius: 16px; overflow: hidden; cursor: pointer; border: 2px solid rgba(255,255,255,0.08); transition: all 0.25s; background: #0d1628; }
+.design-card:hover { transform: translateY(-3px); border-color: rgba(0,212,170,0.3); }
+.design-card.selected { border-color: #00d4aa; box-shadow: 0 0 0 3px rgba(0,212,170,0.15); }
+.design-preview { padding: 16px; background: #0a0f1e; min-height: 500px; }
+.design-info { padding: 14px 16px; background: #0d1628; border-top: 1px solid rgba(255,255,255,0.06); }
+.design-name { font-size: 14px; font-weight: 800; color: #fff; margin-bottom: 4px; }
+.design-desc { font-size: 12px; color: rgba(255,255,255,0.45); line-height: 1.5; }
+.rec-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; background: #00d4aa; color: #0a0f1e; font-size: 9px; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; }
+
+/* ── Design A: Destination Cards ── */
+.da-header { text-align: center; padding: 12px 0 16px; }
+.da-title { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 2px; }
+.da-sub { font-size: 11px; color: rgba(255,255,255,0.4); }
+
+.da-route-card { background: linear-gradient(135deg, rgba(96,165,250,0.08), rgba(59,130,246,0.04)); border: 1px solid rgba(96,165,250,0.2); border-radius: 14px; padding: 16px; margin-bottom: 12px; }
+.da-route { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.da-city { text-align: center; }
+.da-city-code { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 700; color: #fff; letter-spacing: 0.05em; }
+.da-city-name { font-size: 9px; color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 2px; }
+.da-arc { flex: 1; display: flex; align-items: center; justify-content: center; gap: 4px; padding: 0 8px; position: relative; }
+.da-arc-line { flex: 1; height: 1px; background: linear-gradient(90deg, rgba(96,165,250,0.4), rgba(96,165,250,0.8), rgba(96,165,250,0.4)); }
+.da-plane { font-size: 14px; }
+.da-meta { display: flex; gap: 8px; flex-wrap: wrap; }
+.da-badge { padding: '3px 8px'; border-radius: 20px; font-size: 10px; font-weight: 700; }
+.da-price { font-size: 18px; font-weight: 800; color: '#60a5fa'; margin-bottom: 10px; }
+.da-tip { background: rgba(255,217,61,0.08); border: 1px solid rgba(255,217,61,0.2); border-radius: 8px; padding: 7px 10px; font-size: 10px; color: #ffd93d; margin-bottom: 10px; }
+.da-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.da-btn-primary { padding: 10px; border-radius: 10px; font-size: 11px; font-weight: 800; color: #fff; text-align: center; background: linear-gradient(135deg, #60a5fa, #3b82f6); border: none; cursor: pointer; }
+.da-btn-secondary { padding: 10px; border-radius: 10px; font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.7); text-align: center; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); cursor: pointer; }
+
+.da-stays { margin-top: 4px; }
+.da-stays-header { display: flex; gap: 4px; margin-bottom: 10px; overflow: hidden; }
+.da-type-pill { padding: '6px 12px'; border-radius: 20px; font-size: 10px; font-weight: 700; }
+.da-photo-card { border-radius: 12px; overflow: hidden; margin-bottom: 8px; background: #141d33; border: 1px solid rgba(255,255,255,0.07); }
+.da-photo { height: 90px; background: linear-gradient(135deg, #1a2540, rgba(0,212,170,0.3)); position: relative; display: flex; align-items: flex-end; padding: 8px; }
+.da-photo-label { font-size: 12px; font-weight: 700; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.5); }
+.da-photo-price { font-size: 10px; color: rgba(255,255,255,0.7); margin-top: 1px; }
+.da-card-body { padding: 8px 10px; display: flex; justify-content: space-between; align-items: center; }
+.da-card-desc { font-size: 9px; color: rgba(255,255,255,0.4); max-width: 140px; }
+.da-card-btns { display: flex; gap: 5px; }
+.da-mini-btn { padding: '4px 8px'; border-radius: 6px; font-size: 9px; font-weight: 700; }
+
+/* Budget bar */
+.da-budget { margin-top: 12px; }
+.da-budget-label { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.4); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.1em; }
+.da-budget-bar-bg { height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; margin-bottom: 4px; }
+.da-budget-bar-fill { height: 100%; border-radius: 3px; }
+
+/* ── Design B: Map-inspired ── */
+.db-hero { background: linear-gradient(135deg, rgba(96,165,250,0.12), rgba(59,130,246,0.06)); border: 1px solid rgba(96,165,250,0.2); border-radius: 16px; padding: 18px; margin-bottom: 12px; position: relative; overflow: hidden; }
+.db-hero::before { content: ''; position: absolute; inset: 0; background: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2360a5fa' fill-opacity='0.03'%3E%3Cpath d='M0 38.59l2.83-2.83 1.41 1.41L1.41 40H0v-1.41zM0 20.83l2.83-2.83 1.41 1.41L1.41 22H0v-1.17zM0 3.06l2.83-2.83 1.41 1.41L1.41 4.24H0V3.06z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"); }
+.db-from-to { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; position: relative; z-index: 1; }
+.db-city-box { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 8px 12px; flex: 1; }
+.db-city-label { font-size: 8px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 2px; }
+.db-city-name { font-size: 13px; font-weight: 800; color: '#fff'; }
+.db-arrow { font-size: 16px; color: '#60a5fa'; flex-shrink: 0; }
+.db-price-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 12px; }
+.db-price-big { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 700; color: '#60a5fa'; line-height: 1; }
+.db-price-sub { font-size: 11px; color: rgba(255,255,255,0.4); }
+.db-ctas { display: flex; flex-direction: column; gap: 6px; }
+.db-cta-main { padding: 11px 16px; background: linear-gradient(135deg,#60a5fa,#3b82f6); border-radius: 10px; font-size: 12px; font-weight: 800; color: '#fff'; text-align: center; display: flex; align-items: center; justify-content: space-between; }
+.db-cta-sec { padding: 10px 16px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.65); text-align: center; display: flex; align-items: center; justify-content: space-between; }
+
+/* stays grid */
+.db-stays-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+.db-stay-card { border-radius: 12px; overflow: hidden; background: #141d33; }
+.db-stay-img { height: 80px; display: flex; align-items: flex-end; padding: 6px 8px; position: relative; }
+.db-stay-price { font-size: 12px; font-weight: 800; color: '#fff'; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+.db-stay-info { padding: 7px 8px; }
+.db-stay-name { font-size: 11px; font-weight: 700; color: '#fff'; margin-bottom: 2px; }
+.db-stay-sub { font-size: 9px; color: rgba(255,255,255,0.4); margin-bottom: 5px; }
+.db-stay-btns { display: flex; gap: 4px; }
+
+/* pill types */
+.pill-row { display: flex; gap: 5px; margin-bottom: 12px; flex-wrap: wrap; }
+.p { display: inline-flex; padding: 5px 12px; border-radius: 20px; font-size: 10px; font-weight: 700; cursor: pointer; }
+.p-active { background: rgba(0,212,170,0.15); border: 1px solid rgba(0,212,170,0.35); color: #00d4aa; }
+.p-inactive { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.5); }
+
+/* mini links */
+.mini-link { display: inline-block; padding: 4px 9px; border-radius: 6px; font-size: 9px; font-weight: 800; text-decoration: none; }
+.ml-air { background: linear-gradient(135deg, rgba(255,90,60,0.8), rgba(255,56,92,0.8)); color: #fff; }
+.ml-bk { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); }
+
+/* selection */
+.selected-check { display: none; position: absolute; top: 10px; left: 10px; width: 22px; height: 22px; border-radius: 50%; background: #00d4aa; align-items: center; justify-content: center; font-size: 11px; color: #0a0f1e; font-weight: 800; z-index: 10; }
+.design-card.selected .selected-check { display: flex; }
+#pick-note { margin-top: 20px; padding: 14px 18px; background: rgba(0,212,170,0.06); border: 1px solid rgba(0,212,170,0.15); border-radius: 10px; font-size: 13px; color: rgba(255,255,255,0.6); display: none; max-width: 700px; }
+</style>
+</head>
+<body>
+<div style="max-width:1100px;margin:0 auto;">
+
+<h1>Stays & Flights — Modern UI</h1>
+<p class="sub">Two design directions for the Stays & Flights tab. Click one to select.</p>
+
+<div class="grid">
+
+  <!-- Design A: Cards with visual route -->
+  <div class="design-card" id="card-a" onclick="pick('a')" style="position:relative">
+    <div class="selected-check">✓</div>
+    <div class="rec-badge" style="position:absolute;top:10px;right:10px;z-index:5;">★ Recommended</div>
+    <div class="design-preview">
+
+      <!-- Flights card -->
+      <div class="da-route-card">
+        <div class="da-route">
+          <div class="da-city">
+            <div class="da-city-code">BOM</div>
+            <div class="da-city-name">Mumbai</div>
+          </div>
+          <div class="da-arc">
+            <div class="da-arc-line"></div>
+            <span class="da-plane">✈</span>
+            <div class="da-arc-line"></div>
+          </div>
+          <div class="da-city">
+            <div class="da-city-code">DPS</div>
+            <div class="da-city-name">Bali</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px;">
+          <span style="font-family:'Fraunces',serif;font-size:26px;font-weight:700;color:#60a5fa;line-height:1;">₹12K–₹18K</span>
+          <span style="font-size:11px;color:rgba(255,255,255,0.4);">return est.</span>
+        </div>
+        <div style="font-size:10px;color:rgba(255,255,255,0.35);margin-bottom:10px;">Jun 28 · 2 stops · ~5h</div>
+        <div style="background:rgba(255,217,61,0.08);border:1px solid rgba(255,217,61,0.2);border-radius:7px;padding:6px 9px;font-size:10px;color:#ffd93d;margin-bottom:10px;">📅 Cheaper in April & May — save up to 30%</div>
+        <div class="da-btns">
+          <div class="da-btn-primary">Google Flights →</div>
+          <div class="da-btn-secondary">Skyscanner →</div>
+        </div>
+      </div>
+
+      <!-- Accommodation -->
+      <div style="font-size:9px;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:8px;">Where to stay</div>
+      <div class="pill-row">
+        <span class="p p-inactive">🏨 Hotels</span>
+        <span class="p p-active">✨ Surprise me</span>
+        <span class="p p-inactive">🤝 Homestays</span>
+      </div>
+
+      <!-- Photo card -->
+      <div class="da-photo-card">
+        <div class="da-photo" style="background:linear-gradient(160deg,rgba(16,30,50,0.4),rgba(0,212,170,0.25)),url('https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=300&h=90&fit=crop&auto=format') center/cover;">
+          <div>
+            <div class="da-photo-label">Eco-lodge · Ubud</div>
+            <div class="da-photo-price">₹3,200 – ₹6,800/night</div>
+          </div>
+        </div>
+        <div class="da-card-body">
+          <div class="da-card-desc">Jungle retreat with rice terrace views — slow travel perfect</div>
+          <div class="da-card-btns">
+            <span class="mini-link ml-air">Airbnb</span>
+            <span class="mini-link ml-bk">Booking</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Budget bar -->
+      <div style="background:rgba(0,212,170,0.06);border:1px solid rgba(0,212,170,0.2);border-radius:10px;padding:10px 12px;margin-top:8px;">
+        <div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:6px;">
+          <span style="font-weight:700;color:#00d4aa;">✅ Budget looks good</span>
+          <span style="color:rgba(255,255,255,0.4);">₹57K of ₹80K</span>
+        </div>
+        <div style="height:5px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;">
+          <div style="width:71%;height:100%;background:linear-gradient(90deg,#00d4aa,#00a87e);border-radius:3px;"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:9px;color:rgba(255,255,255,0.3);margin-top:4px;">
+          <span>✈️ ₹15K · 🏡 ₹17K · 🎯 ₹25K</span>
+          <span>₹23K buffer</span>
+        </div>
+      </div>
+
+    </div>
+    <div class="design-info">
+      <div class="design-name">A — Route card + photo stays + budget bar</div>
+      <div class="design-desc">Visual airport code route (BOM → DPS), large price in Fraunces, pill type selector, photo cards for accommodation, linear budget health bar.</div>
+    </div>
+  </div>
+
+  <!-- Design B: Split hero layout -->
+  <div class="design-card" id="card-b" onclick="pick('b')" style="position:relative">
+    <div class="selected-check">✓</div>
+    <div class="design-preview">
+
+      <!-- Flight hero -->
+      <div class="db-hero">
+        <div style="font-size:8px;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;color:rgba(96,165,250,0.7);margin-bottom:10px;">Your flight</div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+          <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:8px 14px;flex:1;">
+            <div style="font-size:8px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:3px;">From</div>
+            <div style="font-size:14px;font-weight:800;color:#fff;">Mumbai</div>
+          </div>
+          <div style="font-size:18px;color:#60a5fa;">✈️</div>
+          <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:8px 14px;flex:1;">
+            <div style="font-size:8px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:3px;">To</div>
+            <div style="font-size:14px;font-weight:800;color:#fff;">Bali</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px;">
+          <span style="font-family:'Fraunces',serif;font-size:32px;font-weight:700;color:#60a5fa;line-height:1;">₹12K</span>
+          <span style="font-size:12px;color:rgba(255,255,255,0.4);">– ₹18,000 return est.</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div style="padding:11px 16px;background:linear-gradient(135deg,#60a5fa,#3b82f6);border-radius:10px;font-size:12px;font-weight:800;color:#fff;display:flex;align-items:center;justify-content:space-between;">
+            <span>Search on Google Flights</span><span>→</span>
+          </div>
+          <div style="padding:10px 16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:10px;font-size:12px;font-weight:700;color:rgba(255,255,255,0.65);display:flex;align-items:center;justify-content:space-between;">
+            <span>Search on Skyscanner</span><span>→</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stays -->
+      <div style="font-size:8px;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:8px;">Accommodation</div>
+      <div class="pill-row">
+        <span class="p p-active">✨ Surprise me</span>
+        <span class="p p-inactive">🏨 Hotels</span>
+        <span class="p p-inactive">🏠 Airbnbs</span>
+        <span class="p p-inactive">🤝 Stays</span>
+      </div>
+      <div class="db-stays-grid">
+        <div class="db-stay-card">
+          <div class="db-stay-img" style="background:linear-gradient(160deg,rgba(10,20,40,0.5),rgba(0,212,170,0.2)),url('https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=200&h=80&fit=crop&auto=format') center/cover;">
+            <div><div class="db-stay-price">₹3,200/night</div></div>
+          </div>
+          <div class="db-stay-info">
+            <div class="db-stay-name">Eco-lodge</div>
+            <div class="db-stay-sub">Ubud jungle · Nature match</div>
+            <div class="db-stay-btns">
+              <span class="mini-link ml-air">Airbnb →</span>
+              <span class="mini-link ml-bk">Book →</span>
+            </div>
+          </div>
+        </div>
+        <div class="db-stay-card">
+          <div class="db-stay-img" style="background:linear-gradient(160deg,rgba(10,20,40,0.5),rgba(167,139,250,0.2)),url('https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=200&h=80&fit=crop&auto=format') center/cover;">
+            <div><div class="db-stay-price">₹4,800/night</div></div>
+          </div>
+          <div class="db-stay-info">
+            <div class="db-stay-name">Boutique villa</div>
+            <div class="db-stay-sub">Seminyak · Beach access</div>
+            <div class="db-stay-btns">
+              <span class="mini-link ml-air">Airbnb →</span>
+              <span class="mini-link ml-bk">Book →</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Budget -->
+      <div style="background:rgba(0,212,170,0.06);border:1px solid rgba(0,212,170,0.18);border-radius:10px;padding:10px 12px;">
+        <div style="font-size:10px;font-weight:800;color:#00d4aa;margin-bottom:5px;">✅ Within budget</div>
+        <div style="height:5px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;margin-bottom:4px;">
+          <div style="width:71%;height:100%;background:linear-gradient(90deg,#00d4aa,#00916a);border-radius:3px;"></div>
+        </div>
+        <div style="font-size:9px;color:rgba(255,255,255,0.3);">Estimated ₹57K of ₹80K budget · ₹23K remaining</div>
+      </div>
+    </div>
+    <div class="design-info">
+      <div class="design-name">B — Split hero + 2-col photo grid</div>
+      <div class="design-desc">Larger flight hero with boxed From/To, big Fraunces price, full-width CTAs. Accommodation in a 2-column photo grid. Compact budget bar.</div>
+    </div>
+  </div>
+
+</div>
+
+<div id="pick-note">
+  You selected: <strong id="pick-text" style="color:#00d4aa;"></strong> — tell me in the terminal and I'll build it.
+</div>
+
+</div>
+<script>
+function pick(id) {
+  ['a','b'].forEach(n => document.getElementById('card-'+n).classList.remove('selected'));
+  document.getElementById('card-'+id).classList.add('selected');
+  const labels = { a: 'A — Route card + photo stays + budget bar', b: 'B — Split hero + 2-col photo grid' };
+  document.getElementById('pick-text').textContent = labels[id];
+  document.getElementById('pick-note').style.display = 'block';
+  try { fetch('/event',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'click',choice:id,text:labels[id],timestamp:Date.now()})}).catch(()=>{}); } catch(e) {}
+}
+</script>
+</body>
+</html>

@@ -57,10 +57,8 @@ export default function RecommendationQuiz({ onSelect }) {
       if (selectedStyles.length) params.set('style', selectedStyles.join(','));
       if (selectedBudget) params.set('budget', selectedBudget);
       const url = `${API_URL}/recommendations?${params}`;
-      console.log('RecommendationQuiz: fetching', url);
       const res  = await fetch(url);
       const data = await res.json();
-      console.log('RecommendationQuiz: response', data);
       setResults(data.data?.destinations || []);
     } catch (err) {
       console.error('RecommendationQuiz: fetch failed', err);

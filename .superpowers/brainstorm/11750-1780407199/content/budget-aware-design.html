@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Budget-Aware Stays + Flights</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #080c18; color: #fff; font-family: 'Plus Jakarta Sans', sans-serif; padding: 28px 20px 80px; }
+h1 { font-family: 'Fraunces', serif; font-size: clamp(1.4rem,4vw,2rem); font-weight: 700; letter-spacing: -0.03em; margin-bottom: 6px; }
+.sub { font-size: 13px; color: rgba(255,255,255,0.4); margin-bottom: 36px; line-height: 1.6; max-width: 680px; }
+.divider { height: 1px; background: rgba(255,255,255,0.06); margin: 36px 0; max-width: 1000px; }
+.section-title { font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 4px; }
+.section-sub { font-size: 12px; color: rgba(255,255,255,0.4); margin-bottom: 20px; line-height: 1.6; }
+
+/* Blocker card */
+.blocker { background: rgba(255,107,107,0.08); border: 1px solid rgba(255,107,107,0.25); border-radius: 12px; padding: 16px 20px; max-width: 700px; margin-bottom: 32px; }
+.blocker-title { font-size: 14px; font-weight: 800; color: #ff6b6b; margin-bottom: 6px; }
+.blocker-body { font-size: 12px; color: rgba(255,255,255,0.55); line-height: 1.7; }
+
+/* Decision cards */
+.decision-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 900px; margin-bottom: 40px; }
+.decision-card { border-radius: 12px; padding: 16px 18px; border: 2px solid transparent; cursor: pointer; transition: all 0.2s; }
+.decision-card:hover { transform: translateY(-2px); }
+.decision-card.selected { border-color: #00d4aa; box-shadow: 0 0 0 3px rgba(0,212,170,0.12); }
+.decision-card.option-a { background: rgba(0,212,170,0.05); border-color: rgba(0,212,170,0.2); }
+.decision-card.option-b { background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.08); }
+.decision-name { font-size: 14px; font-weight: 800; color: #fff; margin-bottom: 4px; }
+.decision-sub { font-size: 12px; color: rgba(255,255,255,0.45); line-height: 1.6; margin-bottom: 10px; }
+.pro { font-size: 11px; color: #00d4aa; margin-bottom: 3px; }
+.con { font-size: 11px; color: rgba(255,107,107,0.8); margin-bottom: 3px; }
+.rec-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; background: #00d4aa; color: #0a0f1e; font-size: 9px; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; }
+
+/* Mock UI */
+.phone { width: 240px; background: #0a0f1e; border-radius: 20px; border: 2px solid rgba(255,255,255,0.1); overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.5); font-size: 0; flex-shrink: 0; }
+.phone * { font-size: initial; }
+.p-section { padding: 10px 12px; }
+.p-label { font-size: 7px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: rgba(255,255,255,0.3); display: flex; align-items: center; gap: 6px; margin-bottom: 7px; }
+.p-label::after { content:''; flex:1; height:1px; background:rgba(255,255,255,0.07); }
+.p-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; }
+.p-card-title { font-size: 11px; font-weight: 700; color: #fff; margin-bottom: 2px; }
+.p-card-sub { font-size: 9px; color: rgba(255,255,255,0.4); }
+.p-btn { padding: 6px 12px; border-radius: 7px; font-size: 9px; font-weight: 800; border: none; cursor: pointer; width: 100%; text-align: center; }
+.p-btn-teal { background: linear-gradient(135deg,#00d4aa,#00a87e); color: #0a0f1e; }
+.p-btn-ghost { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.5); }
+.p-input { width: 100%; padding: 7px 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(0,212,170,0.2); border-radius: 7px; color: #fff; font-size: 11px; font-family: inherit; outline: none; }
+.p-type-row { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 7px; }
+.p-type-btn { padding: 5px 6px; border-radius: 6px; font-size: 8px; font-weight: 700; text-align: center; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.4); cursor: pointer; }
+.p-type-btn.active { border-color: #00d4aa; background: rgba(0,212,170,0.1); color: #00d4aa; }
+
+/* Budget health */
+.p-budget-bar { padding: 8px 10px; border-radius: 8px; margin-bottom: 6px; }
+.p-budget-bar.ok { background: rgba(0,212,170,0.08); border: 1px solid rgba(0,212,170,0.2); }
+.p-budget-bar.tight { background: rgba(255,217,61,0.08); border: 1px solid rgba(255,217,61,0.25); }
+.p-budget-bar.over { background: rgba(255,107,107,0.08); border: 1px solid rgba(255,107,107,0.25); }
+.p-budget-status { font-size: 10px; font-weight: 800; margin-bottom: 5px; }
+.p-budget-row { display: flex; justify-content: space-between; font-size: 9px; color: rgba(255,255,255,0.5); margin-bottom: 2px; }
+.p-budget-row span:last-child { color: rgba(255,255,255,0.75); }
+.p-budget-total { display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; padding-top: 5px; border-top: 1px solid rgba(255,255,255,0.07); margin-top: 3px; }
+.p-alt-tip { background: rgba(255,217,61,0.06); border: 1px solid rgba(255,217,61,0.2); border-radius: 7px; padding: 7px 9px; margin-bottom: 6px; font-size: 9px; color: #ffd93d; line-height: 1.5; }
+
+/* Architecture diagram */
+.arch-flow { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; max-width: 1000px; margin-bottom: 40px; }
+.arch-box { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px 16px; flex: 1; min-width: 180px; }
+.arch-box-title { font-size: 12px; font-weight: 800; color: #fff; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+.arch-box-body { font-size: 11px; color: rgba(255,255,255,0.5); line-height: 1.6; }
+.arch-arrow { font-size: 18px; color: rgba(0,212,170,0.5); align-self: center; flex-shrink: 0; margin-top: 10px; }
+.pill { display: inline-flex; padding: 2px 7px; border-radius: 10px; font-size: 9px; font-weight: 700; margin-right: 4px; margin-top: 4px; }
+.pill-green { background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.25); color: #34d399; }
+.pill-blue { background: rgba(96,165,250,0.1); border: 1px solid rgba(96,165,250,0.25); color: #60a5fa; }
+.pill-yellow { background: rgba(255,217,61,0.1); border: 1px solid rgba(255,217,61,0.25); color: #ffd93d; }
+
+#pick-note { display:none; margin-top:20px; padding:14px 18px; background:rgba(0,212,170,0.06); border:1px solid rgba(0,212,170,0.15); border-radius:10px; font-size:13px; color:rgba(255,255,255,0.6); max-width:700px; }
+</style>
+</head>
+<body>
+<div style="max-width:1000px;margin:0 auto;">
+
+<h1>Budget-Aware Stays + Flights</h1>
+<p class="sub">You asked for type selection (Hotels / Airbnbs / Homestays / Surprise me), budget estimation, and alternative date suggestions. One architectural blocker to address first.</p>
+
+<!-- Blocker -->
+<div class="blocker">
+  <div class="blocker-title">⚠️ Architectural blocker: budget is collected AFTER VenueSelection</div>
+  <div class="blocker-body">
+    The current step order is: <strong style="color:#fff">Destination → Venues → Budget → Style → Details → Review</strong>.<br>
+    <code style="background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:3px;">form.budget</code> is empty during VenueSelection (step 1). We need the budget to show budget-aware pricing and the health check.<br><br>
+    Two ways to solve this ↓ click your preferred approach:
+  </div>
+</div>
+
+<!-- Budget timing decision -->
+<div class="section-title">Decision: When should we collect budget?</div>
+<div class="section-sub">This affects the entire step flow, not just stays/flights.</div>
+
+<div class="decision-grid">
+  <div class="decision-card option-a" id="card-budget-a" onclick="pick('budget-a')">
+    <div class="rec-badge">★ Recommended</div>
+    <div class="decision-name">Move budget to step 0</div>
+    <div class="decision-sub">Ask "What's your total budget?" in the first step alongside destination + days. Budget is available everywhere from step 1 onwards.</div>
+    <div class="pro">✓ Budget known during VenueSelection — full health check works</div>
+    <div class="pro">✓ AI venue suggestions can be budget-filtered from the start</div>
+    <div class="pro">✓ One less step (step 2 becomes just currency + dates)</div>
+    <div class="con">− Minor change to step 0 layout (add one input)</div>
+  </div>
+  <div class="decision-card option-b" id="card-budget-b" onclick="pick('budget-b')">
+    <div class="decision-name">Quick budget input inside VenueSelection</div>
+    <div class="decision-sub">Add a small optional budget field inside the stays section. If left blank, show price ranges only (no health check). Budget is synced back to form state.</div>
+    <div class="pro">✓ No change to existing step order</div>
+    <div class="pro">✓ Budget is fully optional</div>
+    <div class="con">− Budget entered twice if user also fills step 2</div>
+    <div class="con">− "Optional" reduces completion rate</div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- UI mockup: full feature -->
+<div class="section-title" style="margin-bottom:4px;">What the full feature looks like</div>
+<div class="section-sub">Mockup shows Option A (budget moved to step 0) + the accommodation type selector + budget health check.</div>
+
+<div style="display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start;margin-bottom:40px;">
+
+  <!-- Phone 1: Budget in step 0 -->
+  <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+    <div class="phone">
+      <div style="padding:12px;background:#111827;border-bottom:1px solid rgba(255,255,255,0.06);">
+        <div style="font-size:8px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:#00d4aa;margin-bottom:5px;">Step 1 of 6 — Where to?</div>
+        <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:700;color:#fff;margin-bottom:12px;line-height:1.1;">Where to?</div>
+        <!-- Destination + days + budget all here -->
+        <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.35);margin-bottom:5px;">Destination</div>
+        <div class="p-input" style="margin-bottom:8px;font-size:10px;color:rgba(255,255,255,0.35);">Bali, Indonesia</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">
+          <div>
+            <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.35);margin-bottom:4px;">Days</div>
+            <div style="display:flex;align-items:center;gap:5px;"><span style="font-size:16px;font-weight:800;color:#00d4aa;">5</span><span style="font-size:9px;color:rgba(255,255,255,0.3);">days</span></div>
+          </div>
+          <div>
+            <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.35);margin-bottom:4px;">Total budget</div>
+            <div class="p-input" style="font-size:10px;padding:4px 8px;color:rgba(255,255,255,0.6);">INR 80,000</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);text-align:center;">Step 0: Budget moved here<span style="display:block;font-size:10px;color:rgba(255,255,255,0.25);font-weight:400;">Small addition to existing layout</span></div>
+  </div>
+
+  <!-- Phone 2: Stays with type selector + budget health -->
+  <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+    <div class="phone">
+      <div class="p-section">
+        <div class="p-label">✈️ Flights from Mumbai</div>
+        <div class="p-card">
+          <div class="p-card-title">BOM → DPS · Jun 28 · ~5h</div>
+          <div class="p-card-sub" style="margin-bottom:6px;">Estimate: INR 12,000–18,000 return</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+            <button class="p-btn p-btn-teal">Google Flights →</button>
+            <button class="p-btn p-btn-ghost">Skyscanner →</button>
+          </div>
+        </div>
+      </div>
+      <div class="p-section" style="padding-top:0;">
+        <div class="p-label">🏡 Where to stay</div>
+        <!-- Type selector -->
+        <div class="p-type-row">
+          <div class="p-type-btn">🏨 Hotel</div>
+          <div class="p-type-btn active">🏠 Airbnb</div>
+          <div class="p-type-btn">🤝 Homestay</div>
+          <div class="p-type-btn">✨ Surprise me</div>
+        </div>
+        <div class="p-card">
+          <div class="p-card-title">🌿 Private villa · Ubud</div>
+          <div class="p-card-sub">~INR 3,500/night · Nature match</div>
+        </div>
+        <div class="p-card" style="border-color:rgba(0,212,170,0.2);">
+          <div class="p-card-title">🏠 Local apartment · Seminyak</div>
+          <div class="p-card-sub">~INR 2,100/night · City access</div>
+        </div>
+        <a style="font-size:9px;color:#60a5fa;text-decoration:none;display:block;margin-bottom:7px;">Search Airbnb in Bali →</a>
+      </div>
+    </div>
+    <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);text-align:center;">Stays section<span style="display:block;font-size:10px;color:rgba(255,255,255,0.25);font-weight:400;">Type selector + estimated prices</span></div>
+  </div>
+
+  <!-- Phone 3: Budget health check -->
+  <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+    <div class="phone">
+      <div class="p-section">
+        <div class="p-label">💰 Budget health check</div>
+        <!-- Tight budget example -->
+        <div class="p-budget-bar tight">
+          <div class="p-budget-status" style="color:#ffd93d;">⚠️ Budget is tight</div>
+          <div class="p-budget-row"><span>✈️ Flights (est.)</span><span>INR 15,000</span></div>
+          <div class="p-budget-row"><span>🏠 Stays · 5 nights</span><span>INR 17,500</span></div>
+          <div class="p-budget-row"><span>🎯 Activities + food</span><span>INR 25,000</span></div>
+          <div class="p-budget-total"><span>Estimated total</span><span style="color:#ffd93d;">INR 57,500</span></div>
+          <div style="font-size:8px;color:rgba(255,255,255,0.3);margin-top:4px;">Your budget: INR 80,000 ✓</div>
+        </div>
+        <!-- Alternative dates tip -->
+        <div class="p-alt-tip">
+          💡 Travel in <strong>May instead of June</strong> — flights are 25% cheaper (INR ~11,000 vs 15,000). Still dry season.
+        </div>
+        <!-- Over budget example -->
+        <div class="p-budget-bar over">
+          <div class="p-budget-status" style="color:#ff6b6b;">❌ Over budget</div>
+          <div class="p-budget-row"><span>✈️ Flights (est.)</span><span>INR 15,000</span></div>
+          <div class="p-budget-row"><span>🏨 Hotel · 5 nights</span><span>INR 40,000</span></div>
+          <div class="p-budget-row"><span>🎯 Activities + food</span><span>INR 25,000</span></div>
+          <div class="p-budget-total"><span>Estimated total</span><span style="color:#ff6b6b;">INR 80,000</span></div>
+          <div style="font-size:8px;color:rgba(255,255,255,0.3);margin-top:4px;">Your budget: INR 80,000 — no buffer!</div>
+        </div>
+        <div style="font-size:9px;color:rgba(255,255,255,0.35);margin-top:4px;line-height:1.5;">💡 Switch to Airbnb to save ~INR 2,000/night</div>
+      </div>
+    </div>
+    <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);text-align:center;">Budget health check<span style="display:block;font-size:10px;color:rgba(255,255,255,0.25);font-weight:400;">Client-side calc from Claude estimates</span></div>
+  </div>
+
+</div>
+
+<div class="divider"></div>
+
+<!-- Architecture -->
+<div class="section-title" style="margin-bottom:4px;">Data flow architecture</div>
+<div class="section-sub">How Claude + existing infrastructure powers the whole feature.</div>
+
+<div class="arch-flow">
+  <div class="arch-box">
+    <div class="arch-box-title">1. User input</div>
+    <div class="arch-box-body">
+      From <code style="background:rgba(255,255,255,0.07);padding:1px 5px;border-radius:3px;">form</code>:<br>
+      budget · currency · days · destination · travelDate · userLocation · travelStyle
+    </div>
+    <div style="margin-top:8px;">
+      <span class="pill pill-green">Already collected</span>
+      <span class="pill pill-yellow">Budget → move to step 0</span>
+    </div>
+  </div>
+  <div class="arch-arrow">→</div>
+  <div class="arch-box">
+    <div class="arch-box-title">2. Extended destination-insights Lambda</div>
+    <div class="arch-box-body">
+      Claude prompt returns 2 new fields:<br><br>
+      <strong style="color:#fff">accommodation[]</strong> — 4 options, one per type, each with type, priceRangePerNightUSD, description, searchKeyword<br><br>
+      <strong style="color:#fff">budgetEstimateUSD</strong> — flightsLow/High, stayLow/High, activitiesPerDayLow/High, cheaperMonths[]
+    </div>
+    <div style="margin-top:8px;">
+      <span class="pill pill-green">Extend existing Lambda</span>
+      <span class="pill pill-green">~20 lines in prompt</span>
+    </div>
+  </div>
+  <div class="arch-arrow">→</div>
+  <div class="arch-box">
+    <div class="arch-box-title">3. Frontend logic</div>
+    <div class="arch-box-body">
+      Type selector state → filters accommodation[] by type<br><br>
+      Budget health = (flightsMid + stayMid×days + activitiesMid×days) vs form.budget converted to USD<br><br>
+      Alternative tip = cheaperMonths[0] vs travelDate month comparison
+    </div>
+    <div style="margin-top:8px;">
+      <span class="pill pill-blue">Client-side only</span>
+      <span class="pill pill-green">No new API</span>
+    </div>
+  </div>
+  <div class="arch-arrow">→</div>
+  <div class="arch-box">
+    <div class="arch-box-title">4. External links</div>
+    <div class="arch-box-body">
+      Flights: Google Flights + Skyscanner deep links (origin + dest + date)<br><br>
+      Stays: Airbnb search link (searchKeyword + destination) + Booking.com<br><br>
+      No booking, no prices — just smart routing
+    </div>
+    <div style="margin-top:8px;">
+      <span class="pill pill-blue">No API key needed</span>
+    </div>
+  </div>
+</div>
+
+<div id="pick-note">
+  You selected: <strong id="pick-text" style="color:#00d4aa;"></strong> — tell me in the terminal and I'll write the spec.
+</div>
+
+</div>
+<script>
+function pick(id) {
+  document.querySelectorAll('.decision-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('card-'+id).classList.add('selected');
+  const labels = { 'budget-a': 'Option A — Move budget to step 0 (recommended)', 'budget-b': 'Option B — Quick budget input inside VenueSelection' };
+  document.getElementById('pick-text').textContent = labels[id];
+  document.getElementById('pick-note').style.display = 'block';
+  try { fetch('/event',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'click',choice:id,text:labels[id],timestamp:Date.now()})}).catch(()=>{}); } catch(e) {}
+}
+</script>
+</body>
+</html>

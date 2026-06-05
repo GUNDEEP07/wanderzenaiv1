@@ -69,9 +69,7 @@ export default function Onboarding() {
 
   return (
     <div style={s.page}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,900&display=swap');
-        input::placeholder { color: rgba(255,255,255,0.2); }
+      <style>{`        input::placeholder { color: rgba(255,255,255,0.2); }
         input:focus, select:focus { border-color: rgba(0,212,170,0.4) !important; }
         select option { background: #111827; color: #fff; }
       `}</style>

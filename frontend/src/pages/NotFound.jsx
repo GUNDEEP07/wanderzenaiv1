@@ -4,7 +4,7 @@ export default function NotFound() {
   const navigate = useNavigate();
   return (
     <div style={{ minHeight: '100vh', background: '#06090f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#fff', textAlign: 'center', padding: 24 }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&family=Fraunces:opsz,wght@9..144,900&display=swap');`}</style>
+      <style>{``}</style>
       <div>
         <div style={{ fontFamily: "'Fraunces', serif", fontSize: 96, fontWeight: 900, color: 'rgba(255,255,255,0.06)', lineHeight: 1, marginBottom: 4 }}>404</div>
         <div style={{ fontFamily: "'Fraunces', serif", fontSize: 32, fontWeight: 900, marginBottom: 10 }}>Page not found</div>

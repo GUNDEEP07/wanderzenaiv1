@@ -1,0 +1,175 @@
+<h2>PlanTrip — Design Direction</h2>
+<p class="subtitle">Two directions for the full form redesign. Pick one or describe what you want differently.</p>
+
+<div class="cards">
+
+  <!-- Direction A: Full-bleed immersive dark -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="height:360px;background:#0a0f1e;border-radius:8px;overflow:hidden;font-family:'Plus Jakarta Sans',sans-serif;">
+
+        <!-- Nav -->
+        <div style="padding:10px 16px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:8px;">
+          <div style="width:20px;height:20px;background:#00d4aa;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#0a0f1e;">W</div>
+          <span style="font-size:10px;color:rgba(255,255,255,0.4);">WanderZenAI</span>
+        </div>
+
+        <!-- Progress — pill style -->
+        <div style="padding:10px 16px 0;display:flex;gap:4px;align-items:center;">
+          <div style="flex:1;height:3px;background:#00d4aa;border-radius:2px;"></div>
+          <div style="flex:1;height:3px;background:rgba(255,255,255,0.08);border-radius:2px;"></div>
+          <div style="flex:1;height:3px;background:rgba(255,255,255,0.08);border-radius:2px;"></div>
+          <div style="flex:1;height:3px;background:rgba(255,255,255,0.08);border-radius:2px;"></div>
+          <div style="flex:1;height:3px;background:rgba(255,255,255,0.08);border-radius:2px;"></div>
+          <div style="flex:1;height:3px;background:rgba(255,255,255,0.08);border-radius:2px;"></div>
+        </div>
+        <div style="padding:3px 16px 0;display:flex;justify-content:space-between;">
+          <span style="font-size:7px;color:#00d4aa;font-weight:600;">Step 1 · Destination</span>
+          <span style="font-size:7px;color:rgba(255,255,255,0.2);">1 of 6</span>
+        </div>
+
+        <!-- Hero step content — full bleed, no card -->
+        <div style="padding:16px 20px 0;">
+          <div style="font-size:8px;color:rgba(255,255,255,0.3);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:6px;">Where to?</div>
+          <div style="font-family:serif;font-size:22px;color:#fff;font-weight:700;line-height:1.1;margin-bottom:4px;">Find your slow-<br>travel destination</div>
+          <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-bottom:14px;font-style:italic;">We'll skip the tourist traps</div>
+
+          <!-- Big search input -->
+          <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(0,212,170,0.3);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+            <span style="font-size:12px;color:rgba(255,255,255,0.2);">🔍</span>
+            <span style="font-size:10px;color:rgba(255,255,255,0.25);">Kyoto, Oaxaca, Bir Billing…</span>
+          </div>
+
+          <!-- Two-col quick fields -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:8px 10px;">
+              <div style="font-size:7px;color:rgba(255,255,255,0.3);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.1em;">Duration</div>
+              <div style="font-size:13px;color:#00d4aa;font-weight:700;">5 days</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:8px 10px;">
+              <div style="font-size:7px;color:rgba(255,255,255,0.3);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.1em;">Start</div>
+              <div style="font-size:10px;color:rgba(255,255,255,0.5);">Pick a date</div>
+            </div>
+          </div>
+
+          <!-- Travel style pills -->
+          <div style="font-size:7px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Your vibe</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;">
+            <div style="background:rgba(0,212,170,0.12);border:1px solid rgba(0,212,170,0.3);border-radius:20px;padding:3px 10px;font-size:8px;color:#00d4aa;">🌿 Nature</div>
+            <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:3px 10px;font-size:8px;color:rgba(255,255,255,0.5);">🏛️ Culture</div>
+            <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:3px 10px;font-size:8px;color:rgba(255,255,255,0.5);">🍜 Foodie</div>
+            <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:3px 10px;font-size:8px;color:rgba(255,255,255,0.5);">🧗 Adventure</div>
+            <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:3px 10px;font-size:8px;color:rgba(255,255,255,0.5);">🧘 Wellness</div>
+          </div>
+        </div>
+
+        <!-- CTA pinned bottom -->
+        <div style="position:absolute;bottom:0;left:0;right:0;padding:10px 20px;background:linear-gradient(to top, #0a0f1e 60%, transparent);display:flex;gap:8px;align-items:center;">
+          <button style="flex:1;padding:10px;background:#00d4aa;border:none;border-radius:8px;font-size:10px;font-weight:700;color:#0a0f1e;cursor:pointer;">Continue →</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Full-bleed, no card border</h3>
+      <p>Steps render directly on the dark background. No card border. Destination + duration + date + travel style all on one page. Bigger, airier, more editorial. Fewer steps to fill out.</p>
+    </div>
+  </div>
+
+  <!-- Direction B: Refined card with stronger hierarchy -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="height:360px;background:#0a0f1e;border-radius:8px;overflow:hidden;font-family:'Plus Jakarta Sans',sans-serif;position:relative;">
+
+        <!-- Nav -->
+        <div style="padding:10px 16px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div style="width:18px;height:18px;background:#00d4aa;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#0a0f1e;">W</div>
+            <span style="font-size:9px;color:rgba(255,255,255,0.4);">WanderZenAI</span>
+          </div>
+          <span style="font-size:8px;color:rgba(255,255,255,0.2);">Step 1 of 6</span>
+        </div>
+
+        <!-- Segmented progress bar -->
+        <div style="display:flex;gap:3px;padding:0 16px;margin-top:8px;">
+          <div style="flex:1;height:2px;background:#00d4aa;border-radius:2px;"></div>
+          <div style="flex:1;height:2px;background:rgba(255,255,255,0.08);border-radius:2px;"></div>
+          <div style="flex:1;height:2px;background:rgba(255,255,255,0.08);border-radius:2px;"></div>
+          <div style="flex:1;height:2px;background:rgba(255,255,255,0.08);border-radius:2px;"></div>
+          <div style="flex:1;height:2px;background:rgba(255,255,255,0.08);border-radius:2px;"></div>
+          <div style="flex:1;height:2px;background:rgba(255,255,255,0.08);border-radius:2px;"></div>
+        </div>
+
+        <div style="padding:12px 16px;max-width:520px;margin:0 auto;">
+          <!-- Strong heading -->
+          <div style="font-family:serif;font-size:20px;color:#fff;font-weight:700;margin-bottom:2px;line-height:1.2;">Where to?</div>
+          <div style="font-size:9px;color:rgba(255,255,255,0.35);margin-bottom:14px;font-style:italic;">We'll find the hidden, local version of your destination.</div>
+
+          <!-- Prominent search -->
+          <div style="background:rgba(255,255,255,0.05);border:1.5px solid rgba(0,212,170,0.4);border-radius:12px;padding:12px 14px;margin-bottom:10px;box-shadow:0 0 20px rgba(0,212,170,0.05);">
+            <div style="font-size:7px;color:#00d4aa;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:4px;">Destination</div>
+            <div style="font-size:10px;color:rgba(255,255,255,0.25);">e.g. Kyoto · Oaxaca · Bir Billing</div>
+          </div>
+
+          <!-- Inline fields row -->
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;">
+            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:7px 9px;">
+              <div style="font-size:6px;color:rgba(255,255,255,0.3);margin-bottom:2px;letter-spacing:0.1em;text-transform:uppercase;">Days</div>
+              <div style="font-size:12px;color:#fff;font-weight:700;">5</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:7px 9px;">
+              <div style="font-size:6px;color:rgba(255,255,255,0.3);margin-bottom:2px;letter-spacing:0.1em;text-transform:uppercase;">Start</div>
+              <div style="font-size:8px;color:rgba(255,255,255,0.35);">Pick date</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:7px 9px;">
+              <div style="font-size:6px;color:rgba(255,255,255,0.3);margin-bottom:2px;letter-spacing:0.1em;text-transform:uppercase;">Who</div>
+              <div style="font-size:8px;color:rgba(255,255,255,0.35);">Solo</div>
+            </div>
+          </div>
+
+          <!-- Style grid -->
+          <div style="font-size:7px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:5px;">Travel vibe</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:12px;">
+            <div style="background:rgba(0,212,170,0.12);border:1px solid rgba(0,212,170,0.35);border-radius:7px;padding:6px 4px;text-align:center;">
+              <div style="font-size:13px;">🌿</div>
+              <div style="font-size:6px;color:#00d4aa;margin-top:2px;font-weight:600;">Nature</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:7px;padding:6px 4px;text-align:center;">
+              <div style="font-size:13px;">🏛️</div>
+              <div style="font-size:6px;color:rgba(255,255,255,0.35);margin-top:2px;">Culture</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:7px;padding:6px 4px;text-align:center;">
+              <div style="font-size:13px;">🍜</div>
+              <div style="font-size:6px;color:rgba(255,255,255,0.35);margin-top:2px;">Foodie</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:7px;padding:6px 4px;text-align:center;">
+              <div style="font-size:13px;">🧗</div>
+              <div style="font-size:6px;color:rgba(255,255,255,0.35);margin-top:2px;">Adventure</div>
+            </div>
+          </div>
+
+          <!-- Bottom row -->
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-size:8px;color:rgba(255,255,255,0.2);">Free · 1 itinerary/month</span>
+            <button style="padding:8px 20px;background:#00d4aa;border:none;border-radius:8px;font-size:9px;font-weight:700;color:#0a0f1e;cursor:pointer;">Continue →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Refined card, stronger hierarchy</h3>
+      <p>Keeps the card approach but with a stronger header, inline 3-col fields (days + date + who), emoji style grid instead of text pills. Everything on one focused page. Clean, modern, no wasted space.</p>
+    </div>
+  </div>
+
+</div>
+
+<div style="margin-top:20px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px 16px;">
+  <h3 style="margin:0 0 8px;font-size:13px;">Both directions share these fixes</h3>
+  <ul style="margin:0;padding-left:18px;font-size:12px;color:rgba(255,255,255,0.6);line-height:1.8;">
+    <li>Destination + duration + start date + who + travel style <strong>all on Step 1</strong> (no more hunting across steps)</li>
+    <li>Step 2 (Venues) removes the duplicate header, breaks out of the narrow 680px card</li>
+    <li>Step 3 (Budget) gets a proper budget range slider or visual selector instead of a bare text input</li>
+    <li>Step 4 (Travel style / pace) becomes much shorter now that style is on Step 1</li>
+    <li>Progress bar becomes a slim 2px segmented bar (not big numbered circles)</li>
+  </ul>
+</div>

@@ -194,7 +194,7 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
     );
   }
 
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches;
   const selectedCount = Object.values(selectedActivities).flat().length +
     Object.values(selectedVenues).reduce((s, set) => s + set.size, 0);
   const scheduledCount = Object.keys(dayAssignments).length;

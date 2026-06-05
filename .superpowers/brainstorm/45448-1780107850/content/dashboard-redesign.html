@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WanderZenAI — Dashboard Redesign</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;0,9..144,900;1,9..144,300;1,9..144,400&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#06090f;color:#fff;font-family:'Plus Jakarta Sans',sans-serif;min-height:100vh;}
+
+/* ── NAV ── */
+.nav{padding:14px 36px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.05);position:sticky;top:0;z-index:10;background:rgba(6,9,15,0.9);backdrop-filter:blur(16px);}
+.nav-logo{display:flex;align-items:center;gap:10px;}
+.logo-mark{width:32px;height:32px;background:linear-gradient(135deg,#00d4aa,#00916a);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#06090f;box-shadow:0 0 20px rgba(0,212,170,0.3);}
+.logo-text{font-size:15px;font-weight:700;}
+.nav-right{display:flex;align-items:center;gap:16px;}
+.nav-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#00d4aa,#00916a);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#06090f;box-shadow:0 0 12px rgba(0,212,170,0.25);}
+.nav-name{font-size:13px;font-weight:600;color:rgba(255,255,255,0.8);}
+.nav-signout{font-size:12px;color:rgba(255,255,255,0.3);background:none;border:none;cursor:pointer;font-family:inherit;}
+
+/* ── HERO ── */
+.hero{position:relative;padding:52px 36px 44px;overflow:hidden;}
+.hero::before{content:'';position:absolute;top:-100px;left:-100px;width:600px;height:500px;background:radial-gradient(ellipse,rgba(0,212,170,0.07) 0%,transparent 65%);pointer-events:none;}
+.hero::after{content:'';position:absolute;top:0;right:0;width:400px;height:400px;background:radial-gradient(ellipse,rgba(96,165,250,0.04) 0%,transparent 65%);pointer-events:none;}
+.hero-eyebrow{font-size:11px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:#00d4aa;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.hero-eyebrow::before{content:'';display:inline-block;width:20px;height:1.5px;background:#00d4aa;}
+.hero-title{font-family:'Fraunces',serif;font-size:48px;font-weight:900;line-height:1.05;letter-spacing:-0.025em;margin-bottom:6px;}
+.hero-title em{font-style:italic;font-weight:300;color:transparent;background:linear-gradient(135deg,rgba(255,255,255,0.55),rgba(255,255,255,0.2));-webkit-background-clip:text;background-clip:text;}
+.hero-sub{font-size:15px;color:rgba(255,255,255,0.4);margin-bottom:36px;font-style:italic;}
+
+/* Stats strip */
+.stats-strip{display:flex;gap:0;border:1px solid rgba(255,255,255,0.07);border-radius:16px;overflow:hidden;background:rgba(255,255,255,0.02);max-width:600px;}
+.stat{flex:1;padding:16px 20px;border-right:1px solid rgba(255,255,255,0.06);position:relative;}
+.stat:last-child{border-right:none;}
+.stat-num{font-family:'Fraunces',serif;font-size:28px;font-weight:900;color:#fff;line-height:1;margin-bottom:4px;}
+.stat-num span{font-size:16px;color:#00d4aa;}
+.stat-label{font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.3);}
+
+/* ── MAIN LAYOUT ── */
+.main{padding:0 36px 60px;display:grid;gap:40px;}
+
+/* ── SECTION HEADER ── */
+.sec-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:18px;}
+.sec-title{font-family:'Fraunces',serif;font-size:22px;font-weight:700;color:#fff;}
+.sec-link{font-size:12px;color:#00d4aa;text-decoration:none;font-weight:600;}
+
+/* ── NEXT TRIP PROMPT ── */
+.next-trip-banner{background:linear-gradient(135deg,rgba(0,212,170,0.08) 0%,rgba(96,165,250,0.05) 100%);border:1px solid rgba(0,212,170,0.2);border-radius:20px;padding:28px 32px;display:flex;align-items:center;justify-content:space-between;gap:24px;position:relative;overflow:hidden;}
+.next-trip-banner::before{content:'✦';position:absolute;right:32px;top:50%;transform:translateY(-50%);font-size:80px;color:rgba(0,212,170,0.04);pointer-events:none;}
+.next-trip-left{}
+.next-trip-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(0,212,170,0.1);border:1px solid rgba(0,212,170,0.2);border-radius:100px;padding:4px 12px;font-size:10px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:#00d4aa;margin-bottom:12px;}
+.next-trip-badge::before{content:'';width:6px;height:6px;background:#00d4aa;border-radius:50%;animation:pulse 2s infinite;box-shadow:0 0 6px rgba(0,212,170,0.8);}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.75)}}
+.next-trip-heading{font-family:'Fraunces',serif;font-size:24px;font-weight:900;color:#fff;margin-bottom:6px;}
+.next-trip-sub{font-size:13px;color:rgba(255,255,255,0.45);font-style:italic;}
+.next-trip-cta{padding:14px 28px;background:linear-gradient(135deg,#00d4aa,#00a87e);border:none;border-radius:12px;color:#06090f;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;white-space:nowrap;box-shadow:0 4px 20px rgba(0,212,170,0.3);flex-shrink:0;transition:all 0.2s;}
+.next-trip-cta:hover{transform:translateY(-1px);box-shadow:0 6px 28px rgba(0,212,170,0.4);}
+
+/* ── RECOMMENDATION CARDS ── */
+.rec-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.rec-card{border-radius:18px;overflow:hidden;cursor:pointer;transition:all 0.25s;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.03);}
+.rec-card:hover{transform:translateY(-3px);border-color:rgba(0,212,170,0.3);box-shadow:0 12px 36px rgba(0,0,0,0.3);}
+.rec-card-img{height:130px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
+.rec-card-flag{font-size:52px;position:relative;z-index:1;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.4));}
+.rec-card-body{padding:16px 18px;}
+.rec-card-dest{font-size:16px;font-weight:800;margin-bottom:4px;}
+.rec-card-reason{font-size:11px;color:rgba(255,255,255,0.45);line-height:1.45;margin-bottom:12px;}
+.rec-card-footer{display:flex;align-items:center;justify-content:space-between;}
+.rec-card-tag{font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#00d4aa;background:rgba(0,212,170,0.08);border:1px solid rgba(0,212,170,0.15);border-radius:4px;padding:3px 7px;}
+.rec-card-arrow{font-size:16px;color:#00d4aa;}
+
+/* ── TRAVEL DNA ── */
+.dna-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+.dna-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:20px 22px;}
+.dna-card-title{font-size:9px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:14px;}
+.dna-item{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.dna-item:last-child{margin-bottom:0;}
+.dna-emoji{font-size:16px;width:28px;text-align:center;flex-shrink:0;}
+.dna-label{font-size:12px;font-weight:600;color:rgba(255,255,255,0.8);flex:1;}
+.dna-bar-wrap{width:80px;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;}
+.dna-bar{height:100%;border-radius:2px;background:linear-gradient(90deg,#00d4aa,#00b896);}
+.dna-count{font-size:10px;font-weight:700;color:#00d4aa;min-width:20px;text-align:right;}
+.dna-big{font-family:'Fraunces',serif;font-size:36px;font-weight:900;color:#00d4aa;margin-bottom:4px;}
+.dna-big-label{font-size:11px;color:rgba(255,255,255,0.4);}
+.dna-style-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+.dna-style-pill{padding:5px 10px;border-radius:20px;font-size:10px;font-weight:700;border:1px solid rgba(0,212,170,0.2);background:rgba(0,212,170,0.07);color:#00d4aa;}
+
+/* ── PAST TRIPS ── */
+.trips-list{display:flex;flex-direction:column;gap:10px;}
+.trip-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:16px;overflow:hidden;transition:all 0.2s;cursor:pointer;}
+.trip-card:hover{border-color:rgba(255,255,255,0.13);background:rgba(255,255,255,0.05);}
+.trip-card-inner{display:flex;align-items:center;gap:0;}
+.trip-color-bar{width:5px;height:80px;flex-shrink:0;border-radius:0;}
+.trip-flag-col{width:72px;display:flex;align-items:center;justify-content:center;font-size:32px;flex-shrink:0;}
+.trip-info{flex:1;padding:16px 0;}
+.trip-dest{font-size:15px;font-weight:800;margin-bottom:3px;}
+.trip-meta{font-size:11px;color:rgba(255,255,255,0.35);}
+.trip-status{padding:3px 9px;border-radius:5px;font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;}
+.trip-status-done{background:rgba(0,212,170,0.1);color:#00d4aa;border:1px solid rgba(0,212,170,0.2);}
+.trip-status-proc{background:rgba(255,217,61,0.08);color:#ffd93d;border:1px solid rgba(255,217,61,0.15);}
+.trip-actions{display:flex;gap:8px;padding:0 20px;align-items:center;flex-shrink:0;}
+.trip-btn{padding:7px 14px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;border:none;transition:all 0.15s;}
+.trip-btn-pdf{background:rgba(0,212,170,0.08);border:1px solid rgba(0,212,170,0.2);color:#00d4aa;}
+.trip-btn-replan{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.6);}
+.trip-btn:hover{filter:brightness(1.2);}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-logo">
+    <div class="logo-mark">W</div>
+    <span class="logo-text">WanderZenAI</span>
+  </div>
+  <div class="nav-right">
+    <div class="nav-avatar">G</div>
+    <span class="nav-name">Gundeep</span>
+    <button class="nav-signout">Sign out</button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow">Good evening</div>
+  <div class="hero-title">Welcome back,<br>Gundeep <em>Singh</em></div>
+  <div class="hero-sub">Your slow travel hub — 13 journeys and counting</div>
+
+  <div class="stats-strip">
+    <div class="stat">
+      <div class="stat-num">13<span>✦</span></div>
+      <div class="stat-label">Itineraries</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">7</div>
+      <div class="stat-label">Countries</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">64</div>
+      <div class="stat-label">Days planned</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">3<span>wks</span></div>
+      <div class="stat-label">Since last trip</div>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- NEXT TRIP PROMPT -->
+  <div>
+    <div class="sec-header">
+      <div class="sec-title">Ready for your next adventure?</div>
+    </div>
+    <div class="next-trip-banner">
+      <div class="next-trip-left">
+        <div class="next-trip-badge">AI Personalised</div>
+        <div class="next-trip-heading">It's been 3 weeks since Kyoto.<br>Time to wander again?</div>
+        <div class="next-trip-sub">Based on your travel history, you tend to plan every 3–4 weeks</div>
+      </div>
+      <button class="next-trip-cta">Plan my next trip →</button>
+    </div>
+  </div>
+
+  <!-- RECOMMENDATIONS -->
+  <div>
+    <div class="sec-header">
+      <div class="sec-title">Picked for you</div>
+      <a class="sec-link" href="#">See all →</a>
+    </div>
+    <div class="rec-grid">
+
+      <div class="rec-card">
+        <div class="rec-card-img" style="background:linear-gradient(135deg,rgba(167,139,250,0.2),rgba(88,28,135,0.4));">
+          <div class="rec-card-flag">🇻🇳</div>
+        </div>
+        <div class="rec-card-body">
+          <div class="rec-card-dest">Hội An, Vietnam</div>
+          <div class="rec-card-reason">You loved Kyoto's temple culture — Hội An is its Southeast Asian twin: lantern streets, tailor shops, rice paddies an hour away</div>
+          <div class="rec-card-footer">
+            <span class="rec-card-tag">Culture · Nature</span>
+            <span class="rec-card-arrow">→</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="rec-card">
+        <div class="rec-card-img" style="background:linear-gradient(135deg,rgba(251,146,60,0.2),rgba(154,52,18,0.4));">
+          <div class="rec-card-flag">🇲🇦</div>
+        </div>
+        <div class="rec-card-body">
+          <div class="rec-card-dest">Chefchaouen, Morocco</div>
+          <div class="rec-card-reason">Your Oaxaca trip shows you love photogenic slow cities. The blue medina, mountain trails, and local souks are made for your pace</div>
+          <div class="rec-card-footer">
+            <span class="rec-card-tag">Culture · Hiking</span>
+            <span class="rec-card-arrow">→</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="rec-card">
+        <div class="rec-card-img" style="background:linear-gradient(135deg,rgba(52,211,153,0.2),rgba(6,78,59,0.4));">
+          <div class="rec-card-flag">🇵🇹</div>
+        </div>
+        <div class="rec-card-body">
+          <div class="rec-card-dest">Alentejo, Portugal</div>
+          <div class="rec-card-reason">Off the tourist trail: cork forests, white villages, wine estates. Matches your preference for nature + local food over crowded cities</div>
+          <div class="rec-card-footer">
+            <span class="rec-card-tag">Nature · Food</span>
+            <span class="rec-card-arrow">→</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- TRENDING AMONG TRAVELERS LIKE YOU -->
+  <div>
+    <div class="sec-header">
+      <div class="sec-title">Trending among travelers like you</div>
+      <a class="sec-link" href="#">Explore all →</a>
+    </div>
+    <div style="font-size:12px;color:rgba(255,255,255,0.35);margin-bottom:16px;display:flex;align-items:center;gap:6px;">
+      <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:100px;padding:4px 12px;">
+        🇮🇳 India
+      </span>
+      <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(0,212,170,0.06);border:1px solid rgba(0,212,170,0.15);border-radius:100px;padding:4px 12px;color:#00d4aa;">
+        🏛️ Culture
+      </span>
+      <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(0,212,170,0.06);border:1px solid rgba(0,212,170,0.15);border-radius:100px;padding:4px 12px;color:#00d4aa;">
+        🥾 Hiking
+      </span>
+      <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(0,212,170,0.06);border:1px solid rgba(0,212,170,0.15);border-radius:100px;padding:4px 12px;color:#00d4aa;">
+        🍜 Food
+      </span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+
+      <!-- Trending card 1 -->
+      <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:16px;overflow:hidden;cursor:pointer;transition:all 0.2s;" onmouseenter="this.style.borderColor='rgba(0,212,170,0.25)';this.style.transform='translateY(-2px)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.07)';this.style.transform='none'">
+        <div style="height:90px;background:linear-gradient(135deg,rgba(129,90,213,0.25),rgba(55,12,114,0.5));display:flex;align-items:center;justify-content:center;font-size:40px;position:relative;">
+          🇯🇵
+          <div style="position:absolute;top:8px;right:8px;background:rgba(255,107,107,0.9);border-radius:4px;padding:2px 7px;font-size:8px;font-weight:800;color:#fff;letter-spacing:0.05em;">🔥 HOT</div>
+        </div>
+        <div style="padding:13px 15px;">
+          <div style="font-size:13px;font-weight:800;margin-bottom:3px;">Kyoto, Japan</div>
+          <div style="font-size:10px;color:rgba(255,255,255,0.35);margin-bottom:8px;">Culture · Nature</div>
+          <div style="display:flex;align-items:center;gap:5px;">
+            <div style="display:flex;">
+              <div style="width:16px;height:16px;border-radius:50%;background:linear-gradient(135deg,#f97316,#ea580c);border:1.5px solid #06090f;font-size:7px;display:flex;align-items:center;justify-content:center;">G</div>
+              <div style="width:16px;height:16px;border-radius:50%;background:linear-gradient(135deg,#818cf8,#6366f1);border:1.5px solid #06090f;margin-left:-5px;font-size:7px;display:flex;align-items:center;justify-content:center;">P</div>
+              <div style="width:16px;height:16px;border-radius:50%;background:linear-gradient(135deg,#34d399,#059669);border:1.5px solid #06090f;margin-left:-5px;font-size:7px;display:flex;align-items:center;justify-content:center;">R</div>
+            </div>
+            <span style="font-size:10px;color:rgba(255,255,255,0.35);">+142 from India</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trending card 2 -->
+      <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:16px;overflow:hidden;cursor:pointer;transition:all 0.2s;" onmouseenter="this.style.borderColor='rgba(0,212,170,0.25)';this.style.transform='translateY(-2px)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.07)';this.style.transform='none'">
+        <div style="height:90px;background:linear-gradient(135deg,rgba(251,146,60,0.25),rgba(154,52,18,0.5));display:flex;align-items:center;justify-content:center;font-size:40px;position:relative;">
+          🇹🇭
+          <div style="position:absolute;top:8px;right:8px;background:rgba(0,212,170,0.85);border-radius:4px;padding:2px 7px;font-size:8px;font-weight:800;color:#06090f;letter-spacing:0.05em;">↑ RISING</div>
+        </div>
+        <div style="padding:13px 15px;">
+          <div style="font-size:13px;font-weight:800;margin-bottom:3px;">Chiang Mai, Thailand</div>
+          <div style="font-size:10px;color:rgba(255,255,255,0.35);margin-bottom:8px;">Culture · Food</div>
+          <div style="display:flex;align-items:center;gap:5px;">
+            <div style="display:flex;">
+              <div style="width:16px;height:16px;border-radius:50%;background:linear-gradient(135deg,#fbbf24,#d97706);border:1.5px solid #06090f;font-size:7px;display:flex;align-items:center;justify-content:center;">A</div>
+              <div style="width:16px;height:16px;border-radius:50%;background:linear-gradient(135deg,#f472b6,#db2777);border:1.5px solid #06090f;margin-left:-5px;font-size:7px;display:flex;align-items:center;justify-content:center;">S</div>
+            </div>
+            <span style="font-size:10px;color:rgba(255,255,255,0.35);">+89 from India</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trending card 3 -->
+      <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:16px;overflow:hidden;cursor:pointer;transition:all 0.2s;" onmouseenter="this.style.borderColor='rgba(0,212,170,0.25)';this.style.transform='translateY(-2px)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.07)';this.style.transform='none'">
+        <div style="height:90px;background:linear-gradient(135deg,rgba(52,211,153,0.25),rgba(6,78,59,0.5));display:flex;align-items:center;justify-content:center;font-size:40px;position:relative;">
+          🇳🇵
+          <div style="position:absolute;top:8px;right:8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);border-radius:4px;padding:2px 7px;font-size:8px;font-weight:800;color:rgba(255,255,255,0.6);letter-spacing:0.05em;">HIDDEN GEM</div>
+        </div>
+        <div style="padding:13px 15px;">
+          <div style="font-size:13px;font-weight:800;margin-bottom:3px;">Pokhara, Nepal</div>
+          <div style="font-size:10px;color:rgba(255,255,255,0.35);margin-bottom:8px;">Hiking · Nature</div>
+          <div style="display:flex;align-items:center;gap:5px;">
+            <div style="display:flex;">
+              <div style="width:16px;height:16px;border-radius:50%;background:linear-gradient(135deg,#60a5fa,#2563eb);border:1.5px solid #06090f;font-size:7px;display:flex;align-items:center;justify-content:center;">M</div>
+              <div style="width:16px;height:16px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);border:1.5px solid #06090f;margin-left:-5px;font-size:7px;display:flex;align-items:center;justify-content:center;">K</div>
+              <div style="width:16px;height:16px;border-radius:50%;background:linear-gradient(135deg,#f97316,#ea580c);border:1.5px solid #06090f;margin-left:-5px;font-size:7px;display:flex;align-items:center;justify-content:center;">J</div>
+            </div>
+            <span style="font-size:10px;color:rgba(255,255,255,0.35);">+63 from India</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trending card 4 -->
+      <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:16px;overflow:hidden;cursor:pointer;transition:all 0.2s;" onmouseenter="this.style.borderColor='rgba(0,212,170,0.25)';this.style.transform='translateY(-2px)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.07)';this.style.transform='none'">
+        <div style="height:90px;background:linear-gradient(135deg,rgba(96,165,250,0.25),rgba(29,78,216,0.5));display:flex;align-items:center;justify-content:center;font-size:40px;position:relative;">
+          🇻🇳
+          <div style="position:absolute;top:8px;right:8px;background:rgba(255,107,107,0.9);border-radius:4px;padding:2px 7px;font-size:8px;font-weight:800;color:#fff;letter-spacing:0.05em;">🔥 HOT</div>
+        </div>
+        <div style="padding:13px 15px;">
+          <div style="font-size:13px;font-weight:800;margin-bottom:3px;">Hội An, Vietnam</div>
+          <div style="font-size:10px;color:rgba(255,255,255,0.35);margin-bottom:8px;">Culture · Food</div>
+          <div style="display:flex;align-items:center;gap:5px;">
+            <div style="display:flex;">
+              <div style="width:16px;height:16px;border-radius:50%;background:linear-gradient(135deg,#34d399,#059669);border:1.5px solid #06090f;font-size:7px;display:flex;align-items:center;justify-content:center;">R</div>
+              <div style="width:16px;height:16px;border-radius:50%;background:linear-gradient(135deg,#fbbf24,#d97706);border:1.5px solid #06090f;margin-left:-5px;font-size:7px;display:flex;align-items:center;justify-content:center;">N</div>
+            </div>
+            <span style="font-size:10px;color:rgba(255,255,255,0.35);">+118 from India</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- TRAVEL DNA -->
+  <div>
+    <div class="sec-header">
+      <div class="sec-title">Your travel DNA</div>
+      <a class="sec-link" href="#">Edit preferences →</a>
+    </div>
+    <div class="dna-grid">
+
+      <!-- Top activities -->
+      <div class="dna-card">
+        <div class="dna-card-title">Top activities</div>
+        <div class="dna-item">
+          <div class="dna-emoji">🏛️</div>
+          <div class="dna-label">Culture</div>
+          <div class="dna-bar-wrap"><div class="dna-bar" style="width:90%;"></div></div>
+          <div class="dna-count">9×</div>
+        </div>
+        <div class="dna-item">
+          <div class="dna-emoji">🥾</div>
+          <div class="dna-label">Hiking</div>
+          <div class="dna-bar-wrap"><div class="dna-bar" style="width:75%;"></div></div>
+          <div class="dna-count">8×</div>
+        </div>
+        <div class="dna-item">
+          <div class="dna-emoji">🍜</div>
+          <div class="dna-label">Food</div>
+          <div class="dna-bar-wrap"><div class="dna-bar" style="width:60%;"></div></div>
+          <div class="dna-count">6×</div>
+        </div>
+        <div class="dna-item">
+          <div class="dna-emoji">🌳</div>
+          <div class="dna-label">Nature</div>
+          <div class="dna-bar-wrap"><div class="dna-bar" style="width:45%;"></div></div>
+          <div class="dna-count">5×</div>
+        </div>
+      </div>
+
+      <!-- Travel style -->
+      <div class="dna-card">
+        <div class="dna-card-title">Travel style</div>
+        <div style="margin-bottom:20px;">
+          <div class="dna-big">Solo</div>
+          <div class="dna-big-label">Most common group type</div>
+        </div>
+        <div class="dna-card-title" style="margin-bottom:8px;">Preferred styles</div>
+        <div class="dna-style-row">
+          <span class="dna-style-pill">🌿 Nature</span>
+          <span class="dna-style-pill">🏛️ Cultural</span>
+          <span class="dna-style-pill">🍜 Foodie</span>
+          <span class="dna-style-pill">🧗 Adventure</span>
+        </div>
+      </div>
+
+      <!-- Pace + stats -->
+      <div class="dna-card">
+        <div class="dna-card-title">Trip patterns</div>
+        <div style="margin-bottom:18px;">
+          <div class="dna-big">5.3<span style="font-size:20px;color:rgba(255,255,255,0.4)"> days</span></div>
+          <div class="dna-big-label">Average trip length</div>
+        </div>
+        <div class="dna-item" style="margin-bottom:12px;">
+          <div class="dna-emoji">⚡</div>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.8);">Balanced pace</div>
+            <div style="font-size:10px;color:rgba(255,255,255,0.35);">Most selected</div>
+          </div>
+        </div>
+        <div class="dna-item">
+          <div class="dna-emoji">🌏</div>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.8);">Asia focus</div>
+            <div style="font-size:10px;color:rgba(255,255,255,0.35);">7 of 13 trips</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- PAST TRIPS -->
+  <div>
+    <div class="sec-header">
+      <div class="sec-title">Your journeys</div>
+      <a class="sec-link" href="#">View all 13 →</a>
+    </div>
+    <div class="trips-list">
+
+      <div class="trip-card">
+        <div class="trip-card-inner">
+          <div class="trip-color-bar" style="background:linear-gradient(180deg,#818cf8,#4f46e5);"></div>
+          <div class="trip-flag-col">🇯🇵</div>
+          <div class="trip-info">
+            <div class="trip-dest">Kyoto, Japan</div>
+            <div class="trip-meta">7 days · May 2026</div>
+          </div>
+          <span class="trip-status trip-status-done">Completed</span>
+          <div class="trip-actions">
+            <button class="trip-btn trip-btn-pdf">📥 PDF</button>
+            <button class="trip-btn trip-btn-replan">Re-plan</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="trip-card">
+        <div class="trip-card-inner">
+          <div class="trip-color-bar" style="background:linear-gradient(180deg,#fb923c,#ea580c);"></div>
+          <div class="trip-flag-col">🇲🇽</div>
+          <div class="trip-info">
+            <div class="trip-dest">Oaxaca, Mexico</div>
+            <div class="trip-meta">5 days · Apr 2026</div>
+          </div>
+          <span class="trip-status trip-status-done">Completed</span>
+          <div class="trip-actions">
+            <button class="trip-btn trip-btn-pdf">📥 PDF</button>
+            <button class="trip-btn trip-btn-replan">Re-plan</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="trip-card">
+        <div class="trip-card-inner">
+          <div class="trip-color-bar" style="background:linear-gradient(180deg,#34d399,#059669);"></div>
+          <div class="trip-flag-col">🇮🇩</div>
+          <div class="trip-info">
+            <div class="trip-dest">Bali, Indonesia</div>
+            <div class="trip-meta">6 days · Mar 2026</div>
+          </div>
+          <span class="trip-status trip-status-done">Completed</span>
+          <div class="trip-actions">
+            <button class="trip-btn trip-btn-pdf">📥 PDF</button>
+            <button class="trip-btn trip-btn-replan">Re-plan</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="trip-card">
+        <div class="trip-card-inner">
+          <div class="trip-color-bar" style="background:linear-gradient(180deg,#fbbf24,#d97706);"></div>
+          <div class="trip-flag-col">🇮🇳</div>
+          <div class="trip-info">
+            <div class="trip-dest">Shimla, India</div>
+            <div class="trip-meta">4 days · Feb 2026</div>
+          </div>
+          <span class="trip-status trip-status-proc">Processing</span>
+          <div class="trip-actions">
+            <button class="trip-btn trip-btn-replan">Re-plan</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

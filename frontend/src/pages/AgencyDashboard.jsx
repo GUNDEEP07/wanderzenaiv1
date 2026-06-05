@@ -50,9 +50,7 @@ const NAV_ITEMS = [
   { id: "api", label: "API access", icon: "⬢" },
 ];
 
-const css = `
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display:ital@0;1&display=swap');
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+const css = `  * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'DM Sans', sans-serif; background: #f4f1ec; color: #1a1610; }
   input, textarea, select, button { font-family: 'DM Sans', sans-serif; }
   ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: #d4cfc5; border-radius: 2px; }

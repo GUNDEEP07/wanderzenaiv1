@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WanderZenAI — Step 2 v3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,300;1,9..144,400&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#06090f; color:#fff; font-family:'Plus Jakarta Sans',sans-serif; height:100vh; overflow:hidden; }
+
+  /* Subtle noise overlay */
+  body::before {
+    content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    opacity: 0.4;
+  }
+
+  /* ── NAV ── */
+  .nav {
+    position:relative; z-index:2;
+    padding:14px 28px; display:flex; align-items:center; justify-content:space-between;
+    border-bottom:1px solid rgba(255,255,255,0.05);
+  }
+  .nav-logo { display:flex; align-items:center; gap:10px; }
+  .logo-mark {
+    width:30px; height:30px; border-radius:8px;
+    background:linear-gradient(135deg,#00d4aa 0%,#00916a 100%);
+    display:flex; align-items:center; justify-content:center;
+    font-size:12px; font-weight:800; color:#06090f;
+    box-shadow: 0 0 16px rgba(0,212,170,0.3);
+  }
+  .logo-text { font-size:14px; font-weight:700; color:rgba(255,255,255,0.88); letter-spacing:-0.01em; }
+  .step-badge { font-size:11px; color:rgba(255,255,255,0.22); font-weight:500; letter-spacing:0.02em; }
+
+  /* ── PROGRESS ── */
+  .progress-bar { position:relative; z-index:2; display:flex; gap:3px; height:3px; }
+  .seg { flex:1; height:3px; background:rgba(255,255,255,0.07); }
+  .seg.done { background:#00d4aa; }
+  .seg.active {
+    background:linear-gradient(90deg,#00d4aa,#00b896);
+    box-shadow:0 0 8px rgba(0,212,170,0.5);
+  }
+
+  /* ── LAYOUT ── */
+  .layout {
+    position:relative; z-index:1;
+    display:grid; grid-template-columns:360px 1fr;
+    height:calc(100vh - 59px - 3px); overflow:hidden;
+  }
+
+  /* ══════════ LEFT PANEL ══════════ */
+  .left {
+    border-right:1px solid rgba(255,255,255,0.05);
+    display:flex; flex-direction:column; overflow:hidden;
+    position:relative;
+  }
+
+  /* Ambient glow bloom behind headline */
+  .left::before {
+    content:''; position:absolute;
+    top:-60px; left:-80px;
+    width:420px; height:380px;
+    background:radial-gradient(ellipse at 40% 40%, rgba(0,212,170,0.09) 0%, transparent 70%);
+    pointer-events:none; z-index:0;
+  }
+
+  .left-head { padding:28px 28px 16px; flex-shrink:0; position:relative; z-index:1; }
+
+  .eyebrow {
+    font-size:10px; font-weight:800; letter-spacing:0.2em;
+    text-transform:uppercase; color:#00d4aa; margin-bottom:10px;
+    display:flex; align-items:center; gap:6px;
+  }
+  .eyebrow::before {
+    content:''; display:inline-block; width:16px; height:1.5px; background:#00d4aa; border-radius:2px;
+  }
+
+  .headline {
+    font-family:'Fraunces',serif; font-size:40px; font-weight:900;
+    line-height:1.05; color:#fff; letter-spacing:-0.025em; margin-bottom:16px;
+  }
+  .headline em {
+    font-style:italic; font-weight:300;
+    color:transparent;
+    background:linear-gradient(135deg,rgba(255,255,255,0.5),rgba(255,255,255,0.25));
+    -webkit-background-clip:text; background-clip:text;
+  }
+
+  .dest-pill {
+    display:inline-flex; align-items:center; gap:7px;
+    background:rgba(0,212,170,0.07); border:1px solid rgba(0,212,170,0.2);
+    border-radius:100px; padding:5px 13px 5px 9px;
+    font-size:11px; color:#00d4aa; font-weight:600; letter-spacing:0.01em;
+  }
+  .dest-pill .dot {
+    width:6px; height:6px; background:#00d4aa; border-radius:50%;
+    box-shadow:0 0 6px rgba(0,212,170,0.8);
+    animation:pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.75)} }
+
+  /* Insight chips */
+  .chips { display:flex; gap:5px; flex-wrap:wrap; padding:10px 28px 14px; flex-shrink:0; position:relative; z-index:1; }
+  .chip { padding:4px 10px; border-radius:20px; font-size:10px; font-weight:600; border:1px solid; letter-spacing:0.01em; }
+  .chip-t { background:rgba(0,212,170,0.07);border-color:rgba(0,212,170,0.18);color:#00d4aa; }
+  .chip-y { background:rgba(255,217,61,0.07);border-color:rgba(255,217,61,0.18);color:#ffd93d; }
+  .chip-w { background:rgba(255,255,255,0.03);border-color:rgba(255,255,255,0.09);color:rgba(255,255,255,0.4); }
+
+  /* AI picks */
+  .picks-label {
+    padding:0 28px 8px; flex-shrink:0; position:relative; z-index:1;
+    display:flex; align-items:center; gap:8px;
+  }
+  .picks-label-text { font-size:9px; font-weight:800; letter-spacing:0.18em; text-transform:uppercase; color:rgba(255,255,255,0.18); }
+  .picks-label-line { flex:1; height:1px; background:rgba(255,255,255,0.05); }
+
+  .picks-scroll {
+    flex:1; overflow-y:auto; padding:0 16px 16px 28px;
+    display:flex; flex-direction:column; gap:5px;
+    scrollbar-width:none; position:relative; z-index:1;
+  }
+  .picks-scroll::-webkit-scrollbar { display:none; }
+
+  .pick {
+    display:flex; align-items:center; gap:10px; padding:10px 12px;
+    border-radius:12px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.06);
+    cursor:pointer; transition:all 0.18s;
+  }
+  .pick:hover { background:rgba(255,255,255,0.05); border-color:rgba(255,255,255,0.12); }
+  .pick.sel { background:rgba(0,212,170,0.07); border-color:rgba(0,212,170,0.25); }
+
+  .pick-ico {
+    width:36px; height:36px; border-radius:10px; background:rgba(255,255,255,0.04);
+    display:flex; align-items:center; justify-content:center; font-size:19px; flex-shrink:0;
+  }
+  .pick.sel .pick-ico { background:rgba(0,212,170,0.1); }
+  .pick-txt { flex:1; min-width:0; }
+  .pick-name { font-size:12px; font-weight:700; color:rgba(255,255,255,0.9); margin-bottom:1px; }
+  .pick-sub { font-size:10px; color:rgba(255,255,255,0.28); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pick-btn {
+    width:20px; height:20px; border-radius:50%; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .pick-btn.check { background:#00d4aa; font-size:9px; font-weight:800; color:#06090f; }
+  .pick-btn.add { border:1.5px solid rgba(255,255,255,0.1); font-size:15px; color:rgba(255,255,255,0.2); line-height:1; }
+
+  /* ══════════ RIGHT PANEL ══════════ */
+  .right { display:flex; flex-direction:column; overflow:hidden; }
+  .right-body { flex:1; overflow-y:auto; padding:22px 28px 0; scrollbar-width:none; }
+  .right-body::-webkit-scrollbar { display:none; }
+
+  /* Section label */
+  .sec-head { margin-bottom:12px; }
+  .sec-head-row { display:flex; align-items:center; gap:8px; margin-bottom:0; }
+  .sec-head-label { font-size:9px; font-weight:800; letter-spacing:0.18em; text-transform:uppercase; color:rgba(255,255,255,0.18); white-space:nowrap; }
+  .sec-head-line { flex:1; height:1px; background:rgba(255,255,255,0.05); }
+
+  /* ── Activity grid — 4 col with category tints ── */
+  .act-grid {
+    display:grid; grid-template-columns:repeat(4,1fr); gap:7px; margin-bottom:20px;
+  }
+  .act-card {
+    border-radius:13px; padding:14px 8px 12px; text-align:center;
+    border:1.5px solid; cursor:pointer; transition:all 0.2s; position:relative; overflow:hidden;
+  }
+  .act-card::after {
+    content:''; position:absolute; inset:0; border-radius:13px;
+    background:linear-gradient(160deg,rgba(255,255,255,0.03) 0%,transparent 60%);
+    pointer-events:none;
+  }
+  .act-card:hover { transform:translateY(-1px); filter:brightness(1.15); }
+
+  /* Category-specific tints */
+  .act-hiking  { background:rgba(34,197,94,0.06);  border-color:rgba(34,197,94,0.15); }
+  .act-food    { background:rgba(251,146,60,0.06); border-color:rgba(251,146,60,0.14); }
+  .act-views   { background:rgba(96,165,250,0.06); border-color:rgba(96,165,250,0.14); }
+  .act-culture { background:rgba(167,139,250,0.06);border-color:rgba(167,139,250,0.14); }
+  .act-nature  { background:rgba(52,211,153,0.06); border-color:rgba(52,211,153,0.14); }
+  .act-night   { background:rgba(129,90,213,0.07); border-color:rgba(129,90,213,0.16); }
+  .act-well    { background:rgba(251,113,133,0.06);border-color:rgba(251,113,133,0.14); }
+  .act-custom  { background:rgba(255,217,61,0.04); border-color:rgba(255,217,61,0.12); }
+
+  .act-card.sel {
+    border-color:rgba(0,212,170,0.5) !important;
+    background:rgba(0,212,170,0.08) !important;
+    box-shadow:0 0 14px rgba(0,212,170,0.1);
+  }
+  .act-card.sel::before {
+    content:'✓'; position:absolute; top:6px; right:8px;
+    font-size:8px; font-weight:800; color:#00d4aa;
+  }
+
+  .act-ico { font-size:24px; margin-bottom:7px; display:block; }
+  .act-lbl { font-size:10px; font-weight:700; color:rgba(255,255,255,0.45); letter-spacing:0.01em; }
+  .act-card.sel .act-lbl { color:#00d4aa; }
+  .act-custom .act-lbl { color:rgba(255,217,61,0.6); }
+
+  /* ── YouTube row ── */
+  .yt-section { margin-bottom:20px; }
+  .yt-row { display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding-bottom:4px; }
+  .yt-row::-webkit-scrollbar { display:none; }
+  .yt-card {
+    flex-shrink:0; width:158px; border-radius:11px; overflow:hidden; cursor:pointer;
+    background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07);
+    transition:all 0.2s;
+  }
+  .yt-card:hover { transform:translateY(-2px); border-color:rgba(255,255,255,0.14); }
+  .yt-thumb {
+    height:88px; position:relative; display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+  }
+  .yt-bg { position:absolute; inset:0; font-size:48px; display:flex; align-items:center; justify-content:center; opacity:0.12; filter:blur(2px); }
+  .yt-gradient { position:absolute; inset:0; }
+  .yt-play {
+    width:30px; height:30px; background:rgba(255,255,255,0.92); border-radius:50%;
+    display:flex; align-items:center; justify-content:center; position:relative; z-index:1;
+    box-shadow:0 2px 12px rgba(0,0,0,0.4);
+  }
+  .yt-play::after { content:'▶'; font-size:9px; color:#111; margin-left:2px; }
+  .yt-info { padding:8px 10px; }
+  .yt-title { font-size:10px; font-weight:600; color:rgba(255,255,255,0.75); line-height:1.35; margin-bottom:3px; }
+  .yt-ch { font-size:9px; color:rgba(255,255,255,0.25); font-weight:500; }
+
+  /* ── Venues 2-col ── */
+  .venue-section { margin-bottom:24px; }
+  .venue-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .venue-card {
+    display:flex; align-items:center; gap:10px; padding:10px 12px;
+    border-radius:11px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.06);
+    cursor:pointer; transition:all 0.15s;
+  }
+  .venue-card:hover { background:rgba(255,255,255,0.05); border-color:rgba(255,255,255,0.1); }
+  .venue-card.sel { background:rgba(0,212,170,0.06); border-color:rgba(0,212,170,0.22); }
+  .v-dot { width:7px; height:7px; border-radius:50%; background:rgba(255,255,255,0.1); flex-shrink:0; }
+  .venue-card.sel .v-dot { background:#00d4aa; box-shadow:0 0 6px rgba(0,212,170,0.5); }
+  .v-info { flex:1; min-width:0; }
+  .v-name { font-size:11px; font-weight:700; color:rgba(255,255,255,0.85); margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .v-meta { font-size:9px; color:rgba(255,255,255,0.25); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .v-star { font-size:10px; color:#00d4aa; font-weight:700; flex-shrink:0; }
+
+  /* ── Footer ── */
+  .footer {
+    padding:11px 28px 15px; border-top:1px solid rgba(255,255,255,0.05);
+    display:flex; align-items:center; justify-content:space-between; flex-shrink:0;
+    background:rgba(6,9,15,0.6); backdrop-filter:blur(12px);
+  }
+  .btn-skip { font-size:12px; color:rgba(255,255,255,0.25); background:none; border:none; cursor:pointer; font-family:inherit; font-weight:500; }
+  .sel-count { font-size:11px; color:rgba(255,255,255,0.28); }
+  .sel-count b { color:#00d4aa; font-weight:800; }
+  .btn-go {
+    padding:11px 30px;
+    background:linear-gradient(135deg,#00d4aa 0%,#00a87e 100%);
+    border:none; border-radius:11px; font-size:13px; font-weight:800;
+    color:#06090f; cursor:pointer; font-family:inherit; letter-spacing:-0.01em;
+    box-shadow:0 4px 22px rgba(0,212,170,0.28), 0 1px 0 rgba(255,255,255,0.15) inset;
+    transition:all 0.2s;
+  }
+  .btn-go:hover { transform:translateY(-1px); box-shadow:0 6px 28px rgba(0,212,170,0.36); }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <div class="nav-logo">
+    <div class="logo-mark">W</div>
+    <span class="logo-text">WanderZenAI</span>
+  </div>
+  <span class="step-badge">Step 2 of 6</span>
+</div>
+<div class="progress-bar">
+  <div class="seg done"></div><div class="seg active"></div>
+  <div class="seg"></div><div class="seg"></div><div class="seg"></div><div class="seg"></div>
+</div>
+
+<div class="layout">
+
+  <!-- ═══ LEFT PANEL ═══ -->
+  <div class="left">
+    <div class="left-head">
+      <div class="eyebrow">Your journey awaits</div>
+      <div class="headline">What makes<br>you <em>come alive?</em></div>
+      <div class="dest-pill"><div class="dot"></div>Munich · May 31–Jun 5</div>
+    </div>
+
+    <div class="chips">
+      <span class="chip chip-t">☀️ 18–24°C · Sunny</span>
+      <span class="chip chip-y">👥 Moderate crowds</span>
+      <span class="chip chip-w">🗓️ May & June best</span>
+    </div>
+
+    <div class="picks-label">
+      <span class="picks-label-text">✦ Curated for you</span>
+      <div class="picks-label-line"></div>
+    </div>
+
+    <div class="picks-scroll">
+      <div class="pick sel">
+        <div class="pick-ico">🌿</div>
+        <div class="pick-txt"><div class="pick-name">English Garden</div><div class="pick-sub">Urban oasis · 3.7km trails</div></div>
+        <div class="pick-btn check">✓</div>
+      </div>
+      <div class="pick">
+        <div class="pick-ico">🏛️</div>
+        <div class="pick-txt"><div class="pick-name">Nymphenburg Palace</div><div class="pick-sub">Baroque gardens at your pace</div></div>
+        <div class="pick-btn add">+</div>
+      </div>
+      <div class="pick">
+        <div class="pick-ico">🍺</div>
+        <div class="pick-txt"><div class="pick-name">Biergarten Culture</div><div class="pick-sub">Augustiner · local haunts</div></div>
+        <div class="pick-btn add">+</div>
+      </div>
+      <div class="pick">
+        <div class="pick-ico">♨️</div>
+        <div class="pick-txt"><div class="pick-name">SPA Therme Erding</div><div class="pick-sub">Europe's largest thermal spa</div></div>
+        <div class="pick-btn add">+</div>
+      </div>
+      <div class="pick">
+        <div class="pick-ico">☕</div>
+        <div class="pick-txt"><div class="pick-name">Marienplatz Cafés</div><div class="pick-sub">Watch the world go by</div></div>
+        <div class="pick-btn add">+</div>
+      </div>
+      <div class="pick">
+        <div class="pick-ico">🚴</div>
+        <div class="pick-txt"><div class="pick-name">Isar River Cycling</div><div class="pick-sub">Scenic 12km riverside path</div></div>
+        <div class="pick-btn add">+</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ RIGHT PANEL ═══ -->
+  <div class="right">
+    <div class="right-body">
+
+      <!-- Activity grid -->
+      <div class="sec-head">
+        <div class="sec-head-row">
+          <div class="sec-head-label">Explore by category</div>
+          <div class="sec-head-line"></div>
+        </div>
+      </div>
+      <div class="act-grid">
+        <div class="act-card act-hiking sel">
+          <span class="act-ico">🥾</span><div class="act-lbl">Hiking</div>
+        </div>
+        <div class="act-card act-food">
+          <span class="act-ico">🍜</span><div class="act-lbl">Food</div>
+        </div>
+        <div class="act-card act-views">
+          <span class="act-ico">⛰️</span><div class="act-lbl">Views</div>
+        </div>
+        <div class="act-card act-culture">
+          <span class="act-ico">🏛️</span><div class="act-lbl">Culture</div>
+        </div>
+        <div class="act-card act-nature">
+          <span class="act-ico">🌳</span><div class="act-lbl">Nature</div>
+        </div>
+        <div class="act-card act-night">
+          <span class="act-ico">🎵</span><div class="act-lbl">Nightlife</div>
+        </div>
+        <div class="act-card act-well">
+          <span class="act-ico">🧘</span><div class="act-lbl">Wellness</div>
+        </div>
+        <div class="act-card act-custom">
+          <span class="act-ico">✨</span><div class="act-lbl">Add own</div>
+        </div>
+      </div>
+
+      <!-- YouTube -->
+      <div class="yt-section">
+        <div class="sec-head">
+          <div class="sec-head-row">
+            <div class="sec-head-label">📺 Hiking — watch before you go</div>
+            <div class="sec-head-line"></div>
+          </div>
+        </div>
+        <div class="yt-row">
+          <div class="yt-card">
+            <div class="yt-thumb">
+              <div class="yt-gradient" style="background:linear-gradient(135deg,rgba(34,197,94,0.25),rgba(6,60,30,0.7));"></div>
+              <div class="yt-bg">🥾</div>
+              <div class="yt-play"></div>
+            </div>
+            <div class="yt-info">
+              <div class="yt-title">Zugspitze — Germany's highest peak trail</div>
+              <div class="yt-ch">Bavaria Outdoors</div>
+            </div>
+          </div>
+          <div class="yt-card">
+            <div class="yt-thumb">
+              <div class="yt-gradient" style="background:linear-gradient(135deg,rgba(52,211,153,0.2),rgba(6,50,40,0.75));"></div>
+              <div class="yt-bg">🌲</div>
+              <div class="yt-play"></div>
+            </div>
+            <div class="yt-info">
+              <div class="yt-title">English Garden hidden trails you didn't know</div>
+              <div class="yt-ch">Munich Walks</div>
+            </div>
+          </div>
+          <div class="yt-card">
+            <div class="yt-thumb">
+              <div class="yt-gradient" style="background:linear-gradient(135deg,rgba(96,165,250,0.2),rgba(6,20,60,0.75));"></div>
+              <div class="yt-bg">🏔️</div>
+              <div class="yt-play"></div>
+            </div>
+            <div class="yt-info">
+              <div class="yt-title">Day hike from Munich — no car needed</div>
+              <div class="yt-ch">Slow Trails</div>
+            </div>
+          </div>
+          <div class="yt-card">
+            <div class="yt-thumb">
+              <div class="yt-gradient" style="background:linear-gradient(135deg,rgba(251,146,60,0.2),rgba(60,20,6,0.75));"></div>
+              <div class="yt-bg">🌄</div>
+              <div class="yt-play"></div>
+            </div>
+            <div class="yt-info">
+              <div class="yt-title">Isar valley sunrise hike — golden hour</div>
+              <div class="yt-ch">Alpine Wanderer</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Venues 2-col -->
+      <div class="venue-section">
+        <div class="sec-head">
+          <div class="sec-head-row">
+            <div class="sec-head-label">📍 Venues near Munich</div>
+            <div class="sec-head-line"></div>
+          </div>
+        </div>
+        <div class="venue-grid">
+          <div class="venue-card sel">
+            <div class="v-dot"></div>
+            <div class="v-info"><div class="v-name">Zugspitze Trail</div><div class="v-meta">Bavaria · 2962m summit</div></div>
+            <div class="v-star">⭐ 4.9</div>
+          </div>
+          <div class="venue-card">
+            <div class="v-dot"></div>
+            <div class="v-info"><div class="v-name">English Garden</div><div class="v-meta">Central · 3.7km loop</div></div>
+            <div class="v-star">⭐ 4.6</div>
+          </div>
+          <div class="venue-card">
+            <div class="v-dot"></div>
+            <div class="v-info"><div class="v-name">Isar River Walk</div><div class="v-meta">Riverside · 12km trail</div></div>
+            <div class="v-star">⭐ 4.5</div>
+          </div>
+          <div class="venue-card">
+            <div class="v-dot"></div>
+            <div class="v-info"><div class="v-name">Olympia Park</div><div class="v-meta">North Munich · Paved paths</div></div>
+            <div class="v-star">⭐ 4.4</div>
+          </div>
+          <div class="venue-card">
+            <div class="v-dot"></div>
+            <div class="v-info"><div class="v-name">Schleißheim Palace</div><div class="v-meta">North suburb · Palace gardens</div></div>
+            <div class="v-star">⭐ 4.3</div>
+          </div>
+          <div class="venue-card">
+            <div class="v-dot"></div>
+            <div class="v-info"><div class="v-name">Hirschgarten Park</div><div class="v-meta">West Munich · Deer park trails</div></div>
+            <div class="v-star">⭐ 4.3</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="footer">
+      <button class="btn-skip">Skip this step</button>
+      <div class="sel-count"><b>2</b> selected</div>
+      <button class="btn-go">Continue →</button>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

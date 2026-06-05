@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react"
 
 function FeedbackWidget({ submissionId, destination }) {
-  const [rating, setRating] = React.useState(0);
-  const [comment, setComment] = React.useState('');
-  const [submitted, setSubmitted] = React.useState(false);
-  const [hovering, setHovering] = React.useState(0);
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+  const [hovering, setHovering] = useState(0);
 
   const submit = async () => {
     if (!rating) return;
@@ -124,7 +124,7 @@ export default function Confirmation() {
           }
         }
       } catch (e) {
-        console.log("Poll error:", e)
+        /* poll error — graceful */
       }
     }
 

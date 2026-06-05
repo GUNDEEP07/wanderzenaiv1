@@ -124,9 +124,7 @@ export default function ItineraryView() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#06090f', fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#fff' }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;0,9..144,900;1,9..144,300&display=swap');
-        * { box-sizing: border-box; }
+      <style>{`        * { box-sizing: border-box; }
       `}</style>
 
       {/* Nav */}

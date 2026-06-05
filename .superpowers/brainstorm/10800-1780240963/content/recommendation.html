@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Recommendation</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,300;1,9..144,400&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #080c18;
+  color: #fff;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  padding: 32px 20px 80px;
+}
+h1 { font-family: 'Fraunces', serif; font-size: clamp(1.5rem,4vw,2.2rem); font-weight: 700; letter-spacing: -0.03em; margin-bottom: 6px; }
+.sub { font-size: 14px; color: rgba(255,255,255,0.45); margin-bottom: 36px; line-height: 1.6; max-width: 680px; }
+
+/* ── The principle callout ── */
+.principle {
+  background: linear-gradient(135deg, rgba(0,212,170,0.08), rgba(139,92,246,0.06));
+  border: 1px solid rgba(0,212,170,0.2);
+  border-radius: 16px;
+  padding: 20px 24px;
+  margin-bottom: 40px;
+  max-width: 700px;
+}
+.principle-label { font-size: 9px; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; color: #00d4aa; margin-bottom: 8px; }
+.principle-text { font-size: 15px; font-weight: 700; color: #fff; line-height: 1.5; margin-bottom: 6px; }
+.principle-sub { font-size: 13px; color: rgba(255,255,255,0.5); line-height: 1.7; }
+
+/* ── Two-column flow ── */
+.flow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  max-width: 1000px;
+  margin-bottom: 48px;
+}
+@media (max-width: 700px) { .flow { grid-template-columns: 1fr; } }
+
+/* ── Phone mockup ── */
+.phone {
+  width: 100%;
+  max-width: 220px;
+  background: #0a0f1e;
+  border-radius: 28px;
+  border: 2px solid rgba(255,255,255,0.1);
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
+  margin: 0 auto;
+  font-size: 0;
+}
+.phone * { font-size: initial; }
+
+/* Aurora nav — used everywhere */
+.p-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px;
+  background: rgba(10,15,30,0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  position: sticky; top: 0; z-index: 5;
+}
+.p-logo { display: flex; align-items: center; gap: 5px; }
+.p-mark {
+  width: 24px; height: 24px; border-radius: 6px;
+  background: linear-gradient(135deg, #00d4aa, #00916a);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 800; color: #0a0f1e;
+  box-shadow: 0 0 12px rgba(0,212,170,0.3);
+}
+.p-wordmark { font-size: 11px; font-weight: 700; color: #fff; letter-spacing: -0.02em; }
+.p-cta {
+  padding: 5px 11px; border-radius: 7px;
+  background: #00d4aa; color: #0a0f1e;
+  font-size: 9px; font-weight: 800;
+  box-shadow: 0 2px 8px rgba(0,212,170,0.3);
+}
+
+/* Landing hero — dramatic aurora */
+.p-hero {
+  padding: 18px 14px 14px;
+  position: relative;
+  overflow: hidden;
+  min-height: 200px;
+}
+.p-aurora-1 {
+  position: absolute; width: 180px; height: 150px;
+  top: -50px; left: -40px;
+  background: radial-gradient(ellipse, rgba(0,212,170,0.2) 0%, transparent 70%);
+  filter: blur(25px);
+  pointer-events: none;
+}
+.p-aurora-2 {
+  position: absolute; width: 160px; height: 140px;
+  top: 10px; right: -30px;
+  background: radial-gradient(ellipse, rgba(139,92,246,0.18) 0%, transparent 70%);
+  filter: blur(22px);
+  pointer-events: none;
+}
+.p-eyebrow {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 7px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  color: #00d4aa; margin-bottom: 9px;
+  padding: 3px 9px; border-radius: 20px;
+  background: rgba(0,212,170,0.08); border: 1px solid rgba(0,212,170,0.18);
+  position: relative; z-index: 1;
+}
+.p-eyebrow-dot { width: 4px; height: 4px; border-radius: 50%; background: #00d4aa; animation: blink 2s infinite; }
+@keyframes blink { 0%,100%{opacity:1}50%{opacity:0.3} }
+.p-h1 {
+  font-family: 'Fraunces', serif;
+  font-size: 26px; font-weight: 700; line-height: 1.08;
+  letter-spacing: -0.03em;
+  margin-bottom: 8px;
+  position: relative; z-index: 1;
+}
+.p-h1-grad {
+  background: linear-gradient(135deg, #fff 20%, rgba(0,212,170,0.85) 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.p-h1 em { color: #00d4aa; font-style: italic; -webkit-text-fill-color: #00d4aa; }
+.p-sub {
+  font-size: 9px; color: rgba(255,255,255,0.45); line-height: 1.6;
+  margin-bottom: 14px; position: relative; z-index: 1;
+}
+.p-btn-full {
+  display: block; width: 100%;
+  padding: 10px; border-radius: 9px; text-align: center;
+  background: linear-gradient(135deg, #00d4aa, #00a87e);
+  font-size: 11px; font-weight: 800; color: #0a0f1e;
+  margin-bottom: 6px;
+  box-shadow: 0 4px 16px rgba(0,212,170,0.25);
+  position: relative; z-index: 1;
+}
+.p-btn-ghost {
+  display: block; width: 100%;
+  padding: 8px; border-radius: 9px; text-align: center;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  font-size: 10px; font-weight: 500; color: rgba(255,255,255,0.45);
+  position: relative; z-index: 1;
+}
+
+/* Stats 2×2 grid */
+.p-stats {
+  display: grid; grid-template-columns: 1fr 1fr;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.p-stat {
+  padding: 10px 12px;
+  border-right: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.p-stat:nth-child(2n) { border-right: none; }
+.p-stat:nth-child(3), .p-stat:nth-child(4) { border-bottom: none; }
+.p-stat-num { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; color: #00d4aa; line-height: 1; }
+.p-stat-label { font-size: 7px; color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+
+/* Section divider */
+.p-section { padding: 12px 14px; }
+.p-sec-label { font-size: 7px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: #00d4aa; display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.p-sec-label::before { content:''; width:16px; height:1px; background:#00d4aa; }
+.p-sec-title { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 700; color: #fff; line-height: 1.2; margin-bottom: 10px; letter-spacing: -0.02em; }
+
+/* Clean glass cards — for content sections */
+.p-card {
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  transition: all 0.2s;
+}
+.p-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.p-card-icon { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+.p-card-title { font-size: 12px; font-weight: 700; color: #fff; }
+.p-card-sub { font-size: 9px; color: rgba(255,255,255,0.4); line-height: 1.5; }
+
+/* Step cards — clean, no glow */
+.p-step {
+  background: rgba(20,29,51,0.6);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  display: flex; align-items: flex-start; gap: 8px;
+}
+.p-step-num { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; color: rgba(0,212,170,0.25); line-height: 1; flex-shrink: 0; width: 22px; }
+.p-step-title { font-size: 11px; font-weight: 700; color: #fff; margin-bottom: 2px; }
+.p-step-body { font-size: 9px; color: rgba(255,255,255,0.4); line-height: 1.5; }
+
+/* Dashboard specific */
+.p-dash-hero {
+  padding: 16px 14px 12px;
+  position: relative; overflow: hidden;
+}
+.p-dash-glow {
+  position: absolute; width: 200px; height: 160px;
+  top: -60px; left: -40px;
+  background: radial-gradient(ellipse, rgba(0,212,170,0.08) 0%, transparent 65%);
+  filter: blur(20px); pointer-events: none;
+}
+.p-greeting { font-size: 8px; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; color: #00d4aa; margin-bottom: 6px; display: flex; align-items: center; gap: 5px; }
+.p-greeting-line { width: 14px; height: 1.5px; background: #00d4aa; border-radius: 1px; }
+.p-dash-title { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 700; line-height: 1.1; letter-spacing: -0.025em; margin-bottom: 3px; }
+.p-dash-title em { font-style: italic; font-weight: 300; color: rgba(255,255,255,0.35); }
+.p-dash-sub { font-size: 9px; color: rgba(255,255,255,0.35); font-style: italic; margin-bottom: 12px; }
+.p-stat-strip {
+  display: grid; grid-template-columns: repeat(4,1fr);
+  border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; overflow: hidden;
+}
+.p-stat-strip-item { padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.05); }
+.p-stat-strip-item:last-child { border-right: none; }
+.p-stat-strip-num { font-family: 'Fraunces', serif; font-size: 14px; font-weight: 700; color: #00d4aa; }
+.p-stat-strip-label { font-size: 6px; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 0.05em; }
+
+.p-trip-card {
+  border-radius: 10px; overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.07); margin-bottom: 7px;
+}
+.p-trip-img {
+  height: 60px; position: relative; overflow: hidden;
+}
+.p-trip-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(10,15,30,0.85), transparent); }
+.p-trip-badge {
+  position: absolute; top: 6px; right: 7px;
+  padding: 2px 7px; border-radius: 10px;
+  font-size: 7px; font-weight: 800; background: rgba(0,212,170,0.9); color: #0a0f1e;
+}
+.p-trip-dest {
+  position: absolute; bottom: 7px; left: 10px;
+  font-family: 'Fraunces', serif; font-size: 13px; font-weight: 700; color: #fff;
+}
+.p-trip-body { padding: 7px 10px; display: flex; gap: 5px; }
+.p-trip-btn { padding: 4px 9px; border-radius: 5px; font-size: 8px; font-weight: 800; background: linear-gradient(135deg, #00d4aa, #00a87e); color: #0a0f1e; }
+.p-trip-btn-ghost { padding: 4px 8px; border-radius: 5px; font-size: 8px; font-weight: 600; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.4); }
+
+/* Form page */
+.p-form-hero { padding: 14px; }
+.p-form-step-label { font-size: 7px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: #00d4aa; margin-bottom: 5px; }
+.p-form-title { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 700; color: #fff; line-height: 1.15; letter-spacing: -0.02em; margin-bottom: 4px; }
+.p-form-sub { font-size: 9px; color: rgba(255,255,255,0.4); font-style: italic; margin-bottom: 14px; }
+.p-progress { height: 2px; background: rgba(255,255,255,0.06); border-radius: 1px; margin-bottom: 14px; overflow: hidden; }
+.p-progress-fill { height: 100%; width: 33%; background: #00d4aa; border-radius: 1px; }
+.p-input {
+  width: 100%; padding: 9px 10px; border-radius: 8px;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(0,212,170,0.18);
+  font-size: 10px; color: rgba(255,255,255,0.5); margin-bottom: 8px;
+}
+.p-choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 8px; }
+.p-choice {
+  padding: 7px 8px; border-radius: 7px;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+  font-size: 9px; color: rgba(255,255,255,0.5); text-align: center;
+}
+.p-choice.sel { background: rgba(0,212,170,0.1); border-color: rgba(0,212,170,0.3); color: #00d4aa; font-weight: 700; }
+.p-form-cta { display: block; width: 100%; padding: 10px; border-radius: 9px; text-align: center; background: linear-gradient(135deg, #00d4aa, #00a87e); font-size: 11px; font-weight: 800; color: #0a0f1e; }
+
+/* Info section */
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 1000px; margin-bottom: 40px; }
+@media (max-width: 600px) { .info-grid { grid-template-columns: 1fr; } }
+.info-card { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 16px 18px; }
+.info-num { font-size: 10px; font-weight: 800; color: #00d4aa; letter-spacing: 0.08em; margin-bottom: 6px; }
+.info-title { font-size: 14px; font-weight: 800; color: #fff; margin-bottom: 6px; }
+.info-body { font-size: 12px; color: rgba(255,255,255,0.5); line-height: 1.6; }
+
+.divider { height: 1px; background: rgba(255,255,255,0.06); margin: 40px 0; max-width: 1000px; }
+
+.phones-row { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; margin-bottom: 48px; }
+.phone-wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.phone-caption { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.5); text-align: center; }
+.phone-caption span { display: block; font-size: 10px; color: rgba(255,255,255,0.25); font-weight: 400; margin-top: 2px; }
+</style>
+</head>
+<body>
+<div style="max-width:1000px;margin:0 auto;">
+
+  <h1>The honest answer: Aurora hero, clean content</h1>
+  <p class="sub">
+    Pure aurora glass is visually stunning but cognitively tiring when someone is trying to read or take action.
+    The pattern that actually converts and retains users is <strong style="color:#fff">dramatic at the first impression, invisible once they're working.</strong>
+    Below is every page of your app rendered in the exact treatment I'd build.
+  </p>
+
+  <div class="principle">
+    <div class="principle-label">The rule</div>
+    <div class="principle-text">"Aurora where they look. Clean where they act."</div>
+    <div class="principle-sub">
+      Landing hero and nav get the aurora treatment — ambient glows, grain texture, gradient text, glass buttons.
+      Dashboard, forms, cards, and content sections stay clean and readable — no distracting effects competing with the actual information.
+    </div>
+  </div>
+
+  <!-- ── Four page mockups ── -->
+  <div class="phones-row">
+
+    <!-- Landing -->
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="p-nav">
+          <div class="p-logo"><div class="p-mark">W</div><span class="p-wordmark">WanderZenAI</span></div>
+          <div class="p-cta">Plan trip →</div>
+        </div>
+        <div class="p-hero">
+          <div class="p-aurora-1"></div>
+          <div class="p-aurora-2"></div>
+          <div class="p-eyebrow"><div class="p-eyebrow-dot"></div>Slow travel AI</div>
+          <div class="p-h1"><span class="p-h1-grad">Find the <em>real</em><br/>destination</span></div>
+          <div class="p-sub">Hidden cafes, village stays, nature trails — built by AI trained to avoid tourist traps.</div>
+          <div class="p-btn-full">Plan my trip — free →</div>
+          <div class="p-btn-ghost">See a sample plan</div>
+        </div>
+        <div class="p-stats">
+          <div class="p-stat"><div class="p-stat-num">22+</div><div class="p-stat-label">Itineraries</div></div>
+          <div class="p-stat"><div class="p-stat-num">14+</div><div class="p-stat-label">Destinations</div></div>
+          <div class="p-stat"><div class="p-stat-num">75+</div><div class="p-stat-label">Days planned</div></div>
+          <div class="p-stat"><div class="p-stat-num">$0</div><div class="p-stat-label">To start</div></div>
+        </div>
+        <div class="p-section">
+          <div class="p-sec-label">How it works</div>
+          <div class="p-step">
+            <div class="p-step-num">01</div>
+            <div><div class="p-step-title">Tell us your trip</div><div class="p-step-body">Destination, budget, pace, interests</div></div>
+          </div>
+          <div class="p-step">
+            <div class="p-step-num">02</div>
+            <div><div class="p-step-title">AI crafts your plan</div><div class="p-step-body">Hidden gems, local guesthouses, scenic routes</div></div>
+          </div>
+          <div class="p-step">
+            <div class="p-step-num">03</div>
+            <div><div class="p-step-title">Itinerary in your inbox</div><div class="p-step-body">Beautiful PDF in 3 minutes, yours forever</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-caption">Landing Page<span>Aurora hero · clean sections</span></div>
+    </div>
+
+    <!-- Dashboard -->
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="p-nav">
+          <div class="p-logo"><div class="p-mark">W</div><span class="p-wordmark">WanderZenAI</span></div>
+          <div style="display:flex;align-items:center;gap:7px;">
+            <div style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#00d4aa,#00916a);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#0a0f1e;">G</div>
+            <span style="font-size:10px;color:rgba(255,255,255,0.5);">Gundeep</span>
+          </div>
+        </div>
+        <div class="p-dash-hero">
+          <div class="p-dash-glow"></div>
+          <div class="p-greeting"><div class="p-greeting-line"></div>Good morning</div>
+          <div class="p-dash-title">Gundeep,<br/><em>where next?</em></div>
+          <div class="p-dash-sub">3 journeys and counting</div>
+          <div class="p-stat-strip">
+            <div class="p-stat-strip-item"><div class="p-stat-strip-num">3</div><div class="p-stat-strip-label">Trips</div></div>
+            <div class="p-stat-strip-item"><div class="p-stat-strip-num">2</div><div class="p-stat-strip-label">Countries</div></div>
+            <div class="p-stat-strip-item"><div class="p-stat-strip-num">14</div><div class="p-stat-strip-label">Days</div></div>
+            <div class="p-stat-strip-item"><div class="p-stat-strip-num" style="font-size:9px;">7d ago</div><div class="p-stat-strip-label">Last trip</div></div>
+          </div>
+        </div>
+        <div style="padding:0 14px 10px;">
+          <div style="font-size:8px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:8px;">Your journeys</div>
+          <div class="p-trip-card">
+            <div class="p-trip-img" style="background:linear-gradient(135deg,#1a1040,#2d1b69);">
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:24px;opacity:0.4;">🇯🇵</div>
+              <div class="p-trip-overlay"></div>
+              <div class="p-trip-badge">✓ Done</div>
+              <div class="p-trip-dest">Kyoto, Japan</div>
+            </div>
+            <div class="p-trip-body">
+              <div class="p-trip-btn">View →</div>
+              <div class="p-trip-btn-ghost">📥 PDF</div>
+              <div class="p-trip-btn-ghost">🔗 Share</div>
+            </div>
+          </div>
+          <div class="p-trip-card">
+            <div class="p-trip-img" style="background:linear-gradient(135deg,#1a1200,#3d2800);">
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:24px;opacity:0.4;">🇮🇳</div>
+              <div class="p-trip-overlay"></div>
+              <div class="p-trip-badge">✓ Done</div>
+              <div class="p-trip-dest">Shimla, India</div>
+            </div>
+            <div class="p-trip-body">
+              <div class="p-trip-btn">View →</div>
+              <div class="p-trip-btn-ghost">📥 PDF</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-caption">Dashboard<span>Subtle hero glow · clean trip cards</span></div>
+    </div>
+
+    <!-- Plan Trip Form -->
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="p-nav">
+          <div class="p-logo"><div class="p-mark">W</div><span class="p-wordmark">WanderZenAI</span></div>
+          <button style="background:none;border:none;color:rgba(255,255,255,0.4);font-size:11px;cursor:pointer;">✕ Exit</button>
+        </div>
+        <div class="p-form-hero">
+          <div class="p-progress"><div class="p-progress-fill"></div></div>
+          <div class="p-form-step-label">Step 2 of 5 · Budget & dates</div>
+          <div class="p-form-title">How long is<br/>your trip?</div>
+          <div class="p-form-sub">We'll build a day-by-day plan around this</div>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+            <div style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:16px;color:rgba(255,255,255,0.5);">−</div>
+            <div style="font-family:'Fraunces',serif;font-size:36px;font-weight:700;color:#00d4aa;min-width:50px;text-align:center;">5</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.35);">days</div>
+            <div style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:16px;color:rgba(255,255,255,0.5);">+</div>
+          </div>
+          <div style="font-size:8px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:7px;">Traveler type</div>
+          <div class="p-choice-grid">
+            <div class="p-choice sel">Solo</div>
+            <div class="p-choice">Couple</div>
+            <div class="p-choice">Family</div>
+            <div class="p-choice">Group</div>
+          </div>
+          <div class="p-form-cta">Continue →</div>
+        </div>
+      </div>
+      <div class="phone-caption">Plan Trip Form<span>No aurora — full focus on the task</span></div>
+    </div>
+
+    <!-- Explore -->
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="p-nav">
+          <div class="p-logo"><div class="p-mark">W</div><span class="p-wordmark">WanderZenAI</span></div>
+          <div class="p-cta">Plan trip →</div>
+        </div>
+        <div style="padding:14px 14px 6px;position:relative;overflow:hidden;">
+          <div style="position:absolute;top:-40px;right:-20px;width:140px;height:120px;background:radial-gradient(ellipse,rgba(0,212,170,0.1) 0%,transparent 70%);filter:blur(16px);pointer-events:none;"></div>
+          <div style="font-size:8px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:#00d4aa;margin-bottom:6px;display:flex;align-items:center;gap:6px;"><span style="width:16px;height:1px;background:#00d4aa;display:inline-block;"></span>Explore</div>
+          <div style="font-family:'Fraunces',serif;font-size:20px;font-weight:700;color:#fff;letter-spacing:-0.025em;line-height:1.15;margin-bottom:12px;">Find your next <span style="color:#00d4aa;font-style:italic;">slow journey</span></div>
+        </div>
+        <!-- Scrollable continent tabs -->
+        <div style="display:flex;gap:6px;padding:0 14px 10px;overflow-x:auto;-webkit-overflow-scrolling:touch;">
+          <div style="flex-shrink:0;padding:5px 11px;border-radius:20px;background:rgba(0,212,170,0.12);border:1px solid rgba(0,212,170,0.25);font-size:9px;font-weight:700;color:#00d4aa;white-space:nowrap;">🏯 Asia</div>
+          <div style="flex-shrink:0;padding:5px 11px;border-radius:20px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);white-space:nowrap;">🏰 Europe</div>
+          <div style="flex-shrink:0;padding:5px 11px;border-radius:20px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);white-space:nowrap;">🌍 Africa</div>
+          <div style="flex-shrink:0;padding:5px 11px;border-radius:20px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);font-size:9px;font-weight:600;color:rgba(255,255,255,0.45);white-space:nowrap;">🌎 Americas</div>
+        </div>
+        <div style="padding:0 14px 14px;display:flex;flex-direction:column;gap:7px;">
+          <div class="p-card">
+            <div class="p-card-header">
+              <div class="p-card-icon" style="background:rgba(99,102,241,0.15);">🇯🇵</div>
+              <div><div class="p-card-title">Japan</div><div class="p-card-sub">Slow travel favourite</div></div>
+              <div style="margin-left:auto;font-size:11px;color:#00d4aa;">→</div>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px;">
+              <span style="font-size:8px;padding:2px 7px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);color:rgba(255,255,255,0.4);">Kyoto</span>
+              <span style="font-size:8px;padding:2px 7px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);color:rgba(255,255,255,0.4);">Kanazawa</span>
+              <span style="font-size:8px;padding:2px 7px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);color:rgba(255,255,255,0.4);">Yakushima</span>
+            </div>
+          </div>
+          <div class="p-card">
+            <div class="p-card-header">
+              <div class="p-card-icon" style="background:rgba(251,146,60,0.15);">🇮🇳</div>
+              <div><div class="p-card-title">India</div><div class="p-card-sub">Cultural depth</div></div>
+              <div style="margin-left:auto;font-size:11px;color:#00d4aa;">→</div>
+            </div>
+          </div>
+          <div class="p-card">
+            <div class="p-card-header">
+              <div class="p-card-icon" style="background:rgba(52,211,153,0.15);">🇮🇩</div>
+              <div><div class="p-card-title">Indonesia</div><div class="p-card-sub">Nature first</div></div>
+              <div style="margin-left:auto;font-size:11px;color:#00d4aa;">→</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-caption">Explore Page<span>Scroll tabs · single-column cards</span></div>
+    </div>
+
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- The 4 design decisions -->
+  <h1 style="font-size:1.5rem;margin-bottom:8px;">Why this works better than pure aurora</h1>
+  <p class="sub" style="margin-bottom:28px;">Four specific decisions that separate attractive from usable.</p>
+
+  <div class="info-grid">
+    <div class="info-card">
+      <div class="info-num">01 — CONTRAST</div>
+      <div class="info-title">Drama fades as trust builds</div>
+      <div class="info-body">The aurora glows on the landing page create the "wow" moment. Once users are in the dashboard or form, those effects are gone — the signal is clarity, not spectacle. Users feel the app is fast and focused.</div>
+    </div>
+    <div class="info-card">
+      <div class="info-num">02 — TOUCH TARGETS</div>
+      <div class="info-title">Every tap target is ≥44px</div>
+      <div class="info-body">Full-width CTAs on mobile, 52px nav height, 36px stepper buttons on the form. Nothing frustrating to tap. The form screen removes all decoration so the user's thumb never hits the wrong thing.</div>
+    </div>
+    <div class="info-card">
+      <div class="info-num">03 — COGNITIVE LOAD</div>
+      <div class="info-title">One action per screen on mobile</div>
+      <div class="info-body">The form shows one question at a time with a single "Continue →" CTA. The explore page leads with scrollable tabs — one decision (continent) before showing cards. No visual noise competes with the decision.</div>
+    </div>
+    <div class="info-card">
+      <div class="info-num">04 — CONSISTENCY</div>
+      <div class="info-title">Same nav, same padding, same card pattern</div>
+      <div class="info-body">Logo left, CTA right, 16px horizontal padding, glass cards with rgba(255,255,255,0.025) background on every content screen. Users learn the pattern once and apply it everywhere. No surprises.</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

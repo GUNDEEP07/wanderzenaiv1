@@ -23,7 +23,5 @@ export async function fetchDestinationInsights(destination, travelStyles, startD
   }
 
   const data = await response.json();
-  console.log(`[DestinationInsights] Fetched insights for ${destination}:`, data);
-
   return data.insights || null;
 }
