@@ -406,7 +406,7 @@ export default function PlanTrip() {
               <p style={s.stepSub}>Tell us your dream destination — we'll find the real, local version of it.</p>
 
               <div style={s.fieldWrap}>
-                <DestinationSearch onSelect={handleDestinationSelect} disabled={false} allowMultiple={true} />
+                <DestinationSearch onSelect={handleDestinationSelect} disabled={false} allowMultiple={true} initialSelected={form.destinations} />
                 {errors.destination && <div style={s.error}>{errors.destination}</div>}
                 {personalRecs.length > 0 && (
                   <div style={{ marginTop: 12 }}>

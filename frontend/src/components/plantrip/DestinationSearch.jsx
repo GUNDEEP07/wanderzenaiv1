@@ -1,14 +1,40 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { debounce } from 'lodash';
 import './styles/destinationsearch.css';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-export function DestinationSearch({ onSelect, disabled, allowMultiple = false }) {
+export function DestinationSearch({ onSelect, disabled, allowMultiple = false, initialSelected = null }) {
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [selected, setSelected] = useState(allowMultiple ? [] : null);
+  const [selected, setSelected] = useState(() => {
+    if (!allowMultiple) return initialSelected || null;
+    if (initialSelected && Array.isArray(initialSelected) && initialSelected.length > 0) {
+      return initialSelected.map(d => ({
+        fsq_id: d.fsq_id || d.name?.toLowerCase().replace(/\s+/g, '-') || 'unknown',
+        name: d.name || '',
+        country: d.country || '',
+        lat: d.lat || 0,
+        lng: d.lng || 0,
+      }));
+    }
+    return [];
+  });
+
+  // Sync selected with initialSelected when it changes (e.g., prefilled destinations)
+  useEffect(() => {
+    if (!allowMultiple || !initialSelected) return;
+    if (Array.isArray(initialSelected) && initialSelected.length > 0) {
+      setSelected(initialSelected.map(d => ({
+        fsq_id: d.fsq_id || d.name?.toLowerCase().replace(/\s+/g, '-') || 'unknown',
+        name: d.name || '',
+        country: d.country || '',
+        lat: d.lat || 0,
+        lng: d.lng || 0,
+      })));
+    }
+  }, [allowMultiple, initialSelected]);
 
   const allDestinations = [
     { fsq_id: 'kyoto', name: 'Kyoto', country: 'Japan', lat: 35.0116, lng: 135.7681 },
