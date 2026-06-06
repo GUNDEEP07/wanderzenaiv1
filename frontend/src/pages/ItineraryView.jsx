@@ -149,6 +149,10 @@ export default function ItineraryView() {
             <button onClick={() => handleShare('email')} style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
               Email
             </button>
+            <span style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
+            <button onClick={() => navigate('/feedback')} style={{ padding: '6px 12px', background: 'rgba(0,212,170,0.1)', border: '1px solid rgba(0,212,170,0.25)', borderRadius: 8, color: '#00d4aa', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              💬 Feedback
+            </button>
             {shareMsg && (
               <div style={{ position: 'absolute', top: '110%', right: 0, background: '#00d4aa', color: '#06090f', borderRadius: 6, padding: '4px 10px', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap', zIndex: 10 }}>
                 {shareMsg}

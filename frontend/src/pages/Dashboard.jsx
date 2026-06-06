@@ -250,6 +250,7 @@ export default function Dashboard() {
           <div style={s.avatar}><Avatar user={currentUser} /></div>
           <span style={s.navName}>{firstName}</span>
           <button style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12 }} onClick={() => navigate('/settings')}>Settings</button>
+          <button style={{ background: 'none', border: 'none', color: '#00d4aa', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, fontWeight: 600 }} onClick={() => navigate('/feedback')}>💬 Feedback</button>
           <button style={s.signOut} onClick={handleSignOut}>Sign out</button>
         </div>
       </nav>
