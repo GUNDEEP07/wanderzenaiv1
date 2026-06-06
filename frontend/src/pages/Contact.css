@@ -1,0 +1,23 @@
+/* Contact page styling */
+
+input::placeholder,
+textarea::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+input:focus,
+textarea:focus {
+  border-color: #00d4aa !important;
+  box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+button:disabled {
+  opacity: 0.5;
+}
+
+@media (max-width: 767px) {
+  textarea {
+    min-height: 120px;
+  }
+}

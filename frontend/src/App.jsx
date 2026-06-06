@@ -23,6 +23,7 @@ const ItineraryView  = lazy(() => import('./pages/ItineraryView'));
 const NotFound       = lazy(() => import('./pages/NotFound'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const Feedback       = lazy(() => import('./pages/Feedback'));
+const Contact        = lazy(() => import('./pages/Contact'));
 
 const Spinner = () => (
   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#06090f' }}>
@@ -52,6 +53,7 @@ export default function App() {
               <Route path="/settings"     element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="/itinerary/:id" element={<ItineraryView />} />
               <Route path="/feedback"     element={<Feedback />} />
+              <Route path="/contact"      element={<Contact />} />
               <Route path="/privacy"      element={<PrivacyPolicy />} />
               <Route path="/terms"        element={<TermsOfService />} />
               <Route path="*"             element={<NotFound />} />

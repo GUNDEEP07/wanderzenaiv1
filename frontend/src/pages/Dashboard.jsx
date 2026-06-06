@@ -251,6 +251,7 @@ export default function Dashboard() {
           <span style={s.navName}>{firstName}</span>
           <button style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12 }} onClick={() => navigate('/settings')}>Settings</button>
           <button style={{ background: 'none', border: 'none', color: '#00d4aa', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, fontWeight: 600 }} onClick={() => navigate('/feedback')}>💬 Feedback</button>
+          <button style={{ background: 'none', border: 'none', color: 'rgba(0,212,170,0.6)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12 }} onClick={() => navigate('/contact')}>Contact us</button>
           <button style={s.signOut} onClick={handleSignOut}>Sign out</button>
         </div>
       </nav>

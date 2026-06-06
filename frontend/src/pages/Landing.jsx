@@ -98,6 +98,7 @@ export default function Landing() {
           <a href="#how" className="nav-link">How it works</a>
           <a href="#sample" className="nav-link">Sample plan</a>
           <a href="/pricing" className="nav-link">Pricing</a>
+          <a href="/contact" className="nav-link">Contact</a>
           <a href="/agency" className="nav-link">For agencies</a>
           {currentUser ? (
             <a href="/dashboard" className="nav-link">Dashboard</a>
@@ -502,8 +503,8 @@ export default function Landing() {
             <a href="/agency">For agencies</a>
             <a href="/privacy">Privacy</a>
             <a href="/terms">Terms</a>
+            <a href="/contact">Contact</a>
             <a href="https://instagram.com/wanderzenai">Instagram</a>
-            <a href="mailto:travel@wanderzenai.com">Contact</a>
           </div>
           <div className="footer-copy">© 2025 WanderZenAI · Built for slow travellers</div>
         </div>
