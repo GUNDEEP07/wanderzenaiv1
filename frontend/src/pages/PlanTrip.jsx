@@ -270,7 +270,7 @@ export default function PlanTrip() {
       if (form.destinations.length === 0) errs.destination = 'Select a destination';
       if (form.days < 2 || form.days > 30) errs.days = 'Duration must be 2–30 days';
 
-      const budgetValidation = validateBudget(form.budget);
+      const budgetValidation = validateBudget(Number(form.budget));
       if (!budgetValidation.valid) errs.budget = budgetValidation.error;
 
       if (!form.interests || form.interests.trim().length < 10) {
@@ -278,6 +278,7 @@ export default function PlanTrip() {
       }
       if (!form.travelPace) errs.travelPace = 'Select a travel pace';
       if (!form.language) errs.language = 'Select a language';
+      if (!form.currency) errs.currency = 'Select a currency';
     }
     if (step === 4) {
       if (!form.email.trim()) errs.email = 'We need your email to send the itinerary';
@@ -466,24 +467,28 @@ export default function PlanTrip() {
               {/* Budget */}
               <div style={s.fieldWrap}>
                 <label style={s.label}>Total Budget *</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.75rem' }}>
-                  <input
-                    style={{ ...s.input, ...(errors.budget ? s.inputError : {}) }}
-                    type="number"
-                    placeholder="e.g., 2500"
-                    value={form.budget}
-                    onChange={e => set('budget', e.target.value)}
-                  />
-                  <select style={s.select} value={form.currency} onChange={e => setCurrency(e.target.value)}>
-                    {CURRENCIES.map(c => (
-                      <option key={c.code} value={c.code}>{c.label}</option>
-                    ))}
-                  </select>
-                </div>
+                <input
+                  style={{ ...s.input, ...(errors.budget ? s.inputError : {}) }}
+                  type="number"
+                  placeholder="e.g., 2500"
+                  value={form.budget}
+                  onChange={e => set('budget', e.target.value)}
+                />
                 {errors.budget && <div style={s.error}>{errors.budget}</div>}
                 <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', marginTop: '0.4rem', fontStyle: 'italic' }}>
                   For flights + accommodation + activities
                 </div>
+              </div>
+
+              {/* Currency */}
+              <div style={s.fieldWrap}>
+                <label style={s.label}>Currency *</label>
+                <select style={s.select} value={form.currency} onChange={e => setCurrency(e.target.value)}>
+                  {CURRENCIES.map(c => (
+                    <option key={c.code} value={c.code}>{c.label}</option>
+                  ))}
+                </select>
+                {errors.currency && <div style={s.error}>{errors.currency}</div>}
               </div>
 
               {/* Interests */}
@@ -536,7 +541,7 @@ export default function PlanTrip() {
 
               {/* Language */}
               <div style={s.fieldWrap}>
-                <label style={s.label}>Language for itinerary generation *</label>
+                <label style={s.label}>Language for itinerary generation & delivery *</label>
                 <select style={s.select} value={form.language} onChange={e => set('language', e.target.value)}>
                   {LANGUAGES.map(l => (
                     <option key={l.code} value={l.code}>{l.label}</option>
@@ -552,7 +557,7 @@ export default function PlanTrip() {
           {/* ── Step 2: Travel dates ──────────────────────────────── */}
           {step === 2 && (
             <div>
-              <div style={s.stepLabel}>Step 3 of 6</div>
+              <div style={s.stepLabel}>Step 3 of 5</div>
               <h2 style={s.stepTitle}>Travel dates</h2>
               <p style={s.stepSub}>When are you heading off? This helps us check flight options and seasonal highlights.</p>
               <div style={s.fieldWrap}>
@@ -565,7 +570,7 @@ export default function PlanTrip() {
           {/* ── Step 3: Travel style ────────────────────────────────── */}
           {step === 3 && (
             <div>
-              <div style={s.stepLabel}>Step 4 of 6</div>
+              <div style={s.stepLabel}>Step 4 of 5</div>
               <h2 style={s.stepTitle}>How do you travel?</h2>
               <p style={s.stepSub}>This shapes the entire plan: activities, pace, food and accommodation.</p>
 
@@ -630,7 +635,7 @@ export default function PlanTrip() {
           {/* ── Step 4: Your details ────────────────────────────────── */}
           {step === 4 && (
             <div>
-              <div style={s.stepLabel}>Step 5 of 6</div>
+              <div style={s.stepLabel}>Step 5 of 5</div>
               <h2 style={s.stepTitle}>Where should we send it?</h2>
               <p style={s.stepSub}>Your personalised {form.destinations.length > 0 ? form.destinations[0].name : 'itinerary'} itinerary arrives in your inbox within 3 minutes.</p>
 
