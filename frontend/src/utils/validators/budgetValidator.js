@@ -24,7 +24,7 @@ export const validateBudget = (budget) => {
   if (budget <= 0) {
     return {
       valid: false,
-      error: 'Budget must be a valid number greater than 0'
+      error: 'Budget must be greater than $0'
     };
   }
 
