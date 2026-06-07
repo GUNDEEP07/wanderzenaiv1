@@ -15,9 +15,7 @@ import { useAuth } from '../context/AuthContext';
 import { analytics } from '../utils/analytics';
 import { getUserLocationFromIP } from '../utils/geolocation';
 import { getCurrencyForCountry } from '../utils/countryToCurrency';
-import { validateDateRange, calculateTripDays } from '../utils/validators/dateValidator';
 import { validateBudget } from '../utils/validators/budgetValidator';
-import { BudgetClarificationBox } from '../components/plantrip/subcomponents/BudgetClarificationBox';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -462,6 +460,7 @@ export default function PlanTrip() {
                     +
                   </button>
                 </div>
+                {errors.days && <div style={s.error}>{errors.days}</div>}
               </div>
 
               {/* Budget */}
@@ -520,6 +519,7 @@ export default function PlanTrip() {
                     </button>
                   ))}
                 </div>
+                {errors.travelPace && <div style={s.error}>{errors.travelPace}</div>}
               </div>
 
               {/* Traveler Type (Optional) */}
@@ -547,6 +547,7 @@ export default function PlanTrip() {
                     <option key={l.code} value={l.code}>{l.label}</option>
                   ))}
                 </select>
+                {errors.language && <div style={s.error}>{errors.language}</div>}
                 <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', marginTop: '0.4rem', fontStyle: 'italic' }}>
                   The language in which your itinerary will be delivered
                 </div>
