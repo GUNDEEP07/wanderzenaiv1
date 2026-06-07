@@ -15,6 +15,9 @@ import { useAuth } from '../context/AuthContext';
 import { analytics } from '../utils/analytics';
 import { getUserLocationFromIP } from '../utils/geolocation';
 import { getCurrencyForCountry } from '../utils/countryToCurrency';
+import { validateDateRange, calculateTripDays } from '../utils/validators/dateValidator';
+import { validateBudget } from '../utils/validators/budgetValidator';
+import { BudgetClarificationBox } from '../components/plantrip/subcomponents/BudgetClarificationBox';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -49,14 +52,14 @@ const LANGUAGES = [
 ];
 
 // Step names drive the progress bar — keep in sync with step indices
-const STEPS = ['Destination', 'Venues', 'Travel dates', 'Travel style', 'Your details', 'Review'];
+const STEPS = ['Destination & Preferences', 'Travel dates', 'Trip Overview', 'Review', 'Submit'];
 
 // Initial form state — all fields null-safe
 const INITIAL_FORM = {
   destinations: [], days: 5, budget: '',
   currency: (typeof localStorage !== 'undefined' && localStorage.getItem('wz_currency')) || 'USD',
   travelerType: '', travelStyle: [], interests: '',
-  travelDate: '', travelPace: 'balanced', wantsHotelRecs: true,
+  travelDate: '', travelDateEnd: '', travelPace: 'balanced', wantsHotelRecs: true,
   startTime: '09:00', userMustDos: '',
   language: 'English', userAge: '', userLocation: '', email: '',
   selected_venues: {},
@@ -263,7 +266,19 @@ export default function PlanTrip() {
 
   const validate = () => {
     const errs = {};
-    if (step === 0 && form.destinations.length === 0) errs.destination = 'Select at least one destination';
+    if (step === 0) {
+      if (form.destinations.length === 0) errs.destination = 'Select a destination';
+      if (form.days < 2 || form.days > 30) errs.days = 'Duration must be 2–30 days';
+
+      const budgetValidation = validateBudget(form.budget);
+      if (!budgetValidation.valid) errs.budget = budgetValidation.error;
+
+      if (!form.interests || form.interests.trim().length < 10) {
+        errs.interests = 'Tell us what interests you (at least 10 characters)';
+      }
+      if (!form.travelPace) errs.travelPace = 'Select a travel pace';
+      if (!form.language) errs.language = 'Select a language';
+    }
     if (step === 4) {
       if (!form.email.trim()) errs.email = 'We need your email to send the itinerary';
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = 'Invalid email address';
@@ -351,7 +366,7 @@ export default function PlanTrip() {
         <div style={{ padding: '12px 24px 0' }}>
           {progressBar}
           <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#00d4aa', marginTop: 8, paddingBottom: 4 }}>
-            Step 2 of 6 — Choose your experiences
+            Step 2 of 5 — Choose your experiences
           </div>
         </div>
         <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
@@ -398,74 +413,137 @@ export default function PlanTrip() {
         {(step !== 1 || form.destinations.length === 0) && (
         <div style={s.card}>
 
-          {/* ── Step 0: Destination Search ─────────────────────────────────── */}
-          {(step === 0 || (step === 1 && form.destinations.length === 0)) && (
+          {/* ── Step 0: Destination & Preferences ─────────────────────────────────── */}
+          {step === 0 && (
             <div>
-              <div style={s.stepLabel}>Step 1 of 6</div>
-              <h2 style={s.stepTitle}>Where to?</h2>
-              <p style={s.stepSub}>Tell us your dream destination — we'll find the real, local version of it.</p>
+              <div style={s.stepLabel}>Step 1 of 5</div>
+              <h2 style={s.stepTitle}>Where & When</h2>
+              <p style={s.stepSub}>Tell us your destination, how long you'll stay, and what interests you.</p>
 
+              {/* Destination */}
               <div style={s.fieldWrap}>
-                <DestinationSearch onSelect={handleDestinationSelect} disabled={false} allowMultiple={true} initialSelected={form.destinations} />
-                {errors.destination && <div style={s.error}>{errors.destination}</div>}
-                {personalRecs.length > 0 && (
-                  <div style={{ marginTop: 12 }}>
-                    <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)', marginBottom: 8 }}>Based on your travels</div>
-                    <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-                      {personalRecs.map((rec, i) => (
-                        <button type="button" key={i} onClick={() => handleDestinationSelect({ name: rec.destination.split(',')[0].trim(), lat: 0, lng: 0 })} style={{ padding: '6px 12px', borderRadius: 20, border: '1px solid rgba(0,212,170,0.25)', background: 'rgba(0,212,170,0.07)', color: '#00d4aa', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                          {rec.emoji} {rec.destination.split(',')[0].trim()}
-                        </button>
-                      ))}
+                <label style={s.label}>Destination *</label>
+                <div style={s.fieldWrap}>
+                  <DestinationSearch onSelect={handleDestinationSelect} disabled={false} allowMultiple={false} initialSelected={form.destinations} />
+                  {errors.destination && <div style={s.error}>{errors.destination}</div>}
+                  {personalRecs.length > 0 && (
+                    <div style={{ marginTop: 12 }}>
+                      <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)', marginBottom: 8 }}>Based on your travels</div>
+                      <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+                        {personalRecs.map((rec, i) => (
+                          <button type="button" key={i} onClick={() => handleDestinationSelect({ name: rec.destination.split(',')[0].trim(), lat: 0, lng: 0 })} style={{ padding: '6px 12px', borderRadius: 20, border: '1px solid rgba(0,212,170,0.25)', background: 'rgba(0,212,170,0.07)', color: '#00d4aa', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                            {rec.emoji} {rec.destination.split(',')[0].trim()}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-
-              <div style={s.fieldWrap}>
-                <label style={s.label}>How many days?</label>
-                <div style={s.daysRow}>
-                  <button type="button" style={s.daysBtn} onClick={() => set('days', Math.max(1, form.days - 1))}>−</button>
-                  <div style={s.daysNum}>{form.days}</div>
-                  <button type="button" style={s.daysBtn} onClick={() => set('days', Math.min(30, form.days + 1))}>+</button>
-                  <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem' }}>days</span>
+                  )}
                 </div>
               </div>
 
+              {/* Days */}
               <div style={s.fieldWrap}>
-                <label style={s.label}>Total budget <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontSize: '0.7rem' }}>(optional)</span></label>
-                <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.04)', border: `1px solid ${errors.budget ? '#ff6b6b' : 'rgba(255,255,255,0.1)'}`, borderRadius: 10, overflow: 'hidden' }}>
-                  <select
-                    style={{ padding: '0.875rem 0.75rem', background: 'rgba(255,255,255,0.02)', border: 'none', color: 'rgba(255,255,255,0.7)', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '0.85rem', outline: 'none', cursor: 'pointer', borderRight: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}
-                    value={form.currency}
-                    onChange={e => setCurrency(e.target.value)}
+                <label style={s.label}>Duration (Days) *</label>
+                <div style={s.daysRow}>
+                  <button
+                    type="button"
+                    style={s.daysBtn}
+                    onClick={() => set('days', Math.max(2, form.days - 1))}
                   >
-                    {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.label.match(/\((.+)\)/)?.[1] || c.code}</option>)}
-                  </select>
+                    −
+                  </button>
+                  <div style={s.daysNum}>{form.days}</div>
+                  <button
+                    type="button"
+                    style={s.daysBtn}
+                    onClick={() => set('days', Math.min(30, form.days + 1))}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              {/* Budget */}
+              <div style={s.fieldWrap}>
+                <label style={s.label}>Total Budget *</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.75rem' }}>
                   <input
-                    style={{ ...s.input, border: 'none', borderRadius: 0, flex: 1 }}
-                    type="number" min="0" placeholder="e.g. 5000"
+                    style={{ ...s.input, ...(errors.budget ? s.inputError : {}) }}
+                    type="number"
+                    placeholder="e.g., 2500"
                     value={form.budget}
                     onChange={e => set('budget', e.target.value)}
                   />
+                  <select style={s.select} value={form.currency} onChange={e => setCurrency(e.target.value)}>
+                    {CURRENCIES.map(c => (
+                      <option key={c.code} value={c.code}>{c.label}</option>
+                    ))}
+                  </select>
+                </div>
+                {errors.budget && <div style={s.error}>{errors.budget}</div>}
+                <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', marginTop: '0.4rem', fontStyle: 'italic' }}>
+                  For flights + accommodation + activities
                 </div>
               </div>
 
+              {/* Interests */}
               <div style={s.fieldWrap}>
-                <label style={s.label}>Travelling as</label>
-                <div style={s.grid2}>
-                  {TRAVELER_TYPES.map(t => (
-                    <button type="button" key={t} style={s.choiceBtn(form.travelerType === t)} onClick={() => set('travelerType', t)}>{t}</button>
+                <label style={s.label}>What interests you? *</label>
+                <textarea
+                  style={{ ...s.textarea, ...(errors.interests ? s.inputError : {}) }}
+                  rows={3}
+                  placeholder="e.g., hiking, food tours, museums, nature, wellness, adventure, culture"
+                  value={form.interests}
+                  onChange={e => set('interests', e.target.value)}
+                />
+                {errors.interests && <div style={s.error}>{errors.interests}</div>}
+              </div>
+
+              {/* Travel Pace */}
+              <div style={s.fieldWrap}>
+                <label style={s.label}>How do you travel? *</label>
+                <div style={s.grid3}>
+                  {PACE_OPTIONS.map(p => (
+                    <button
+                      type="button"
+                      key={p.val}
+                      style={s.choiceBtn(form.travelPace === p.val)}
+                      onClick={() => set('travelPace', p.val)}
+                    >
+                      <div style={{ fontWeight: 700, marginBottom: 4 }}>{p.label}</div>
+                      <div style={{ fontSize: '0.75rem', opacity: 0.6, fontWeight: 400 }}>{p.sub}</div>
+                    </button>
                   ))}
                 </div>
               </div>
 
+              {/* Traveler Type (Optional) */}
               <div style={s.fieldWrap}>
-                <label style={s.label}>Travel style <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(pick any)</span></label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  {TRAVEL_STYLES.map(st => (
-                    <button type="button" key={st} style={s.tag(form.travelStyle.includes(st))} onClick={() => toggleStyle(st)}>{st}</button>
+                <label style={s.label}>Traveler Type (Optional)</label>
+                <div style={s.grid4}>
+                  {TRAVELER_TYPES.map(type => (
+                    <button
+                      type="button"
+                      key={type}
+                      style={s.choiceBtn(form.travelerType === type)}
+                      onClick={() => set('travelerType', type)}
+                    >
+                      {type}
+                    </button>
                   ))}
+                </div>
+              </div>
+
+              {/* Language */}
+              <div style={s.fieldWrap}>
+                <label style={s.label}>Language for itinerary generation *</label>
+                <select style={s.select} value={form.language} onChange={e => set('language', e.target.value)}>
+                  {LANGUAGES.map(l => (
+                    <option key={l.code} value={l.code}>{l.label}</option>
+                  ))}
+                </select>
+                <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', marginTop: '0.4rem', fontStyle: 'italic' }}>
+                  The language in which your itinerary will be delivered
                 </div>
               </div>
             </div>
