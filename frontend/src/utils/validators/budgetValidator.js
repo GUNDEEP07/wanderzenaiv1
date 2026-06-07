@@ -20,6 +20,14 @@ export const validateBudget = (budget) => {
     };
   }
 
+  // Check if budget is greater than zero
+  if (budget <= 0) {
+    return {
+      valid: false,
+      error: 'Budget must be a valid number greater than 0'
+    };
+  }
+
   // Check if budget is within valid range
   if (budget < MIN_BUDGET) {
     return {
@@ -48,7 +56,7 @@ export const validateBudget = (budget) => {
  * @returns {boolean} True if budget appears to be a typo
  */
 export const isBudgetSuspiciouslyLow = (budget) => {
-  return typeof budget === 'number' && !isNaN(budget) && budget < 100;
+  return typeof budget === 'number' && !isNaN(budget) && budget > 0 && budget < 100;
 };
 
 /**
