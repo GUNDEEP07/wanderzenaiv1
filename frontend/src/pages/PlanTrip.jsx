@@ -16,6 +16,7 @@ import { analytics } from '../utils/analytics';
 import { getUserLocationFromIP } from '../utils/geolocation';
 import { getCurrencyForCountry } from '../utils/countryToCurrency';
 import { validateBudget } from '../utils/validators/budgetValidator';
+import { validateDateRange, calculateTripDays } from '../utils/validators/dateValidator';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -245,7 +246,7 @@ export default function PlanTrip() {
       selected_venues: venueData.venues || venueData,
       day_assignments: venueData.dayAssignments || {},
     }));
-    goToStep(2);
+    goToStep(3);
   };
 
   // Calls /preview and stores result on form._preview
@@ -277,6 +278,17 @@ export default function PlanTrip() {
       if (!form.travelPace) errs.travelPace = 'Select a travel pace';
       if (!form.language) errs.language = 'Select a language';
       if (!form.currency) errs.currency = 'Select a currency';
+    }
+    if (step === 1) {
+      const dateValidation = validateDateRange(form.travelDate, form.travelDateEnd);
+      if (!dateValidation.valid) {
+        dateValidation.errors.forEach(err => {
+          if (err.includes('Start date')) errs.travelDate = err;
+          else if (err.includes('End date')) errs.travelDateEnd = err;
+          else if (err.includes('End date must be after')) errs.travelDateEnd = err;
+          else if (err.includes('cannot be in the past')) errs.travelDate = err;
+        });
+      }
     }
     if (step === 4) {
       if (!form.email.trim()) errs.email = 'We need your email to send the itinerary';
@@ -350,8 +362,8 @@ export default function PlanTrip() {
     @keyframes spin { to { transform: rotate(360deg); } }
   `;
 
-  /* ── Step 1 (Venues): full-bleed, full-height ────────────────────── */
-  if (step === 1 && form.destinations.length > 0) {
+  /* ── Step 2 (Venues): full-bleed, full-height ────────────────────── */
+  if (step === 2 && form.destinations.length > 0) {
     return (
       <div style={{ ...s.page, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
         <style>{sharedStyles}</style>
@@ -365,7 +377,7 @@ export default function PlanTrip() {
         <div style={{ padding: '12px 24px 0' }}>
           {progressBar}
           <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#00d4aa', marginTop: 8, paddingBottom: 4 }}>
-            Step 2 of 5 — Choose your experiences
+            Step 3 of 5 — Choose your experiences
           </div>
         </div>
         <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
@@ -373,14 +385,11 @@ export default function PlanTrip() {
             destinations={form.destinations}
             travelStyles={form.travelStyle}
             startDate={form.travelDate}
-            endDate={form.travelDate
-              ? new Date(new Date(form.travelDate).getTime() + form.days * 24 * 60 * 60 * 1000)
-                  .toISOString().split('T')[0]
-              : null}
+            endDate={form.travelDateEnd}
             days={form.days}
             onSubmit={handleVenueSelect}
-            onSkip={() => goToStep(2)}
-            onBack={() => goToStep(0)}
+            onSkip={() => goToStep(3)}
+            onBack={() => goToStep(1)}
             savedState={venueSelState}
             onSave={setVenueSelState}
             preferredActivities={preferredActivities}
@@ -409,7 +418,7 @@ export default function PlanTrip() {
         <div style={{ marginBottom: '2rem' }}>{progressBar}</div>
 
         {/* All steps — inside the card */}
-        {(step !== 1 || form.destinations.length === 0) && (
+        {(step !== 2 || form.destinations.length === 0) && (
         <div style={s.card}>
 
           {/* ── Step 0: Destination & Preferences ─────────────────────────────────── */}
@@ -555,20 +564,49 @@ export default function PlanTrip() {
             </div>
           )}
 
-          {/* ── Step 2: Travel dates ──────────────────────────────── */}
-          {step === 2 && (
+          {/* ── Step 1: Travel dates ──────────────────────────────── */}
+          {step === 1 && (
             <div>
-              <div style={s.stepLabel}>Step 3 of 5</div>
+              <div style={s.stepLabel}>Step 2 of 5</div>
               <h2 style={s.stepTitle}>Travel dates</h2>
-              <p style={s.stepSub}>When are you heading off? This helps us check flight options and seasonal highlights.</p>
+              <p style={s.stepSub}>When are you heading off?</p>
+
+              {/* Start Date */}
               <div style={s.fieldWrap}>
-                <label style={s.label}>Start date <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontSize: '0.7rem' }}>(optional)</span></label>
-                <input style={s.input} type="date" value={form.travelDate} onChange={e => set('travelDate', e.target.value)} />
+                <label style={s.label}>Start date *</label>
+                <input
+                  style={{ ...s.input, ...(errors.travelDate ? s.inputError : {}) }}
+                  type="date"
+                  value={form.travelDate}
+                  onChange={e => set('travelDate', e.target.value)}
+                />
+                {errors.travelDate && <div style={s.error}>{errors.travelDate}</div>}
               </div>
+
+              {/* End Date */}
+              <div style={s.fieldWrap}>
+                <label style={s.label}>End date *</label>
+                <input
+                  style={{ ...s.input, ...(errors.travelDateEnd ? s.inputError : {}) }}
+                  type="date"
+                  value={form.travelDateEnd}
+                  onChange={e => set('travelDateEnd', e.target.value)}
+                />
+                {errors.travelDateEnd && <div style={s.error}>{errors.travelDateEnd}</div>}
+              </div>
+
+              {/* Trip Duration Summary */}
+              {form.travelDate && form.travelDateEnd && (
+                <div style={s.summaryBox}>
+                  <div style={{ color: '#00d4aa', fontSize: '1rem', fontWeight: 600 }}>
+                    📅 {calculateTripDays(form.travelDate, form.travelDateEnd)} days planned
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
-          {/* ── Step 3: Travel style ────────────────────────────────── */}
+          {/* ── Step 3: Trip Overview ────────────────────────────────── */}
           {step === 3 && (
             <div>
               <div style={s.stepLabel}>Step 4 of 5</div>
