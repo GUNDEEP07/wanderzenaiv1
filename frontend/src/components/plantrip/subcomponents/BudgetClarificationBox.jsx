@@ -14,10 +14,10 @@ export function BudgetClarificationBox({ budgetEstimateUSD, currency = 'USD' }) 
 
   const flightsLow = toUserCurrency(budgetEstimateUSD.flightsLow, currency);
   const flightsHigh = toUserCurrency(budgetEstimateUSD.flightsHigh, currency);
-  const accommodationLow = toUserCurrency(budgetEstimateUSD.accommodationLow, currency);
-  const accommodationHigh = toUserCurrency(budgetEstimateUSD.accommodationHigh, currency);
-  const activityLow = toUserCurrency(budgetEstimateUSD.activityLow, currency);
-  const activityHigh = toUserCurrency(budgetEstimateUSD.activityHigh, currency);
+  const accommodationLow = toUserCurrency(budgetEstimateUSD.accommodationPerNightLow, currency);
+  const accommodationHigh = toUserCurrency(budgetEstimateUSD.accommodationPerNightHigh, currency);
+  const activityLow = toUserCurrency(budgetEstimateUSD.activitiesPerDayLow, currency);
+  const activityHigh = toUserCurrency(budgetEstimateUSD.activitiesPerDayHigh, currency);
 
   return (
     <div style={{ background: 'linear-gradient(135deg, rgba(255,217,61,0.07), rgba(251,191,36,0.03))', border: '1px solid rgba(255,217,61,0.2)', borderRadius: 16, padding: 18, marginBottom: 20 }}>
@@ -28,7 +28,7 @@ export function BudgetClarificationBox({ budgetEstimateUSD, currency = 'USD' }) 
 
       {/* Message */}
       <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 1.6, marginBottom: 14 }}>
-        Budget shown includes estimated flights + accommodation + activities for your entire trip. Actual costs may vary.
+        Budget shown includes estimated flights + accommodation + activities. Actual prices vary by provider. Use this as a ballpark.
       </div>
 
       {/* Breakdown */}
