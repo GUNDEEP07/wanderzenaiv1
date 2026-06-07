@@ -4,8 +4,8 @@
 // Step 1: Travel dates
 // Step 2: Trip Overview (Flights, Hotels, Activities, Budget)
 // Step 3: VenueSelection component (full-page)
-// Step 4: How do you travel? (Pace, interests, age, location, language, hotel toggle)
-// Step 5: Review & Preview (extracted to StepReview.jsx)
+// Step 3: Review (Email & Summary of all selections)
+// Step 4: Preview & Submit (extracted to StepReview.jsx)
 // API calls are in src/api/itinerary.js.
 
 import React, { useState, useEffect } from 'react';
@@ -278,6 +278,7 @@ export default function PlanTrip() {
       day_assignments: venueData.dayAssignments || {},
     }));
     goToStep(3);
+    analytics.stepReached(STEPS[3], 3);
   };
 
   // Calls /preview and stores result on form._preview
@@ -321,7 +322,7 @@ export default function PlanTrip() {
         });
       }
     }
-    if (step === 4) {
+    if (step === 3) {
       if (!form.email.trim()) errs.email = 'We need your email to send the itinerary';
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = 'Invalid email address';
     }
@@ -334,7 +335,7 @@ export default function PlanTrip() {
     const nextStep = step + 1;
     goToStep(nextStep);
     analytics.stepReached(STEPS[nextStep], nextStep);
-    if (nextStep === 5) loadPreview(form);
+    if (nextStep === 4) loadPreview(form);
   };
 
   const back = () => goToStep(step - 1);
@@ -419,7 +420,7 @@ export default function PlanTrip() {
             endDate={form.travelDateEnd}
             days={form.days}
             onSubmit={handleVenueSelect}
-            onSkip={() => goToStep(3)}
+            onSkip={() => { goToStep(3); analytics.stepReached(STEPS[3], 3); }}
             onBack={() => goToStep(1)}
             savedState={venueSelState}
             onSave={setVenueSelState}
@@ -705,85 +706,23 @@ export default function PlanTrip() {
             </div>
           )}
 
-          {/* ── Step 4: How do you travel ────────────────────────────────── */}
+
+          {/* ── Step 3: Review ────────────────────────────────── */}
           {step === 3 && (
             <div>
               <div style={s.stepLabel}>Step 4 of 5</div>
-              <h2 style={s.stepTitle}>How do you travel?</h2>
-              <p style={s.stepSub}>This shapes the entire plan: activities, pace, food and accommodation.</p>
-
-              <div style={s.fieldWrap}>
-                <label style={s.label}>Pace</label>
-                <div style={s.grid3}>
-                  {PACE_OPTIONS.map(p => (
-                    <button type="button" key={p.val} style={{ ...s.choiceBtn(form.travelPace === p.val), padding: '0.875rem' }} onClick={() => set('travelPace', p.val)}>
-                      <div style={{ fontWeight: 700, marginBottom: 4 }}>{p.label}</div>
-                      <div style={{ fontSize: '0.75rem', opacity: 0.6, fontWeight: 400 }}>{p.sub}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div style={s.fieldWrap}>
-                <label style={s.label}>Specific interests <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
-                <textarea
-                  style={s.textarea} rows={3}
-                  placeholder="e.g. morning hikes, roadside noodle shops, pottery villages, hidden waterfalls..."
-                  value={form.interests}
-                  onChange={e => set('interests', e.target.value)}
-                />
-              </div>
-
-              <div style={s.fieldWrap}>
-                <label style={s.label}>Your age <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontSize: '0.7rem' }}>(optional)</span></label>
-                <input style={s.input} type="number" min="16" max="99" placeholder="e.g. 28" value={form.userAge} onChange={e => set('userAge', e.target.value)} />
-              </div>
-
-              <div style={s.fieldWrap}>
-                <label style={s.label}>Where are you based? <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontSize: '0.7rem' }}>(optional)</span></label>
-                <input style={s.input} type="text" placeholder="e.g. Sydney, Australia · Mumbai, India · London, UK" value={form.userLocation} onChange={e => set('userLocation', e.target.value)} />
-              </div>
-
-              <div style={s.fieldWrap}>
-                <label style={s.label}>Itinerary language</label>
-                <select style={s.select} value={form.language} onChange={e => set('language', e.target.value)}>
-                  {LANGUAGES.map(l => (
-                    <option key={l.code} value={l.code}>{l.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div style={s.fieldWrap}>
-                <div
-                  style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', padding: '1rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, cursor: 'pointer' }}
-                  onClick={() => set('wantsHotelRecs', !form.wantsHotelRecs)}
-                >
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#fff', marginBottom: 2 }}>Include accommodation suggestions</div>
-                    <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)' }}>Homestays, guesthouses and Airbnbs near nature</div>
-                  </div>
-                  <div style={s.toggle(form.wantsHotelRecs)}>
-                    <div style={s.toggleThumb(form.wantsHotelRecs)} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ── Step 4: Your details ────────────────────────────────── */}
-          {step === 4 && (
-            <div>
-              <div style={s.stepLabel}>Step 5 of 5</div>
-              <h2 style={s.stepTitle}>Where should we send it?</h2>
-              <p style={s.stepSub}>Your personalised {form.destinations.length > 0 ? form.destinations[0].name : 'itinerary'} itinerary arrives in your inbox within 3 minutes.</p>
+              <h2 style={s.stepTitle}>Review your trip</h2>
+              <p style={s.stepSub}>Here's everything we'll use to create your personalised itinerary.</p>
 
               <div style={s.summaryBox}>
                 {[
                   ['Destinations', form.destinations.map(d => d.name).join(', ') || '—'],
+                  ['Travel Dates', form.travelDate && form.travelDateEnd ? `${form.travelDate} to ${form.travelDateEnd}` : '—'],
                   ['Duration', `${form.days} days`],
                   ['Budget', `${form.currency} ${form.budget}`],
-                  ['Traveller', form.travelerType || '—'],
-                  ['Pace', form.travelPace],
+                  ['Traveller Type', form.travelerType || '—'],
+                  ['Travel Pace', form.travelPace],
+                  ['Interests', form.interests || '—'],
                   ['Language', form.language],
                   ...(form.userAge ? [['Your age', `${form.userAge} yrs`]] : []),
                   ...(form.userLocation ? [['Based in', form.userLocation]] : []),
@@ -814,8 +753,8 @@ export default function PlanTrip() {
             </div>
           )}
 
-          {/* ── Step 5: Review & Preview (extracted component) ─────── */}
-          {step === 5 && (
+          {/* ── Step 4: Preview & Submit (extracted component) ─────── */}
+          {step === 4 && (
             <StepReview
               form={form}
               set={set}
@@ -826,8 +765,8 @@ export default function PlanTrip() {
             />
           )}
 
-          {/* Nav buttons — steps 0–4 only; step 5 has its own buttons */}
-          {step < 5 && (
+          {/* Nav buttons — steps 0–3 only; step 4 has its own buttons */}
+          {step < 4 && (
             <div style={s.navBtns}>
               {step > 0 && (
                 <button type="button" style={s.backBtnForm} onClick={back} disabled={submitting}>← Back</button>
@@ -838,12 +777,12 @@ export default function PlanTrip() {
                 style={{
                   ...s.nextBtn,
                   ...(submitting ? { background: 'rgba(0,212,170,0.5)', cursor: 'not-allowed' } : {}),
-                  ...(step === 4 ? { minWidth: 200 } : {}),
+                  ...(step === 3 ? { minWidth: 200 } : {}),
                 }}
                 onClick={next}
                 disabled={submitting}
               >
-                {step === 4 ? 'Review my trip →' : 'Continue →'}
+                {step === 3 ? 'Preview & submit →' : 'Continue →'}
               </button>
             </div>
           )}
