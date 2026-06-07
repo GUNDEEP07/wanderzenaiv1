@@ -1,8 +1,11 @@
 // src/pages/PlanTrip.jsx
 // Orchestrator for the multi-step itinerary planning form.
-// Steps 0–1 are new components (DestinationSearch, VenueSelection).
-// Steps 2–5 are existing steps.
-// Step 4 is extracted to StepReview.jsx.
+// Step 0: Destination & Preferences
+// Step 1: Travel dates
+// Step 2: Trip Overview (Flights, Hotels, Activities, Budget)
+// Step 3: VenueSelection component (full-page)
+// Step 4: How do you travel? (Pace, interests, age, location, language, hotel toggle)
+// Step 5: Review & Preview (extracted to StepReview.jsx)
 // API calls are in src/api/itinerary.js.
 
 import React, { useState, useEffect } from 'react';
@@ -11,12 +14,16 @@ import { DestinationSearch } from '../components/plantrip/DestinationSearch';
 import { VenueSelection } from '../components/plantrip/VenueSelection';
 import StepReview from '../components/plantrip/StepReview';
 import { fetchPreview, submitItinerary } from '../api/itinerary';
+import { fetchDestinationInsights } from '../api/destinationInsights';
 import { useAuth } from '../context/AuthContext';
 import { analytics } from '../utils/analytics';
 import { getUserLocationFromIP } from '../utils/geolocation';
 import { getCurrencyForCountry } from '../utils/countryToCurrency';
 import { validateBudget } from '../utils/validators/budgetValidator';
 import { validateDateRange, calculateTripDays } from '../utils/validators/dateValidator';
+import { FlightsSection } from '../components/plantrip/subcomponents/FlightsSection';
+import { AccommodationSection } from '../components/plantrip/subcomponents/AccommodationSection';
+import { BudgetClarificationBox } from '../components/plantrip/subcomponents/BudgetClarificationBox';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -150,6 +157,8 @@ export default function PlanTrip() {
   const { currentUser, getIdToken } = useAuth();
   const [personalRecs, setPersonalRecs] = useState([]);
   const [preferredActivities, setPreferredActivities] = useState([]);
+  const [destinationInsights, setDestinationInsights] = useState(null);
+  const [insightsLoading, setInsightsLoading] = useState(false);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -203,6 +212,28 @@ export default function PlanTrip() {
       sessionStorage.setItem('wz_plan_form', JSON.stringify(form));
     } catch { /* ignore */ }
   }, [form]);
+
+  // Fetch destination insights when entering step 2
+  useEffect(() => {
+    if (step !== 2) return;
+    if (!form.destinations.length || !form.travelDate || !form.travelDateEnd) return;
+
+    const loadInsights = async () => {
+      setInsightsLoading(true);
+      try {
+        const destName = form.destinations[0].name;
+        const data = await fetchDestinationInsights(destName, form.travelStyle, form.travelDate, form.travelDateEnd);
+        setDestinationInsights(data);
+      } catch (err) {
+        console.error('Failed to load destination insights:', err);
+        setDestinationInsights(null);
+      } finally {
+        setInsightsLoading(false);
+      }
+    };
+
+    loadInsights();
+  }, [step, form.destinations, form.travelDate, form.travelDateEnd, form.travelStyle]);
 
   // Wrapper for setStep that also persists to sessionStorage
   const goToStep = (n) => {
@@ -362,8 +393,8 @@ export default function PlanTrip() {
     @keyframes spin { to { transform: rotate(360deg); } }
   `;
 
-  /* ── Step 2 (Venues): full-bleed, full-height ────────────────────── */
-  if (step === 2 && form.destinations.length > 0) {
+  /* ── Step 3 (Venues): full-bleed, full-height ────────────────────── */
+  if (step === 3 && form.destinations.length > 0) {
     return (
       <div style={{ ...s.page, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
         <style>{sharedStyles}</style>
@@ -418,7 +449,7 @@ export default function PlanTrip() {
         <div style={{ marginBottom: '2rem' }}>{progressBar}</div>
 
         {/* All steps — inside the card */}
-        {(step !== 2 || form.destinations.length === 0) && (
+        {(step !== 3 || form.destinations.length === 0) && (
         <div style={s.card}>
 
           {/* ── Step 0: Destination & Preferences ─────────────────────────────────── */}
@@ -606,7 +637,75 @@ export default function PlanTrip() {
             </div>
           )}
 
-          {/* ── Step 3: Trip Overview ────────────────────────────────── */}
+          {/* ── Step 2: Trip Overview ────────────────────────────────── */}
+          {step === 2 && (
+            <div>
+              <div style={s.stepLabel}>Step 3 of 5</div>
+              <h2 style={s.stepTitle}>Trip Overview</h2>
+              <p style={s.stepSub}>Here's what to expect for your trip.</p>
+
+              {insightsLoading && (
+                <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'rgba(255,255,255,0.5)' }}>
+                  <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
+                  <div style={{ fontSize: '1rem' }}>Generating recommendations...</div>
+                </div>
+              )}
+
+              {!insightsLoading && (
+                <>
+                  {/* Activities Section */}
+                  {destinationInsights?.activities && (
+                    <div style={{ marginBottom: '2rem' }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: '#00d4aa', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>
+                        🎯 Activities
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {destinationInsights.activities.slice(0, 6).map((activity, i) => (
+                          <div key={i} style={{ padding: '8px 14px', borderRadius: 20, background: 'rgba(0,212,170,0.12)', border: '1px solid rgba(0,212,170,0.25)', color: '#00d4aa', fontSize: 12, fontWeight: 600 }}>
+                            {activity}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Flights Section */}
+                  {form.destinations.length > 0 && (
+                    <FlightsSection
+                      destination={form.destinations[0]}
+                      origin={form.userLocation}
+                      travelDate={form.travelDate}
+                      budgetEstimateUSD={destinationInsights?.budgetEstimateUSD}
+                      currency={form.currency}
+                      onOriginChange={(origin) => set('userLocation', origin)}
+                    />
+                  )}
+
+                  {/* Accommodation Section */}
+                  {form.destinations.length > 0 && (
+                    <AccommodationSection
+                      destination={form.destinations[0]}
+                      insights={destinationInsights}
+                      budget={form.budget}
+                      currency={form.currency}
+                      days={form.days}
+                      travelStyle={form.travelStyle}
+                    />
+                  )}
+
+                  {/* Budget Clarification Box */}
+                  {destinationInsights?.budgetEstimateUSD && (
+                    <BudgetClarificationBox
+                      budgetEstimateUSD={destinationInsights.budgetEstimateUSD}
+                      currency={form.currency}
+                    />
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* ── Step 4: How do you travel ────────────────────────────────── */}
           {step === 3 && (
             <div>
               <div style={s.stepLabel}>Step 4 of 5</div>
