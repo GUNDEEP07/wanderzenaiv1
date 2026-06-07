@@ -765,25 +765,39 @@ export default function PlanTrip() {
             />
           )}
 
-          {/* Nav buttons — steps 0–3 only; step 4 has its own buttons */}
+          {/* Nav buttons — steps 0–2 have Back/Next, step 3 has Submit; step 4 (StepReview) has its own buttons */}
           {step < 4 && (
             <div style={s.navBtns}>
               {step > 0 && (
                 <button type="button" style={s.backBtnForm} onClick={back} disabled={submitting}>← Back</button>
               )}
               <div style={{ flex: 1 }} />
-              <button
-                type="button"
-                style={{
-                  ...s.nextBtn,
-                  ...(submitting ? { background: 'rgba(0,212,170,0.5)', cursor: 'not-allowed' } : {}),
-                  ...(step === 3 ? { minWidth: 200 } : {}),
-                }}
-                onClick={next}
-                disabled={submitting}
-              >
-                {step === 3 ? 'Preview & submit →' : 'Continue →'}
-              </button>
+              {step < 3 ? (
+                <button
+                  type="button"
+                  style={{
+                    ...s.nextBtn,
+                    ...(submitting ? { background: 'rgba(0,212,170,0.5)', cursor: 'not-allowed' } : {}),
+                  }}
+                  onClick={next}
+                  disabled={submitting}
+                >
+                  Continue →
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  style={{
+                    ...s.nextBtn,
+                    ...(submitting ? { background: 'rgba(0,212,170,0.5)', cursor: 'not-allowed' } : {}),
+                    minWidth: 200,
+                  }}
+                  onClick={handleSubmit}
+                  disabled={submitting}
+                >
+                  {submitting ? 'Generating...' : 'Generate My Itinerary'}
+                </button>
+              )}
             </div>
           )}
         </div>
