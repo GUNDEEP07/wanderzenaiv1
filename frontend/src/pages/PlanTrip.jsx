@@ -57,6 +57,14 @@ const LANGUAGES = [
   { code: 'Dutch', label: 'Nederlands (Dutch)' },
 ];
 
+const PREDEFINED_INTERESTS = [
+  'Hiking', 'Museums', 'Food tours', 'Beaches', 'Temples',
+  'Markets', 'Nightlife', 'Shopping', 'Photography', 'History',
+  'Yoga & Wellness', 'Coffee culture', 'Wine tasting', 'Boating', 'Wildlife',
+  'Architecture', 'Local experiences', 'Spas', 'Meditation', 'Road trips',
+];
+
+
 // Step names drive the progress bar — keep in sync with step indices
 const STEPS = ['Destination & Preferences', 'Travel dates', 'Trip Overview', 'Review', 'Submit'];
 
@@ -185,8 +193,14 @@ export default function PlanTrip() {
         }
         if (recsRes.status === 'fulfilled') {
           const d = await recsRes.value.json();
-          if (d.recommendations) setPersonalRecs(d.recommendations);
+          console.log('Personalised recommendations response:', d);
+          if (d.recommendations) {
+            console.log('Setting personalRecs:', d.recommendations);
+            setPersonalRecs(d.recommendations);
+          }
           if (d.preferred_activities) setPreferredActivities(d.preferred_activities);
+        } else {
+          console.error('Recommendations fetch failed:', recsRes.reason);
         }
       } catch { /* graceful */ }
     })();
@@ -264,10 +278,30 @@ export default function PlanTrip() {
     }));
   };
 
+  const toggleInterest = (interest) => {
+    const interestsList = form.interests.split(',').map(i => i.trim()).filter(Boolean);
+    const index = interestsList.findIndex(i => i.toLowerCase() === interest.toLowerCase());
+
+    if (index > -1) {
+      interestsList.splice(index, 1);
+    } else {
+      interestsList.push(interest);
+    }
+
+    set('interests', interestsList.join(', '));
+  };
+
+  const getSelectedInterests = () => {
+    return form.interests.split(',').map(i => i.trim()).filter(Boolean);
+  };
+
   const handleDestinationSelect = (destinations) => {
+    console.log('handleDestinationSelect called with:', destinations);
+    const destArray = Array.isArray(destinations) ? destinations : [destinations];
+    console.log('Setting destinations to:', destArray);
     setForm(f => ({
       ...f,
-      destinations: Array.isArray(destinations) ? destinations : [destinations],
+      destinations: destArray,
     }));
   };
 
@@ -304,8 +338,10 @@ export default function PlanTrip() {
       const budgetValidation = validateBudget(Number(form.budget));
       if (!budgetValidation.valid) errs.budget = budgetValidation.error;
 
-      if (!form.interests || form.interests.trim().length < 10) {
-        errs.interests = 'Tell us what interests you (at least 10 characters)';
+      if (!form.interests || form.interests.trim().length === 0) {
+        errs.interests = 'Please tell us what interests you';
+      } else if (form.interests.trim().length < 5) {
+        errs.interests = 'Please be more specific (at least 5 characters)';
       }
       if (!form.travelPace) errs.travelPace = 'Select a travel pace';
       if (!form.language) errs.language = 'Select a language';
@@ -409,7 +445,7 @@ export default function PlanTrip() {
         <div style={{ padding: '12px 24px 0' }}>
           {progressBar}
           <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#00d4aa', marginTop: 8, paddingBottom: 4 }}>
-            Step 3 of 5 — Choose your experiences
+            Step 4 of 5 — Choose your experiences
           </div>
         </div>
         <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
@@ -470,11 +506,15 @@ export default function PlanTrip() {
                     <div style={{ marginTop: 12 }}>
                       <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)', marginBottom: 8 }}>Based on your travels</div>
                       <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-                        {personalRecs.map((rec, i) => (
-                          <button type="button" key={i} onClick={() => handleDestinationSelect({ name: rec.destination.split(',')[0].trim(), lat: 0, lng: 0 })} style={{ padding: '6px 12px', borderRadius: 20, border: '1px solid rgba(0,212,170,0.25)', background: 'rgba(0,212,170,0.07)', color: '#00d4aa', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                            {rec.emoji} {rec.destination.split(',')[0].trim()}
-                          </button>
-                        ))}
+                        {personalRecs.map((rec, i) => {
+                          const cityName = rec.destination.split(',')[0].trim();
+                          const countryName = rec.country || rec.destination.split(',')[1]?.trim() || 'Unknown';
+                          return (
+                            <button type="button" key={i} onClick={() => handleDestinationSelect({ name: cityName, country: countryName, lat: null, lng: null })} style={{ padding: '6px 12px', borderRadius: 20, border: '1px solid rgba(0,212,170,0.25)', background: 'rgba(0,212,170,0.07)', color: '#00d4aa', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.2s' }} onMouseEnter={(e) => { e.target.style.background = 'rgba(0,212,170,0.15)'; e.target.style.borderColor = 'rgba(0,212,170,0.5)'; }} onMouseLeave={(e) => { e.target.style.background = 'rgba(0,212,170,0.07)'; e.target.style.borderColor = 'rgba(0,212,170,0.25)'; }}>
+                              {rec.emoji} {cityName}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -533,15 +573,44 @@ export default function PlanTrip() {
 
               {/* Interests */}
               <div style={s.fieldWrap}>
-                <label style={s.label}>What interests you? *</label>
+                <label style={s.label}>What excites you? * (Pick one or more)</label>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: '1rem' }}>
+                  {PREDEFINED_INTERESTS.map(interest => {
+                    const selected = getSelectedInterests().some(i => i.toLowerCase() === interest.toLowerCase());
+                    return (
+                      <button
+                        type="button"
+                        key={interest}
+                        onClick={() => toggleInterest(interest)}
+                        style={{
+                          ...s.tag(selected),
+                          fontSize: '0.8rem',
+                        }}
+                      >
+                        {selected ? '✓ ' : ''}{interest}
+                      </button>
+                    );
+                  })}
+                </div>
+                <label style={{ ...s.label, marginBottom: '0.5rem' }}>Or describe your interests:</label>
                 <textarea
                   style={{ ...s.textarea, ...(errors.interests ? s.inputError : {}) }}
-                  rows={3}
-                  placeholder="e.g., hiking, food tours, museums, nature, wellness, adventure, culture"
+                  rows={2}
+                  placeholder="Add any additional interests not listed above..."
                   value={form.interests}
                   onChange={e => set('interests', e.target.value)}
                 />
                 {errors.interests && <div style={s.error}>{errors.interests}</div>}
+                {!errors.interests && form.interests.length > 0 && form.interests.length < 5 && (
+                  <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginTop: '0.4rem', fontStyle: 'italic' }}>
+                    Keep going! Share more about what you're looking for in this trip.
+                  </div>
+                )}
+                {!errors.interests && form.interests.length >= 5 && (
+                  <div style={{ fontSize: '0.75rem', color: 'rgba(0,212,170,0.6)', marginTop: '0.4rem', fontStyle: 'italic' }}>
+                    ✓ Great! This helps us tailor your itinerary.
+                  </div>
+                )}
               </div>
 
               {/* Travel Pace */}
@@ -643,7 +712,7 @@ export default function PlanTrip() {
             <div>
               <div style={s.stepLabel}>Step 3 of 5</div>
               <h2 style={s.stepTitle}>Trip Overview</h2>
-              <p style={s.stepSub}>Here's what to expect for your trip.</p>
+              <p style={s.stepSub}>Here's what to expect for your {form.days}-day trip to {form.destinations.length > 0 ? form.destinations[0].name : 'your destination'}.</p>
 
               {insightsLoading && (
                 <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'rgba(255,255,255,0.5)' }}>
@@ -655,20 +724,24 @@ export default function PlanTrip() {
               {!insightsLoading && (
                 <>
                   {/* Activities Section */}
-                  {destinationInsights?.activities && (
-                    <div style={{ marginBottom: '2rem' }}>
-                      <div style={{ fontSize: 12, fontWeight: 800, color: '#00d4aa', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>
-                        🎯 Activities
-                      </div>
+                  <div style={{ marginBottom: '2.5rem', padding: '1.5rem', background: 'rgba(0,212,170,0.08)', borderRadius: 12, border: '1px solid rgba(0,212,170,0.15)' }}>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: '#00d4aa', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 14 }}>
+                      🎯 Recommended Activities
+                    </div>
+                    {destinationInsights?.activities && destinationInsights.activities.length > 0 ? (
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        {destinationInsights.activities.slice(0, 6).map((activity, i) => (
-                          <div key={i} style={{ padding: '8px 14px', borderRadius: 20, background: 'rgba(0,212,170,0.12)', border: '1px solid rgba(0,212,170,0.25)', color: '#00d4aa', fontSize: 12, fontWeight: 600 }}>
+                        {destinationInsights.activities.slice(0, 8).map((activity, i) => (
+                          <div key={i} style={{ padding: '8px 14px', borderRadius: 20, background: 'rgba(0,212,170,0.15)', border: '1px solid rgba(0,212,170,0.3)', color: '#00d4aa', fontSize: 12, fontWeight: 600 }}>
                             {activity}
                           </div>
                         ))}
                       </div>
-                    </div>
-                  )}
+                    ) : (
+                      <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem' }}>
+                        Curated activities based on your interests and travel style will appear here. Continue to select specific venues in the next step.
+                      </div>
+                    )}
+                  </div>
 
                   {/* Flights Section */}
                   {form.destinations.length > 0 && (
@@ -691,6 +764,8 @@ export default function PlanTrip() {
                       currency={form.currency}
                       days={form.days}
                       travelStyle={form.travelStyle}
+                      startDate={form.travelDate}
+                      endDate={form.travelDateEnd}
                     />
                   )}
 

@@ -44,11 +44,15 @@ function getBudgetHealth(budget, currency, days, budgetEstimateUSD, accomType) {
   };
 }
 
-export function AccommodationSection({ destination, insights, budget, currency, days, travelStyle, alwaysOpen = false }) {
+export function AccommodationSection({ destination, insights, budget, currency, days, travelStyle, startDate, endDate, alwaysOpen = false }) {
   const [open, setOpen] = useState(true);
   const [accomType, setAccomType] = useState('surprise');
   const isOpen = alwaysOpen || open;
   const destName = destination?.name || '';
+
+  // Format dates for booking URLs (YYYY-MM-DD)
+  const checkinDate = startDate ? new Date(startDate).toISOString().split('T')[0] : '';
+  const checkoutDate = endDate ? new Date(endDate).toISOString().split('T')[0] : '';
 
   const accommodation = insights?.accommodation || [];
   const budgetEstimateUSD = insights?.budgetEstimateUSD || null;
@@ -121,8 +125,12 @@ export function AccommodationSection({ destination, insights, budget, currency, 
               {cards.map((a, i) => {
                 const low = toUserCurrency(a.priceRangePerNightUSD?.low || 30, currency);
                 const high = toUserCurrency(a.priceRangePerNightUSD?.high || 80, currency);
-                const airbnbUrl = `https://www.airbnb.com/s/${encodeURIComponent(destName)}/homes?query=${encodeURIComponent(a.searchKeyword || destName)}`;
-                const bookingUrl = `https://www.booking.com/search.html?ss=${encodeURIComponent(destName + ' ' + (a.searchKeyword || ''))}`;
+                const airbnbUrl = checkinDate && checkoutDate
+                  ? `https://www.airbnb.com/s/${encodeURIComponent(destName)}/homes?query=${encodeURIComponent(a.searchKeyword || destName)}&checkin=${checkinDate}&checkout=${checkoutDate}`
+                  : `https://www.airbnb.com/s/${encodeURIComponent(destName)}/homes?query=${encodeURIComponent(a.searchKeyword || destName)}`;
+                const bookingUrl = checkinDate && checkoutDate
+                  ? `https://www.booking.com/search.html?ss=${encodeURIComponent(destName + ' ' + (a.searchKeyword || ''))}&checkin=${checkinDate}&checkout=${checkoutDate}`
+                  : `https://www.booking.com/search.html?ss=${encodeURIComponent(destName + ' ' + (a.searchKeyword || ''))}`;
                 return (
                   <div key={i} style={{ borderRadius: 12, overflow: 'hidden', background: '#0f1a2e', border: '1px solid rgba(255,255,255,0.07)' }}>
                     {/* Photo */}

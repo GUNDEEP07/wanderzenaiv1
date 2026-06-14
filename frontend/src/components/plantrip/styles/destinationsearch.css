@@ -115,6 +115,27 @@
 .selected-destination .selected-text {
   font-weight: 500;
   color: #fff;
+  flex: 1;
+}
+
+.selected-destination .remove-btn {
+  background: none;
+  border: none;
+  color: #00d4aa;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  opacity: 0.6;
+  margin-left: auto;
+}
+
+.selected-destination .remove-btn:hover {
+  opacity: 1;
+  transform: scale(1.1);
 }
 
 .selected-destinations {

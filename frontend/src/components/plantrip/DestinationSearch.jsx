@@ -9,7 +9,16 @@ export function DestinationSearch({ onSelect, disabled, allowMultiple = false, i
   const [suggestions, setSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState(() => {
-    if (!allowMultiple) return initialSelected || null;
+    if (!allowMultiple) {
+      if (!initialSelected) return null;
+      return {
+        fsq_id: initialSelected.fsq_id || initialSelected.name?.toLowerCase().replace(/\s+/g, '-') || 'unknown',
+        name: initialSelected.name || '',
+        country: initialSelected.country || '',
+        lat: initialSelected.lat || 0,
+        lng: initialSelected.lng || 0,
+      };
+    }
     if (initialSelected && Array.isArray(initialSelected) && initialSelected.length > 0) {
       return initialSelected.map(d => ({
         fsq_id: d.fsq_id || d.name?.toLowerCase().replace(/\s+/g, '-') || 'unknown',
@@ -24,17 +33,55 @@ export function DestinationSearch({ onSelect, disabled, allowMultiple = false, i
 
   // Sync selected with initialSelected when it changes (e.g., prefilled destinations)
   useEffect(() => {
-    if (!allowMultiple || !initialSelected) return;
-    if (Array.isArray(initialSelected) && initialSelected.length > 0) {
-      setSelected(initialSelected.map(d => ({
-        fsq_id: d.fsq_id || d.name?.toLowerCase().replace(/\s+/g, '-') || 'unknown',
-        name: d.name || '',
-        country: d.country || '',
-        lat: d.lat || 0,
-        lng: d.lng || 0,
-      })));
+    if (!initialSelected) return;
+
+    try {
+      if (allowMultiple) {
+        // Multi-select mode: map array of destinations
+        if (Array.isArray(initialSelected) && initialSelected.length > 0) {
+          const mapped = initialSelected.map(d => {
+            if (!d) return null;
+            return {
+              fsq_id: d.fsq_id || (d.name ? d.name.toLowerCase().replace(/\s+/g, '-') : 'unknown'),
+              name: d.name || '',
+              country: d.country || '',
+              lat: d.lat || 0,
+              lng: d.lng || 0,
+            };
+          }).filter(Boolean);
+          if (mapped.length > 0) setSelected(mapped);
+        }
+      } else {
+        // Single-select mode: sync the single selected destination
+        if (Array.isArray(initialSelected)) {
+          // If array, use first element
+          if (initialSelected.length > 0 && initialSelected[0]) {
+            const dest = initialSelected[0];
+            setSelected({
+              fsq_id: dest.fsq_id || (dest.name ? dest.name.toLowerCase().replace(/\s+/g, '-') : 'unknown'),
+              name: dest.name || '',
+              country: dest.country || '',
+              lat: dest.lat || 0,
+              lng: dest.lng || 0,
+            });
+            setQuery(dest.name || '');
+          }
+        } else if (initialSelected && initialSelected.name) {
+          // If object, use directly
+          setSelected({
+            fsq_id: initialSelected.fsq_id || (initialSelected.name ? initialSelected.name.toLowerCase().replace(/\s+/g, '-') : 'unknown'),
+            name: initialSelected.name || '',
+            country: initialSelected.country || '',
+            lat: initialSelected.lat || 0,
+            lng: initialSelected.lng || 0,
+          });
+          setQuery(initialSelected.name);
+        }
+      }
+    } catch (err) {
+      console.warn('Error syncing selected destination:', err);
     }
-  }, [allowMultiple, initialSelected]);
+  }, [initialSelected]);
 
   const allDestinations = [
     { fsq_id: 'kyoto', name: 'Kyoto', country: 'Japan', lat: 35.0116, lng: 135.7681 },
@@ -183,7 +230,7 @@ export function DestinationSearch({ onSelect, disabled, allowMultiple = false, i
           <div className="selected-destinations">
             {selected.map((dest) => (
               <div key={dest.fsq_id} className="selected-destination-tag">
-                <span>{dest.name}, {dest.country}</span>
+                <span>{dest.name && dest.country ? `${dest.name}, ${dest.country}` : (dest.name || dest.country || 'Unknown')}</span>
                 <button
                   className="remove-btn"
                   onClick={(e) => {
@@ -198,12 +245,24 @@ export function DestinationSearch({ onSelect, disabled, allowMultiple = false, i
           </div>
         )
       ) : (
-        selected && (
+        selected && (selected.name || selected.country) && (
           <div className="selected-destination">
             <div className="checkmark">✓</div>
             <div className="selected-text">
-              {selected.name}, {selected.country}
+              {selected.name && selected.country ? `${selected.name}, ${selected.country}` : (selected.name || selected.country)}
             </div>
+            <button
+              className="remove-btn"
+              onClick={(e) => {
+                e.preventDefault();
+                setSelected(null);
+                setQuery('');
+                onSelect(null);
+              }}
+              title="Remove destination"
+            >
+              ✕
+            </button>
           </div>
         )
       )}
