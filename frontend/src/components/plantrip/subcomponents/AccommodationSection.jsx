@@ -107,6 +107,29 @@ export function AccommodationSection({ destination, insights, budget, currency, 
             ))}
           </div>
 
+          {/* Price breakdown & info */}
+          {budgetEstimateUSD && (
+            <div style={{ marginBottom: 14, padding: '12px 14px', background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.15)', borderRadius: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 8 }}>
+                <div>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>Per Night</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: '#60a5fa' }}>
+                    {fmt(toUserCurrency(budgetEstimateUSD.accommodationPerNightLow, currency), currency)} – {fmt(toUserCurrency(budgetEstimateUSD.accommodationPerNightHigh, currency), currency)}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>For {days} nights</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: '#60a5fa' }}>
+                    {fmt(toUserCurrency(budgetEstimateUSD.accommodationPerNightLow * days, currency), currency)} – {fmt(toUserCurrency(budgetEstimateUSD.accommodationPerNightHigh * days, currency), currency)}
+                  </div>
+                </div>
+              </div>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', lineHeight: 1.5 }}>
+                📍 {destName} · Typical price range for {days}-day trip
+              </div>
+            </div>
+          )}
+
           {/* Disclaimer */}
           <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', fontStyle: 'italic', marginBottom: 12, lineHeight: 1.5 }}>
             AI-suggested stay types with typical price estimates · Links open search on Airbnb / Booking.com
@@ -151,7 +174,10 @@ export function AccommodationSection({ destination, insights, budget, currency, 
                     {/* Info */}
                     <div style={{ padding: '8px 9px' }}>
                       <div style={{ fontSize: 11, fontWeight: 700, color: '#fff', marginBottom: 2, lineHeight: 1.2 }}>{a.type}</div>
-                      <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', marginBottom: 7, lineHeight: 1.4 }}>{a.whyItFits}</div>
+                      <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', marginBottom: 2, lineHeight: 1.4 }}>{a.whyItFits}</div>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: '#60a5fa', marginBottom: 6 }}>
+                        {fmt(low * days, currency)} total
+                      </div>
                       <div style={{ display: 'flex', gap: 5 }}>
                         <a href={airbnbUrl} target="_blank" rel="noopener noreferrer"
                           style={{ flex: 1, display: 'block', padding: '5px 4px', background: 'linear-gradient(135deg,rgba(255,90,60,0.85),rgba(255,56,92,0.85))', borderRadius: 6, fontSize: 9, fontWeight: 800, color: '#fff', textDecoration: 'none', textAlign: 'center' }}>

@@ -6,7 +6,6 @@ import { YouTubeCarousel } from './subcomponents/YouTubeCarousel';
 import { VenuesList } from './subcomponents/VenuesList';
 import { CustomInterestModal } from './subcomponents/CustomInterestModal';
 import { DestinationInsightsPanel } from './subcomponents/DestinationInsightsPanel';
-import { FlightsSection } from './subcomponents/FlightsSection';
 import { AccommodationSection } from './subcomponents/AccommodationSection';
 import { getUserLocationFromIP } from '../../utils/geolocation';
 import { fetchTrendingVideos } from '../../utils/youtube';
@@ -239,26 +238,6 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
       {/* ── Stays & Flights tab (full width) ── */}
       {activeMode === 'stays' && (
         <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px 32px', scrollbarWidth: 'none', maxWidth: 720, margin: '0 auto', width: '100%' }}>
-          {/* Header */}
-          <div style={{ marginBottom: 28 }}>
-            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em', marginBottom: 4 }}>
-              Plan your trip logistics
-            </div>
-            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6 }}>
-              {destination?.name ? `Get to ${destination.name} and find the right place to stay.` : 'Find your flights and accommodation.'}
-            </div>
-          </div>
-
-          <FlightsSection
-            destination={destination}
-            origin={userLocation || detectedOriginCity}
-            travelDate={startDate}
-            budgetEstimateUSD={destinationInsights?.budgetEstimateUSD || null}
-            currency={currency}
-            onOriginChange={() => {}}
-            alwaysOpen
-          />
-          <div style={{ marginTop: 20 }} />
           <AccommodationSection
             destination={destination}
             insights={destinationInsights}

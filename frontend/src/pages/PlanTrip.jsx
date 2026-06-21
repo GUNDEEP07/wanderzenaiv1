@@ -78,6 +78,8 @@ const INITIAL_FORM = {
   language: 'English', userAge: '', userLocation: '', email: '',
   selected_venues: {},
   day_assignments: {},   // ← day→venue mapping from VenueSelection
+  budgetScope: 'full-trip',  // 'full-trip' or 'activities-only'
+  alreadyBooked: false,  // Skip flights/accommodation if true
 };
 
 // ─── Styles ────────────────────────────────────────────────────────────────────
@@ -346,6 +348,7 @@ export default function PlanTrip() {
       if (!form.travelPace) errs.travelPace = 'Select a travel pace';
       if (!form.language) errs.language = 'Select a language';
       if (!form.currency) errs.currency = 'Select a currency';
+      if (!form.budgetScope) errs.budgetScope = 'Tell us what your budget covers';
     }
     if (step === 1) {
       const dateValidation = validateDateRange(form.travelDate, form.travelDateEnd);
@@ -368,13 +371,24 @@ export default function PlanTrip() {
 
   const next = () => {
     if (!validate()) return;
-    const nextStep = step + 1;
+    let nextStep = step + 1;
+    // If user says flights/hotels already booked, skip Trip Overview (step 2) and go to Activities (step 3)
+    if (step === 1 && form.alreadyBooked) {
+      nextStep = 3;
+    }
     goToStep(nextStep);
     analytics.stepReached(STEPS[nextStep], nextStep);
     if (nextStep === 4) loadPreview(form);
   };
 
-  const back = () => goToStep(step - 1);
+  const back = () => {
+    // If on Step 3 and skipped Step 2 (activities only), go back to Step 1
+    if (step === 3 && form.alreadyBooked) {
+      goToStep(1);
+    } else {
+      goToStep(step - 1);
+    }
+  };
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -662,6 +676,61 @@ export default function PlanTrip() {
                   The language in which your itinerary will be delivered
                 </div>
               </div>
+
+              {/* Budget Scope */}
+              <div style={s.fieldWrap}>
+                <label style={s.label}>What does your budget cover? *</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <button
+                    type="button"
+                    onClick={() => set('budgetScope', 'full-trip')}
+                    style={{
+                      padding: '14px 16px',
+                      borderRadius: 12,
+                      border: form.budgetScope === 'full-trip' ? '2px solid #00d4aa' : '1px solid rgba(255,255,255,0.1)',
+                      background: form.budgetScope === 'full-trip' ? 'rgba(0,212,170,0.1)' : 'rgba(255,255,255,0.03)',
+                      color: form.budgetScope === 'full-trip' ? '#00d4aa' : '#fff',
+                      fontSize: '0.95rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      fontFamily: 'inherit',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <div style={{ marginBottom: 4 }}>🌍 Entire Trip</div>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 400, opacity: 0.7 }}>Flights, hotels & activities</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { set('budgetScope', 'activities-only'); set('alreadyBooked', true); }}
+                    style={{
+                      padding: '14px 16px',
+                      borderRadius: 12,
+                      border: form.budgetScope === 'activities-only' ? '2px solid #00d4aa' : '1px solid rgba(255,255,255,0.1)',
+                      background: form.budgetScope === 'activities-only' ? 'rgba(0,212,170,0.1)' : 'rgba(255,255,255,0.03)',
+                      color: form.budgetScope === 'activities-only' ? '#00d4aa' : '#fff',
+                      fontSize: '0.95rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      fontFamily: 'inherit',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <div style={{ marginBottom: 4 }}>🎯 Activities Only</div>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 400, opacity: 0.7 }}>Already booked flights & hotels</div>
+                  </button>
+                </div>
+                {errors.budgetScope && <div style={s.error}>{errors.budgetScope}</div>}
+              </div>
+
+              {/* Already Booked Explanation */}
+              {form.budgetScope === 'activities-only' && (
+                <div style={{ marginBottom: '1.5rem', padding: '12px 14px', background: 'rgba(0,212,170,0.08)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 10, fontSize: '0.9rem', color: 'rgba(255,255,255,0.8)', lineHeight: 1.6 }}>
+                  ✓ You'll skip the flight & hotel booking steps and go straight to selecting activities and venues for your trip.
+                </div>
+              )}
             </div>
           )}
 
@@ -723,26 +792,6 @@ export default function PlanTrip() {
 
               {!insightsLoading && (
                 <>
-                  {/* Activities Section */}
-                  <div style={{ marginBottom: '2.5rem', padding: '1.5rem', background: 'rgba(0,212,170,0.08)', borderRadius: 12, border: '1px solid rgba(0,212,170,0.15)' }}>
-                    <div style={{ fontSize: 12, fontWeight: 800, color: '#00d4aa', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 14 }}>
-                      🎯 Recommended Activities
-                    </div>
-                    {destinationInsights?.activities && destinationInsights.activities.length > 0 ? (
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        {destinationInsights.activities.slice(0, 8).map((activity, i) => (
-                          <div key={i} style={{ padding: '8px 14px', borderRadius: 20, background: 'rgba(0,212,170,0.15)', border: '1px solid rgba(0,212,170,0.3)', color: '#00d4aa', fontSize: 12, fontWeight: 600 }}>
-                            {activity}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem' }}>
-                        Curated activities based on your interests and travel style will appear here. Continue to select specific venues in the next step.
-                      </div>
-                    )}
-                  </div>
-
                   {/* Flights Section */}
                   {form.destinations.length > 0 && (
                     <FlightsSection

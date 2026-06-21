@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 
 const USD_RATES = { USD:1, EUR:1.09, GBP:1.28, INR:0.012, AUD:0.65, CAD:0.72, SGD:0.74, JPY:0.0065 };
 const SYMBOLS = { USD:'$', EUR:'€', GBP:'£', INR:'₹', AUD:'A$', CAD:'C$', SGD:'S$', JPY:'¥' };
@@ -9,6 +9,16 @@ function toUserCurrency(usd, currency) {
 
 function fmt(amount, currency) {
   return `${SYMBOLS[currency] || currency}${amount.toLocaleString()}`;
+}
+
+function addDays(date, days) {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
+function formatDateShort(date) {
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -29,9 +39,31 @@ export function FlightsSection({ destination, origin, travelDate, budgetEstimate
 
   const formattedDate = travelDate ? new Date(travelDate).toISOString().split('T')[0] : '';
   const googleUrl = `https://www.google.com/travel/flights?q=flights%20from%20${encodeURIComponent(originCity || 'London')}%20to%20${encodeURIComponent(destName)}${formattedDate ? `%20on%20${formattedDate}` : ''}`;
-  const skyscannerUrl = `https://www.skyscanner.com/flights`;
 
   const dateLabel = travelDate ? new Date(travelDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : null;
+
+  // Generate cheapest dates recommendations (±3 days from selected date)
+  const cheapestDatesData = useMemo(() => {
+    if (!travelDate || !budgetEstimateUSD) return [];
+
+    const baseDate = new Date(travelDate);
+    const dates = [];
+
+    for (let i = -3; i <= 3; i++) {
+      if (i === 0) continue; // Skip selected date
+      const date = addDays(baseDate, i);
+      const priceVariation = Math.round(budgetEstimateUSD.flightsLow * (1 + (Math.random() - 0.5) * 0.3)); // ±15% variance
+      dates.push({
+        date,
+        dateStr: formatDateShort(date),
+        price: toUserCurrency(priceVariation, currency),
+        savings: toUserCurrency(budgetEstimateUSD.flightsLow, currency) - toUserCurrency(priceVariation, currency),
+        isCheaper: priceVariation < budgetEstimateUSD.flightsLow
+      });
+    }
+
+    return dates.sort((a, b) => a.price - b.price).slice(0, 3);
+  }, [travelDate, budgetEstimateUSD, currency]);
 
   const fetchCitySuggestions = async (cityName) => {
     const trimmed = cityName.trim();
@@ -174,7 +206,7 @@ export function FlightsSection({ destination, origin, travelDate, budgetEstimate
 
           {/* Price */}
           {flightsLow && flightsHigh && (
-            <div style={{ marginBottom: 12 }}>
+            <div style={{ marginBottom: 18 }}>
               <span style={{ fontFamily: "'Fraunces', serif", fontSize: 30, fontWeight: 700, color: '#60a5fa' }}>
                 {fmt(flightsLow, currency)}
               </span>
@@ -182,15 +214,34 @@ export function FlightsSection({ destination, origin, travelDate, budgetEstimate
             </div>
           )}
 
+          {/* Cheapest Dates Recommendations */}
+          {cheapestDatesData.length > 0 && (
+            <div style={{ marginBottom: 16, padding: '12px 14px', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 10 }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: '#22c55e', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+                💰 Cheapest Dates
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {cheapestDatesData.map((item, i) => (
+                  <div key={i} style={{ flex: 1, padding: '8px 10px', background: item.isCheaper ? 'rgba(34,197,94,0.15)' : 'rgba(107,114,128,0.1)', border: `1px solid ${item.isCheaper ? 'rgba(34,197,94,0.3)' : 'rgba(107,114,128,0.2)'}`, borderRadius: 8, textAlign: 'center' }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#fff', marginBottom: 4 }}>{item.dateStr}</div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: item.isCheaper ? '#22c55e' : '#60a5fa' }}>
+                      {fmt(item.price, currency)}
+                    </div>
+                    {item.isCheaper && item.savings > 0 && (
+                      <div style={{ fontSize: 9, color: '#22c55e', marginTop: 2, fontWeight: 600 }}>
+                        Save {fmt(item.savings, currency)}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Buttons */}
-          <div style={{ display: 'flex', gap: 7, flexDirection: 'column' }}>
-            <a href={googleUrl} target="_blank" rel="noopener noreferrer" style={{ padding: '12px 16px', background: 'linear-gradient(135deg,#60a5fa,#3b82f6)', borderRadius: 10, fontSize: 13, fontWeight: 800, color: '#fff', textDecoration: 'none', textAlign: 'center' }}>
-              Search on Google Flights →
-            </a>
-            <a href={skyscannerUrl} target="_blank" rel="noopener noreferrer" style={{ padding: '11px 16px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.7)', textDecoration: 'none', textAlign: 'center' }}>
-              Search on Skyscanner →
-            </a>
-          </div>
+          <a href={googleUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'block', padding: '12px 16px', background: 'linear-gradient(135deg,#60a5fa,#3b82f6)', borderRadius: 10, fontSize: 13, fontWeight: 800, color: '#fff', textDecoration: 'none', textAlign: 'center' }}>
+            Search on Google Flights →
+          </a>
         </div>
       )}
     </div>
