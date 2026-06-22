@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 const API_URL = import.meta.env.VITE_API_URL;
 import { ActivityGrid } from './subcomponents/ActivityGrid';
 import { ActivityTabs } from './subcomponents/ActivityTabs';
@@ -6,7 +6,6 @@ import { YouTubeCarousel } from './subcomponents/YouTubeCarousel';
 import { VenuesList } from './subcomponents/VenuesList';
 import { CustomInterestModal } from './subcomponents/CustomInterestModal';
 import { DestinationInsightsPanel } from './subcomponents/DestinationInsightsPanel';
-import { AccommodationSection } from './subcomponents/AccommodationSection';
 import { getUserLocationFromIP } from '../../utils/geolocation';
 import { fetchTrendingVideos } from '../../utils/youtube';
 import { fetchVenuesForActivity, getActivitiesForTravelStyle } from '../../utils/foursquare';
@@ -15,13 +14,14 @@ import './styles/venueselection-redesign.css';
 const PRESET_ACTIVITIES = ['Hiking', 'Food', 'Views', 'Culture', 'Nature', 'Nightlife', 'Wellness'];
 
 export function VenueSelection({ destinations, travelStyles, startDate, endDate, days = 5, onSubmit, onSkip, onBack, savedState, onSave, preferredActivities = [], currency = 'USD', budget = 0, userLocation = '' }) {
-  const [activeMode, setActiveMode] = useState('experiences');
   const [detectedOriginCity, setDetectedOriginCity] = useState('');
   const [selectedDestination, setSelectedDestination] = useState(0);
   const [selectedActivities, setSelectedActivities] = useState(() => savedState?.activities || {});
   const [activeTab, setActiveTab] = useState(() => savedState?.activeTab || null);
   const [youtubeVideos, setYoutubeVideos] = useState({});
+  const [youtubeErrors, setYoutubeErrors] = useState({});
   const [foursquareVenues, setFoursquareVenues] = useState({});
+  const [venueErrors, setVenueErrors] = useState({});
   const [selectedVenues, setSelectedVenues] = useState(() => {
     const raw = savedState?.venues || {};
     const result = {};
@@ -37,6 +37,7 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState(null);
   const [destinationInsights, setDestinationInsights] = useState(null);
 
   const destination = destinations?.[selectedDestination];
@@ -72,15 +73,29 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
   const fetchActivityContent = async (activity) => {
     if (!youtubeVideos[activity]) {
       setVideoLoading(prev => ({ ...prev, [activity]: true }));
-      const videos = await fetchTrendingVideos(activity, destination, countryCode);
-      setYoutubeVideos(prev => ({ ...prev, [activity]: videos }));
-      setVideoLoading(prev => ({ ...prev, [activity]: false }));
+      try {
+        const videos = await fetchTrendingVideos(activity, destination, countryCode);
+        setYoutubeVideos(prev => ({ ...prev, [activity]: videos || [] }));
+        setYoutubeErrors(prev => ({ ...prev, [activity]: null }));
+      } catch (err) {
+        setYoutubeErrors(prev => ({ ...prev, [activity]: 'Could not load videos' }));
+        setYoutubeVideos(prev => ({ ...prev, [activity]: [] }));
+      } finally {
+        setVideoLoading(prev => ({ ...prev, [activity]: false }));
+      }
     }
     if (!foursquareVenues[activity]) {
       setVenueLoading(prev => ({ ...prev, [activity]: true }));
-      const venues = await fetchVenuesForActivity(activity, destination);
-      setFoursquareVenues(prev => ({ ...prev, [activity]: venues }));
-      setVenueLoading(prev => ({ ...prev, [activity]: false }));
+      try {
+        const venues = await fetchVenuesForActivity(activity, destination);
+        setFoursquareVenues(prev => ({ ...prev, [activity]: venues || [] }));
+        setVenueErrors(prev => ({ ...prev, [activity]: null }));
+      } catch (err) {
+        setVenueErrors(prev => ({ ...prev, [activity]: 'Could not load venues' }));
+        setFoursquareVenues(prev => ({ ...prev, [activity]: [] }));
+      } finally {
+        setVenueLoading(prev => ({ ...prev, [activity]: false }));
+      }
     }
   };
 
@@ -113,6 +128,7 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
     if (!q || !destination?.lat) return;
     setSearchLoading(true);
     setSearchResults([]);
+    setSearchError(null);
     try {
       const params = new URLSearchParams({
         query: q,
@@ -121,6 +137,7 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
         lng: destination.lng.toString(),
       });
       const res = await fetch(`${API_URL}/recommendations/venues?${params}`);
+      if (!res.ok) throw new Error(`Search failed: ${res.status}`);
       const data = await res.json();
       const allVenues = (data.categories || []).flatMap(c => c.venues || []).map(v => ({
         id: v.fsq_id,
@@ -143,8 +160,12 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
         instagramUrl: v.instagramUrl || null,
         attributes: v.attributes || null,
       }));
-      setSearchResults(allVenues);
-    } catch {
+      setSearchResults(allVenues.length > 0 ? allVenues : []);
+      if (allVenues.length === 0) {
+        setSearchError(`No results found for "${q}"`);
+      }
+    } catch (err) {
+      setSearchError('Search failed. Please try again.');
       setSearchResults([]);
     } finally {
       setSearchLoading(false);
@@ -200,74 +221,7 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
 
   return (
     <>
-      {/* ── Mode tabs ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '12px 20px', background: '#0a0f1e', borderBottom: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
-        <div style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: 3, gap: 3 }}>
-          {[
-            { key: 'experiences', label: '🎯 Experiences' },
-            { key: 'stays', label: '✈️ Stays & Flights' },
-          ].map(({ key, label }) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setActiveMode(key)}
-              style={{
-                padding: '7px 16px', borderRadius: 8, fontFamily: 'inherit',
-                fontSize: 12, fontWeight: 700, cursor: 'pointer', border: 'none',
-                background: activeMode === key ? 'rgba(0,212,170,0.15)' : 'transparent',
-                color: activeMode === key ? '#00d4aa' : 'rgba(255,255,255,0.55)',
-                transition: 'all 0.18s',
-                boxShadow: activeMode === key ? '0 0 0 1px rgba(0,212,170,0.3)' : 'none',
-              }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        {activeMode === 'experiences' && (
-          <button
-            type="button"
-            onClick={() => setActiveMode('stays')}
-            style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, color: '#60a5fa', background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.2)', borderRadius: 20, padding: '4px 10px', cursor: 'pointer', fontFamily: 'inherit' }}
-          >
-            ✈️ Plan stays →
-          </button>
-        )}
-      </div>
-
-      {/* ── Stays & Flights tab (full width) ── */}
-      {activeMode === 'stays' && (
-        <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px 32px', scrollbarWidth: 'none', maxWidth: 720, margin: '0 auto', width: '100%' }}>
-          <AccommodationSection
-            destination={destination}
-            insights={destinationInsights}
-            budget={budget}
-            currency={currency}
-            days={days}
-            travelStyle={travelStyles}
-            alwaysOpen
-          />
-          {/* Always mount insights panel — uses default dates if user hasn't set travel dates */}
-          {destination && (
-            <div style={{ display: 'none' }}>
-              <DestinationInsightsPanel
-                destination={destination}
-                travelStyles={travelStyles}
-                startDate={effectiveStartDate}
-                endDate={effectiveEndDate}
-                selectedActivities={currentActivities}
-                onActivityToggle={handleActivityToggle}
-                onDayAssign={handleDayAssign}
-                onFullInsightsLoaded={setDestinationInsights}
-                days={days}
-              />
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Experiences tab (split panel) ── */}
-      {activeMode === 'experiences' && (
+      {/* ── Experiences section (split panel) ── */}
       <div className="venue-split">
         {/* LEFT PANEL */}
         <div className="venue-panel-left">
@@ -359,6 +313,11 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
             </form>
 
             {/* Search results */}
+            {searchError && (
+              <div style={{ marginBottom: 20, padding: '12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
+                ⚠️ {searchError}
+              </div>
+            )}
             {searchResults.length > 0 && (
               <div style={{ marginBottom: 20 }}>
                 <div className="venue-sec-row">
@@ -404,6 +363,13 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
                   <div className="venue-sec-label">📺 {activeTab} — watch before you go</div>
                   <div className="venue-sec-line"></div>
                 </div>
+
+                {youtubeErrors[activeTab] && (
+                  <div style={{ padding: '12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, marginBottom: 12, fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
+                    ⚠️ {youtubeErrors[activeTab]}
+                  </div>
+                )}
+
                 <div className="yt-row">
                   <YouTubeCarousel
                     activity={activeTab}
@@ -414,6 +380,12 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
                     isMobile={isMobile}
                   />
                 </div>
+
+                {venueErrors[activeTab] && (
+                  <div style={{ padding: '12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, marginBottom: 12, fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
+                    ⚠️ {venueErrors[activeTab]}
+                  </div>
+                )}
 
                 <VenuesList
                   activity={activeTab}
@@ -442,7 +414,6 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
           </div>
         </div>
       </div>
-      )}
 
       {/* ── Footer (always visible) ── */}
       <div className="venue-footer">
