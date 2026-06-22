@@ -10,6 +10,23 @@ import { getUserLocationFromIP } from '../../utils/geolocation';
 import { fetchTrendingVideos } from '../../utils/youtube';
 import { fetchVenuesForActivity, getActivitiesForTravelStyle } from '../../utils/foursquare';
 import { fetchWithRetry } from '../../utils/fetchWithRetry';
+import {
+  logActivitySelected,
+  logActivityDeselected,
+  logVenueLoading,
+  logVenueLoaded,
+  logVenueError,
+  logVideoLoading,
+  logVideoLoaded,
+  logVideoError,
+  logSearchInitiated,
+  logSearchLoaded,
+  logSearchEmpty,
+  logSearchError,
+  logVenueAdded,
+  logVenueRemoved,
+  logVenueDayAssigned,
+} from '../../utils/experienceLogger';
 import './styles/venueselection-redesign.css';
 
 const PRESET_ACTIVITIES = ['Hiking', 'Food', 'Views', 'Culture', 'Nature', 'Nightlife', 'Wellness'];
@@ -97,6 +114,7 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
     // Fetch videos with retry
     if (!state.videos.length && !state.videosError) {
       setActivityState(activity, { videosLoading: true });
+      logVideoLoading(activity, destination?.name);
       try {
         const videos = await fetchWithRetry(
           () => fetchTrendingVideos(activity, destination, countryCode),
@@ -107,19 +125,21 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
           videosError: null,
           videosLoading: false,
         });
+        logVideoLoaded(activity, destination?.name, videos?.length || 0);
       } catch (err) {
         setActivityState(activity, {
           videosError: 'Could not load videos',
           videos: [],
           videosLoading: false,
         });
-        console.error(`Video fetch failed for ${activity}:`, err);
+        logVideoError(activity, destination?.name, err);
       }
     }
 
     // Fetch venues with retry
     if (!state.venues.length && !state.venuesError) {
       setActivityState(activity, { venuesLoading: true });
+      logVenueLoading(activity, destination?.name);
       try {
         const venues = await fetchWithRetry(
           () => fetchVenuesForActivity(activity, destination),
@@ -131,13 +151,14 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
           venuesLoading: false,
           lastFetchAt: Date.now(),
         });
+        logVenueLoaded(activity, destination?.name, venues?.length || 0);
       } catch (err) {
         setActivityState(activity, {
           venuesError: 'Could not load venues',
           venues: [],
           venuesLoading: false,
         });
-        console.error(`Venue fetch failed for ${activity}:`, err);
+        logVenueError(activity, destination?.name, err);
       }
     }
   };
@@ -149,9 +170,11 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
       if (activities.includes(activity)) {
         updated = activities.filter(a => a !== activity);
         if (activeTab === activity) setActiveTab(updated.length > 0 ? updated[0] : null);
+        logActivityDeselected(activity, destination?.name);
       } else {
         updated = [...activities, activity];
         if (!activeTab) setActiveTab(activity);
+        logActivitySelected(activity, destination?.name);
         // Only search Foursquare/YouTube for generic categories, not AI-specific place names
         if (availableActivities.includes(activity)) {
           fetchActivityContent(activity);
@@ -172,6 +195,7 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
     setSearchLoading(true);
     setSearchResults([]);
     setSearchError(null);
+    logSearchInitiated(q, destination?.name);
     try {
       const params = new URLSearchParams({
         query: q,
@@ -206,10 +230,14 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
       setSearchResults(allVenues.length > 0 ? allVenues : []);
       if (allVenues.length === 0) {
         setSearchError(`No results found for "${q}"`);
+        logSearchEmpty(q, destination?.name);
+      } else {
+        logSearchLoaded(q, destination?.name, allVenues.length);
       }
     } catch (err) {
       setSearchError('Search failed. Please try again.');
       setSearchResults([]);
+      logSearchError(q, destination?.name, err);
     } finally {
       setSearchLoading(false);
     }
