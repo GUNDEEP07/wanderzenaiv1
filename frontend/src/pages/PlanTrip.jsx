@@ -13,6 +13,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { DestinationSearch } from '../components/plantrip/DestinationSearch';
 import { VenueSelection } from '../components/plantrip/VenueSelection';
 import StepReview from '../components/plantrip/StepReview';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { fetchPreview, submitItinerary } from '../api/itinerary';
 import { fetchDestinationInsights } from '../api/destinationInsights';
 import { useAuth } from '../context/AuthContext';
@@ -463,22 +464,24 @@ export default function PlanTrip() {
           </div>
         </div>
         <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
-          <VenueSelection
-            destinations={form.destinations}
-            travelStyles={form.travelStyle}
-            startDate={form.travelDate}
-            endDate={form.travelDateEnd}
-            days={form.days}
-            onSubmit={handleVenueSelect}
-            onSkip={() => { goToStep(3); analytics.stepReached(STEPS[3], 3); }}
-            onBack={() => goToStep(1)}
-            savedState={venueSelState}
-            onSave={setVenueSelState}
-            preferredActivities={preferredActivities}
-            currency={form.currency}
-            budget={form.budget}
-            userLocation={form.userLocation}
-          />
+          <ErrorBoundary scoped={true}>
+            <VenueSelection
+              destinations={form.destinations}
+              travelStyles={form.travelStyle}
+              startDate={form.travelDate}
+              endDate={form.travelDateEnd}
+              days={form.days}
+              onSubmit={handleVenueSelect}
+              onSkip={() => { goToStep(3); analytics.stepReached(STEPS[3], 3); }}
+              onBack={() => goToStep(1)}
+              savedState={venueSelState}
+              onSave={setVenueSelState}
+              preferredActivities={preferredActivities}
+              currency={form.currency}
+              budget={form.budget}
+              userLocation={form.userLocation}
+            />
+          </ErrorBoundary>
         </div>
       </div>
     );
