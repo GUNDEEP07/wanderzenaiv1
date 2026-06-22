@@ -9,19 +9,37 @@ import { DestinationInsightsPanel } from './subcomponents/DestinationInsightsPan
 import { getUserLocationFromIP } from '../../utils/geolocation';
 import { fetchTrendingVideos } from '../../utils/youtube';
 import { fetchVenuesForActivity, getActivitiesForTravelStyle } from '../../utils/foursquare';
+import { fetchWithRetry } from '../../utils/fetchWithRetry';
 import './styles/venueselection-redesign.css';
 
 const PRESET_ACTIVITIES = ['Hiking', 'Food', 'Views', 'Culture', 'Nature', 'Nightlife', 'Wellness'];
+
+const DEFAULT_ACTIVITY_STATE = {
+  venues: [],
+  videos: [],
+  venuesLoading: false,
+  videosLoading: false,
+  venuesError: null,
+  videosError: null,
+  lastFetchAt: null,
+};
 
 export function VenueSelection({ destinations, travelStyles, startDate, endDate, days = 5, onSubmit, onSkip, onBack, savedState, onSave, preferredActivities = [], currency = 'USD', budget = 0, userLocation = '' }) {
   const [detectedOriginCity, setDetectedOriginCity] = useState('');
   const [selectedDestination, setSelectedDestination] = useState(0);
   const [selectedActivities, setSelectedActivities] = useState(() => savedState?.activities || {});
   const [activeTab, setActiveTab] = useState(() => savedState?.activeTab || null);
-  const [youtubeVideos, setYoutubeVideos] = useState({});
-  const [youtubeErrors, setYoutubeErrors] = useState({});
-  const [foursquareVenues, setFoursquareVenues] = useState({});
-  const [venueErrors, setVenueErrors] = useState({});
+
+  // Unified activity state machine
+  const [activityStates, setActivityStates] = useState({});
+  const getActivityState = (activity) => activityStates[activity] || DEFAULT_ACTIVITY_STATE;
+  const setActivityState = (activity, updates) => {
+    setActivityStates(prev => ({
+      ...prev,
+      [activity]: { ...getActivityState(activity), ...updates }
+    }));
+  };
+
   const [selectedVenues, setSelectedVenues] = useState(() => {
     const raw = savedState?.venues || {};
     const result = {};
@@ -31,8 +49,6 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
   const [dayAssignments, setDayAssignments] = useState(() => savedState?.dayAssignments || {});
   const [showCustomModal, setShowCustomModal] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [videoLoading, setVideoLoading] = useState({});
-  const [venueLoading, setVenueLoading] = useState({});
   const [countryCode, setCountryCode] = useState('US');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -71,30 +87,57 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
   }, []);
 
   const fetchActivityContent = async (activity) => {
-    if (!youtubeVideos[activity]) {
-      setVideoLoading(prev => ({ ...prev, [activity]: true }));
+    const state = getActivityState(activity);
+
+    // Skip if already fetched recently
+    if (state.lastFetchAt && Date.now() - state.lastFetchAt < 60000) {
+      return;
+    }
+
+    // Fetch videos with retry
+    if (!state.videos.length && !state.videosError) {
+      setActivityState(activity, { videosLoading: true });
       try {
-        const videos = await fetchTrendingVideos(activity, destination, countryCode);
-        setYoutubeVideos(prev => ({ ...prev, [activity]: videos || [] }));
-        setYoutubeErrors(prev => ({ ...prev, [activity]: null }));
+        const videos = await fetchWithRetry(
+          () => fetchTrendingVideos(activity, destination, countryCode),
+          { maxRetries: 3, delayMs: 500 }
+        );
+        setActivityState(activity, {
+          videos: videos || [],
+          videosError: null,
+          videosLoading: false,
+        });
       } catch (err) {
-        setYoutubeErrors(prev => ({ ...prev, [activity]: 'Could not load videos' }));
-        setYoutubeVideos(prev => ({ ...prev, [activity]: [] }));
-      } finally {
-        setVideoLoading(prev => ({ ...prev, [activity]: false }));
+        setActivityState(activity, {
+          videosError: 'Could not load videos',
+          videos: [],
+          videosLoading: false,
+        });
+        console.error(`Video fetch failed for ${activity}:`, err);
       }
     }
-    if (!foursquareVenues[activity]) {
-      setVenueLoading(prev => ({ ...prev, [activity]: true }));
+
+    // Fetch venues with retry
+    if (!state.venues.length && !state.venuesError) {
+      setActivityState(activity, { venuesLoading: true });
       try {
-        const venues = await fetchVenuesForActivity(activity, destination);
-        setFoursquareVenues(prev => ({ ...prev, [activity]: venues || [] }));
-        setVenueErrors(prev => ({ ...prev, [activity]: null }));
+        const venues = await fetchWithRetry(
+          () => fetchVenuesForActivity(activity, destination),
+          { maxRetries: 3, delayMs: 500 }
+        );
+        setActivityState(activity, {
+          venues: venues || [],
+          venuesError: null,
+          venuesLoading: false,
+          lastFetchAt: Date.now(),
+        });
       } catch (err) {
-        setVenueErrors(prev => ({ ...prev, [activity]: 'Could not load venues' }));
-        setFoursquareVenues(prev => ({ ...prev, [activity]: [] }));
-      } finally {
-        setVenueLoading(prev => ({ ...prev, [activity]: false }));
+        setActivityState(activity, {
+          venuesError: 'Could not load venues',
+          venues: [],
+          venuesLoading: false,
+        });
+        console.error(`Venue fetch failed for ${activity}:`, err);
       }
     }
   };
@@ -364,40 +407,54 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
                   <div className="venue-sec-line"></div>
                 </div>
 
-                {youtubeErrors[activeTab] && (
-                  <div style={{ padding: '12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, marginBottom: 12, fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
-                    ⚠️ {youtubeErrors[activeTab]}
-                  </div>
-                )}
+                {(() => {
+                  const state = getActivityState(activeTab);
+                  return (
+                    <>
+                      {state.videosError && (
+                        <div style={{ padding: '12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, marginBottom: 12, fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
+                          ⚠️ {state.videosError}
+                        </div>
+                      )}
 
-                <div className="yt-row">
-                  <YouTubeCarousel
-                    activity={activeTab}
-                    destination={destination}
-                    countryCode={countryCode}
-                    videos={youtubeVideos[activeTab] || []}
-                    loading={videoLoading[activeTab] || false}
-                    isMobile={isMobile}
-                  />
-                </div>
+                      <div className="yt-row">
+                        <YouTubeCarousel
+                          activity={activeTab}
+                          destination={destination}
+                          countryCode={countryCode}
+                          videos={state.videos || []}
+                          loading={state.videosLoading || false}
+                          isMobile={isMobile}
+                        />
+                      </div>
+                    </>
+                  );
+                })()}
 
-                {venueErrors[activeTab] && (
-                  <div style={{ padding: '12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, marginBottom: 12, fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
-                    ⚠️ {venueErrors[activeTab]}
-                  </div>
-                )}
+                {(() => {
+                  const state = getActivityState(activeTab);
+                  return (
+                    <>
+                      {state.venuesError && (
+                        <div style={{ padding: '12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, marginBottom: 12, fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
+                          ⚠️ {state.venuesError}
+                        </div>
+                      )}
 
-                <VenuesList
-                  activity={activeTab}
-                  venues={foursquareVenues[activeTab] || []}
-                  selectedVenues={selectedVenues[`${destKey}/${activeTab}`] || new Set()}
-                  onVenueToggle={handleVenueToggle}
-                  onDayAssign={handleDayAssign}
-                  loading={venueLoading[activeTab] || false}
-                  destination={destination}
-                  days={days}
-                  startDate={startDate}
-                />
+                      <VenuesList
+                        activity={activeTab}
+                        venues={state.venues || []}
+                        selectedVenues={selectedVenues[`${destKey}/${activeTab}`] || new Set()}
+                        onVenueToggle={handleVenueToggle}
+                        onDayAssign={handleDayAssign}
+                        loading={state.venuesLoading || false}
+                        destination={destination}
+                        days={days}
+                        startDate={startDate}
+                      />
+                    </>
+                  );
+                })()}
               </>
             )}
 
