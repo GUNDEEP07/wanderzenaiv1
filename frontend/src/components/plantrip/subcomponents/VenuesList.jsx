@@ -15,9 +15,34 @@ export function VenuesList({ activity, venues, selectedVenues, onVenueToggle, on
   }
 
   if (!venues || venues.length === 0) {
+    const emptyMessages = {
+      'Hiking': '🥾 No hiking trails found nearby',
+      'Food': '🍽️ No restaurants found nearby',
+      'Culture': '🏛️ No cultural sites found nearby',
+      'Nature': '🌳 No nature spots found nearby',
+      'Views': '⛰️ No viewpoints found nearby',
+      'Nightlife': '🎵 No nightlife venues found nearby',
+      'Wellness': '🧘 No wellness spots found nearby',
+    };
+
+    const message = emptyMessages[activity] || `📍 No venues found for ${activity}`;
+
     return (
-      <div style={{ padding: '12px 0', fontSize: '12px', color: 'rgba(255,255,255,0.3)', textAlign: 'center' }}>
-        No venues found for {activity}
+      <div style={{
+        padding: '20px 16px',
+        textAlign: 'center',
+        background: 'rgba(0,212,170,0.03)',
+        border: '1px solid rgba(0,212,170,0.1)',
+        borderRadius: 8,
+        marginBottom: 12
+      }}>
+        <div style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.7)', marginBottom: 6 }}>
+          {message}
+        </div>
+        <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', lineHeight: 1.4 }}>
+          We couldn't find venues for this activity in this area.<br />
+          Try searching with more specific keywords or select a different activity.
+        </div>
       </div>
     );
   }
