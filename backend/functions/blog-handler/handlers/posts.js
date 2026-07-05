@@ -8,6 +8,8 @@ const { log } = require('/opt/nodejs/index');
 const corsHeaders = {
   'Access-Control-Allow-Origin': process.env.FRONTEND_URL || '*',
   'Content-Type': 'application/json',
+  'Cache-Control': 'private, no-store',
+  'Vary': 'Authorization',
 };
 
 const buildResponse = (statusCode, data) => ({
