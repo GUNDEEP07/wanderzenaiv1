@@ -139,7 +139,7 @@ exports.handler = async (event) => {
 
     // GET /blog/admin/pending — List pending posts
     if (httpMethod === 'GET' && (path === '/blog/admin/pending' || path?.endsWith('/blog/admin/pending'))) {
-      return await adminHandler.listPendingPosts(userId, userRole, queryStringParameters);
+      return await adminHandler.listPendingPosts(queryStringParameters, userRole);
     }
 
     // ─── 404: Route not found ─────────────────────────────────────────────────
