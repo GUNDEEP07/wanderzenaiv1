@@ -22,6 +22,7 @@ const TermsOfService = lazy(() => import('./pages/TermsOfService'));
 const ItineraryView  = lazy(() => import('./pages/ItineraryView'));
 const NotFound       = lazy(() => import('./pages/NotFound'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const AdminBlogPanel = lazy(() => import('./pages/AdminBlogPanel'));
 const Feedback       = lazy(() => import('./pages/Feedback'));
 const Contact        = lazy(() => import('./pages/Contact'));
 
@@ -49,6 +50,7 @@ export default function App() {
               <Route path="/dashboard"    element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/agency"       element={<AgencyDashboard />} />
               <Route path="/admin"        element={<RoleGate requiredRoles={['admin','superadmin','support']}><AdminDashboard /></RoleGate>} />
+              <Route path="/admin/blog"   element={<RoleGate requiredRoles={['admin','superadmin']}><AdminBlogPanel /></RoleGate>} />
               <Route path="/explore"      element={<ExplorePage />} />
               <Route path="/settings"     element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="/itinerary/:id" element={<ItineraryView />} />
