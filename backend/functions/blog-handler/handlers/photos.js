@@ -3,7 +3,7 @@
 const { randomUUID } = require('crypto');
 const blog = require('../db/blog');
 const { generateS3SignedPutUrl, deleteS3Object } = require('../utils/s3');
-const { validatePhotoUpload } = require('../utils/validation');
+const { validatePhotoUpload, validateS3KeyPattern } = require('../utils/validation');
 const errors = require('../utils/errors');
 const { log } = require('/opt/nodejs/index');
 
@@ -151,8 +151,9 @@ const confirmPhotoUpload = async (postId, body, userId) => {
     // Verify user owns the post
     await verifyPostOwnership(postId, userId);
 
-    // Validate photo upload (checks extension and size)
-    validatePhotoUpload(s3Key, 1); // We pass 1 as fileSize since we already validated in request phase
+    // Validate s3Key matches expected pattern: blog/{postId}/{uuid}-{filename}
+    // This prevents clients from submitting arbitrary S3 keys
+    validateS3KeyPattern(s3Key, postId);
 
     // Add photo to database
     const photo = await blog.addPhoto(postId, s3Key, displayOrder);
@@ -171,7 +172,7 @@ const confirmPhotoUpload = async (postId, body, userId) => {
       return buildResponse(403, { error: 'You do not have permission to confirm uploads for this post' });
     }
 
-    if (err.message.includes('Photo format') || err.message.includes('File size')) {
+    if (err.message.includes('Photo format') || err.message.includes('S3 key') || err.message.includes('format')) {
       log.warn('Confirm photo upload: validation error', { error: err.message, postId, userId });
       return errors.badRequest(err.message);
     }
@@ -181,15 +182,26 @@ const confirmPhotoUpload = async (postId, body, userId) => {
   }
 };
 
-const listPhotos = async (postId) => {
+/**
+ * List photos for a post, enforcing visibility rules
+ * Published posts visible to all; draft/unpublished only to owner/admin
+ * @param {string} postId — Post ID
+ * @param {string} userId — Current user ID (optional)
+ * @param {string} userRole — Current user's role (optional)
+ * @returns {object} Response with photos array or error
+ */
+const listPhotos = async (postId, userId = null, userRole = null) => {
   try {
     if (!postId) {
       return errors.badRequest('Post ID is required');
     }
 
-    // Verify post exists
+    // Verify post exists and user has permission to view it
     const checkSql = `
-      SELECT id FROM blog_posts WHERE id = $1;
+      SELECT id, status, user_id
+      FROM blog_posts
+      WHERE id = $1
+        AND (status = 'published' OR user_id = $2 OR $3 IN ('admin', 'superadmin'));
     `;
 
     const { Pool } = require('pg');
@@ -207,17 +219,17 @@ const listPhotos = async (postId) => {
       connectionTimeoutMillis: 5000,
     });
 
-    const checkResult = await pool.query(checkSql, [postId]);
+    const checkResult = await pool.query(checkSql, [postId, userId, userRole]);
     await pool.end();
 
     if (!checkResult.rows.length) {
-      log.warn('List photos: post not found', { postId });
-      return errors.notFound('Post not found');
+      log.warn('List photos: post not found or access denied', { postId, userId, userRole });
+      return errors.notFound('Post not found or access denied');
     }
 
     const photos = await blog.listPhotos(postId);
 
-    log.info('Photos listed', { postId, count: photos.length });
+    log.info('Photos listed', { postId, userId, count: photos.length });
     return success(photos);
 
   } catch (err) {

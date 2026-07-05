@@ -47,6 +47,29 @@ const deleteS3Object = async (s3Key) => {
   }
 };
 
+/**
+ * Map file extension to MIME type
+ * @param {string} extension — File extension (without dot)
+ * @returns {string} MIME type
+ * @throws {Error} If extension is not allowed
+ */
+const getContentTypeFromExtension = (extension) => {
+  const mimeTypes = {
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    webp: 'image/webp',
+    gif: 'image/gif',
+  };
+
+  const lowerExt = extension.toLowerCase();
+  if (!mimeTypes[lowerExt]) {
+    throw new Error(`Photo format not allowed: ${extension}. Allowed: jpg, jpeg, png, webp, gif`);
+  }
+
+  return mimeTypes[lowerExt];
+};
+
 const generateS3SignedPutUrl = async (s3Key, expiresIn = 3600) => {
   try {
     if (!s3Key || typeof s3Key !== 'string') {
@@ -57,14 +80,25 @@ const generateS3SignedPutUrl = async (s3Key, expiresIn = 3600) => {
       throw new Error('Expiration time must be a positive number');
     }
 
+    // Extract file extension from s3Key (last part after the dash in filename)
+    const fileName = s3Key.split('/').pop(); // Get filename from key
+    const extension = fileName.split('.').pop(); // Get extension
+
+    // Validate and get MIME type
+    const contentType = getContentTypeFromExtension(extension);
+
+    // 10MB limit in bytes
+    const maxContentLength = 10 * 1024 * 1024;
+
     const url = s3.getSignedUrl('putObject', {
       Bucket: process.env.PDF_BUCKET,
       Key: s3Key,
       Expires: expiresIn,
-      ContentType: 'image/*',
+      ContentType: contentType,
+      ContentLength: maxContentLength,
     });
 
-    log.info('Generated S3 signed PUT URL', { s3Key, expiresIn });
+    log.info('Generated S3 signed PUT URL', { s3Key, expiresIn, contentType });
     return url;
   } catch (err) {
     log.error('Failed to generate S3 signed PUT URL', { s3Key, error: err.message });
@@ -76,4 +110,5 @@ module.exports = {
   generateS3SignedUrl,
   deleteS3Object,
   generateS3SignedPutUrl,
+  getContentTypeFromExtension,
 };

@@ -120,7 +120,7 @@ exports.handler = async (event) => {
     // GET /blog/{id}/photos — List post photos
     if (httpMethod === 'GET' && path?.endsWith('/photos')) {
       const postId = path.split('/')[2];
-      return await photosHandler.listPhotos(postId);
+      return await photosHandler.listPhotos(postId, userId, userRole);
     }
 
     // ─── ADMIN ROUTES ─────────────────────────────────────────────────────────
