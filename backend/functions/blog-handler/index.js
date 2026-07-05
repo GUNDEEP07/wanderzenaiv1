@@ -104,10 +104,17 @@ exports.handler = async (event) => {
 
     // ─── PHOTOS ROUTES ────────────────────────────────────────────────────────
 
-    // POST /blog/{id}/photos — Request photo upload URL
+    // POST /blog/{id}/photos — Request photo upload URL or confirm photo upload
     if (httpMethod === 'POST' && path?.endsWith('/photos')) {
       const postId = path.split('/')[2];
-      return await photosHandler.requestPhotoUploadUrl(postId, body, userId);
+      // Determine which operation based on request body
+      if (body.s3Key) {
+        // Confirm photo upload (s3Key indicates file was already uploaded to S3)
+        return await photosHandler.confirmPhotoUpload(postId, body, userId);
+      } else {
+        // Request photo upload URL (fileName and fileSize for new upload)
+        return await photosHandler.requestPhotoUploadUrl(postId, body, userId);
+      }
     }
 
     // GET /blog/{id}/photos — List post photos

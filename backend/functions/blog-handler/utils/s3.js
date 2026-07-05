@@ -47,7 +47,33 @@ const deleteS3Object = async (s3Key) => {
   }
 };
 
+const generateS3SignedPutUrl = async (s3Key, expiresIn = 3600) => {
+  try {
+    if (!s3Key || typeof s3Key !== 'string') {
+      throw new Error('S3 key is required');
+    }
+
+    if (typeof expiresIn !== 'number' || expiresIn < 1) {
+      throw new Error('Expiration time must be a positive number');
+    }
+
+    const url = s3.getSignedUrl('putObject', {
+      Bucket: process.env.PDF_BUCKET,
+      Key: s3Key,
+      Expires: expiresIn,
+      ContentType: 'image/*',
+    });
+
+    log.info('Generated S3 signed PUT URL', { s3Key, expiresIn });
+    return url;
+  } catch (err) {
+    log.error('Failed to generate S3 signed PUT URL', { s3Key, error: err.message });
+    throw err;
+  }
+};
+
 module.exports = {
   generateS3SignedUrl,
   deleteS3Object,
+  generateS3SignedPutUrl,
 };
