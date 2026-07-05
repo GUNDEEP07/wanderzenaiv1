@@ -3,13 +3,17 @@
 const { Pool } = require('pg');
 
 // ─── Database connection pool ────────────────────────────────────────────────
+const fs = require('fs');
+
 const pool = new Pool({
   host: process.env.DB_HOST,
   database: process.env.DB_NAME,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   port: 5432,
-  ssl: { rejectUnauthorized: false },
+  ssl: process.env.DB_HOST === 'localhost' || process.env.DB_HOST === '127.0.0.1'
+    ? false
+    : { rejectUnauthorized: true },
   max: 3,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
@@ -56,10 +60,13 @@ const createPost = async (userId, title, description, content, location, country
 
 /**
  * getPost — Fetch single post by ID with author email joined
+ * Published posts visible to all; draft/rejected only to owner/admin
  * @param {string} postId — Post ID (UUID)
- * @returns {Promise<object|null>} Post object with author_email, or null if not found
+ * @param {string} userId — Current user ID (optional, for ownership check)
+ * @param {string} userRole — Current user's role (optional, for admin check)
+ * @returns {Promise<object|null>} Post object with author_email, or null if not found or unauthorized
  */
-const getPost = async (postId) => {
+const getPost = async (postId, userId = null, userRole = null) => {
   const sql = `
     SELECT
       bp.id, bp.user_id, bp.title, bp.description, bp.content,
@@ -68,10 +75,11 @@ const getPost = async (postId) => {
       u.email AS author_email
     FROM blog_posts bp
     JOIN users u ON bp.user_id = u.id
-    WHERE bp.id = $1;
+    WHERE bp.id = $1
+      AND (bp.status = 'published' OR bp.user_id = $2 OR $3 IN ('admin', 'superadmin'));
   `;
 
-  const result = await pool.query(sql, [postId]);
+  const result = await pool.query(sql, [postId, userId, userRole]);
   return result.rows.length > 0 ? result.rows[0] : null;
 };
 
@@ -271,14 +279,24 @@ const deletePost = async (postId, userId, userRole) => {
 // ═════════════════════════════════════════════════════════════════════════════
 
 /**
- * createComment — Insert new comment (auto-approved, no moderation queue)
+ * createComment — Insert new comment (only on published posts)
  * @param {string} postId — Post ID (UUID)
  * @param {string} userId — Commenter's user ID (UUID)
  * @param {string} userEmail — Commenter's email
  * @param {string} content — Comment text
  * @returns {Promise<object>} Created comment object
+ * @throws {Error} "Post not found or not available for comments" if post unpublished
  */
 const createComment = async (postId, userId, userEmail, content) => {
+  const checkSql = `
+    SELECT status FROM blog_posts WHERE id = $1;
+  `;
+  const checkResult = await pool.query(checkSql, [postId]);
+
+  if (!checkResult.rows.length || checkResult.rows[0].status !== 'published') {
+    throw new Error('Post not found or not available for comments');
+  }
+
   const sql = `
     INSERT INTO blog_comments (post_id, user_id, user_email, content, created_at, updated_at)
     VALUES ($1, $2, $3, $4, NOW(), NOW())
@@ -407,47 +425,47 @@ const listPhotos = async (postId) => {
 // ═════════════════════════════════════════════════════════════════════════════
 
 /**
- * approvePost — Publish a pending post (status: pending_review → published)
+ * approvePost — Publish a pending post (only from pending_review status)
  * @param {string} postId — Post ID (UUID)
  * @returns {Promise<object>} Updated post object
- * @throws {Error} "Post not found" if post doesn't exist
+ * @throws {Error} "Post not in pending_review state" if status is not pending_review
  */
 const approvePost = async (postId) => {
   const sql = `
     UPDATE blog_posts
     SET status = 'published', published_at = NOW(), updated_at = NOW()
-    WHERE id = $1
+    WHERE id = $1 AND status = 'pending_review'
     RETURNING id, user_id, title, description, content, location, country, travel_dates, category, status, admin_notes, created_at, updated_at, published_at;
   `;
 
   const result = await pool.query(sql, [postId]);
 
   if (!result.rows.length) {
-    throw new Error('Post not found');
+    throw new Error('Post not in pending_review state');
   }
 
   return result.rows[0];
 };
 
 /**
- * rejectPost — Reject a pending post and add admin notes
+ * rejectPost — Reject a pending post and add admin notes (only from pending_review status)
  * @param {string} postId — Post ID (UUID)
  * @param {string} adminNotes — Rejection reason/feedback for author
  * @returns {Promise<object>} Updated post object
- * @throws {Error} "Post not found" if post doesn't exist
+ * @throws {Error} "Post not in pending_review state" if status is not pending_review
  */
 const rejectPost = async (postId, adminNotes) => {
   const sql = `
     UPDATE blog_posts
     SET status = 'rejected', admin_notes = $1, updated_at = NOW()
-    WHERE id = $2
+    WHERE id = $2 AND status = 'pending_review'
     RETURNING id, user_id, title, description, content, location, country, travel_dates, category, status, admin_notes, created_at, updated_at, published_at;
   `;
 
   const result = await pool.query(sql, [adminNotes, postId]);
 
   if (!result.rows.length) {
-    throw new Error('Post not found');
+    throw new Error('Post not in pending_review state');
   }
 
   return result.rows[0];
