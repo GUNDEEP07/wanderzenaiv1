@@ -58,7 +58,7 @@ const validatePhotoUpload = (s3Key, fileSize) => {
     throw new Error(`File size exceeds maximum of 10MB (received ${(fileSize / 1024 / 1024).toFixed(2)}MB)`);
   }
 
-  const validExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+  const validExtensions = ['jpg', 'png', 'webp', 'gif'];
   const extension = s3Key.toLowerCase().split('.').pop();
 
   if (!validExtensions.includes(extension)) {
