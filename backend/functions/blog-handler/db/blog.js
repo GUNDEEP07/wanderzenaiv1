@@ -318,21 +318,38 @@ const createComment = async (postId, userId, userEmail, content) => {
  * @param {string} userId — Current user ID (for auth)
  * @param {string} content — New comment content
  * @returns {Promise<object>} Updated comment object
- * @throws {Error} "Comment not found or unauthorized" if not owner
+ * @throws {Error} "Comment not found" (404) if comment doesn't exist, "Unauthorized" (403) if user doesn't own it
  */
 const updateComment = async (commentId, userId, content) => {
+  // First check if comment exists
+  const checkSql = `
+    SELECT id, user_id
+    FROM blog_comments
+    WHERE id = $1;
+  `;
+
+  const checkResult = await pool.query(checkSql, [commentId]);
+
+  if (!checkResult.rows.length) {
+    throw new Error('Comment not found');
+  }
+
+  const comment = checkResult.rows[0];
+
+  // Check authorization
+  if (comment.user_id !== userId) {
+    throw new Error('Unauthorized');
+  }
+
+  // Perform update
   const sql = `
     UPDATE blog_comments
     SET content = $1, updated_at = NOW()
-    WHERE id = $2 AND user_id = $3
+    WHERE id = $2
     RETURNING id, post_id, user_id, user_email, content, created_at, updated_at;
   `;
 
-  const result = await pool.query(sql, [content, commentId, userId]);
-
-  if (!result.rows.length) {
-    throw new Error('Comment not found or unauthorized');
-  }
+  const result = await pool.query(sql, [content, commentId]);
 
   return result.rows[0];
 };
@@ -343,20 +360,36 @@ const updateComment = async (commentId, userId, content) => {
  * @param {string} userId — Current user ID
  * @param {string} userRole — Current user's role
  * @returns {Promise<void>}
- * @throws {Error} "Comment not found or unauthorized" if cannot delete
+ * @throws {Error} "Comment not found" (404) if comment doesn't exist, "Unauthorized" (403) if user can't delete
  */
 const deleteComment = async (commentId, userId, userRole) => {
-  const sql = `
-    DELETE FROM blog_comments
-    WHERE id = $1 AND (user_id = $2 OR $3 IN ('admin', 'superadmin'))
-    RETURNING id;
+  // First check if comment exists
+  const checkSql = `
+    SELECT id, user_id
+    FROM blog_comments
+    WHERE id = $1;
   `;
 
-  const result = await pool.query(sql, [commentId, userId, userRole]);
+  const checkResult = await pool.query(checkSql, [commentId]);
 
-  if (!result.rows.length) {
-    throw new Error('Comment not found or unauthorized');
+  if (!checkResult.rows.length) {
+    throw new Error('Comment not found');
   }
+
+  const comment = checkResult.rows[0];
+
+  // Check authorization — user must own comment or be admin
+  if (comment.user_id !== userId && userRole !== 'admin' && userRole !== 'superadmin') {
+    throw new Error('Unauthorized');
+  }
+
+  // Perform delete
+  const deleteSql = `
+    DELETE FROM blog_comments
+    WHERE id = $1;
+  `;
+
+  await pool.query(deleteSql, [commentId]);
 };
 
 /**
