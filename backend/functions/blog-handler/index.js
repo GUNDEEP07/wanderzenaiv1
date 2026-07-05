@@ -67,7 +67,7 @@ exports.handler = async (event) => {
     // GET /blog/{id} — Get single post
     if (httpMethod === 'GET' && path?.match(/^\/blog\/[^/]+$/) && !path.endsWith('/comments') && !path.endsWith('/photos')) {
       const postId = pathParameters.id || path.split('/')[2];
-      return await postsHandler.getPost(postId);
+      return await postsHandler.getPost(postId, userId, userRole);
     }
 
     // PUT /blog/{id} — Update post
