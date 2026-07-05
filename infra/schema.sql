@@ -231,3 +231,52 @@ CREATE INDEX IF NOT EXISTS idx_feedback_rating  ON feedback(rating);
 -- ─── destination_insights_cache: add travel_styles_key if missing (table existed without it) ───
 ALTER TABLE destination_insights_cache ADD COLUMN IF NOT EXISTS travel_styles_key VARCHAR(500) NOT NULL DEFAULT 'general';
 CREATE UNIQUE INDEX IF NOT EXISTS idx_insights_unique ON destination_insights_cache(destination, start_date, end_date, travel_styles_key);
+
+-- ─── Blog posts table ───────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS blog_posts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id),
+  title VARCHAR(255) NOT NULL,
+  description TEXT NOT NULL,
+  content TEXT NOT NULL,
+  location VARCHAR(255) NOT NULL,
+  country VARCHAR(100) NOT NULL,
+  travel_dates DATERANGE,
+  category VARCHAR(50) NOT NULL DEFAULT 'other' CHECK (category IN ('tips', 'adventure', 'culture', 'food', 'budget', 'other')),
+  status VARCHAR(50) NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'pending_review', 'published', 'rejected')),
+  admin_notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  published_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_blog_posts_user ON blog_posts(user_id);
+CREATE INDEX IF NOT EXISTS idx_blog_posts_status ON blog_posts(status);
+CREATE INDEX IF NOT EXISTS idx_blog_posts_country ON blog_posts(country);
+CREATE INDEX IF NOT EXISTS idx_blog_posts_category ON blog_posts(category);
+CREATE INDEX IF NOT EXISTS idx_blog_posts_published ON blog_posts(published_at DESC);
+
+-- ─── Blog comments table ────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS blog_comments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  post_id UUID NOT NULL REFERENCES blog_posts(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id),
+  user_email VARCHAR(255) NOT NULL,
+  content TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_blog_comments_post ON blog_comments(post_id);
+CREATE INDEX IF NOT EXISTS idx_blog_comments_user ON blog_comments(user_id);
+
+-- ─── Blog photos table ──────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS blog_photos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  post_id UUID NOT NULL REFERENCES blog_posts(id) ON DELETE CASCADE,
+  s3_key VARCHAR(500) NOT NULL,
+  display_order INTEGER NOT NULL,
+  uploaded_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_blog_photos_post ON blog_photos(post_id);
