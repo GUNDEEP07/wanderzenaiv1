@@ -102,6 +102,7 @@ export default function AdminDashboard() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>{currentUser?.email}</span>
+          <button type="button" onClick={() => navigate('/admin/blog')} style={{ background: 'none', border: 'none', color: '#00d4aa', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, fontWeight: 600 }}>Manage Blog</button>
           <button type="button" onClick={() => { signOut(); navigate('/login'); }} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12 }}>Sign out</button>
         </div>
       </nav>
