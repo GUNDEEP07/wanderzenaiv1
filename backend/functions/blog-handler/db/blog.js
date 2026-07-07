@@ -1,9 +1,23 @@
 'use strict';
 
 const { Pool } = require('pg');
+const fs = require('fs');
+const path = require('path');
 
 // ─── Database connection pool ────────────────────────────────────────────────
-const fs = require('fs');
+let sslConfig = false;
+if (process.env.DB_HOST && process.env.DB_HOST !== 'localhost' && process.env.DB_HOST !== '127.0.0.1') {
+  // For RDS: load the AWS RDS global CA bundle if available, otherwise use env var or disable verification
+  if (process.env.RDS_CA_BUNDLE) {
+    sslConfig = {
+      rejectUnauthorized: true,
+      ca: process.env.RDS_CA_BUNDLE.split('\\n').join('\n'),
+    };
+  } else {
+    // Fallback: disable verification (matches shared layer pattern for dev environments)
+    sslConfig = { rejectUnauthorized: false };
+  }
+}
 
 const pool = new Pool({
   host: process.env.DB_HOST,
@@ -11,9 +25,7 @@ const pool = new Pool({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   port: 5432,
-  ssl: process.env.DB_HOST === 'localhost' || process.env.DB_HOST === '127.0.0.1'
-    ? false
-    : { rejectUnauthorized: false },
+  ssl: sslConfig,
   max: 3,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
