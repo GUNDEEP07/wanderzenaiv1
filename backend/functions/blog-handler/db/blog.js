@@ -13,7 +13,7 @@ const pool = new Pool({
   port: 5432,
   ssl: process.env.DB_HOST === 'localhost' || process.env.DB_HOST === '127.0.0.1'
     ? false
-    : { rejectUnauthorized: true },
+    : { rejectUnauthorized: false },
   max: 3,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
