@@ -437,6 +437,106 @@ Resources:
             Path: /admin
             Method: ANY
 
+  # ─── Blog Handler Lambda ──────────────────────────────────────────────────
+  BlogHandlerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub wanderzenai-blog-handler-${Stage}
+      CodeUri: ../backend/functions/blog-handler
+      Handler: index.handler
+      Timeout: 30
+      MemorySize: 512
+      Description: Handles blog posts, comments, photos, and moderation workflows
+      Events:
+        # ─── Posts Routes ─────────────────────────────────────────────────────
+        PostCreate:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /blog
+            Method: POST
+        PostList:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /blog
+            Method: GET
+        PostGet:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /blog/{id}
+            Method: GET
+        PostUpdate:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /blog/{id}
+            Method: PUT
+        PostDelete:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /blog/{id}
+            Method: DELETE
+        # ─── Comments Routes ──────────────────────────────────────────────────
+        CommentCreate:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /blog/{id}/comments
+            Method: POST
+        CommentUpdate:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /blog/comments/{commentId}
+            Method: PUT
+        CommentDelete:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /blog/comments/{commentId}
+            Method: DELETE
+        # ─── Photos Routes ────────────────────────────────────────────────────
+        PhotosList:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /blog/{id}/photos
+            Method: GET
+        PhotoRequest:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /blog/{id}/photos/request
+            Method: POST
+        PhotoConfirm:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /blog/{id}/photos/confirm
+            Method: POST
+        # ─── Admin Routes ─────────────────────────────────────────────────────
+        PostApprove:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /blog/{id}/approve
+            Method: PUT
+        PostReject:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /blog/{id}/reject
+            Method: PUT
+        AdminPending:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /blog/admin/pending
+            Method: GET
+
   # ─── S3 Bucket for PDFs ────────────────────────────────────────────────────
   PDFBucket:
     Type: AWS::S3::Bucket
