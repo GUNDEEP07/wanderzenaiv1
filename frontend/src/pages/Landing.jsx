@@ -95,6 +95,7 @@ export default function Landing() {
             <span className="nav-logo-text">Wander<span>Zen</span>AI</span>
           </a>
           <a href="/explore" className="nav-link">Explore</a>
+          <a href="/blog" className="nav-link">Stories</a>
           <a href="#how" className="nav-link">How it works</a>
           <a href="#sample" className="nav-link">Sample plan</a>
           <a href="/pricing" className="nav-link">Pricing</a>
@@ -499,6 +500,7 @@ export default function Landing() {
             <span className="nav-logo-text">Wander<span>Zen</span>AI</span>
           </div>
           <div className="footer-links">
+            <a href="/blog">Stories</a>
             <a href="/pricing">Pricing</a>
             <a href="/agency">For agencies</a>
             <a href="/privacy">Privacy</a>
