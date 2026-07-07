@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { fetchPost, createComment, updateComment, deleteComment } from '../api/blog';
+import { fetchPost, fetchComments, createComment, updateComment, deleteComment } from '../api/blog';
 import { BlogCommentThread } from '../components/blog/BlogCommentThread';
 
 export default function BlogDetailPage() {
@@ -23,9 +23,19 @@ export default function BlogDetailPage() {
       setLoading(true);
       setError(null);
       const token = currentUser ? await getIdToken() : null;
-      const data = await fetchPost(postId, currentUser?.uid, token);
-      setPost(data);
-      setComments(data.comments || []);
+      const response = await fetchPost(postId, currentUser?.uid, token);
+      // API returns { success: true, data: {...} }
+      const postData = response.data || response;
+      setPost(postData);
+      // Comments are fetched separately
+      if (postData.id) {
+        try {
+          const commentsData = await fetchComments(postData.id, token);
+          setComments(commentsData || []);
+        } catch (err) {
+          console.warn('Failed to load comments:', err.message);
+        }
+      }
     } catch (err) {
       setError(err.message);
     } finally {
