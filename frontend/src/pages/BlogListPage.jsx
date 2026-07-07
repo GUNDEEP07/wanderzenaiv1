@@ -22,7 +22,7 @@ export default function BlogListPage() {
       setLoading(true);
       setError(null);
       const token = currentUser ? await getIdToken() : null;
-      const data = await fetchPosts(
+      const response = await fetchPosts(
         {
           category: selectedCategory,
           country: selectedCountry,
@@ -31,8 +31,10 @@ export default function BlogListPage() {
         },
         token
       );
-      setPosts(data.posts || []);
-      setTotal(data.total || 0);
+      // API returns { success: true, data: [...] }
+      const posts = response.data || [];
+      setPosts(posts);
+      setTotal(posts.length > 0 ? posts.length : 0);
     } catch (err) {
       setError(err.message);
     } finally {
