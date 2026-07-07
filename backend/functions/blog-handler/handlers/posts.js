@@ -73,25 +73,26 @@ const getPost = async (postId, userId = null, userRole = null) => {
 const listPosts = async (queryStringParameters = {}) => {
   try {
     const filters = {};
+    const params = queryStringParameters || {};
 
-    if (queryStringParameters.category) {
-      filters.category = queryStringParameters.category;
+    if (params.category) {
+      filters.category = params.category;
     }
 
-    if (queryStringParameters.country) {
-      filters.country = queryStringParameters.country;
+    if (params.country) {
+      filters.country = params.country;
     }
 
-    if (queryStringParameters.location) {
-      filters.location = queryStringParameters.location;
+    if (params.location) {
+      filters.location = params.location;
     }
 
-    if (queryStringParameters.search) {
-      filters.search = queryStringParameters.search;
+    if (params.search) {
+      filters.search = params.search;
     }
 
-    if (queryStringParameters.page) {
-      filters.page = parseInt(queryStringParameters.page, 10);
+    if (params.page) {
+      filters.page = parseInt(params.page, 10);
     }
 
     const posts = await blog.listPosts(filters);
