@@ -6,6 +6,7 @@ const {
   requireUser, AuthError, authFailure, checkRateLimit, userSubject, tooManyRequests,
 } = require('/opt/nodejs/index');
 const { sanitizeSelectedVenues } = require('/opt/nodejs/selected-venues');
+const { createMessage, firstText } = require('/opt/nodejs/claude');
 
 const lambda = new LambdaClient({ region: process.env.AWS_REGION || 'ap-southeast-2' });
 
@@ -80,24 +81,17 @@ ${userMustDos ? `User must-dos to weave in: ${userMustDos}` : ''}
 No activity detail. Titles and atmosphere only. Exactly ${days} items.`;
 
   try {
-    const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.CLAUDE_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5',
-        max_tokens: 1024,
-        messages: [{ role: 'user', content: previewPrompt }],
-      }),
-      signal: AbortSignal.timeout(20000),
+    // The user is waiting on this one: short timeout, one retry.
+    const claudeData = await createMessage({
+      model: 'claude-haiku-4-5',
+      max_tokens: 1024,
+      messages: [{ role: 'user', content: previewPrompt }],
+    }, {
+      timeoutMs: 15000,
+      maxAttempts: 2,
+      onRetry: (info) => log.warn('Preview Claude call retrying', info),
     });
-
-    if (!claudeRes.ok) throw new Error(`Claude ${claudeRes.status}`);
-    const claudeData = await claudeRes.json();
-    let raw = claudeData.content[0].text.trim();
+    let raw = firstText(claudeData).trim();
 
     // Strip any accidental markdown fences
     raw = raw.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/i, '').trim();
