@@ -33,6 +33,46 @@ const DEFAULT_LIMITS = Object.freeze({
 
 const PRUNE_PROBABILITY = 0.01;
 const PRUNE_AFTER = '2 days';
+const UNDEFINED_TABLE = '42P01';
+
+// Same DDL as infra/migrations/002_add_rate_limits.sql. CI cannot reach RDS to run
+// migrations, so the first limiter call in a container creates the table if it is missing.
+// Idempotent (IF NOT EXISTS) and safe under concurrent cold starts.
+const ENSURE_TABLE_SQL = `
+  CREATE TABLE IF NOT EXISTS rate_limits (
+    bucket_key   VARCHAR(200) NOT NULL,
+    window_start TIMESTAMPTZ  NOT NULL,
+    count        INTEGER      NOT NULL DEFAULT 0,
+    PRIMARY KEY (bucket_key, window_start)
+  );
+  CREATE INDEX IF NOT EXISTS idx_rate_limits_window_start ON rate_limits (window_start);`;
+
+let ensureTablePromise = null;
+function ensureTable(db) {
+  if (!ensureTablePromise) {
+    ensureTablePromise = db.query(ENSURE_TABLE_SQL).catch((err) => {
+      ensureTablePromise = null; // allow a later retry
+      throw err;
+    });
+  }
+  return ensureTablePromise;
+}
+
+const UPSERT_SQL = `INSERT INTO rate_limits (bucket_key, window_start, count)
+       VALUES ($1, to_timestamp($2::double precision), 1)
+       ON CONFLICT (bucket_key, window_start)
+       DO UPDATE SET count = rate_limits.count + 1
+       RETURNING count`;
+
+async function increment(db, key, windowStartSec) {
+  try {
+    return await db.query(UPSERT_SQL, [key, windowStartSec]);
+  } catch (err) {
+    if (err.code !== UNDEFINED_TABLE) throw err;
+    await ensureTable(db);
+    return db.query(UPSERT_SQL, [key, windowStartSec]);
+  }
+}
 
 function loadLimits() {
   const raw = process.env.RATE_LIMITS_JSON;
@@ -80,14 +120,7 @@ async function consume(db, bucket, subject, opts = {}) {
   for (const { limit, windowSeconds } of rules) {
     const windowStartSec = Math.floor(nowMs / 1000 / windowSeconds) * windowSeconds;
     const key = `${bucket}:${windowSeconds}:${subject}`;
-    const { rows } = await db.query(
-      `INSERT INTO rate_limits (bucket_key, window_start, count)
-       VALUES ($1, to_timestamp($2::double precision), 1)
-       ON CONFLICT (bucket_key, window_start)
-       DO UPDATE SET count = rate_limits.count + 1
-       RETURNING count`,
-      [key, windowStartSec]
-    );
+    const { rows } = await increment(db, key, windowStartSec);
     if (rows[0].count > limit) {
       const resetSec = windowStartSec + windowSeconds - Math.floor(nowMs / 1000);
       retryAfterSeconds = Math.max(retryAfterSeconds, resetSec);

@@ -1,10 +1,9 @@
 -- 002_add_rate_limits.sql
 -- Per-identity request counters for backend/layers/shared/nodejs/rate-limit.js.
 --
--- Run BEFORE deploying the code that uses it:
+-- Optional to run by hand: backend/layers/shared/nodejs/rate-limit.js creates this table
+-- on first use if it is missing (CI cannot reach RDS). Running it manually is harmless:
 --   psql "$DATABASE_URL" -f infra/migrations/002_add_rate_limits.sql
--- If the code ships first, the limiter logs ERROR "Rate limiter unavailable — failing open"
--- and requests still succeed (API Gateway + WAF limits still apply).
 --
 -- Rollback: infra/migrations/002_add_rate_limits.down.sql
 --
