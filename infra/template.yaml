@@ -25,6 +25,9 @@ Globals:
         FOURSQUARE_API_KEY: !Ref FoursquareApiKey
         FOURSQUARE_ENABLED: !Ref FoursquareEnabled
         GOOGLE_PLACES_API_KEY: !Ref GooglePlacesApiKey
+        # Read by the shared token verifier (backend/layers/shared/nodejs/auth.js) in every function.
+        FIREBASE_PROJECT_ID: !Ref FirebaseProjectId
+        REQUIRE_EMAIL_VERIFIED: !Ref RequireEmailVerified
 
     Layers:
       - !Ref SharedLayer
@@ -85,8 +88,14 @@ Parameters:
     Description: Google Places API key for city autocomplete
   FirebaseProjectId:
     Type: String
-    Default: ''
-    Description: Firebase project ID — used to verify JWT issuer/audience in admin Lambda
+    Default: 'wanderzenai-9c343'
+    AllowedPattern: '^[a-z0-9-]{4,40}$'
+    Description: Firebase project ID — pins the aud/iss of every verified ID token. Not a secret.
+  RequireEmailVerified:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+    Description: Reject ID tokens whose email is unverified. Only set 'false' as a temporary rollback.
   AllowedOrigins:
     Type: String
     Default: 'https://www.wanderzenai.com,http://localhost:5173,https://localhost:5173,https://web.postman.co'
@@ -102,11 +111,36 @@ Resources:
       Name: !Sub wanderzenai-api-${Stage}
       StageName: !Ref Stage
       Cors:
-        AllowMethods: "'POST,GET,OPTIONS'"
+        # PUT/DELETE are used by /profile and /blog; without them browser preflight fails.
+        AllowMethods: "'POST,GET,PUT,DELETE,OPTIONS'"
         AllowHeaders: "'Content-Type,Authorization,X-Stripe-Signature'"
         AllowOrigin: "'*'"
       Auth:
         DefaultAuthorizer: NONE
+      # Coarse, stage-wide throttling: a ceiling on total spend no matter who is calling.
+      # Per-user limits live in the rate_limits table; per-IP limits in WanderZenWebAcl.
+      # ResourcePath encodes '/' as '~1' (CloudFormation MethodSetting format).
+      MethodSettings:
+        - ResourcePath: '/*'
+          HttpMethod: '*'
+          ThrottlingRateLimit: 25
+          ThrottlingBurstLimit: 50
+        - ResourcePath: '/~1submit'
+          HttpMethod: POST
+          ThrottlingRateLimit: 1
+          ThrottlingBurstLimit: 5
+        - ResourcePath: '/~1preview'
+          HttpMethod: POST
+          ThrottlingRateLimit: 3
+          ThrottlingBurstLimit: 10
+        - ResourcePath: '/~1recommendations~1chat'
+          HttpMethod: POST
+          ThrottlingRateLimit: 3
+          ThrottlingBurstLimit: 10
+        - ResourcePath: '/~1welcome-email'
+          HttpMethod: POST
+          ThrottlingRateLimit: 1
+          ThrottlingBurstLimit: 3
       GatewayResponses:
         DEFAULT_4XX:
           ResponseParameters:
@@ -523,19 +557,122 @@ Resources:
           Properties:
             RestApiId: !Ref WanderZenApi
             Path: /blog/{id}/approve
-            Method: PUT
+            Method: POST  # matches frontend/src/api/blog.js
         PostReject:
           Type: Api
           Properties:
             RestApiId: !Ref WanderZenApi
             Path: /blog/{id}/reject
-            Method: PUT
+            Method: POST  # matches frontend/src/api/blog.js
         AdminPending:
           Type: Api
           Properties:
             RestApiId: !Ref WanderZenApi
             Path: /blog/admin/pending
             Method: GET
+
+  # ─── WAF: per-IP rate limits in front of API Gateway ──────────────────────
+  # Rate-based rules count requests per source IP over a rolling 5-minute window.
+  # Cost: ~US$5/month for the ACL + ~US$1/month per rule + US$0.60 per million requests.
+  WanderZenWebAcl:
+    Type: AWS::WAFv2::WebACL
+    Properties:
+      Name: !Sub wanderzenai-api-${Stage}
+      Scope: REGIONAL
+      DefaultAction:
+        Allow: {}
+      VisibilityConfig:
+        SampledRequestsEnabled: true
+        CloudWatchMetricsEnabled: true
+        MetricName: !Sub wanderzenai-api-${Stage}
+      Rules:
+        - Name: AmazonIpReputationList
+          Priority: 0
+          OverrideAction:
+            None: {}
+          Statement:
+            ManagedRuleGroupStatement:
+              VendorName: AWS
+              Name: AWSManagedRulesAmazonIpReputationList
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: ip-reputation
+        - Name: RateLimitAiEndpoints
+          Priority: 1
+          Action:
+            Block:
+              CustomResponse:
+                ResponseCode: 429
+          Statement:
+            RateBasedStatement:
+              Limit: 100  # requests per 5 minutes per IP
+              AggregateKeyType: IP
+              ScopeDownStatement:
+                OrStatement:
+                  Statements:
+                    - ByteMatchStatement:
+                        SearchString: /submit
+                        FieldToMatch: { UriPath: {} }
+                        PositionalConstraint: CONTAINS
+                        TextTransformations: [{ Priority: 0, Type: LOWERCASE }]
+                    - ByteMatchStatement:
+                        SearchString: /preview
+                        FieldToMatch: { UriPath: {} }
+                        PositionalConstraint: CONTAINS
+                        TextTransformations: [{ Priority: 0, Type: LOWERCASE }]
+                    - ByteMatchStatement:
+                        SearchString: /recommendations/chat
+                        FieldToMatch: { UriPath: {} }
+                        PositionalConstraint: CONTAINS
+                        TextTransformations: [{ Priority: 0, Type: LOWERCASE }]
+                    - ByteMatchStatement:
+                        SearchString: /recommendations/trending
+                        FieldToMatch: { UriPath: {} }
+                        PositionalConstraint: CONTAINS
+                        TextTransformations: [{ Priority: 0, Type: LOWERCASE }]
+                    - ByteMatchStatement:
+                        SearchString: /destination-insights
+                        FieldToMatch: { UriPath: {} }
+                        PositionalConstraint: CONTAINS
+                        TextTransformations: [{ Priority: 0, Type: LOWERCASE }]
+                    - ByteMatchStatement:
+                        SearchString: /welcome-email
+                        FieldToMatch: { UriPath: {} }
+                        PositionalConstraint: CONTAINS
+                        TextTransformations: [{ Priority: 0, Type: LOWERCASE }]
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: rate-limit-ai
+        - Name: RateLimitAll
+          Priority: 2
+          Action:
+            Block:
+              CustomResponse:
+                ResponseCode: 429
+          Statement:
+            RateBasedStatement:
+              Limit: 1000  # requests per 5 minutes per IP, any route
+              AggregateKeyType: IP
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: rate-limit-all
+
+  WanderZenWebAclAssociation:
+    Type: AWS::WAFv2::WebACLAssociation
+    Properties:
+      WebACLArn: !GetAtt WanderZenWebAcl.Arn
+      # WanderZenApi.Stage is the SAM-generated stage; referencing it orders this after the stage exists.
+      ResourceArn: !Join
+        - ''
+        - - 'arn:aws:apigateway:'
+          - !Ref AWS::Region
+          - '::/restapis/'
+          - !Ref WanderZenApi
+          - '/stages/'
+          - !Ref WanderZenApi.Stage
 
   # ─── S3 Bucket for PDFs ────────────────────────────────────────────────────
   PDFBucket:

@@ -2,6 +2,9 @@
 // All API calls related to itinerary generation.
 // Import API_URL from env — never hardcode.
 
+import { sendEmailVerification } from 'firebase/auth';
+import { auth, FIREBASE_CONFIGURED } from '../firebase';
+
 const API_URL = import.meta.env.VITE_API_URL;
 
 const FALLBACK_PREVIEW = {
@@ -17,6 +20,33 @@ const FALLBACK_PREVIEW = {
 };
 
 /**
+ * Headers for an authenticated call. /preview and /submit identify the caller from the
+ * Firebase ID token; the backend ignores any email in the request body.
+ * @returns {Promise<Record<string, string>>}
+ */
+async function authHeaders() {
+  const headers = { 'Content-Type': 'application/json' };
+  const user = FIREBASE_CONFIGURED ? auth?.currentUser : null;
+  if (user) headers.Authorization = `Bearer ${await user.getIdToken()}`;
+  return headers;
+}
+
+/**
+ * The backend answers 403 EMAIL_NOT_VERIFIED for email/password accounts that haven't
+ * clicked their verification link. Resend it so the message we show is actionable.
+ */
+async function resendVerificationIfNeeded(status, data) {
+  if (status !== 403 || data?.code !== 'EMAIL_NOT_VERIFIED') return;
+  const user = FIREBASE_CONFIGURED ? auth?.currentUser : null;
+  if (!user || user.emailVerified) return;
+  try {
+    await sendEmailVerification(user);
+  } catch {
+    /* Firebase throttles resends; the original email still works */
+  }
+}
+
+/**
  * Fetch a lightweight day-outline preview from Claude.
  * No DB write, no PDF, no email. Returns in ~4 seconds.
  * @param {Object} formData
@@ -30,7 +60,7 @@ export async function fetchPreview(formData) {
 
     const res = await fetch(`${API_URL}/preview`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await authHeaders(),
       body: JSON.stringify({
         destination: typeof primaryDestination === 'object' ? primaryDestination.name : primaryDestination,
         days: +formData.days,
@@ -56,8 +86,9 @@ export async function fetchPreview(formData) {
 /**
  * Submit the full itinerary request.
  * Triggers itinerary-gen Lambda async. Returns submissionId immediately.
+ * The itinerary is delivered to the signed-in account's email address.
  * @param {Object} formData
- * @returns {Promise<{success: boolean, data: {submissionId: string}}>}
+ * @returns {Promise<{status: number, data: {success: boolean, data?: {submissionId: string}, message?: string, code?: string}}>}
  */
 export async function submitItinerary(formData) {
   const primaryDestination = Array.isArray(formData.destinations) && formData.destinations.length > 0
@@ -66,11 +97,14 @@ export async function submitItinerary(formData) {
 
   const destinationName = typeof primaryDestination === 'object' ? primaryDestination.name : primaryDestination;
 
+  // Not sent: the backend takes the delivery address from the verified token.
+  const { email: _ignoredEmail, ...rest } = formData;
+
   const res = await fetch(`${API_URL}/submit`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(),
     body: JSON.stringify({
-      ...formData,
+      ...rest,
       destination: destinationName,
       destinations: Array.isArray(formData.destinations) ? formData.destinations : [],
       destinationLat: typeof primaryDestination === 'object' ? primaryDestination.lat : 0,
@@ -83,6 +117,13 @@ export async function submitItinerary(formData) {
       selected_venues: formData.selected_venues || { activities: {}, venues: {} },
     }),
   });
-  const data = await res.json();
+
+  let data;
+  try {
+    data = await res.json();
+  } catch {
+    data = { success: false, message: 'Something went wrong. Please try again.' };
+  }
+  await resendVerificationIfNeeded(res.status, data);
   return { status: res.status, data };
 }

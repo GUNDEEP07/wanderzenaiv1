@@ -53,6 +53,14 @@ Before recommending any new integration, confirm current docs + access.
 - Do NOT auto-create Notion issues. Gundeep logs issues himself. Only update existing
   Notion pages when explicitly asked.
 
+## Auth + rate limiting — use the shared layer, never roll your own
+- Caller identity comes ONLY from `requireUser(event)` / `optionalUser(event)` in
+  `backend/layers/shared/nodejs/auth.js` (verified Firebase ID token, verified email by
+  default). Never base64-decode a JWT payload, and never trust an `email` in a request body.
+- Any endpoint that calls Claude must call `checkRateLimit()` (`rate-limit.js`) before the
+  Claude call — keyed by `userSubject(user)`, or `ipSubject(event)` for public endpoints.
+- Tests: `node --test backend/tests/unit/*.test.js` (runs in CI before deploy).
+
 ## Security defaults (this repo is internet-facing + wired to prod)
 - Never hardcode secrets. Stripe keys, SES creds, DB password → SSM Parameter Store /
   Secrets Manager, referenced in template.yaml. Never in samconfig.toml or .env committed.

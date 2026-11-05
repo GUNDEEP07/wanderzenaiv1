@@ -280,3 +280,14 @@ CREATE TABLE IF NOT EXISTS blog_photos (
 );
 
 CREATE INDEX IF NOT EXISTS idx_blog_photos_post ON blog_photos(post_id);
+
+-- ─── Rate limits (migration 002) ──────────────────────────────────────────────
+-- Per-identity request counters; see backend/layers/shared/nodejs/rate-limit.js.
+CREATE TABLE IF NOT EXISTS rate_limits (
+  bucket_key   VARCHAR(200) NOT NULL,
+  window_start TIMESTAMPTZ  NOT NULL,
+  count        INTEGER      NOT NULL DEFAULT 0,
+  PRIMARY KEY (bucket_key, window_start)
+);
+
+CREATE INDEX IF NOT EXISTS idx_rate_limits_window_start ON rate_limits (window_start);

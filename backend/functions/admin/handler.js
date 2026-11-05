@@ -1,38 +1,14 @@
 import pkg from 'pg';
 const { Pool } = pkg;
-import jwt from 'jsonwebtoken';
-import https from 'https';
+import { createRequire } from 'module';
 
 // ── Firebase JWT verification ──────────────────────────────────────────────────
-// Firebase signs ID tokens with RS256. We verify the signature against their
-// public keys before trusting any claim (incl. email). Never skip verification
-// on an admin endpoint — an unsigned/forged token could otherwise bypass auth.
-const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID;
-let _jwksCache = null;
-let _jwksCacheExpiry = 0;
-
-function fetchFirebasePublicKeys() {
-  return new Promise((resolve, reject) => {
-    https.get(
-      'https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com',
-      (res) => {
-        let data = '';
-        res.on('data', chunk => { data += chunk; });
-        res.on('end', () => {
-          try { resolve(JSON.parse(data)); }
-          catch (e) { reject(e); }
-        });
-      }
-    ).on('error', reject);
-  });
-}
-
-async function getFirebasePublicKeys() {
-  if (_jwksCache && Date.now() < _jwksCacheExpiry) return _jwksCache;
-  _jwksCache = await fetchFirebasePublicKeys();
-  _jwksCacheExpiry = Date.now() + 3600 * 1000; // cache 1 hour
-  return _jwksCache;
-}
+// Uses the shared verifier (backend/layers/shared/nodejs/auth.js) so every endpoint
+// applies the same checks: RS256 signature, exp/iat, aud/iss pinned to our project
+// (fails closed if FIREBASE_PROJECT_ID is unset), and a verified email. The previous
+// local copy skipped aud/iss when the project ID was empty and accepted unverified emails.
+const require = createRequire(import.meta.url);
+const { requireUser, AuthError } = require('/opt/nodejs/index');
 
 const pool = new Pool({
   host: process.env.DB_HOST,
@@ -49,24 +25,15 @@ const CORS = {
 };
 
 async function getAdminEmail(event) {
-  const auth = event.headers?.Authorization || event.headers?.authorization || '';
-  const token = auth.replace('Bearer ', '');
-  if (!token || token === 'demo-token') return null;
   try {
-    // Decode header to find the key ID (kid)
-    const header = JSON.parse(Buffer.from(token.split('.')[0], 'base64url').toString());
-    // Fetch Firebase's public keys (RS256 certs, cached 1h)
-    const keys = await getFirebasePublicKeys();
-    const cert = keys[header.kid];
-    if (!cert) return null; // unknown key ID — reject
-    // Verify signature + expiry + issuer. Throws if invalid.
-    const payload = jwt.verify(token, cert, {
-      algorithms: ['RS256'],
-      issuer: FIREBASE_PROJECT_ID ? `https://securetoken.google.com/${FIREBASE_PROJECT_ID}` : undefined,
-      audience: FIREBASE_PROJECT_ID || undefined,
-    });
-    return payload.email || null;
-  } catch { return null; }
+    const user = await requireUser(event);
+    return user.email || null;
+  } catch (err) {
+    if (!(err instanceof AuthError)) {
+      console.error(JSON.stringify({ level: 'ERROR', msg: 'Admin auth misconfigured', error: err.message }));
+    }
+    return null; // handler responds 403
+  }
 }
 
 async function getEmailRoles(email) {

@@ -1,8 +1,11 @@
 'use strict';
 
+const crypto = require('crypto');
 const { Pool } = require('pg');
 const { searchVenues } = require('./venue-enrichment/foursquare');
 const { formatVenueForPrompt } = require('./venue-enrichment/venue-model');
+const auth = require('./auth');
+const rateLimit = require('./rate-limit');
 
 // ─── Database connection pool ────────────────────────────────────────────────
 let pool;
@@ -30,7 +33,7 @@ const response = (statusCode, body, extraHeaders = {}) => ({
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': process.env.FRONTEND_URL || '*',
     'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-    'Access-Control-Allow-Methods': 'POST,GET,OPTIONS',
+    'Access-Control-Allow-Methods': 'POST,GET,PUT,DELETE,OPTIONS',
     ...extraHeaders,
   },
   body: JSON.stringify(body),
@@ -40,22 +43,35 @@ const ok          = (data)             => response(200, { success: true, data })
 const created     = (data)             => response(201, { success: true, data });
 const badRequest  = (msg, errors = []) => response(400, { success: false, message: msg, errors });
 const unauthorized= (msg = 'Unauthorized') => response(401, { success: false, message: msg });
+const forbidden   = (msg = 'Forbidden') => response(403, { success: false, message: msg });
 const notFound    = (msg = 'Not found')=> response(404, { success: false, message: msg });
 const serverError = (msg = 'Internal server error') => response(500, { success: false, message: msg });
 
+/** 401/403 from an AuthError, in the standard response shape. */
+const authFailure = (err) => response(err.statusCode, auth.authErrorBody(err));
+
+/** 429 with Retry-After, in the standard response shape. */
+const tooManyRequests = (retryAfterSeconds) =>
+  response(429, rateLimit.rateLimitBody(retryAfterSeconds), { 'Retry-After': String(retryAfterSeconds) });
+
 // ─── Input validation ────────────────────────────────────────────────────────
+// email is no longer accepted from the request body — it comes from the verified token.
 const validateFormInput = (body) => {
   const errors = [];
-  const required = ['destination', 'days', 'budget', 'currency', 'travelerType', 'email'];
+  const required = ['destination', 'days', 'budget', 'currency', 'travelerType'];
   required.forEach(field => { if (!body[field]) errors.push(`${field} is required`); });
-  if (body.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) errors.push('Invalid email address');
   if (body.days && (isNaN(body.days) || body.days < 1 || body.days > 30)) errors.push('Days must be between 1 and 30');
   if (body.budget && (isNaN(body.budget) || body.budget < 0)) errors.push('Budget must be a positive number');
+  if (typeof body.destination === 'string' && body.destination.length > 200) errors.push('Destination is too long');
+  if (typeof body.interests === 'string' && body.interests.length > 2000) errors.push('Interests is too long');
+  if (typeof body.userMustDos === 'string' && body.userMustDos.length > 2000) errors.push('Must-dos is too long');
   return errors;
 };
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
-const generateId = () => `wz_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 9)}`;
+// Submission IDs double as share-link secrets (see profile getItinerary), so the random
+// part must come from a CSPRNG. 96 random bits; the timestamp prefix keeps IDs sortable.
+const generateId = () => `wz_${Date.now().toString(36)}_${crypto.randomBytes(12).toString('base64url')}`;
 const CURRENCY_SYMBOLS = { USD: '$', EUR: '€', GBP: '£', INR: '₹', AUD: 'A$', CAD: 'C$', SGD: 'S$', JPY: '¥' };
 const getCurrencySymbol = (code) => CURRENCY_SYMBOLS[code] || code;
 
@@ -135,10 +151,21 @@ const fetchAmadeusScore = async (lat, lng) => {
 const getAmadeusToken = async () => null;
 
 module.exports = {
-  getDB, ok, created, badRequest, unauthorized, notFound, serverError,
+  getDB, ok, created, badRequest, unauthorized, forbidden, notFound, serverError,
+  authFailure, tooManyRequests,
   validateFormInput, generateId, getCurrencySymbol, log,
   fetchFoursquareTips,
   fetchFoursquareVenues,
   fetchAmadeusScore,
   getAmadeusToken,
+  // auth
+  AuthError: auth.AuthError,
+  requireUser: auth.requireUser,
+  optionalUser: auth.optionalUser,
+  authErrorBody: auth.authErrorBody,
+  // rate limiting
+  checkRateLimit: rateLimit.checkRateLimit,
+  userSubject: rateLimit.userSubject,
+  ipSubject: rateLimit.ipSubject,
+  rateLimitBody: rateLimit.rateLimitBody,
 };
