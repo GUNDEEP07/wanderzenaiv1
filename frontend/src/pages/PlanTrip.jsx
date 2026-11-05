@@ -77,8 +77,7 @@ const INITIAL_FORM = {
   travelDate: '', travelDateEnd: '', travelPace: 'balanced', wantsHotelRecs: true,
   startTime: '09:00', userMustDos: '',
   language: 'English', userAge: '', userLocation: '', email: '',
-  selected_venues: {},
-  day_assignments: {},   // ← day→venue mapping from VenueSelection
+  selected_venues: { version: 2, picks: [], interests: [] }, // set by VenueSelection (names, places, days)
   budgetScope: 'full-trip',  // 'full-trip' or 'activities-only'
   alreadyBooked: false,  // Skip flights/accommodation if true
 };
@@ -311,8 +310,8 @@ export default function PlanTrip() {
   const handleVenueSelect = (venueData) => {
     setForm(f => ({
       ...f,
-      selected_venues: venueData.venues || venueData,
-      day_assignments: venueData.dayAssignments || {},
+      // Version 2: named places with coordinates and chosen days (see VenueSelection buildPicks).
+      selected_venues: venueData.selection || { version: 2, picks: [], interests: [] },
     }));
     goToStep(3);
     analytics.stepReached(STEPS[3], 3);

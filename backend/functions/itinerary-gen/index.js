@@ -3,6 +3,9 @@
 const { LambdaClient, InvokeCommand } = require('@aws-sdk/client-lambda');
 const { getDB, generateId, getCurrencySymbol, log, fetchFoursquareTips } = require('/opt/nodejs/index');
 const { searchVenues } = require('/opt/nodejs/venue-enrichment/foursquare');
+const {
+  planPicks, formatPicksForDays, formatPicksOverview, findMissingPicks,
+} = require('/opt/nodejs/selected-venues');
 
 const lambda = new LambdaClient({ region: process.env.AWS_REGION || 'ap-southeast-2' });
 
@@ -117,35 +120,18 @@ const callClaude = async (systemPrompt, userPrompt, maxTokens, submissionId, att
   return { raw, usage: data.usage };
 };
 
-// ─── FORMAT SELECTED VENUES FOR CLAUDE ──────────────────────────────────────
-const formatSelectedVenues = (selectedVenues) => {
-  if (!selectedVenues || typeof selectedVenues !== 'object') return '';
-
-  const venuesList = Object.entries(selectedVenues)
-    .flatMap(([category, fsqIds]) => {
-      const ids = Array.isArray(fsqIds) ? fsqIds : [];
-      return ids.map(id => `- ${id} (${category})`);
-    })
-    .join('\n');
-
-  if (!venuesList) return '';
-
-  return `\n\nUser has selected these specific venues to include in the itinerary:\n${venuesList}\n\nWeave these venues naturally into the itinerary at appropriate times and days.`;
-};
-
 // ─── GENERATE META (title, summary, accommodation, tips) ────────────────────
+// Step 3 picks arrive as submission.picksPlan (see shared selected-venues.js).
 const generateMeta = async (submission, currencySymbol, submissionId, fsTips = null) => {
-  const { destination, days, budget, currency, travelerType, travelStyle, travelPace, interests, startTime, userMustDos, userAge, userLocation, language, selectedVenues } = submission;
+  const { destination, days, budget, currency, travelerType, travelStyle, travelPace, interests, startTime, userMustDos, userAge, userLocation, language, picksPlan } = submission;
   const styleList = Array.isArray(travelStyle) ? travelStyle.join(', ') : travelStyle;
-  const venuesContext = formatSelectedVenues(selectedVenues);
+  const venuesContext = formatPicksOverview(picksPlan || { picks: [], interests: [] });
 
   const prompt = `Create the overview section for a ${days}-day slow travel itinerary for ${destination}.
 
 Traveller: ${travelerType}, budget ${currencySymbol}${budget} ${currency}, style: ${styleList || 'balanced'}, pace: ${travelPace}
 ${interests ? `Interests: ${interests}` : ''}
 ${startTime && startTime !== '09:00' ? `Day starts: ${startTime} — do not schedule anything before this time` : ''}
-${userMustDos ? `Must include: ${userMustDos}` : ''}
-${startTime && startTime !== '09:00' ? `Day starts: ${startTime} — schedule nothing before this time` : ''}
 ${userMustDos ? `Must include: ${userMustDos}` : ''}
 ${userAge ? `Age: ${userAge}` : ''}
 ${userLocation ? `From: ${userLocation}` : ''}
@@ -183,18 +169,16 @@ ${META_SCHEMA}`;
 
 // ─── GENERATE A BATCH OF DAYS ────────────────────────────────────────────────
 const generateDaysBatch = async (submission, dayNumbers, currencySymbol, submissionId, fsTips = null) => {
-  const { destination, budget, currency, travelerType, travelStyle, travelPace, interests, startTime, userMustDos, userAge, userLocation, language, days: totalDays, selectedVenues } = submission;
+  const { destination, budget, currency, travelerType, travelStyle, travelPace, interests, startTime, userMustDos, userAge, userLocation, language, days: totalDays, picksPlan } = submission;
   const styleList = Array.isArray(travelStyle) ? travelStyle.join(', ') : travelStyle;
   const dailyBudget = Math.round(budget / totalDays);
-  const venuesContext = formatSelectedVenues(selectedVenues);
+  const venuesContext = formatPicksForDays(picksPlan || { picks: [], interests: [] }, dayNumbers);
 
   const prompt = `Create days ${dayNumbers.join(', ')} of ${totalDays} for a slow travel itinerary in ${destination}.
 
 Traveller: ${travelerType}, daily budget ~${currencySymbol}${dailyBudget} ${currency}, style: ${styleList || 'balanced'}, pace: ${travelPace}
 ${interests ? `Interests: ${interests}` : ''}
 ${startTime && startTime !== '09:00' ? `Day starts: ${startTime} — do not schedule anything before this time` : ''}
-${userMustDos ? `Must include: ${userMustDos}` : ''}
-${startTime && startTime !== '09:00' ? `Day starts: ${startTime} — schedule nothing before this time` : ''}
 ${userMustDos ? `Must include: ${userMustDos}` : ''}
 ${userAge ? `Age: ${userAge}` : ''}
 ${userLocation ? `From: ${userLocation}` : ''}
@@ -339,6 +323,14 @@ exports.handler = async (event) => {
       email: row.email,
       selectedVenues: row.selected_venues || {},
     };
+    // Step 3 picks with a day each (pinned by the user, or spread across the trip).
+    submission.picksPlan = planPicks(submission.selectedVenues, submission.days);
+    log.info('Step 3 picks planned', {
+      submissionId,
+      picks: submission.picksPlan.picks.length,
+      pinned: submission.picksPlan.picks.filter(p => p.pinned).length,
+      interests: submission.picksPlan.interests.length,
+    });
 
     const currencySymbol = getCurrencySymbol(submission.currency);
 
@@ -390,6 +382,20 @@ exports.handler = async (event) => {
       days: allDays.sort((a, b) => a.dayNumber - b.dayNumber),
       totalEstimatedCost: meta.totalEstimatedCost || submission.budget,
     };
+
+    // ── Check the traveller's own picks made it in ────────────────────────
+    // Logged for now; Q3 (validation pass) will regenerate the affected days.
+    if (submission.picksPlan.picks.length) {
+      const { missing, wrongDay } = findMissingPicks(itinerary.days, submission.picksPlan);
+      const coverage = {
+        picked: submission.picksPlan.picks.length,
+        included: submission.picksPlan.picks.length - missing.length,
+        missing: missing.map(p => ({ name: p.name, day: p.day })),
+        wrongDay: wrongDay.map(p => ({ name: p.name, day: p.day })),
+      };
+      itinerary.pickCoverage = coverage;
+      (missing.length || wrongDay.length ? log.warn : log.info)('Step 3 pick coverage', { submissionId, ...coverage });
+    }
 
     // Attach full venue objects to activities by matching venueName
     const allFoursquareVenues = await searchVenues(submission.destination, { limit: 50 });

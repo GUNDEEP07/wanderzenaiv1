@@ -114,7 +114,7 @@ export async function submitItinerary(formData) {
       travelDate: formData.travelDate && formData.travelDate.trim() !== '' ? formData.travelDate : null,
       startTime: formData.startTime || '09:00',
       userMustDos: formData.userMustDos && formData.userMustDos.trim() !== '' ? formData.userMustDos.trim() : null,
-      selected_venues: formData.selected_venues || { activities: {}, venues: {} },
+      selected_venues: formData.selected_venues || { version: 2, picks: [], interests: [] },
     }),
   });
 
