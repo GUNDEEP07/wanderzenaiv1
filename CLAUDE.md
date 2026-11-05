@@ -17,10 +17,18 @@ AI-powered slow-travel itinerary SaaS. Live at wanderzenai.com. Solo-maintained.
 - `samconfig.toml` is required at deploy time. Has been missing/flaky — verify it exists
   before any `sam deploy`. If regenerating, use `sam deploy --guided` then scrub it of
   anything sensitive before committing.
-- Frontend itinerary flow: `src/components/plantrip/PlanTrip.jsx` (multi-step form).
+- Frontend itinerary flow: `frontend/src/pages/PlanTrip.jsx` (multi-step form; it lives in
+  `pages/`, not `components/`).
 - `StepReview.jsx` is the dedicated Step 4/5 review-preview component under
   `src/components/plantrip/`.
 - `src/api/itinerary.js` is the service layer: `fetchPreview()` + `submitItinerary()`.
+- Step 3 picks travel as `selected_venues` v2 `{ version: 2, picks, interests }` — see
+  `backend/layers/shared/nodejs/selected-venues.js`.
+- Claude calls: model IDs come from `MODELS` in `backend/layers/shared/nodejs/claude.js`
+  (template params `ClaudeModelFast` / `ClaudeModelStrong`); read response text with
+  `firstText()`, never `content[0].text` (current models may return a thinking block first).
+- DB migrations: CI cannot reach RDS. New tables that code depends on create themselves on
+  first use (`rate_limits`, `stripe_events`); `infra/migrations/NNN_*.sql` document them.
 
 ## Coding conventions — FOLLOW THE EXISTING CODEBASE
 - Styling: s-object inline-style pattern + per-page CSS files. Do NOT introduce a new
@@ -39,7 +47,9 @@ AI-powered slow-travel itinerary SaaS. Live at wanderzenai.com. Solo-maintained.
   workflow edit.
 
 ## Third-party APIs — Current Status
-- **Foursquare V3**: ✓ Active — Places Autocomplete, Search, and Venue APIs working. Used for venue recommendations and weekly cache refresh.
+- **Foursquare Places API** (`places-api.foursquare.com`, Bearer key + `X-Places-Api-Version`):
+  ✓ Active via `backend/layers/shared/nodejs/venue-enrichment/foursquare.js`. The legacy V3 API
+  (`api.foursquare.com/v3`) was shut down on May 15, 2026 — never call it.
 - **Amadeus POI**: ✗ Discontinued for independent devs (removed from architecture).
 - **OpenTripMap**: ✗ Verification undeliverable.
 - **Google Maps APIs**: Not currently used; evaluate if needed for destination geocoding.
@@ -69,6 +79,9 @@ Before recommending any new integration, confirm current docs + access.
 - Use a scoped AWS profile, not root keys.
 
 ## Current focus
-- Step 4 preview panel was built but not rendering on the live site. Debug path: confirm
-  the `/preview` POST fires (Network tab), inspect its response, check for a JS error
-  blocking the state update.
+- Work is tracked on two Notion pages under WanderZenAI-Project HQ: "Security & Product
+  Review — Priority Backlog" and "Itinerary Quality Plan". Check their progress logs and open
+  decisions before starting anything new.
+- Older note (may be resolved): Step 4 preview panel not rendering on the live site. Debug
+  path: confirm the `/preview` POST fires (Network tab), inspect its response, check for a JS
+  error blocking the state update.
