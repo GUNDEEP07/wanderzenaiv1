@@ -5,6 +5,7 @@ const {
   getDB, ok, badRequest, serverError, validateFormInput, generateId, log,
   requireUser, AuthError, authFailure, checkRateLimit, userSubject, tooManyRequests,
 } = require('/opt/nodejs/index');
+const { sanitizeSelectedVenues } = require('/opt/nodejs/selected-venues');
 
 const lambda = new LambdaClient({ region: process.env.AWS_REGION || 'ap-southeast-2' });
 
@@ -226,13 +227,14 @@ async function handleSubmit(event, db, user) {
         startTime || '09:00',
         userMustDos && userMustDos.trim() !== '' ? userMustDos.trim() : null,
         isPaid ? 'paid' : 'free',
-        JSON.stringify(selected_venues || {}),
+        JSON.stringify(sanitizeSelectedVenues(selected_venues, parseInt(days, 10))),
       ]
     );
 
     log.info('Submission stored', {
       submissionId, uid: user.uid, destination,
-      selected_venues_count: Object.keys(selected_venues || {}).length,
+      selected_venues_version: selected_venues?.version || 1,
+      picks_count: Array.isArray(selected_venues?.picks) ? selected_venues.picks.length : 0,
     });
 
     // ─── Invoke itinerary generator async (no wait) ──────────────────────────

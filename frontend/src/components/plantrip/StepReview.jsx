@@ -178,34 +178,36 @@ export default function StepReview({ form, set, onBack, onSubmit, submitting, su
       </div>
 
       {/* ── Selected experiences ── */}
-      {form.selected_venues && Object.keys(form.selected_venues).length > 0 && (() => {
-        const validEntries = Object.entries(form.selected_venues).filter(([, venues]) =>
-          Array.isArray(venues) ? venues.length > 0 : venues instanceof Set ? venues.size > 0 : false
-        );
-        return validEntries.length > 0 ? (
+      {(() => {
+        // selected_venues v2: { picks: [{ name, day, ... }], interests: [...] } — see VenueSelection.
+        const picks = Array.isArray(form.selected_venues?.picks) ? form.selected_venues.picks : [];
+        const interests = Array.isArray(form.selected_venues?.interests) ? form.selected_venues.interests : [];
+        if (!picks.length && !interests.length) return null;
+        const chip = {
+          padding: '5px 12px', borderRadius: 20,
+          background: 'rgba(0,212,170,0.08)', border: '1px solid rgba(0,212,170,0.2)',
+          fontSize: '0.75rem', color: '#00d4aa', fontWeight: 600,
+        };
+        const sorted = [...picks].sort((a, b) => (a.day || 99) - (b.day || 99));
+        return (
           <div style={{ ...panel, marginBottom: '1.5rem' }}>
-            <div style={sectionLabel}>Selected experiences</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {validEntries.map(([key]) => {
-                const parts = key.split('/');
-                const activity = parts[parts.length - 1];
-                if (activity === '__search__') return null;
-                return (
-                  <span
-                    key={key}
-                    style={{
-                      padding: '5px 12px', borderRadius: 20,
-                      background: 'rgba(0,212,170,0.08)', border: '1px solid rgba(0,212,170,0.2)',
-                      fontSize: '0.75rem', color: '#00d4aa', fontWeight: 600,
-                    }}
-                  >
-                    {activity}
+            <div style={sectionLabel}>Your picks — included in the itinerary</div>
+            {sorted.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: interests.length ? 10 : 0 }}>
+                {sorted.map(p => (
+                  <span key={`${p.name}-${p.day || 'any'}`} style={chip}>
+                    {p.day ? `Day ${p.day} · ` : ''}{p.name}
                   </span>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+            )}
+            {interests.length > 0 && (
+              <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)' }}>
+                Interests: {interests.join(', ')}
+              </div>
+            )}
           </div>
-        ) : null;
+        );
       })()}
 
       {submitError && <p style={{ color: '#ff6b6b', marginBottom: '1rem', fontSize: '0.9rem' }}>{submitError}</p>}

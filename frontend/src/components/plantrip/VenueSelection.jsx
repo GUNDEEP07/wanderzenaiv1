@@ -64,6 +64,24 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
     return result;
   });
   const [dayAssignments, setDayAssignments] = useState(() => savedState?.dayAssignments || {});
+  // id → { name, address, lat, lng, category, source } for every venue the user has picked.
+  // Venue lists are refetched per tab and search results are replaced on each search, so the
+  // details are captured at pick time — the generator needs names and places, not bare IDs.
+  const [venueDetails, setVenueDetails] = useState(() => savedState?.venueDetails || {});
+  const rememberVenue = (venue, fallbackCategory) => {
+    if (!venue?.id || !venue?.name) return;
+    setVenueDetails(prev => (prev[venue.id] ? prev : {
+      ...prev,
+      [venue.id]: {
+        name: venue.name,
+        address: venue.address || null,
+        lat: typeof venue.lat === 'number' ? venue.lat : null,
+        lng: typeof venue.lng === 'number' ? venue.lng : null,
+        category: venue.category || fallbackCategory || null,
+        source: venue.source || null,
+      },
+    }));
+  };
   const [showCustomModal, setShowCustomModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [countryCode, setCountryCode] = useState('US');
@@ -256,6 +274,7 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
 
   const handleVenueToggle = (venueId) => {
     const venueKey = `${destKey}/${activeTab}`;
+    rememberVenue(getActivityState(activeTab).venues.find(v => v.id === venueId), activeTab);
     setSelectedVenues(prev => {
       const existing = prev[venueKey] || new Set();
       const updated = new Set(existing);
@@ -268,13 +287,50 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
   const buildSnapshot = () => {
     const venueData = {};
     Object.entries(selectedVenues).forEach(([key, venues]) => { venueData[key] = Array.from(venues); });
-    return { activities: selectedActivities, venues: venueData, dayAssignments, activeTab };
+    return { activities: selectedActivities, venues: venueData, dayAssignments, venueDetails, activeTab };
+  };
+
+  const toDay = (v) => {
+    const n = Number(v);
+    return Number.isInteger(n) && n >= 1 && n <= days ? n : null;
+  };
+
+  /**
+   * What the itinerary generator receives (selected_venues version 2): every picked venue
+   * with its name, address, coordinates and chosen day; places picked from the AI
+   * suggestions panel; and the generic interests ticked (Hiking, Food, …).
+   */
+  const buildPicks = (snap) => {
+    const picks = [];
+    const seenIds = new Set();
+    Object.entries(snap.venues).forEach(([key, ids]) => {
+      const [dest, ...rest] = key.split('/');
+      const category = rest[0] === '__search__' ? (rest.slice(1).join('/') || null) : (rest.join('/') || null);
+      ids.forEach(id => {
+        const d = snap.venueDetails[id];
+        if (!d || seenIds.has(id)) return;
+        seenIds.add(id);
+        picks.push({ ...d, category: d.category || category, destination: dest, day: toDay(snap.dayAssignments[id]) });
+      });
+    });
+    const interests = [];
+    Object.entries(snap.activities).forEach(([dest, acts]) => {
+      (acts || []).forEach(name => {
+        if (availableActivities.includes(name)) {
+          if (!interests.includes(name)) interests.push(name);
+        } else {
+          // Specific place from the AI suggestions panel, or a custom interest.
+          picks.push({ name, category: 'suggested', destination: dest, source: 'suggestion', day: toDay(snap.dayAssignments[name]) });
+        }
+      });
+    });
+    return { version: 2, picks, interests };
   };
 
   const handleContinue = () => {
     const snap = buildSnapshot();
     onSave?.(snap);
-    onSubmit({ activities: snap.activities, venues: snap.venues, dayAssignments: snap.dayAssignments });
+    onSubmit({ activities: snap.activities, venues: snap.venues, dayAssignments: snap.dayAssignments, selection: buildPicks(snap) });
   };
 
   if (loading) {
@@ -402,6 +458,7 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
                   selectedVenues={selectedVenues[`${destKey}/__search__/${searchQuery}`] || new Set()}
                   onVenueToggle={(venueId) => {
                     const venueKey = `${destKey}/__search__/${searchQuery}`;
+                    rememberVenue(searchResults.find(v => v.id === venueId), searchQuery);
                     setSelectedVenues(prev => {
                       const existing = prev[venueKey] || new Set();
                       const updated = new Set(existing);
