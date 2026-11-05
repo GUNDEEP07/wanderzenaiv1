@@ -1,0 +1,34 @@
+name: Prod smoke tests
+
+# Read-only checks against the live API and site (see scripts/smoke/prod-smoke.mjs).
+# Runs after every successful deploy, on demand, and on pushes to smoke/** branches.
+on:
+  workflow_run:
+    workflows: ['Deploy WanderZenAI']
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+  push:
+    branches: ['smoke/**']
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Smoke test prod
+    runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run smoke tests
+        env:
+          API_URL: https://y44o2x9cu1.execute-api.ap-southeast-2.amazonaws.com/prod
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+        run: node scripts/smoke/prod-smoke.mjs
