@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential, deleteUser } from 'firebase/auth';
 import { auth, FIREBASE_CONFIGURED } from '../firebase';
 import { analytics } from '../utils/analytics';
+import { withCheckoutIdentity } from '../utils/paymentLink';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -305,7 +306,7 @@ export default function Settings() {
                   <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>Single Trip &mdash; $7</div>
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>One additional itinerary · no subscription</div>
                 </div>
-                <a href={import.meta.env.VITE_STRIPE_SINGLE_PLAN_LINK} target="_blank" rel="noreferrer" onClick={() => analytics.upgradeClicked('single', 'settings')}>
+                <a href={withCheckoutIdentity(import.meta.env.VITE_STRIPE_SINGLE_PLAN_LINK, currentUser)} target="_blank" rel="noreferrer" onClick={() => analytics.upgradeClicked('single', 'settings')}>
                   <button style={s.upgradeBtn}>Buy now</button>
                 </a>
               </div>
@@ -314,7 +315,7 @@ export default function Settings() {
                   <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>Wanderer &mdash; $9/mo</div>
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>Unlimited itineraries · priority generation</div>
                 </div>
-                <a href={import.meta.env.VITE_STRIPE_WANDERER_LINK} target="_blank" rel="noreferrer" onClick={() => analytics.upgradeClicked('wanderer', 'settings')}>
+                <a href={withCheckoutIdentity(import.meta.env.VITE_STRIPE_WANDERER_LINK, currentUser)} target="_blank" rel="noreferrer" onClick={() => analytics.upgradeClicked('wanderer', 'settings')}>
                   <button style={s.upgradeBtn}>Upgrade</button>
                 </a>
               </div>

@@ -171,29 +171,18 @@ async function handleSubmit(event, db, user) {
 
   const submissionId = generateId();
 
+  let entitlement;
   try {
-    // ─── Check free tier usage ───────────────────────────────────────────────
-    const usageResult = await db.query(
-      `SELECT COUNT(*) as count FROM submissions
-       WHERE email = $1
-       AND created_at > NOW() - INTERVAL '30 days'
-       AND plan = 'free'`,
-      [email]
-    );
-    const freeTierUsage = parseInt(usageResult.rows[0].count, 10);
+    entitlement = await decideEntitlement(db, email);
+  } catch (err) {
+    log.error('Entitlement check failed', { error: err.message, submissionId });
+    return serverError('Failed to process submission. Please try again.');
+  }
 
-    const testResult = await db.query(`SELECT 1 FROM test_accounts WHERE email = $1`, [email]);
-    const isTestAccount = testResult.rows.length > 0;
+  try {
+    const isPaid = entitlement.isPaid;
 
-    const paidResult = await db.query(
-      `SELECT id, plan, itineraries_remaining FROM users WHERE email = $1`,
-      [email]
-    );
-    const dbUser = paidResult.rows[0];
-    const isPaid = dbUser && (dbUser.plan === 'paid_once' || dbUser.plan === 'subscriber');
-    const hasFreeSlot = freeTierUsage < 1;
-
-    if (!isTestAccount && !isPaid && !hasFreeSlot) {
+    if (!entitlement.allowed) {
       return {
         statusCode: 402,
         headers: {
@@ -233,6 +222,8 @@ async function handleSubmit(event, db, user) {
 
     log.info('Submission stored', {
       submissionId, uid: user.uid, destination,
+      entitlement: entitlement.reason,
+      ...(entitlement.consumedCredit ? { creditsLeft: entitlement.creditsLeft } : {}),
       selected_venues_version: selected_venues?.version || 1,
       picks_count: Array.isArray(selected_venues?.picks) ? selected_venues.picks.length : 0,
     });
@@ -253,7 +244,58 @@ async function handleSubmit(event, db, user) {
     });
   } catch (err) {
     log.error('Form handler error', { error: err.message, submissionId });
+    if (entitlement?.consumedCredit) await refundCredit(db, email, submissionId);
     return serverError('Failed to process submission. Please try again.');
+  }
+}
+
+// ─── Entitlement ─────────────────────────────────────────────────────────────
+// Order of precedence for who may generate an itinerary:
+//   1. test account               → allowed, recorded as paid
+//   2. a purchased/referral credit → consumed atomically, recorded as paid
+//      (Single Plan = "1 premium itinerary"; referral rewards are +1 credit)
+//   3. subscriber                 → allowed, recorded as paid (unlimited for now —
+//                                   "5/month vs unlimited" is an open pricing decision)
+//   4. the monthly free itinerary  → recorded as free
+// Previously plan 'paid_once' alone meant "paid" and credits were never consumed, so a
+// single $7 purchase allowed unlimited itineraries and referral credits did nothing.
+async function decideEntitlement(db, email) {
+  const testResult = await db.query(`SELECT 1 FROM test_accounts WHERE email = $1`, [email]);
+  if (testResult.rows.length) return { allowed: true, isPaid: true, reason: 'test_account', consumedCredit: false };
+
+  const credit = await db.query(
+    `UPDATE users SET itineraries_remaining = itineraries_remaining - 1, updated_at = NOW()
+     WHERE email = $1 AND itineraries_remaining > 0
+     RETURNING itineraries_remaining`,
+    [email]
+  );
+  if (credit.rows.length) {
+    return { allowed: true, isPaid: true, reason: 'credit', consumedCredit: true, creditsLeft: credit.rows[0].itineraries_remaining };
+  }
+
+  const userResult = await db.query(`SELECT plan FROM users WHERE email = $1`, [email]);
+  if (userResult.rows[0]?.plan === 'subscriber') return { allowed: true, isPaid: true, reason: 'subscriber', consumedCredit: false };
+
+  const usageResult = await db.query(
+    `SELECT COUNT(*) as count FROM submissions
+     WHERE email = $1 AND created_at > NOW() - INTERVAL '30 days' AND plan = 'free'`,
+    [email]
+  );
+  if (parseInt(usageResult.rows[0].count, 10) < 1) return { allowed: true, isPaid: false, reason: 'free_monthly', consumedCredit: false };
+
+  return { allowed: false, isPaid: false, reason: 'exhausted', consumedCredit: false };
+}
+
+/** Give back a credit taken for a submission that was never stored. Best effort. */
+async function refundCredit(db, email, submissionId) {
+  try {
+    await db.query(
+      `UPDATE users SET itineraries_remaining = itineraries_remaining + 1, updated_at = NOW() WHERE email = $1`,
+      [email]
+    );
+    log.info('Credit refunded after failed submission', { submissionId });
+  } catch (err) {
+    log.error('Credit refund failed', { submissionId, error: err.message });
   }
 }
 
@@ -285,4 +327,4 @@ exports.handler = async (event) => {
 };
 
 // Exported for unit tests.
-exports._internal = { validatePreviewInput };
+exports._internal = { validatePreviewInput, decideEntitlement };

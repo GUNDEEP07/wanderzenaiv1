@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { withCheckoutIdentity } from '../utils/paymentLink';
 import './Pricing.css';
 
 const SINGLE_LINK = import.meta.env.VITE_STRIPE_SINGLE_PLAN_LINK;
@@ -95,10 +97,13 @@ export default function Pricing() {
   const location = useLocation();
   const reason = location.state?.reason;
   const [openFaq, setOpenFaq] = useState(null);
+  const { currentUser } = useAuth();
 
   const handleCta = (plan) => {
     if (!plan.link) { navigate('/plan'); return; }
-    window.location.href = plan.link;
+    // A purchase must be tied to an account, or the webhook can't grant it.
+    if (!currentUser) { navigate('/login', { state: { from: '/pricing' } }); return; }
+    window.location.href = withCheckoutIdentity(plan.link, currentUser);
   };
 
   return (
