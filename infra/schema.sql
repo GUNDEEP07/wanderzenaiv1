@@ -99,18 +99,20 @@ CREATE INDEX IF NOT EXISTS idx_foursquare_categories_name ON foursquare_categori
 CREATE INDEX IF NOT EXISTS idx_foursquare_categories_parent ON foursquare_categories(parent_id);
 
 -- ─── Analytics view (useful for monitoring costs) ─────────────────────────────
+-- Columns are qualified: both tables have created_at, and the unqualified version failed
+-- with "column reference created_at is ambiguous", aborting every statement after it.
 CREATE OR REPLACE VIEW daily_stats AS
 SELECT
-  DATE(created_at) AS date,
+  DATE(s.created_at) AS date,
   COUNT(*) AS total_submissions,
-  SUM(CASE WHEN plan = 'paid' THEN 1 ELSE 0 END) AS paid_submissions,
-  SUM(CASE WHEN status = 'email_sent' THEN 1 ELSE 0 END) AS completed,
-  SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed,
-  SUM(claude_input_tokens) AS total_input_tokens,
-  SUM(claude_output_tokens) AS total_output_tokens
+  SUM(CASE WHEN s.plan = 'paid' THEN 1 ELSE 0 END) AS paid_submissions,
+  SUM(CASE WHEN s.status = 'email_sent' THEN 1 ELSE 0 END) AS completed,
+  SUM(CASE WHEN s.status = 'failed' THEN 1 ELSE 0 END) AS failed,
+  SUM(i.claude_input_tokens) AS total_input_tokens,
+  SUM(i.claude_output_tokens) AS total_output_tokens
 FROM submissions s
 LEFT JOIN itineraries i ON i.submission_id = s.id
-GROUP BY DATE(created_at)
+GROUP BY DATE(s.created_at)
 ORDER BY date DESC;
 
 -- ─── Cost tracking view ───────────────────────────────────────────────────────
