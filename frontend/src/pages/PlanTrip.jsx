@@ -363,8 +363,8 @@ export default function PlanTrip() {
       }
     }
     if (step === 3) {
-      if (!form.email.trim()) errs.email = 'We need your email to send the itinerary';
-      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = 'Invalid email address';
+      // Delivery goes to the signed-in account's email (set server-side from the token).
+      if (!currentUser?.email) errs.email = 'Your account has no email address — please sign in again';
     }
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -408,7 +408,7 @@ export default function PlanTrip() {
       sessionStorage.removeItem('wz_plan_step');
       sessionStorage.removeItem('wz_plan_form');
       navigate('/confirmation', {
-        state: { submissionId: data.data.submissionId, destination: destinationName, email: form.email },
+        state: { submissionId: data.data.submissionId, destination: destinationName, email: currentUser?.email || form.email },
       });
     } catch (err) {
       setSubmitError(err.message || 'Something went wrong. Please try again.');
@@ -863,16 +863,17 @@ export default function PlanTrip() {
 
               <div style={s.fieldWrap}>
                 <label style={s.label}>Your email address</label>
+                {/* Read-only: the backend delivers to the signed-in account's verified email. */}
                 <input
-                  style={{ ...s.input, ...(errors.email ? s.inputError : {}) }}
-                  type="email" placeholder="you@example.com"
-                  value={form.email}
-                  onChange={e => set('email', e.target.value)}
-                  autoFocus
+                  style={{ ...s.input, ...(errors.email ? s.inputError : {}), opacity: 0.7, cursor: 'not-allowed' }}
+                  type="email"
+                  value={currentUser?.email || form.email}
+                  readOnly
+                  aria-readonly="true"
                 />
                 {errors.email && <div style={s.error}>{errors.email}</div>}
                 <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.25)', marginTop: '0.5rem', fontStyle: 'italic' }}>
-                  We only use your email to send the itinerary. No spam, ever.
+                  Your itinerary is sent to the email on your account. No spam, ever.
                 </div>
               </div>
 

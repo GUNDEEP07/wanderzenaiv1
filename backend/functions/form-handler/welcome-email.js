@@ -1,6 +1,9 @@
 'use strict';
 
 const { SESClient, SendEmailCommand } = require('@aws-sdk/client-ses');
+const {
+  getDB, log, requireUser, AuthError, authErrorBody, checkRateLimit, userSubject, rateLimitBody,
+} = require('/opt/nodejs/index');
 
 const ses = new SESClient({ region: 'ap-southeast-2' });
 
@@ -10,7 +13,24 @@ const CORS = {
   'Content-Type': 'application/json',
 };
 
-const buildWelcomeHTML = (name) => `
+const json = (statusCode, body, extra = {}) => ({ statusCode, headers: { ...CORS, ...extra }, body: JSON.stringify(body) });
+
+const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => HTML_ESCAPES[c]);
+
+/**
+ * First name for the greeting. Taken from the request body (the Firebase token may predate
+ * updateProfile), so it is attacker-controlled: strip control characters (header injection
+ * in the subject line), cap the length, and HTML-escape before it touches the template.
+ */
+function firstNameFrom(raw) {
+  if (typeof raw !== 'string') return '';
+  const first = raw.replace(/[\u0000-\u001f\u007f]/g, ' ').trim().split(/\s+/)[0] || '';
+  return first.slice(0, 40);
+}
+
+// `safeFirstName` must already be HTML-escaped.
+const buildWelcomeHTML = (safeFirstName) => `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -65,7 +85,7 @@ const buildWelcomeHTML = (name) => `
   </div>
 
   <div class="body">
-    <div class="greeting">Welcome${name ? `, ${name.split(' ')[0]}` : ''} ✦</div>
+    <div class="greeting">Welcome${safeFirstName ? `, ${safeFirstName}` : ''} ✦</div>
     <p class="intro">
       You're now part of a community of slow travelers who believe the best journeys aren't on any top-10 list.
       We're here to help you find the hidden cafés, early-morning trails, and village markets that most tourists never see.
@@ -128,38 +148,59 @@ exports.handler = async (event) => {
     return { statusCode: 200, headers: { ...CORS, 'Access-Control-Allow-Methods': 'POST,OPTIONS' }, body: '' };
   }
 
+  // The recipient is the signed-in user's own address, taken from the verified token.
+  // Previously the address came from the request body, which let anyone send our branded
+  // email (with injected HTML) to any inbox from our SES identity.
+  // Email verification is not required: this is sent right after sign-up, before the user
+  // has clicked the verification link, and it only ever goes to the token's own address.
+  let user;
   try {
-    const body = JSON.parse(event.body || '{}');
-    const { email, name } = body;
+    user = await requireUser(event, { requireEmailVerified: false });
+  } catch (err) {
+    if (err instanceof AuthError) return json(err.statusCode, authErrorBody(err));
+    log.error('Welcome email auth misconfigured', { error: err.message });
+    return json(500, { ok: false, error: 'Authentication is temporarily unavailable' });
+  }
+  if (!user.email) return json(400, { ok: false, error: 'Account has no email address' });
 
-    if (!email || !email.includes('@')) {
-      return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Valid email required' }) };
-    }
+  const blocked = await checkRateLimit(getDB(), 'welcome', userSubject(user));
+  if (blocked) {
+    return json(429, rateLimitBody(blocked.retryAfterSeconds), { 'Retry-After': String(blocked.retryAfterSeconds) });
+  }
 
+  let body = {};
+  try { body = JSON.parse(event.body || '{}'); } catch { /* name is optional */ }
+  const firstName = firstNameFrom(body.name);
+
+  try {
     const fromEmail = process.env.FROM_EMAIL || 'travel@wanderzenai.com';
 
     await ses.send(new SendEmailCommand({
       Source: `WanderZenAI <${fromEmail}>`,
-      Destination: { ToAddresses: [email] },
+      Destination: { ToAddresses: [user.email] },
       Message: {
         Subject: {
-          Data: `Welcome to WanderZenAI, ${name ? name.split(' ')[0] : 'explorer'} ✦`,
+          Data: `Welcome to WanderZenAI, ${firstName || 'explorer'} ✦`,
           Charset: 'UTF-8',
         },
         Body: {
-          Html: { Data: buildWelcomeHTML(name), Charset: 'UTF-8' },
+          Html: { Data: buildWelcomeHTML(escapeHtml(firstName)), Charset: 'UTF-8' },
           Text: {
-            Data: `Welcome to WanderZenAI${name ? `, ${name.split(' ')[0]}` : ''}!\n\nYou're now part of a community of slow travelers.\n\nPlan your first trip: https://www.wanderzenai.com/plan\n\nYour free plan includes 1 itinerary per month.\n\nQuestions? travel@wanderzenai.com`,
+            Data: `Welcome to WanderZenAI${firstName ? `, ${firstName}` : ''}!\n\nYou're now part of a community of slow travelers.\n\nPlan your first trip: https://www.wanderzenai.com/plan\n\nYour free plan includes 1 itinerary per month.\n\nQuestions? travel@wanderzenai.com`,
             Charset: 'UTF-8',
           },
         },
       },
     }));
 
-    return { statusCode: 200, headers: CORS, body: JSON.stringify({ ok: true }) };
+    log.info('Welcome email sent', { uid: user.uid });
+    return json(200, { ok: true });
   } catch (err) {
     // Non-blocking — don't fail signup if welcome email fails
-    console.error('Welcome email failed:', err.message);
-    return { statusCode: 200, headers: CORS, body: JSON.stringify({ ok: false, error: err.message }) };
+    log.error('Welcome email failed', { error: err.message, uid: user.uid });
+    return json(200, { ok: false });
   }
 };
+
+// Exported for unit tests.
+exports._internal = { firstNameFrom, escapeHtml, buildWelcomeHTML };

@@ -32,6 +32,11 @@ jobs:
         working-directory: frontend
         run: npm run lint --if-present
 
+      # Token verification and rate limiting guard every paid/AI endpoint — never deploy
+      # if they regress. Built-in node:test runner, no extra dependencies.
+      - name: Backend auth + rate-limit unit tests
+        run: node --test backend/tests/unit/*.test.js
+
   deploy-backend:
     name: Deploy Backend
     runs-on: ubuntu-latest
@@ -71,6 +76,24 @@ jobs:
               echo "Installing deps for $dir"
               cd "$dir" && npm ci && cd -
             fi
+          done
+
+      # Numbered migrations are idempotent (IF NOT EXISTS), so they run on every deploy,
+      # before the code that needs them. *.down.sql rollbacks are never run here.
+      # Every secret is mapped explicitly — unmapped secrets arrive as empty strings.
+      - name: Apply database migrations
+        env:
+          PGHOST: ${{ secrets.DB_HOST }}
+          PGDATABASE: ${{ secrets.DB_NAME }}
+          PGUSER: ${{ secrets.DB_USER }}
+          PGPASSWORD: ${{ secrets.DB_PASSWORD }}
+          PGSSLMODE: require
+          PGCONNECT_TIMEOUT: '15'
+        run: |
+          for f in infra/migrations/[0-9][0-9][0-9]_*.sql; do
+            case "$f" in *.down.sql) continue ;; esac
+            echo "Applying $f"
+            psql -v ON_ERROR_STOP=1 -q -f "$f"
           done
 
       - name: SAM build

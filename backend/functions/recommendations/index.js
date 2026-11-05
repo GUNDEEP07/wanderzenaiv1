@@ -2,7 +2,10 @@
 
 const axios = require('axios');
 const Anthropic = require('@anthropic-ai/sdk');
-const { log, getDB } = require('/opt/nodejs/index');
+const {
+  log, getDB, requireUser, optionalUser, AuthError, authErrorBody,
+  checkRateLimit, userSubject, ipSubject, rateLimitBody,
+} = require('/opt/nodejs/index');
 
 const FOURSQUARE_API_KEY = process.env.FOURSQUARE_API_KEY;
 const FOURSQUARE_BASE = 'https://places-api.foursquare.com';
@@ -265,8 +268,11 @@ async function handleVenues(event) {
     };
   }
 
-  // Natural language query path
+  // Natural language query path — two Claude calls per request, so it's rate limited.
   if (query) {
+    if (query.length > 200) return respond(400, { error: 'Query is too long' }, event);
+    const limited = await rateLimitedResponse('aiVenues', ipSubject(event), event);
+    if (limited) return limited;
     log.info('Natural language search', { destination, query });
     const intent = await interpretNaturalQuery(query, destination || 'this city');
     const resolvedActivity = intent?.foursquareCategory || intent?.venueType || query;
@@ -401,7 +407,9 @@ async function handleVenues(event) {
     }
 
     // If Foursquare returned nothing, fall back to Claude AI
-    if (categories.length === 0) {
+    // Over the limit: skip the AI fallback and return whatever Foursquare gave (graceful).
+    if (categories.length === 0 &&
+        !(await checkRateLimit(getDB(), 'aiVenues', ipSubject(event)))) {
       log.info('Foursquare returned 0 venues, trying AI fallback', { destination, activity });
       const aiVenues = await generateAIVenues(destination, activity, lat, lng);
       if (aiVenues.length > 0) {
@@ -517,18 +525,10 @@ Rules:
 }
 
 async function handlePersonalised(event) {
-  const authHeader = event.headers?.Authorization || event.headers?.authorization || '';
-  const token = authHeader.replace('Bearer ', '');
-
-  let email = null;
-  try {
-    if (token && token !== 'demo-token') {
-      const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString());
-      email = payload.email || null;
-    }
-  } catch { /* invalid token */ }
-
-  if (!email) return ok({ recommendations: [], preferred_activities: [] }, event);
+  const auth = await authenticateOrRespond(event);
+  if (auth.response) return auth.response;
+  const { user } = auth;
+  const { email } = user;
 
   // Check 7-day cache
   try {
@@ -546,6 +546,10 @@ async function handlePersonalised(event) {
   }
 
   if (!anthropic) return ok({ recommendations: [], preferred_activities: [] }, event);
+
+  // Only cache misses reach Claude, so only they count against the limit.
+  const limited = await rateLimitedResponse('personalised', userSubject(user), event);
+  if (limited) return limited;
 
   try {
     // Fetch past destinations and profile in parallel
@@ -641,21 +645,21 @@ Return JSON array ONLY — no explanation:
 async function handleChat(event) {
   if (!anthropic) return ok({ reply: 'AI advisor is not configured yet.' }, event);
 
-  // Decode user email from JWT
-  const authHeader = event.headers?.Authorization || event.headers?.authorization || '';
-  const token = authHeader.replace('Bearer ', '');
-  let email = null;
-  try {
-    if (token && token !== 'demo-token') {
-      const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString());
-      email = payload.email;
-    }
-  } catch { /* skip */ }
+  // TravelChat reads `reply`, so error bodies carry the message there too.
+  const auth = await authenticateOrRespond(event, { replyField: true });
+  if (auth.response) return auth.response;
+  const { user } = auth;
+  const { email } = user;
 
-  const body = JSON.parse(event.body || '{}');
-  const { message, history = [] } = body;
+  let body;
+  try { body = JSON.parse(event.body || '{}'); } catch { return respond(400, { reply: 'Invalid request.' }, event); }
 
-  if (!message?.trim()) return ok({ reply: 'Please send a message.' }, event);
+  const validated = validateChatInput(body);
+  if (validated.error) return respond(400, { reply: validated.error }, event);
+  const { message, history } = validated;
+
+  const limited = await rateLimitedResponse('chat', userSubject(user), event, { replyField: true });
+  if (limited) return limited;
 
   // Track chat session — upsert so multiple messages in one session increment the count
   // Uses session fingerprint: email + date (one session per user per day)
@@ -773,19 +777,20 @@ Rules:
 }
 
 async function handleTrending(event) {
-  const authHeader = event.headers?.Authorization || event.headers?.authorization || '';
-  const token = authHeader.replace('Bearer ', '');
-  let email = null;
+  // Public endpoint; personalises by home country when a valid token is present.
+  let user = null;
   try {
-    if (token && token !== 'demo-token') {
-      const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString());
-      email = payload.email;
-    }
-  } catch { /* public fallback */ }
+    user = await optionalUser(event);
+  } catch (err) {
+    log.error('Trending auth misconfigured', { error: err.message });
+  }
+  const email = user?.email || null;
 
-  // Get user country from profile if logged in
-  let country = event.queryStringParameters?.country || 'India';
-  let interests = event.queryStringParameters?.interests || '';
+  // Query params feed the Claude prompt and the cache key: cap them so callers can't
+  // inject long prompts or mint unlimited cache-busting keys.
+  const clean = (v, max) => String(v || '').replace(/[\n\r`\\]/g, ' ').trim().slice(0, max);
+  let country = clean(event.queryStringParameters?.country, 60) || 'India';
+  let interests = clean(event.queryStringParameters?.interests, 200);
 
   if (email) {
     try {
@@ -820,6 +825,9 @@ async function handleTrending(event) {
   if (!anthropic) {
     return ok({ trending: [] }, event);
   }
+
+  const limited = await rateLimitedResponse('trending', user ? userSubject(user) : ipSubject(event), event);
+  if (limited) return limited;
 
   try {
     const interestText = interests ? `Their interests include: ${interests}.` : '';
@@ -940,6 +948,83 @@ function formatCategory(cat) {
     'accommodation': 'Accommodations',
   };
   return categoryMap[cat] || cat.split('_').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
+}
+
+// ─── Auth, rate limiting and input helpers ───────────────────────────────────
+
+function respond(statusCode, data, event, extraHeaders = {}) {
+  return {
+    statusCode,
+    headers: {
+      'Access-Control-Allow-Origin': getAllowedOrigin(event),
+      'Content-Type': 'application/json',
+      ...extraHeaders,
+    },
+    body: JSON.stringify(data),
+  };
+}
+
+/**
+ * Resolve the verified caller, or produce the error response.
+ * @param {{ replyField?: boolean }} [opts] mirror the message into `reply` for TravelChat
+ * @returns {Promise<{ user?: object, response?: object }>}
+ */
+async function authenticateOrRespond(event, opts = {}) {
+  try {
+    return { user: await requireUser(event) };
+  } catch (err) {
+    if (err instanceof AuthError) {
+      log.warn('Auth rejected', { code: err.code, path: event.path });
+      const body = authErrorBody(err);
+      return { response: respond(err.statusCode, opts.replyField ? { ...body, reply: body.message } : body, event) };
+    }
+    log.error('Auth misconfigured', { error: err.message });
+    const message = 'Authentication is temporarily unavailable.';
+    return { response: respond(500, opts.replyField ? { error: message, reply: message } : { error: message }, event) };
+  }
+}
+
+/** Returns a 429 response when `subject` is over `bucket`'s limit, else null. */
+async function rateLimitedResponse(bucket, subject, event, opts = {}) {
+  const blocked = await checkRateLimit(getDB(), bucket, subject);
+  if (!blocked) return null;
+  log.warn('Rate limited', { bucket });
+  const body = rateLimitBody(blocked.retryAfterSeconds);
+  return respond(429, opts.replyField ? { ...body, reply: body.message } : body, event,
+    { 'Retry-After': String(blocked.retryAfterSeconds) });
+}
+
+const CHAT_MAX_MESSAGE = 2000;
+const CHAT_MAX_HISTORY = 10;
+
+/**
+ * The client sends the whole conversation. Only user/assistant roles are allowed (a
+ * client-supplied "system" turn would be prompt injection), lengths are capped so one
+ * request can't buy an arbitrarily large prompt, and Claude requires the first turn to
+ * be from the user.
+ */
+function validateChatInput(body) {
+  const message = typeof body.message === 'string' ? body.message.trim() : '';
+  if (!message) return { error: 'Please send a message.' };
+  if (message.length > CHAT_MAX_MESSAGE) return { error: 'That message is too long — please shorten it.' };
+
+  const rawHistory = Array.isArray(body.history) ? body.history.slice(-CHAT_MAX_HISTORY) : [];
+  const history = [];
+  for (const m of rawHistory) {
+    if (!m || (m.role !== 'user' && m.role !== 'assistant') || typeof m.content !== 'string') {
+      return { error: 'Invalid conversation history.' };
+    }
+    const content = m.content.trim();
+    if (!content) continue;
+    history.push({ role: m.role, content: content.slice(0, CHAT_MAX_MESSAGE) });
+  }
+  while (history.length && history[0].role !== 'user') history.shift();
+  if (!history.length || history[history.length - 1].role !== 'user') history.push({ role: 'user', content: message });
+
+  if (body.destination !== undefined && body.destination !== null) {
+    if (typeof body.destination !== 'string' || body.destination.length > 200) return { error: 'Invalid destination.' };
+  }
+  return { message, history };
 }
 
 function getAllowedOrigin(event) {

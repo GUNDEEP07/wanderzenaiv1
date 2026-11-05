@@ -1,6 +1,12 @@
 import { Anthropic } from '@anthropic-ai/sdk';
 import pkg from 'pg';
+import { createRequire } from 'module';
 const { Pool } = pkg;
+
+const require = createRequire(import.meta.url);
+const {
+  getDB, optionalUser, checkRateLimit, userSubject, ipSubject, rateLimitBody,
+} = require('/opt/nodejs/index');
 
 // ── DB + API clients ──────────────────────────────────────────────────────────
 const pool = new Pool({
@@ -60,6 +66,16 @@ export async function handler(event) {
     };
   }
 
+  // Inputs feed a Claude prompt and the cache key — reject oversized values.
+  if (destination.length > 200 || startDate.length > 30 || endDate.length > 30 ||
+      travelStyles.length > 12 || travelStyles.some(s => s.length > 40)) {
+    return {
+      statusCode: 400,
+      headers: CORS_HEADERS,
+      body: JSON.stringify({ error: 'Invalid request parameters' }),
+    };
+  }
+
   // Sorted lowercase key — e.g. ["Nature","Parks"] → "nature,parks"
   const stylesKey = [...travelStyles].sort().join(',').toLowerCase() || 'general';
 
@@ -96,6 +112,17 @@ export async function handler(event) {
 
   // ── 3. Claude fallback ───────────────────────────────────────────────────────
   if (!insights) {
+    // Public endpoint: cap Claude spend per caller (hashed IP, or uid when signed in).
+    let caller = null;
+    try { caller = await optionalUser(event); } catch { /* treat as anonymous */ }
+    const blocked = await checkRateLimit(getDB(), 'insights', caller ? userSubject(caller) : ipSubject(event));
+    if (blocked) {
+      return {
+        statusCode: 429,
+        headers: { ...CORS_HEADERS, 'Retry-After': String(blocked.retryAfterSeconds) },
+        body: JSON.stringify(rateLimitBody(blocked.retryAfterSeconds)),
+      };
+    }
     try {
       insights = await generateFromClaude(destination, travelStyles, startDate, endDate);
       console.log(`Claude insights generated for ${destination} [${stylesKey}]`);

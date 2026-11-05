@@ -53,13 +53,16 @@ export default function Signup() {
       const result = await signInWithGoogle();
       analytics.signUp('google');
       // Fire-and-forget welcome email
-      const u = result?.user || {};
-      if (u.email) {
-        fetch(`${import.meta.env.VITE_API_URL}/welcome-email`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: u.email, name: u.displayName || '' }),
-        }).catch(() => {});
+      // The backend sends to the token's own address; only the display name is passed.
+      const u = result?.user;
+      if (u?.email && typeof u.getIdToken === 'function') {
+        u.getIdToken()
+          .then(token => fetch(`${import.meta.env.VITE_API_URL}/welcome-email`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ name: u.displayName || '' }),
+          }))
+          .catch(() => {});
       }
       navigate(onboardingPath);
     }
@@ -83,12 +86,16 @@ export default function Signup() {
         try { await sendEmailVerification(auth.currentUser); } catch { /* non-blocking */ }
       }
       analytics.signUp('email');
-      // Fire-and-forget welcome email — non-blocking
-      fetch(`${import.meta.env.VITE_API_URL}/welcome-email`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, name: fullName.trim() }),
-      }).catch(() => {});
+      // Fire-and-forget welcome email — non-blocking. Sent to the token's own address.
+      if (FIREBASE_CONFIGURED && auth?.currentUser) {
+        auth.currentUser.getIdToken()
+          .then(token => fetch(`${import.meta.env.VITE_API_URL}/welcome-email`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ name: fullName.trim() }),
+          }))
+          .catch(() => {});
+      }
       navigate(onboardingPath);
     } catch (err) {
       if (err?.code === 'auth/email-already-in-use') setError('An account with this email already exists.');
