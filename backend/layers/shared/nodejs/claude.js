@@ -12,6 +12,21 @@
  * Other 4xx (bad request, auth, not found) fail immediately — retrying can't fix them.
  */
 
+/**
+ * Model IDs in one place, overridable per deploy (template.yaml ClaudeModelFast /
+ * ClaudeModelStrong → CLAUDE_MODEL_FAST / CLAUDE_MODEL_STRONG).
+ *   fast   — itineraries, preview, chat, recommendations, insights
+ *   strong — re-try of a day batch whose JSON failed to parse
+ * Defaults are the models in use before this was centralised, so deploying this
+ * changes nothing. Upgrading (Haiku 4.5 is past its earliest retirement date) is an
+ * open decision — see Notion A3; current models can start with a thinking block,
+ * which is why every caller reads text via firstText() rather than content[0].
+ */
+const MODELS = Object.freeze({
+  fast: process.env.CLAUDE_MODEL_FAST || 'claude-haiku-4-5-20251001',
+  strong: process.env.CLAUDE_MODEL_STRONG || 'claude-sonnet-4-6',
+});
+
 const API_URL = 'https://api.anthropic.com/v1/messages';
 const API_VERSION = '2023-06-01';
 const RETRYABLE_STATUS = new Set([408, 409, 429, 500, 502, 503, 504, 529]);
@@ -101,4 +116,4 @@ function firstText(data) {
   return block?.text || '';
 }
 
-module.exports = { createMessage, firstText, ClaudeError, RETRYABLE_STATUS };
+module.exports = { MODELS, createMessage, firstText, ClaudeError, RETRYABLE_STATUS };

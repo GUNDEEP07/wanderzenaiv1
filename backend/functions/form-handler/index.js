@@ -6,7 +6,7 @@ const {
   requireUser, AuthError, authFailure, checkRateLimit, userSubject, tooManyRequests,
 } = require('/opt/nodejs/index');
 const { sanitizeSelectedVenues } = require('/opt/nodejs/selected-venues');
-const { createMessage, firstText } = require('/opt/nodejs/claude');
+const { MODELS, createMessage, firstText } = require('/opt/nodejs/claude');
 
 const lambda = new LambdaClient({ region: process.env.AWS_REGION || 'ap-southeast-2' });
 
@@ -83,7 +83,7 @@ No activity detail. Titles and atmosphere only. Exactly ${days} items.`;
   try {
     // The user is waiting on this one: short timeout, one retry.
     const claudeData = await createMessage({
-      model: 'claude-haiku-4-5',
+      model: MODELS.fast,
       max_tokens: 1024,
       messages: [{ role: 'user', content: previewPrompt }],
     }, {

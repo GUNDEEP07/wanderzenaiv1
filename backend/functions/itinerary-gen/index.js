@@ -3,7 +3,7 @@
 const { LambdaClient, InvokeCommand } = require('@aws-sdk/client-lambda');
 const { getDB, generateId, getCurrencySymbol, log, fetchFoursquareTips } = require('/opt/nodejs/index');
 const { searchVenues } = require('/opt/nodejs/venue-enrichment/foursquare');
-const { createMessage, firstText } = require('/opt/nodejs/claude');
+const { MODELS, createMessage, firstText } = require('/opt/nodejs/claude');
 const {
   planPicks, formatPicksForDays, formatPicksOverview, findMissingPicks,
 } = require('/opt/nodejs/selected-venues');
@@ -84,7 +84,7 @@ const callClaude = async (systemPrompt, userPrompt, maxTokens, submissionId, att
   // Timeout + retry on 429/5xx/529/network errors (shared claude.js). Previously one
   // overloaded response failed the whole itinerary.
   const data = await createMessage({
-    model: 'claude-haiku-4-5-20251001',
+    model: MODELS.fast,
     max_tokens: maxTokens,
     system: systemPrompt,
     messages: [{ role: 'user', content: userPrompt }],
@@ -208,7 +208,7 @@ Return ONLY a JSON object with a "days" array containing ${dayNumbers.length} da
       // Previously a raw fetch that never checked res.ok, so an API error surfaced as a
       // confusing "cannot read content" failure.
       const retryData = await createMessage({
-        model: 'claude-sonnet-4-6',
+        model: MODELS.strong,
         max_tokens: maxTokens + 1000,
         system: SYSTEM_PROMPT,
         messages: [{ role: 'user', content: prompt }],

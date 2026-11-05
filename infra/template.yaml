@@ -28,6 +28,9 @@ Globals:
         # Read by the shared token verifier (backend/layers/shared/nodejs/auth.js) in every function.
         FIREBASE_PROJECT_ID: !Ref FirebaseProjectId
         REQUIRE_EMAIL_VERIFIED: !Ref RequireEmailVerified
+        # Read by backend/layers/shared/nodejs/claude.js (MODELS).
+        CLAUDE_MODEL_FAST: !Ref ClaudeModelFast
+        CLAUDE_MODEL_STRONG: !Ref ClaudeModelStrong
 
     Layers:
       - !Ref SharedLayer
@@ -96,6 +99,16 @@ Parameters:
     Default: 'true'
     AllowedValues: ['true', 'false']
     Description: Reject ID tokens whose email is unverified. Only set 'false' as a temporary rollback.
+  ClaudeModelFast:
+    Type: String
+    Default: 'claude-haiku-4-5-20251001'
+    AllowedPattern: '^claude-[a-z0-9.-]+$'
+    Description: Model for itineraries, preview, chat, recommendations and insights (see Notion A3 before changing).
+  ClaudeModelStrong:
+    Type: String
+    Default: 'claude-sonnet-4-6'
+    AllowedPattern: '^claude-[a-z0-9.-]+$'
+    Description: Model used to re-try a day batch whose JSON could not be parsed.
   AllowedOrigins:
     Type: String
     Default: 'https://www.wanderzenai.com,http://localhost:5173,https://localhost:5173,https://web.postman.co'
