@@ -20,31 +20,11 @@ const pool = new Pool({
 const anthropic = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY });
 
 // ── Config ────────────────────────────────────────────────────────────────────
-const FOURSQUARE_ENABLED = process.env.FOURSQUARE_ENABLED !== 'false';
-const FOURSQUARE_API_KEY = process.env.FOURSQUARE_API_KEY;
-
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'Content-Type,Authorization',
   'Content-Type': 'application/json',
 };
-
-// ── Category emoji map ────────────────────────────────────────────────────────
-const CATEGORY_EMOJI = {
-  restaurant: '🍽️', cafe: '☕', bar: '🍸', park: '🌳', garden: '🌿',
-  museum: '🏛️', temple: '⛩️', beach: '🏖️', market: '🏪', hiking: '🥾',
-  hotel: '🏨', spa: '🧘', shopping: '🛍️', viewpoint: '⛰️', nature: '🌿',
-  nightlife: '🎵', adventure: '🚀', wellness: '🌿', culture: '🏛️',
-};
-
-function getCategoryEmoji(categoryName) {
-  if (!categoryName) return '📍';
-  const lower = categoryName.toLowerCase();
-  for (const [key, emoji] of Object.entries(CATEGORY_EMOJI)) {
-    if (lower.includes(key)) return emoji;
-  }
-  return '📍';
-}
 
 // ── Main handler ──────────────────────────────────────────────────────────────
 export async function handler(event) {
@@ -94,24 +74,15 @@ export async function handler(event) {
     console.warn('Cache read failed (non-fatal):', cacheErr.message);
   }
 
-  // ── 2. Foursquare primary (if enabled and key present) ───────────────────────
+  // ── 2. Generate with Claude ──────────────────────────────────────────────────
+  // There used to be a Foursquare-first path here, calling the legacy v3 API
+  // (api.foursquare.com/v3), which Foursquare shut down on May 15, 2026. Every request
+  // failed (up to three wasted HTTP calls) and fell through to Claude, so removing it
+  // changes nothing users see. It also returned no budget/accommodation estimates, which
+  // Step 2 needs. Mixing real venues from the shared places-api adapter into thingsToDo is
+  // a product decision — see Notion A5.
   let insights = null;
-
-  if (FOURSQUARE_ENABLED && FOURSQUARE_API_KEY) {
-    try {
-      insights = await getFromFoursquare(destination, travelStyles);
-      if (insights) {
-        console.log(`Foursquare: ${insights.thingsToDo.length} venues for ${destination} [${stylesKey}]`);
-      } else {
-        console.log(`Foursquare: no results for ${destination} [${stylesKey}], falling back to Claude`);
-      }
-    } catch (fsqErr) {
-      console.warn('Foursquare failed (falling back to Claude):', fsqErr.message);
-    }
-  }
-
-  // ── 3. Claude fallback ───────────────────────────────────────────────────────
-  if (!insights) {
+  {
     // Public endpoint: cap Claude spend per caller (hashed IP, or uid when signed in).
     let caller = null;
     try { caller = await optionalUser(event); } catch { /* treat as anonymous */ }
@@ -181,67 +152,7 @@ async function saveToCache(destination, startDate, endDate, stylesKey, insights)
   );
 }
 
-// ── Foursquare venue fetch ─────────────────────────────────────────────────────
-
-async function getFromFoursquare(destination, travelStyles) {
-  const queries = travelStyles.length > 0 ? travelStyles.slice(0, 3) : ['attractions', 'restaurants'];
-  const allVenues = [];
-
-  for (const style of queries) {
-    const url = new URL('https://api.foursquare.com/v3/places/search');
-    url.searchParams.set('query', style);
-    url.searchParams.set('near', destination);
-    url.searchParams.set('limit', '6');
-    url.searchParams.set('sort', 'RATING');
-    url.searchParams.set('fields', 'name,categories,rating,distance,hours,tips,location,fsq_id');
-
-    const res = await fetch(url.toString(), {
-      headers: {
-        'Authorization': FOURSQUARE_API_KEY,
-        'Accept': 'application/json',
-      },
-    });
-
-    if (!res.ok) {
-      console.warn(`Foursquare "${style}" query → HTTP ${res.status}`);
-      continue;
-    }
-
-    const data = await res.json();
-    const venues = (data.results || []).map(v => ({
-      name: v.name,
-      category: v.categories?.[0]?.name || style,
-      reason: `A top-rated ${style.toLowerCase()} spot in ${destination}`,
-      emoji: getCategoryEmoji(v.categories?.[0]?.name),
-      openingHours: v.hours?.display || 'Check locally for current hours',
-      distanceFromCenter: v.distance != null
-        ? `${(v.distance / 1000).toFixed(1)}km from centre`
-        : 'In the area',
-      bestTime: 'Morning or early evening for fewer crowds',
-      visitorTip: v.tips?.[0]?.text || `Rated ${v.rating ? v.rating.toFixed(1) : 'highly'} — worth the visit`,
-      unsplashKeyword: `${v.name.toLowerCase().split(' ').slice(0, 2).join(' ')} ${destination.toLowerCase()}`,
-      foursquareId: v.fsq_id || null,
-    }));
-
-    allVenues.push(...venues);
-  }
-
-  if (allVenues.length === 0) return null;
-
-  return {
-    thingsToDo: allVenues.slice(0, 8),
-    weather: 'Check local forecast for your travel dates',
-    crowdLevel: 'Moderate',
-    seasonalHighlights: `Curated top spots in ${destination} for ${travelStyles.join(', ') || 'all interests'}`,
-    travelTip: `Book popular venues in ${destination} ahead of time during peak season`,
-    bestMonths: [],
-    whyThisMonth: '',
-    accommodation: [],
-    budgetEstimateUSD: null,
-  };
-}
-
-// ── Claude fallback generation ────────────────────────────────────────────────
+// ── Claude generation ─────────────────────────────────────────────────────────
 
 async function generateFromClaude(destination, travelStyles, startDate, endDate) {
   const stylesText = travelStyles.length > 0 ? travelStyles.join(', ') : 'general travel';

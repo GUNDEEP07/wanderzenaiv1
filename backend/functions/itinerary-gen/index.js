@@ -3,6 +3,7 @@
 const { LambdaClient, InvokeCommand } = require('@aws-sdk/client-lambda');
 const { getDB, generateId, getCurrencySymbol, log, fetchFoursquareTips } = require('/opt/nodejs/index');
 const { searchVenues } = require('/opt/nodejs/venue-enrichment/foursquare');
+const { createMessage, firstText } = require('/opt/nodejs/claude');
 const {
   planPicks, formatPicksForDays, formatPicksOverview, findMissingPicks,
 } = require('/opt/nodejs/selected-venues');
@@ -80,28 +81,18 @@ const parseJSON = (raw) => {
 const callClaude = async (systemPrompt, userPrompt, maxTokens, submissionId, attempt = 1) => {
   log.info('Claude API call', { submissionId, maxTokens, attempt });
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': process.env.CLAUDE_API_KEY,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: maxTokens,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
-    }),
+  // Timeout + retry on 429/5xx/529/network errors (shared claude.js). Previously one
+  // overloaded response failed the whole itinerary.
+  const data = await createMessage({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: maxTokens,
+    system: systemPrompt,
+    messages: [{ role: 'user', content: userPrompt }],
+  }, {
+    timeoutMs: 90000,
+    onRetry: (info) => log.warn('Claude call retrying', { submissionId, ...info }),
   });
-
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`Claude API ${response.status}: ${err}`);
-  }
-
-  const data = await response.json();
-  const raw = data.content[0].text;
+  const raw = firstText(data);
 
   log.info('Claude response', {
     submissionId,
@@ -214,19 +205,18 @@ Return ONLY a JSON object with a "days" array containing ${dayNumbers.length} da
     // Retry this batch once with Sonnet for better reliability
     log.info('Retrying batch with Sonnet', { submissionId, dayNumbers });
     try {
-      const retryResp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.CLAUDE_API_KEY, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
-          max_tokens: maxTokens + 1000,
-          system: SYSTEM_PROMPT,
-          messages: [{ role: 'user', content: prompt }],
-        }),
+      // Previously a raw fetch that never checked res.ok, so an API error surfaced as a
+      // confusing "cannot read content" failure.
+      const retryData = await createMessage({
+        model: 'claude-sonnet-4-6',
+        max_tokens: maxTokens + 1000,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: prompt }],
+      }, {
+        timeoutMs: 120000,
+        onRetry: (info) => log.warn('Sonnet retry call retrying', { submissionId, dayNumbers, ...info }),
       });
-      const retryData = await retryResp.json();
-      const retryRaw = retryData.content[0].text;
-      const retryParsed = parseJSON(retryRaw);
+      const retryParsed = parseJSON(firstText(retryData));
       if (retryParsed.days && Array.isArray(retryParsed.days)) {
         return { days: retryParsed.days, usage: retryData.usage };
       }
@@ -234,9 +224,12 @@ Return ONLY a JSON object with a "days" array containing ${dayNumbers.length} da
       log.error('Retry also failed', { submissionId, dayNumbers, error: retryErr.message });
     }
 
-    // Fallback: generate minimal day objects rather than failing
+    // Fallback: generic placeholder days. Flagged (isFallback) and logged at ERROR so they
+    // are visible; whether to ship these at all is an open decision (see Notion A4).
+    log.error('Shipping generic fallback days', { submissionId, dayNumbers });
     return {
       days: dayNumbers.map(n => ({
+        isFallback: true,
         dayNumber: n,
         theme: `Day ${n} — Local Exploration`,
         morningActivity: { time: '8:00 AM', activity: `Morning walk through local neighbourhood`, location: destination, why: 'The best way to feel the pulse of a place', cost: 0, isFree: true, insiderTip: 'Go before 9am for the quietest experience' },
@@ -427,6 +420,7 @@ exports.handler = async (event) => {
     log.info('Itinerary assembled', {
       submissionId,
       totalDays: allDays.length,
+      fallbackDays: allDays.filter(d => d.isFallback).length,
       totalInputTokens,
       totalOutputTokens,
       venuesWithSocial: venuesWithSocial.length,
