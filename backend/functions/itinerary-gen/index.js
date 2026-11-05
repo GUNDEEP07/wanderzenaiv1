@@ -4,6 +4,7 @@ const { LambdaClient, InvokeCommand } = require('@aws-sdk/client-lambda');
 const { getDB, generateId, getCurrencySymbol, log, fetchFoursquareTips } = require('/opt/nodejs/index');
 const { searchVenues } = require('/opt/nodejs/venue-enrichment/foursquare');
 const { MODELS, createMessage, firstText } = require('/opt/nodejs/claude');
+const { findDuplicateVenues, planRepairs, repairRules } = require('./validate');
 const {
   planPicks, formatPicksForDays, formatPicksOverview, findMissingPicks,
 } = require('/opt/nodejs/selected-venues');
@@ -159,7 +160,8 @@ ${META_SCHEMA}`;
 };
 
 // ─── GENERATE A BATCH OF DAYS ────────────────────────────────────────────────
-const generateDaysBatch = async (submission, dayNumbers, currencySymbol, submissionId, fsTips = null) => {
+// extraRules: appended verbatim — used by the Q3 validation pass when rewriting a day.
+const generateDaysBatch = async (submission, dayNumbers, currencySymbol, submissionId, fsTips = null, extraRules = '') => {
   const { destination, budget, currency, travelerType, travelStyle, travelPace, interests, startTime, userMustDos, userAge, userLocation, language, days: totalDays, picksPlan } = submission;
   const styleList = Array.isArray(travelStyle) ? travelStyle.join(', ') : travelStyle;
   const dailyBudget = Math.round(budget / totalDays);
@@ -180,7 +182,7 @@ Rules:
 - One completely free hidden gem per day
 - Specific place names, not generic descriptions
 - Costs in ${currency} (${currencySymbol})
-${fsTips ? `\n\nReal verified venues — when you reference any of these venues, set venueName to the EXACT name from this list:\n${fsTips}\n\nFor EVERY activity that references a verified venue above, set venueName to the exact venue name (e.g. "venueName":"Kiyomizu-dera Temple (清水寺)"). If the activity doesn't reference one of these venues, set venueName to null.` : ''}${venuesContext}
+${fsTips ? `\n\nReal verified venues — when you reference any of these venues, set venueName to the EXACT name from this list:\n${fsTips}\n\nFor EVERY activity that references a verified venue above, set venueName to the exact venue name (e.g. "venueName":"Kiyomizu-dera Temple (清水寺)"). If the activity doesn't reference one of these venues, set venueName to null.` : ''}${venuesContext}${extraRules}
 
 Return ONLY a JSON object with a "days" array containing ${dayNumbers.length} day object(s):
 {
@@ -376,19 +378,56 @@ exports.handler = async (event) => {
       totalEstimatedCost: meta.totalEstimatedCost || submission.budget,
     };
 
-    // ── Check the traveller's own picks made it in ────────────────────────
-    // Logged for now; Q3 (validation pass) will regenerate the affected days.
-    if (submission.picksPlan.picks.length) {
-      const { missing, wrongDay } = findMissingPicks(itinerary.days, submission.picksPlan);
-      const coverage = {
-        picked: submission.picksPlan.picks.length,
-        included: submission.picksPlan.picks.length - missing.length,
-        missing: missing.map(p => ({ name: p.name, day: p.day })),
-        wrongDay: wrongDay.map(p => ({ name: p.name, day: p.day })),
-      };
-      itinerary.pickCoverage = coverage;
-      (missing.length || wrongDay.length ? log.warn : log.info)('Step 3 pick coverage', { submissionId, ...coverage });
+    // ── Q3 validation pass: duplicates + Step 3 picks, repaired once ──────
+    const coverageOf = (days) => (submission.picksPlan.picks.length
+      ? findMissingPicks(days, submission.picksPlan)
+      : { missing: [], wrongDay: [] });
+    const summarise = (days, cov) => ({
+      duplicates: findDuplicateVenues(days).map(d => ({ name: d.name, days: [d.firstDay, ...d.repeatDays] })),
+      missingPicks: cov.missing.map(p => ({ name: p.name, day: p.day })),
+      wrongDayPicks: cov.wrongDay.map(p => ({ name: p.name, day: p.day })),
+    });
+
+    const coverageBefore = coverageOf(itinerary.days);
+    const before = summarise(itinerary.days, coverageBefore);
+    const repairs = planRepairs({ days: itinerary.days, coverage: coverageBefore });
+    const repaired = [];
+
+    for (const [dayNumber, repair] of repairs) {
+      try {
+        const { days: fixed, usage } = await generateDaysBatch(
+          submission, [dayNumber], currencySymbol, submissionId, fsTips, repairRules(repair)
+        );
+        totalInputTokens += usage?.input_tokens || 0;
+        totalOutputTokens += usage?.output_tokens || 0;
+        const replacement = fixed?.[0];
+        if (!replacement || replacement.isFallback) continue; // keep the original rather than filler
+        replacement.dayNumber = dayNumber;
+        const idx = itinerary.days.findIndex(d => d.dayNumber === dayNumber);
+        if (idx >= 0) { itinerary.days[idx] = replacement; repaired.push({ day: dayNumber, reasons: repair.reasons }); }
+      } catch (err) {
+        log.warn('Validation repair failed — keeping original day', { submissionId, dayNumber, error: err.message });
+      }
     }
+
+    const coverageAfter = repaired.length ? coverageOf(itinerary.days) : coverageBefore;
+    const after = repaired.length ? summarise(itinerary.days, coverageAfter) : before;
+    itinerary.validation = { before, repaired, after };
+    if (submission.picksPlan.picks.length) {
+      itinerary.pickCoverage = {
+        picked: submission.picksPlan.picks.length,
+        included: submission.picksPlan.picks.length - coverageAfter.missing.length,
+        missing: after.missingPicks,
+        wrongDay: after.wrongDayPicks,
+      };
+    }
+    const clean = !after.duplicates.length && !after.missingPicks.length && !after.wrongDayPicks.length;
+    (clean ? log.info : log.warn)('Itinerary validation', {
+      submissionId,
+      issuesBefore: before.duplicates.length + before.missingPicks.length + before.wrongDayPicks.length,
+      repairedDays: repaired.map(r => r.day),
+      after,
+    });
 
     // Attach full venue objects to activities by matching venueName
     const allFoursquareVenues = await searchVenues(submission.destination, { limit: 50 });
