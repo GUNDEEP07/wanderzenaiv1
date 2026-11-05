@@ -90,3 +90,20 @@ test('rateLimitBody is client-safe and human readable', () => {
   assert.equal(body.code, 'RATE_LIMITED');
   assert.match(body.message, /2 minutes/);
 });
+
+test('creates the rate_limits table on first use when it is missing', async () => {
+  let tableExists = false;
+  let ddlRuns = 0;
+  const db = {
+    async query(sql, params) {
+      if (sql.includes('CREATE TABLE IF NOT EXISTS rate_limits')) { ddlRuns++; tableExists = true; return { rows: [] }; }
+      if (sql.startsWith('DELETE')) return { rows: [] };
+      if (!tableExists) { const e = new Error('relation "rate_limits" does not exist'); e.code = '42P01'; throw e; }
+      return { rows: [{ count: 1 }] };
+    },
+  };
+  assert.equal(await rl.checkRateLimit(db, 'submit', 'u:new', { nowMs: T0 }), null);
+  assert.equal(ddlRuns, 1);
+  assert.equal(await rl.checkRateLimit(db, 'submit', 'u:new', { nowMs: T0 }), null);
+  assert.equal(ddlRuns, 1, 'DDL runs once per container');
+});
