@@ -93,3 +93,14 @@ test('firstText tolerates odd shapes', () => {
   assert.equal(firstText({}), '');
   assert.equal(firstText(null), '');
 });
+
+test('firstText skips a leading thinking block (current models think adaptively)', () => {
+  const data = { content: [{ type: 'thinking', thinking: 'planning…', signature: 'x' }, { type: 'text', text: '{"days":[]}' }] };
+  assert.equal(firstText(data), '{"days":[]}');
+});
+
+test('MODELS defaults to the models in use before centralising', () => {
+  const { MODELS } = require(path.join(__dirname, '../../layers/shared/nodejs/claude.js'));
+  if (!process.env.CLAUDE_MODEL_FAST) assert.equal(MODELS.fast, 'claude-haiku-4-5-20251001');
+  if (!process.env.CLAUDE_MODEL_STRONG) assert.equal(MODELS.strong, 'claude-sonnet-4-6');
+});

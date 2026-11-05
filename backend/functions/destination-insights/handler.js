@@ -7,6 +7,7 @@ const require = createRequire(import.meta.url);
 const {
   getDB, optionalUser, checkRateLimit, userSubject, ipSubject, rateLimitBody,
 } = require('/opt/nodejs/index');
+const { MODELS, firstText } = require('/opt/nodejs/claude');
 
 // ── DB + API clients ──────────────────────────────────────────────────────────
 const pool = new Pool({
@@ -164,12 +165,12 @@ Destination: ${destination}. Travel styles: ${stylesText}. Dates: ${startDate} t
 Rules: exactly 3 thingsToDo, exactly 4 accommodation (styles: hotel/airbnb/homestay/surprise), all values concise. Real place names.`;
 
   const response = await anthropic.messages.create({
-    model: 'claude-haiku-4-5-20251001',
+    model: MODELS.fast,
     max_tokens: 2048,
     messages: [{ role: 'user', content: prompt }],
   });
 
-  const text = response.content[0].type === 'text' ? response.content[0].text : '';
+  const text = firstText(response);
   const match = text.match(/\{[\s\S]*\}/);
   if (!match) throw new Error(`Could not parse Claude response as JSON. Raw: ${text.slice(0, 200)}`);
   return JSON.parse(match[0]);

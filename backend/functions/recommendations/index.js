@@ -6,6 +6,7 @@ const {
   log, getDB, requireUser, optionalUser, AuthError, authErrorBody,
   checkRateLimit, userSubject, ipSubject, rateLimitBody,
 } = require('/opt/nodejs/index');
+const { MODELS, firstText } = require('/opt/nodejs/claude');
 
 const FOURSQUARE_API_KEY = process.env.FOURSQUARE_API_KEY;
 const FOURSQUARE_BASE = 'https://places-api.foursquare.com';
@@ -241,7 +242,7 @@ async function interpretNaturalQuery(query, destination) {
   try {
     const msg = await anthropic.messages.create(
       {
-        model: 'claude-haiku-4-5-20251001',
+        model: MODELS.fast,
         max_tokens: 256,
         messages: [{
           role: 'user',
@@ -250,7 +251,7 @@ async function interpretNaturalQuery(query, destination) {
       },
       { timeout: 5000 }
     );
-    const text = msg.content[0]?.text || '';
+    const text = firstText(msg);
     const match = text.match(/\{[\s\S]*\}/);
     if (match) return JSON.parse(match[0]);
   } catch {}
@@ -478,7 +479,7 @@ Rules:
     try {
       message = await anthropic.messages.create(
         {
-          model: 'claude-haiku-4-5-20251001',
+          model: MODELS.fast,
           max_tokens: 1024,
           messages: [{ role: 'user', content: prompt }],
         },
@@ -488,7 +489,7 @@ Rules:
       clearTimeout(timer);
     }
 
-    const text = message.content[0]?.type === 'text' ? message.content[0].text : '';
+    const text = firstText(message);
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     if (!jsonMatch) return [];
 
@@ -590,14 +591,14 @@ Return JSON array ONLY — no explanation:
     let message;
     try {
       message = await anthropic.messages.create(
-        { model: 'claude-haiku-4-5-20251001', max_tokens: 512, messages: [{ role: 'user', content: prompt }] },
+        { model: MODELS.fast, max_tokens: 512, messages: [{ role: 'user', content: prompt }] },
         { signal: controller.signal }
       );
     } finally {
       clearTimeout(timer);
     }
 
-    const text = message.content[0]?.text || '';
+    const text = firstText(message);
     const match = text.match(/\[[\s\S]*\]/);
     const recommendations = match ? JSON.parse(match[0]).slice(0, 3) : [];
 
@@ -738,13 +739,13 @@ Rules:
     let response;
     try {
       response = await anthropic.messages.create(
-        { model: 'claude-haiku-4-5-20251001', max_tokens: 400, system: systemPrompt, messages },
+        { model: MODELS.fast, max_tokens: 400, system: systemPrompt, messages },
         { signal: controller.signal }
       );
     } finally {
       clearTimeout(timer);
     }
-    const raw = response.content[0]?.text || '';
+    const raw = firstText(response);
 
     // Detect READY: signal — Claude has collected all trip details
     const readyMatch = raw.match(/^READY:(\{[\s\S]*\})\s*$/m);
@@ -851,14 +852,14 @@ Return JSON ONLY:
     let message;
     try {
       message = await anthropic.messages.create(
-        { model: 'claude-haiku-4-5-20251001', max_tokens: 800, messages: [{ role: 'user', content: prompt }] },
+        { model: MODELS.fast, max_tokens: 800, messages: [{ role: 'user', content: prompt }] },
         { signal: controller.signal }
       );
     } finally {
       clearTimeout(timer);
     }
 
-    const text = message.content[0]?.text || '';
+    const text = firstText(message);
     const match = text.match(/\[[\s\S]*\]/);
     const trending = match ? JSON.parse(match[0]).slice(0, 6) : [];
 
