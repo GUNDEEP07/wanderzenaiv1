@@ -6,7 +6,15 @@ const {
   log, getDB, requireUser, optionalUser, AuthError, authErrorBody,
   checkRateLimit, userSubject, ipSubject, rateLimitBody,
 } = require('/opt/nodejs/index');
-const { MODELS, firstText } = require('/opt/nodejs/claude');
+const { MODELS, firstText, withEffort, maxTokensFor } = require('/opt/nodejs/claude');
+const { searchPhoto, normaliseQuery } = require('./photos');
+
+/** Request body for a quick interactive call on the fast model: low effort, room to think. */
+const fastBody = (textTokens, rest) => withEffort({
+  model: MODELS.fast,
+  max_tokens: maxTokensFor(MODELS.fast, textTokens, { thinkingHeadroom: 1500 }),
+  ...rest,
+}, 'low');
 
 const FOURSQUARE_API_KEY = process.env.FOURSQUARE_API_KEY;
 const FOURSQUARE_BASE = 'https://places-api.foursquare.com';
@@ -63,7 +71,9 @@ exports.handler = async (event) => {
   log.info('Recommendations request', { path, method: event.httpMethod });
 
   try {
-    if (path.includes('/autocomplete')) {
+    if (path.includes('/photos/search')) {
+      return await handlePhotoSearch(event);
+    } else if (path.includes('/autocomplete')) {
       return await handleAutocomplete(event);
     } else if (path.includes('/venues')) {
       return await handleVenues(event);
@@ -89,6 +99,27 @@ exports.handler = async (event) => {
     };
   }
 };
+
+// ─── Unsplash photo search proxy (see photos.js) ─────────────────────────────
+async function handlePhotoSearch(event) {
+  const query = normaliseQuery(event.queryStringParameters?.query);
+  if (!query) return respond(400, { error: 'query must be 2–80 letters or numbers' }, event);
+
+  const limited = await rateLimitedResponse('photos', ipSubject(event), event);
+  if (limited) return limited;
+
+  try {
+    const { photo, cached } = await searchPhoto(query, {
+      db: getDB(), accessKey: process.env.UNSPLASH_ACCESS_KEY, log,
+    });
+    if (!cached) log.info('Unsplash photo search', { query, found: !!photo });
+    // Browsers and CloudFront may reuse the answer for a day.
+    return respond(200, { photo }, event, { 'Cache-Control': 'public, max-age=86400' });
+  } catch (err) {
+    log.warn('Photo search failed', { error: err.message });
+    return respond(200, { photo: null }, event); // the UI falls back to a stock photo
+  }
+}
 
 async function handleAutocomplete(event) {
   const query = event.queryStringParameters?.query || '';
@@ -241,14 +272,12 @@ async function interpretNaturalQuery(query, destination) {
   const safe = query.replace(/[\n\r`\\]/g, ' ').trim().slice(0, 200);
   try {
     const msg = await anthropic.messages.create(
-      {
-        model: MODELS.fast,
-        max_tokens: 256,
+      fastBody(256, {
         messages: [{
           role: 'user',
           content: `Extract the venue type from this search query for ${destination}: "${safe}"\nReturn JSON only: {"venueType": "...", "searchTerms": ["term1","term2"], "foursquareCategory": "restaurant|cafe|park|temple|museum|hiking_trail|viewpoint|market|bar|spa|beach|shopping"}`,
         }],
-      },
+      }),
       { timeout: 5000 }
     );
     const text = firstText(msg);
@@ -478,11 +507,7 @@ Rules:
     let message;
     try {
       message = await anthropic.messages.create(
-        {
-          model: MODELS.fast,
-          max_tokens: 1024,
-          messages: [{ role: 'user', content: prompt }],
-        },
+        fastBody(1024, { messages: [{ role: 'user', content: prompt }] }),
         { signal: controller.signal }
       );
     } finally {
@@ -591,7 +616,7 @@ Return JSON array ONLY — no explanation:
     let message;
     try {
       message = await anthropic.messages.create(
-        { model: MODELS.fast, max_tokens: 512, messages: [{ role: 'user', content: prompt }] },
+        fastBody(512, { messages: [{ role: 'user', content: prompt }] }),
         { signal: controller.signal }
       );
     } finally {
@@ -739,7 +764,7 @@ Rules:
     let response;
     try {
       response = await anthropic.messages.create(
-        { model: MODELS.fast, max_tokens: 400, system: systemPrompt, messages },
+        fastBody(400, { system: systemPrompt, messages }),
         { signal: controller.signal }
       );
     } finally {
@@ -852,7 +877,7 @@ Return JSON ONLY:
     let message;
     try {
       message = await anthropic.messages.create(
-        { model: MODELS.fast, max_tokens: 800, messages: [{ role: 'user', content: prompt }] },
+        fastBody(800, { messages: [{ role: 'user', content: prompt }] }),
         { signal: controller.signal }
       );
     } finally {

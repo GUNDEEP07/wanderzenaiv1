@@ -19,7 +19,7 @@ Module._load = function (request, ...rest) {
 };
 
 const { _internal } = require(path.join(__dirname, '../../functions/form-handler/stripe-webhook.js'));
-const { verifyStripeSignature, resolveAccount, fulfilCheckout } = _internal;
+const { verifyStripeSignature, resolveAccount, fulfilCheckout, renewMonthlyAllowance } = _internal;
 
 const SECRET = 'whsec_test_secret';
 const sign = (payload, t, secret = SECRET) =>
@@ -60,14 +60,29 @@ function fakeClient(users) {
         const u = users.find(x => x.firebase_uid === params[0]);
         return { rows: u ? [{ email: u.email }] : [] };
       }
+      if (sql.startsWith('INSERT INTO users') && sql.includes('monthly_remaining')) {
+        // Subscription start: plan subscriber, allowance SET (not added).
+        const [email, allowance, customer] = params;
+        const u = users.find(x => x.email === email);
+        if (u) Object.assign(u, { plan: 'subscriber', monthly_remaining: allowance, stripe_customer_id: customer ?? u.stripe_customer_id });
+        else users.push({ email, plan: 'subscriber', itineraries_remaining: 0, monthly_remaining: allowance, stripe_customer_id: customer });
+        return { rows: [] };
+      }
       if (sql.startsWith('INSERT INTO users')) {
-        const [email, plan, credits] = params;
+        // Single plan: credit added, a subscriber stays a subscriber.
+        const [email, credits, customer] = params;
         const u = users.find(x => x.email === email);
         if (u) {
-          u.plan = u.plan === 'subscriber' && plan === 'paid_once' ? 'subscriber' : plan;
+          u.plan = u.plan === 'subscriber' ? 'subscriber' : 'paid_once';
           u.itineraries_remaining += credits;
-        } else users.push({ email, plan, itineraries_remaining: credits });
+        } else users.push({ email, plan: 'paid_once', itineraries_remaining: credits, monthly_remaining: 0, stripe_customer_id: customer });
         return { rows: [] };
+      }
+      if (sql.startsWith('UPDATE users SET monthly_remaining')) {
+        const [allowance, customer] = params;
+        const hits = users.filter(x => x.stripe_customer_id === customer && x.plan === 'subscriber');
+        hits.forEach(u => { u.monthly_remaining = allowance; });
+        return { rows: [], rowCount: hits.length };
       }
       if (sql.includes('SELECT referred_by')) return { rows: [{}] };
       return { rows: [] };
@@ -106,6 +121,57 @@ test('a subscriber buying a single plan keeps the subscription and gains a credi
   await fulfilCheckout(fakeClient(users), { id: 'cs_3', mode: 'payment', payment_status: 'paid', client_reference_id: 'uidD' });
   assert.equal(users[0].plan, 'subscriber');
   assert.equal(users[0].itineraries_remaining, 1);
+});
+
+test('Wanderer checkout: plan subscriber with 5 for this month; purchased credits untouched', async () => {
+  const users = [{ email: 'e@example.com', firebase_uid: 'uidE', plan: 'paid_once', itineraries_remaining: 1, monthly_remaining: 0 }];
+  const r = await fulfilCheckout(fakeClient(users), {
+    id: 'cs_5', mode: 'subscription', payment_status: 'paid', client_reference_id: 'uidE', customer: 'cus_E', subscription: 'sub_E',
+  });
+  assert.equal(r.credits, 5);
+  assert.equal(users[0].plan, 'subscriber');
+  assert.equal(users[0].monthly_remaining, 5);
+  assert.equal(users[0].itineraries_remaining, 1, 'the Single Plan credit is kept');
+});
+
+test('a second subscription checkout sets the allowance, it does not stack', async () => {
+  const users = [{ email: 'f@example.com', firebase_uid: 'uidF', plan: 'subscriber', itineraries_remaining: 0, monthly_remaining: 2 }];
+  const session = { id: 'cs_6', mode: 'subscription', payment_status: 'paid', client_reference_id: 'uidF', customer: 'cus_F' };
+  await fulfilCheckout(fakeClient(users), session);
+  await fulfilCheckout(fakeClient(users), { ...session, id: 'cs_7' });
+  assert.equal(users[0].monthly_remaining, 5);
+});
+
+test('renewal (invoice.paid, subscription_cycle) resets the allowance to 5 — no rollover', async () => {
+  const users = [
+    { email: 'g@example.com', plan: 'subscriber', stripe_customer_id: 'cus_G', monthly_remaining: 1, itineraries_remaining: 2 },
+    { email: 'h@example.com', plan: 'subscriber', stripe_customer_id: 'cus_H', monthly_remaining: 0, itineraries_remaining: 0 },
+  ];
+  const r = await renewMonthlyAllowance(fakeClient(users), { id: 'in_1', billing_reason: 'subscription_cycle', customer: 'cus_G' });
+  assert.deepEqual(r, { renewed: true });
+  assert.equal(users[0].monthly_remaining, 5);
+  assert.equal(users[0].itineraries_remaining, 2, 'purchased credits untouched');
+  assert.equal(users[1].monthly_remaining, 0, 'other customers untouched');
+});
+
+test('invoice.paid that is not a renewal changes nothing (first invoice, plan change, one-off)', async () => {
+  const users = [{ email: 'i@example.com', plan: 'subscriber', stripe_customer_id: 'cus_I', monthly_remaining: 3 }];
+  for (const billing_reason of ['subscription_create', 'subscription_update', 'manual', undefined]) {
+    const r = await renewMonthlyAllowance(fakeClient(users), { id: 'in_2', billing_reason, customer: 'cus_I' });
+    assert.equal(r.renewed, false, String(billing_reason));
+  }
+  assert.equal(users[0].monthly_remaining, 3);
+});
+
+test('renewal for a cancelled (free) or unknown customer is reported, not applied', async () => {
+  const users = [{ email: 'j@example.com', plan: 'free', stripe_customer_id: 'cus_J', monthly_remaining: 0 }];
+  assert.deepEqual(await renewMonthlyAllowance(fakeClient(users), { id: 'in_3', billing_reason: 'subscription_cycle', customer: 'cus_J' }), { renewed: false, reason: 'no_account' });
+  assert.equal(users[0].monthly_remaining, 0);
+  assert.deepEqual(await renewMonthlyAllowance(fakeClient(users), { id: 'in_4', billing_reason: 'subscription_cycle' }), { renewed: false, reason: 'no_customer' });
+  // An expanded customer object also works.
+  users[0].plan = 'subscriber';
+  await renewMonthlyAllowance(fakeClient(users), { id: 'in_5', billing_reason: 'subscription_cycle', customer: { id: 'cus_J' } });
+  assert.equal(users[0].monthly_remaining, 5);
 });
 
 test('an unmatched paid checkout is reported, not thrown', async () => {

@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 const API_URL = import.meta.env.VITE_API_URL;
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getDestinationPhoto, getFallbackPhoto, useDestinationPhoto } from '../utils/destinationPhotos';
+import { getDestinationPhoto, getFallbackPhoto, useDestinationPhotoWithCredit } from '../utils/destinationPhotos';
+import { CreditedPhoto, PhotoCredit } from '../components/PhotoCredit';
 
 const CONTINENTS = [
   { id: 'asia', name: 'Asia', emoji: '🏯', tagline: 'Ancient temples, mountain villages, street food' },
@@ -92,17 +93,15 @@ const w40 = 'rgba(255,255,255,0.4)';
 const w08 = 'rgba(255,255,255,0.06)';
 
 function ThingPhoto({ name, keyword, style }) {
-  const src = useDestinationPhoto(name || '', keyword || '', 'thumb');
-  return <img src={src} alt={name} style={style} onError={e => { e.target.src = getFallbackPhoto('thumb'); }} />;
+  return <CreditedPhoto destination={name || ''} keyword={keyword || ''} size="thumb" alt={name} style={style} loading="eager" />;
 }
 
 function CountryPhoto({ name, style }) {
-  const src = useDestinationPhoto(name || '', '', 'card');
-  return <img src={src} alt={name} style={style} loading="lazy" onError={e => { e.target.src = getFallbackPhoto('card'); }} />;
+  return <CreditedPhoto destination={name || ''} size="card" alt={name} style={style} />;
 }
 
 function PersonalRecCard({ rec, onClick }) {
-  const src = useDestinationPhoto(rec.destination || '', '', 'card');
+  const { src, credit } = useDestinationPhotoWithCredit(rec.destination || '', '', 'card');
   return (
     <div onClick={onClick}
       style={{ borderRadius: 14, overflow: 'hidden', cursor: 'pointer', border: `1px solid ${border}`, background: navy3, transition: 'all 0.2s' }}
@@ -111,6 +110,7 @@ function PersonalRecCard({ rec, onClick }) {
       <div style={{ height: 120, position: 'relative', overflow: 'hidden' }}>
         <img src={src} alt={rec.destination} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={e => { e.target.src = getFallbackPhoto('card'); }} />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(10,15,30,0.9), transparent 60%)' }} />
+        <PhotoCredit credit={credit} />
         <div style={{ position: 'absolute', bottom: 8, left: 12, fontSize: 14, fontWeight: 700, color: '#fff' }}>{rec.destination?.split(',')[0]}</div>
       </div>
       <div style={{ padding: '10px 12px' }}>
@@ -122,7 +122,7 @@ function PersonalRecCard({ rec, onClick }) {
 }
 
 function TrendingCard({ t, onClick }) {
-  const src = useDestinationPhoto(t.dest || '', '', 'card');
+  const { src, credit } = useDestinationPhotoWithCredit(t.dest || '', '', 'card');
   return (
     <div
       onClick={onClick}
@@ -132,6 +132,7 @@ function TrendingCard({ t, onClick }) {
     >
       <img src={src} alt={t.dest} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} loading="lazy" onError={e => { e.target.src = getFallbackPhoto('card'); }} />
       <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(10,15,30,0.95) 0%, rgba(10,15,30,0.2) 60%, transparent 100%)' }} />
+      <PhotoCredit credit={credit} />
       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px 14px' }}>
         <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff', marginBottom: 3 }}>{t.dest}</div>
         <div style={{ fontSize: '0.7rem', color: teal, fontWeight: 600 }}>{t.trend}</div>

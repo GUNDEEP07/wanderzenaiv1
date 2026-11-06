@@ -7,7 +7,9 @@ const require = createRequire(import.meta.url);
 const {
   getDB, optionalUser, checkRateLimit, userSubject, ipSubject, rateLimitBody,
 } = require('/opt/nodejs/index');
-const { MODELS, firstText } = require('/opt/nodejs/claude');
+const { MODELS, firstText, withEffort, maxTokensFor } = require('/opt/nodejs/claude');
+const { searchVenues } = require('/opt/nodejs/venue-enrichment/foursquare');
+const { formatVenueChoices, groundThingsToDo } = require('/opt/nodejs/venue-enrichment/verified');
 
 // ── DB + API clients ──────────────────────────────────────────────────────────
 const pool = new Pool({
@@ -75,13 +77,9 @@ export async function handler(event) {
     console.warn('Cache read failed (non-fatal):', cacheErr.message);
   }
 
-  // ── 2. Generate with Claude ──────────────────────────────────────────────────
-  // There used to be a Foursquare-first path here, calling the legacy v3 API
-  // (api.foursquare.com/v3), which Foursquare shut down on May 15, 2026. Every request
-  // failed (up to three wasted HTTP calls) and fell through to Claude, so removing it
-  // changes nothing users see. It also returned no budget/accommodation estimates, which
-  // Step 2 needs. Mixing real venues from the shared places-api adapter into thingsToDo is
-  // a product decision — see Notion A5.
+  // ── 2. Generate with Claude, things to do grounded in Foursquare venues ─────
+  // Season, budget and stay estimates come from Claude (labelled as estimates in the UI);
+  // thingsToDo are chosen from real Foursquare places — see generateFromClaude.
   let insights = null;
   {
     // Public endpoint: cap Claude spend per caller (hashed IP, or uid when signed in).
@@ -134,9 +132,10 @@ async function getFromCache(destination, startDate, endDate, stylesKey) {
   );
   if (result.rows.length === 0) return null;
   const insights = result.rows[0].insights;
-  // Invalidate cache entries created before accommodation field was added
-  if (!insights.accommodation || insights.accommodation.length === 0) {
-    console.log(`Cache miss (stale — no accommodation): ${destination}`);
+  // Invalidate cache entries created before accommodation field was added, or before
+  // things to do were grounded in real places (no placesSource).
+  if (!insights.accommodation || insights.accommodation.length === 0 || !insights.placesSource) {
+    console.log(`Cache miss (stale entry): ${destination}`);
     return null;
   }
   return insights;
@@ -158,20 +157,39 @@ async function saveToCache(destination, startDate, endDate, stylesKey, insights)
 async function generateFromClaude(destination, travelStyles, startDate, endDate) {
   const stylesText = travelStyles.length > 0 ? travelStyles.join(', ') : 'general travel';
 
+  // Real places first (Foursquare Places API). Empty on any failure — Claude then
+  // suggests places itself and they are labelled as AI suggestions.
+  const venues = await searchVenues(destination, { limit: 20 });
+  const venueRule = venues.length
+    ? `\nthingsToDo: choose exactly 3 from this list of real places, copying "name" exactly as written. Prefer quiet nature, local and slow-travel spots over famous landmarks:\n${formatVenueChoices(venues)}\n`
+    : '\nthingsToDo: real place names only.\n';
+
   const prompt = `Travel expert. Return ONLY raw JSON, no markdown:
 {"bestMonths":["Jun","Jul"],"seasonalHighlights":"10 words max","weather":"10 words max","crowdLevel":"Peak|High|Moderate|Low","travelTip":"one tip","thingsToDo":[{"name":"Real place","category":"Nature","reason":"one sentence","emoji":"🏛️","visitorTip":"one insider tip","unsplashKeyword":"2-3 words"}],"accommodation":[{"type":"Eco-lodge","style":"homestay","priceRangePerNightUSD":{"low":35,"high":70},"description":"one sentence","searchKeyword":"eco lodge ${destination.toLowerCase()}"}],"budgetEstimateUSD":{"flightsLow":300,"flightsHigh":600,"accommodationPerNightLow":25,"accommodationPerNightHigh":120,"activitiesPerDayLow":20,"activitiesPerDayHigh":60,"cheaperMonths":["Apr","May"]}}
 
 Destination: ${destination}. Travel styles: ${stylesText}. Dates: ${startDate} to ${endDate}.
-Rules: exactly 3 thingsToDo, exactly 4 accommodation (styles: hotel/airbnb/homestay/surprise), all values concise. Real place names.`;
+Rules: exactly 3 thingsToDo, exactly 4 accommodation (styles: hotel/airbnb/homestay/surprise), all values concise.${venueRule}`;
 
-  const response = await anthropic.messages.create({
+  const response = await anthropic.messages.create(withEffort({
     model: MODELS.fast,
-    max_tokens: 2048,
+    max_tokens: maxTokensFor(MODELS.fast, 2048, { thinkingHeadroom: 1500 }),
     messages: [{ role: 'user', content: prompt }],
-  });
+  }, 'low'));
 
   const text = firstText(response);
   const match = text.match(/\{[\s\S]*\}/);
   if (!match) throw new Error(`Could not parse Claude response as JSON. Raw: ${text.slice(0, 200)}`);
-  return JSON.parse(match[0]);
+  const insights = JSON.parse(match[0]);
+
+  // Matched back in code: verified places get real name/address/map link; anything
+  // Claude invented is kept only as a labelled suggestion.
+  insights.thingsToDo = groundThingsToDo(insights.thingsToDo, venues, 3);
+  insights.placesSource = venues.length ? 'foursquare' : 'ai';
+  console.log(JSON.stringify({
+    level: 'INFO', msg: 'Insights things to do grounded', destination,
+    venuesOffered: venues.length,
+    verified: insights.thingsToDo.filter(t => t.verified).length,
+    suggestions: insights.thingsToDo.filter(t => !t.verified).length,
+  }));
+  return insights;
 }

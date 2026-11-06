@@ -3,7 +3,7 @@
 const { LambdaClient, InvokeCommand } = require('@aws-sdk/client-lambda');
 const { getDB, generateId, getCurrencySymbol, log, fetchFoursquareTips } = require('/opt/nodejs/index');
 const { searchVenues } = require('/opt/nodejs/venue-enrichment/foursquare');
-const { MODELS, createMessage, firstText } = require('/opt/nodejs/claude');
+const { MODELS, createMessage, firstText, withEffort, maxTokensFor } = require('/opt/nodejs/claude');
 const { findDuplicateVenues, planRepairs, repairRules } = require('./validate');
 const {
   planPicks, formatPicksForDays, formatPicksOverview, findMissingPicks,
@@ -79,18 +79,30 @@ const parseJSON = (raw) => {
 };
 
 // ─── CALL CLAUDE WITH RETRY ──────────────────────────────────────────────────
-const callClaude = async (systemPrompt, userPrompt, maxTokens, submissionId, attempt = 1) => {
-  log.info('Claude API call', { submissionId, maxTokens, attempt });
+// The itinerary is written by MODELS.strong (Opus by default). ITINERARY_EFFORT tunes
+// how much it thinks: higher = better plans, slower and more output tokens.
+const ITINERARY_EFFORT = process.env.CLAUDE_ITINERARY_EFFORT || 'medium';
+// Day batches run in parallel, this many at a time (Opus is slower than Haiku; a
+// 30-day trip run one batch at a time would not finish inside the Lambda timeout).
+const BATCH_CONCURRENCY = 4;
 
-  // Timeout + retry on 429/5xx/529/network errors (shared claude.js). Previously one
-  // overloaded response failed the whole itinerary.
-  const data = await createMessage({
-    model: MODELS.fast,
+/**
+ * @param {number} textTokens visible output needed; max_tokens adds thinking headroom
+ * @param {object} [opts] { effort, attempt }
+ */
+const callClaude = async (systemPrompt, userPrompt, textTokens, submissionId, { effort = ITINERARY_EFFORT, attempt = 1 } = {}) => {
+  const model = MODELS.strong;
+  const maxTokens = maxTokensFor(model, textTokens);
+  log.info('Claude API call', { submissionId, model, effort, maxTokens, attempt });
+
+  // Timeout + retry on 429/5xx/529/network errors (shared claude.js).
+  const data = await createMessage(withEffort({
+    model,
     max_tokens: maxTokens,
     system: systemPrompt,
     messages: [{ role: 'user', content: userPrompt }],
-  }, {
-    timeoutMs: 90000,
+  }, effort), {
+    timeoutMs: 240000,
     onRetry: (info) => log.warn('Claude call retrying', { submissionId, ...info }),
   });
   const raw = firstText(data);
@@ -103,14 +115,28 @@ const callClaude = async (systemPrompt, userPrompt, maxTokens, submissionId, att
     stopReason: data.stop_reason,
   });
 
-  // If stop_reason is max_tokens, response was cut off — retry with more tokens
+  // Cut off (thinking + text hit max_tokens): retry once with double the room.
   if (data.stop_reason === 'max_tokens' && attempt === 1) {
-    log.warn('Response truncated, retrying with higher token limit', { submissionId });
-    return callClaude(systemPrompt, userPrompt, Math.min(maxTokens + 2000, 8000), submissionId, 2);
+    log.warn('Response truncated, retrying with higher token limit', { submissionId, maxTokens });
+    return callClaude(systemPrompt, userPrompt, textTokens * 2, submissionId, { effort, attempt: 2 });
   }
 
   return { raw, usage: data.usage };
 };
+
+/** Run async tasks with at most `limit` in flight; results keep input order. */
+async function mapLimit(items, limit, fn) {
+  const results = new Array(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++;
+      results[i] = await fn(items[i], i);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
+}
 
 // ─── GENERATE META (title, summary, accommodation, tips) ────────────────────
 // Step 3 picks arrive as submission.picksPlan (see shared selected-venues.js).
@@ -191,9 +217,9 @@ Return ONLY a JSON object with a "days" array containing ${dayNumbers.length} da
   ]
 }`;
 
-  // 1800 tokens per day is comfortable for 3 days
-  const maxTokens = Math.min(1800 * dayNumbers.length + 400, 6000);
-  const { raw, usage } = await callClaude(SYSTEM_PROMPT, prompt, maxTokens, submissionId);
+  // ~1800 visible tokens per day; callClaude adds thinking headroom on 5.x models.
+  const textTokens = 1800 * dayNumbers.length + 400;
+  const { raw, usage } = await callClaude(SYSTEM_PROMPT, prompt, textTokens, submissionId);
 
   try {
     const parsed = parseJSON(raw);
@@ -204,23 +230,15 @@ Return ONLY a JSON object with a "days" array containing ${dayNumbers.length} da
   } catch (e) {
     log.error('Days batch parse failed', { submissionId, dayNumbers, raw: raw.substring(0, 400) });
 
-    // Retry this batch once with Sonnet for better reliability
-    log.info('Retrying batch with Sonnet', { submissionId, dayNumbers });
+    // Retry this batch once, thinking harder and with more room.
+    log.info('Retrying batch after parse failure', { submissionId, dayNumbers });
     try {
-      // Previously a raw fetch that never checked res.ok, so an API error surfaced as a
-      // confusing "cannot read content" failure.
-      const retryData = await createMessage({
-        model: MODELS.strong,
-        max_tokens: maxTokens + 1000,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: prompt }],
-      }, {
-        timeoutMs: 120000,
-        onRetry: (info) => log.warn('Sonnet retry call retrying', { submissionId, dayNumbers, ...info }),
-      });
-      const retryParsed = parseJSON(firstText(retryData));
+      const { raw: retryRaw, usage: retryUsage } = await callClaude(
+        SYSTEM_PROMPT, prompt, textTokens + 1000, submissionId, { effort: 'high', attempt: 2 }
+      );
+      const retryParsed = parseJSON(retryRaw);
       if (retryParsed.days && Array.isArray(retryParsed.days)) {
-        return { days: retryParsed.days, usage: retryData.usage };
+        return { days: retryParsed.days, usage: retryUsage };
       }
     } catch (retryErr) {
       log.error('Retry also failed', { submissionId, dayNumbers, error: retryErr.message });
@@ -340,36 +358,40 @@ exports.handler = async (event) => {
       log.info('Foursquare tips unavailable', { submissionId });
     }
 
-    // ── Generate meta (title, summary, accommodation, tips) ───────────────
-    log.info('Generating meta', { submissionId, destination: submission.destination });
-    const { data: meta, usage: metaUsage } = await generateMeta(submission, currencySymbol, submissionId, fsTips);
-    totalInputTokens += metaUsage?.input_tokens || 0;
-    totalOutputTokens += metaUsage?.output_tokens || 0;
-
-    // ── Generate days in batches of 3 ────────────────────────────────────
+    // ── Overview + days in batches of 3, in parallel ─────────────────────
+    // The overview and each batch are independent calls, so they run concurrently
+    // (BATCH_CONCURRENCY batches at a time) — needed for Opus to finish long trips in time.
     const totalDays = submission.days;
     const batchSize = 3;
-    const allDays = [];
-
+    const batches = [];
     for (let i = 1; i <= totalDays; i += batchSize) {
       const batchNums = [];
       for (let j = i; j < i + batchSize && j <= totalDays; j++) batchNums.push(j);
+      batches.push(batchNums);
+    }
 
-      log.info('Generating batch', { submissionId, days: batchNums });
-      const { days: batchDays, usage: batchUsage } = await generateDaysBatch(submission, batchNums, currencySymbol, submissionId, fsTips);
+    log.info('Generating overview and day batches', { submissionId, destination: submission.destination, batches: batches.length });
+    const [metaResult, batchResults] = await Promise.all([
+      generateMeta(submission, currencySymbol, submissionId, fsTips),
+      mapLimit(batches, BATCH_CONCURRENCY, (batchNums) => {
+        log.info('Generating batch', { submissionId, days: batchNums });
+        return generateDaysBatch(submission, batchNums, currencySymbol, submissionId, fsTips);
+      }),
+    ]);
 
+    const { data: meta, usage: metaUsage } = metaResult;
+    totalInputTokens += metaUsage?.input_tokens || 0;
+    totalOutputTokens += metaUsage?.output_tokens || 0;
+
+    const allDays = [];
+    batchResults.forEach(({ days: batchDays, usage: batchUsage }, b) => {
+      const batchNums = batches[b];
       // Ensure day numbers are correct
       batchDays.forEach((day, idx) => { day.dayNumber = batchNums[idx] || batchNums[0] + idx; });
       allDays.push(...batchDays);
-
       totalInputTokens += batchUsage?.input_tokens || 0;
       totalOutputTokens += batchUsage?.output_tokens || 0;
-
-      // Small delay between batches to avoid rate limits
-      if (i + batchSize <= totalDays) {
-        await new Promise(r => setTimeout(r, 500));
-      }
-    }
+    });
 
     // ── Merge everything ──────────────────────────────────────────────────
     let itinerary = {
@@ -393,22 +415,29 @@ exports.handler = async (event) => {
     const repairs = planRepairs({ days: itinerary.days, coverage: coverageBefore });
     const repaired = [];
 
-    for (const [dayNumber, repair] of repairs) {
+    // Repairs are independent single days (≤ MAX_REPAIR_DAYS) — run them together.
+    const repairResults = await Promise.all([...repairs].map(async ([dayNumber, repair]) => {
       try {
         const { days: fixed, usage } = await generateDaysBatch(
           submission, [dayNumber], currencySymbol, submissionId, fsTips, repairRules(repair)
         );
-        totalInputTokens += usage?.input_tokens || 0;
-        totalOutputTokens += usage?.output_tokens || 0;
-        const replacement = fixed?.[0];
-        if (!replacement || replacement.isFallback) continue; // keep the original rather than filler
-        replacement.dayNumber = dayNumber;
-        const idx = itinerary.days.findIndex(d => d.dayNumber === dayNumber);
-        if (idx >= 0) { itinerary.days[idx] = replacement; repaired.push({ day: dayNumber, reasons: repair.reasons }); }
+        return { dayNumber, repair, fixed, usage };
       } catch (err) {
         log.warn('Validation repair failed — keeping original day', { submissionId, dayNumber, error: err.message });
+        return null;
       }
+    }));
+    for (const r of repairResults) {
+      if (!r) continue;
+      totalInputTokens += r.usage?.input_tokens || 0;
+      totalOutputTokens += r.usage?.output_tokens || 0;
+      const replacement = r.fixed?.[0];
+      if (!replacement || replacement.isFallback) continue; // keep the original rather than filler
+      replacement.dayNumber = r.dayNumber;
+      const idx = itinerary.days.findIndex(d => d.dayNumber === r.dayNumber);
+      if (idx >= 0) { itinerary.days[idx] = replacement; repaired.push({ day: r.dayNumber, reasons: r.repair.reasons }); }
     }
+    repaired.sort((a, b) => a.day - b.day);
 
     const coverageAfter = repaired.length ? coverageOf(itinerary.days) : coverageBefore;
     const after = repaired.length ? summarise(itinerary.days, coverageAfter) : before;

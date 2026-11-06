@@ -27,8 +27,17 @@ AI-powered slow-travel itinerary SaaS. Live at wanderzenai.com. Solo-maintained.
 - Claude calls: model IDs come from `MODELS` in `backend/layers/shared/nodejs/claude.js`
   (template params `ClaudeModelFast` / `ClaudeModelStrong`); read response text with
   `firstText()`, never `content[0].text` (current models may return a thinking block first).
-- DB migrations: CI cannot reach RDS. New tables that code depends on create themselves on
-  first use (`rate_limits`, `stripe_events`); `infra/migrations/NNN_*.sql` document them.
+- Models: `ClaudeModelStrong` (Opus 5.5) writes the itinerary; `ClaudeModelFast` (Haiku 5.5)
+  handles preview/chat/insights. 5.x models reject `temperature`/`top_p`/`top_k` and prefill;
+  use `withEffort()` / `maxTokensFor()` from claude.js (max_tokens includes thinking).
+- DB migrations: CI cannot reach RDS. New tables/columns that code depends on create
+  themselves on first use (`rate_limits`, `stripe_events`, `photo_cache`,
+  `users.monthly_remaining`); `infra/migrations/NNN_*.sql` document them.
+- Plans: Wanderer = 5 itineraries per billing month (`users.monthly_remaining`, reset on Stripe
+  `invoice.paid` with `billing_reason=subscription_cycle`); purchased credits live in
+  `itineraries_remaining` and never expire. See `form-handler/subscription.js`.
+- Photos: Unsplash only through the backend `GET /photos/search` (key stays server-side, cached);
+  every API photo shows its credit via `components/PhotoCredit.jsx` (Unsplash API Guidelines).
 
 ## Coding conventions — FOLLOW THE EXISTING CODEBASE
 - Styling: s-object inline-style pattern + per-page CSS files. Do NOT introduce a new

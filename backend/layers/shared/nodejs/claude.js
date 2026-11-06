@@ -15,17 +15,50 @@
 /**
  * Model IDs in one place, overridable per deploy (template.yaml ClaudeModelFast /
  * ClaudeModelStrong → CLAUDE_MODEL_FAST / CLAUDE_MODEL_STRONG).
- *   fast   — itineraries, preview, chat, recommendations, insights
- *   strong — re-try of a day batch whose JSON failed to parse
- * Defaults are the models in use before this was centralised, so deploying this
- * changes nothing. Upgrading (Haiku 4.5 is past its earliest retirement date) is an
- * open decision — see Notion A3; current models can start with a thinking block,
- * which is why every caller reads text via firstText() rather than content[0].
+ *   strong — writes the itinerary (overview, day batches, Q3 repairs)
+ *   fast   — interactive calls: preview, chat, recommendations, insights
+ *
+ * Claude 5.x models (Opus 5.5, Haiku 5.5) always use adaptive thinking:
+ *   - a response can start with thinking blocks → read text via firstText(), never content[0]
+ *   - max_tokens caps thinking + text together → callers size it with maxTokensFor()
+ *   - temperature / top_p / top_k and a prefilled assistant turn are rejected → never send them
+ *   - depth is set with output_config.effort (low | medium | high | xhigh | max)
+ * Docs: https://platform.claude.com/docs/en/models/opus-5-5/migration-guide
  */
 const MODELS = Object.freeze({
-  fast: process.env.CLAUDE_MODEL_FAST || 'claude-haiku-4-5-20251001',
-  strong: process.env.CLAUDE_MODEL_STRONG || 'claude-sonnet-4-6',
+  fast: process.env.CLAUDE_MODEL_FAST || 'claude-haiku-5-5',
+  strong: process.env.CLAUDE_MODEL_STRONG || 'claude-opus-5-5',
 });
+
+const EFFORT_LEVELS = new Set(['low', 'medium', 'high', 'xhigh', 'max']);
+
+/** True for models that take output_config.effort and think adaptively (Claude 5.x and later). */
+function supportsEffort(model) {
+  return /^claude-(opus|sonnet|haiku)-([5-9]|\d{2,})(\b|-)/.test(String(model || '')) ||
+    /^claude-(fable|mythos)-/.test(String(model || ''));
+}
+
+/**
+ * Request body with an effort level added when the model supports it. Older models
+ * (e.g. a rollback to Haiku 4.5 via the template parameter) get the body unchanged,
+ * so they never see a parameter they would reject.
+ * @param {object} body Messages API request body
+ * @param {'low'|'medium'|'high'|'xhigh'|'max'} effort
+ */
+function withEffort(body, effort) {
+  if (!supportsEffort(body.model) || !EFFORT_LEVELS.has(effort)) return body;
+  return { ...body, output_config: { ...(body.output_config || {}), effort } };
+}
+
+/**
+ * max_tokens for a call that needs about `textTokens` of visible output. On thinking
+ * models the limit also covers thinking, so leave headroom (thinking tokens are billed
+ * as output only when used, so a higher cap costs nothing by itself).
+ */
+function maxTokensFor(model, textTokens, { thinkingHeadroom = 4000, cap = 64000 } = {}) {
+  if (!supportsEffort(model)) return textTokens;
+  return Math.min(Math.round(textTokens * 1.5) + thinkingHeadroom, cap);
+}
 
 const API_URL = 'https://api.anthropic.com/v1/messages';
 const API_VERSION = '2023-06-01';
@@ -110,10 +143,18 @@ async function createMessage(body, opts = {}) {
   throw lastError;
 }
 
-/** Text of the first text block, or '' */
+/**
+ * All text blocks of a response joined, or ''. Thinking blocks (which may come first,
+ * and are empty at the default display setting) are skipped.
+ */
 function firstText(data) {
-  const block = (data?.content || []).find(b => b?.type === 'text' || typeof b?.text === 'string');
-  return block?.text || '';
+  return (data?.content || [])
+    .filter(b => b?.type === 'text' && typeof b.text === 'string')
+    .map(b => b.text)
+    .join('');
 }
 
-module.exports = { MODELS, createMessage, firstText, ClaudeError, RETRYABLE_STATUS };
+module.exports = {
+  MODELS, createMessage, firstText, withEffort, maxTokensFor, supportsEffort,
+  ClaudeError, RETRYABLE_STATUS,
+};

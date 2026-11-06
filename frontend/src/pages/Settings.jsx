@@ -269,7 +269,7 @@ export default function Settings() {
                     {plan === 'subscriber' ? 'Wanderer Plan' : plan === 'paid_once' ? 'Single Trip' : 'Free Plan'}
                   </div>
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
-                    {plan === 'subscriber' ? 'Unlimited itineraries · priority generation'
+                    {plan === 'subscriber' ? '5 itineraries a month · priority generation'
                      : plan === 'paid_once' ? 'Extra itinerary purchased'
                      : '1 itinerary per month · PDF download included'}
                   </div>
@@ -313,7 +313,7 @@ export default function Settings() {
               <div style={s.planCard}>
                 <div>
                   <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>Wanderer &mdash; $9/mo</div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>Unlimited itineraries · priority generation</div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>5 itineraries a month · priority generation</div>
                 </div>
                 <a href={withCheckoutIdentity(import.meta.env.VITE_STRIPE_WANDERER_LINK, currentUser)} target="_blank" rel="noreferrer" onClick={() => analytics.upgradeClicked('wanderer', 'settings')}>
                   <button style={s.upgradeBtn}>Upgrade</button>

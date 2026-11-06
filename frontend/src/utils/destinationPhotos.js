@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 
 const BASE = 'https://images.unsplash.com';
-const UNSPLASH_KEY = import.meta.env.VITE_UNSPLASH_ACCESS_KEY || '';
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 const KNOWN_PHOTOS = {
   kyoto:      'photo-1493976040374-85c8e12f0c0e',
@@ -70,40 +70,58 @@ export function getFallbackPhoto(size = 'card') {
   return buildUrl(FALLBACK_ID, size);
 }
 
-// Async Unsplash search — caches results per keyword+size
-async function fetchFromUnsplash(query, size) {
-  if (!UNSPLASH_KEY || !query) return null;
-  const cacheKey = `${query.toLowerCase()}_${size}`;
-  if (_apiCache.has(cacheKey)) return _apiCache.get(cacheKey);
-
-  try {
-    const [w, h] = SIZES[size] || SIZES.card;
-    const res = await fetch(
-      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=1&orientation=landscape`,
-      { headers: { Authorization: `Client-ID ${UNSPLASH_KEY}` } }
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    const baseUrl = data.results?.[0]?.urls?.regular;
-    if (!baseUrl) return null;
-    const url = `${baseUrl}&w=${w}&h=${h}&fit=crop&q=70`;
-    _apiCache.set(cacheKey, url);
-    return url;
-  } catch {
-    return null;
-  }
+/**
+ * Unsplash search via our backend (GET /photos/search). The Access Key stays on the
+ * server, results are cached there for 30 days, and each photo comes with the
+ * photographer credit the Unsplash API Guidelines require us to show (PhotoCredit.jsx).
+ * One request per query per page load: in-flight requests are shared.
+ * @returns {Promise<{ url, photographer, photographerUrl, unsplashUrl } | null>}
+ */
+function fetchPhoto(query) {
+  const key = query.toLowerCase();
+  if (_apiCache.has(key)) return _apiCache.get(key);
+  const p = (async () => {
+    if (!API_URL) return null;
+    try {
+      const res = await fetch(`${API_URL}/photos/search?query=${encodeURIComponent(key)}`);
+      if (!res.ok) return null;
+      const { photo } = await res.json();
+      return photo?.url ? photo : null;
+    } catch {
+      return null;
+    }
+  })();
+  _apiCache.set(key, p);
+  return p;
 }
 
-// React hook — returns sync fallback immediately, upgrades to Unsplash URL once fetched
-export function useDestinationPhoto(destination = '', keyword = '', size = 'card') {
-  const [src, setSrc] = useState(() => getDestinationPhoto(destination, keyword, size));
+function sizedUrl(url, size) {
+  const [w, h] = SIZES[size] || SIZES.card;
+  return `${url}${url.includes('?') ? '&' : '?'}w=${w}&h=${h}&fit=crop&q=70`;
+}
+
+/**
+ * React hook — returns a stock photo immediately, then the matching Unsplash photo and
+ * its credit once fetched. credit is null while showing a stock photo.
+ */
+export function useDestinationPhotoWithCredit(destination = '', keyword = '', size = 'card') {
+  const [state, setState] = useState(() => ({ src: getDestinationPhoto(destination, keyword, size), credit: null }));
 
   useEffect(() => {
-    setSrc(getDestinationPhoto(destination, keyword, size));
+    let alive = true;
+    setState({ src: getDestinationPhoto(destination, keyword, size), credit: null });
     const query = keyword || destination.split(',')[0].trim();
-    if (!query) return;
-    fetchFromUnsplash(query, size).then(url => { if (url) setSrc(url); });
+    if (!query) return undefined;
+    fetchPhoto(query).then(photo => {
+      if (alive && photo) setState({ src: sizedUrl(photo.url, size), credit: photo });
+    });
+    return () => { alive = false; };
   }, [destination, keyword, size]);
 
-  return src;
+  return state;
+}
+
+/** Same, URL only (for places that cannot show a credit — prefer the hook above). */
+export function useDestinationPhoto(destination = '', keyword = '', size = 'card') {
+  return useDestinationPhotoWithCredit(destination, keyword, size).src;
 }

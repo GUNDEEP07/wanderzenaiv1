@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useDestinationPhoto, getFallbackPhoto } from '../../../utils/destinationPhotos';
+import { CreditedPhoto } from '../../PhotoCredit';
 
 const USD_RATES = { USD:1, EUR:1.09, GBP:1.28, INR:0.012, AUD:0.65, CAD:0.72, SGD:0.74, JPY:0.0065 };
 const SYMBOLS = { USD:'$', EUR:'€', GBP:'£', INR:'₹', AUD:'A$', CAD:'C$', SGD:'S$', JPY:'¥' };
@@ -12,8 +12,7 @@ function fmt(amount, currency) {
 }
 
 function AccomPhoto({ keyword, destination, style }) {
-  const src = useDestinationPhoto('', keyword || destination || '', 'card');
-  return <img src={src} alt={keyword} loading="lazy" style={style} onError={e => { e.target.src = getFallbackPhoto('card'); }} />;
+  return <CreditedPhoto keyword={keyword || destination || ''} size="card" alt={keyword} style={style} />;
 }
 
 const TYPE_OPTIONS = [
