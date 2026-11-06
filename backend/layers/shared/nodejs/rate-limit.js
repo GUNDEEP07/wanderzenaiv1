@@ -31,6 +31,8 @@ const DEFAULT_LIMITS = Object.freeze({
   aiVenues:     [{ limit: 60, windowSeconds: 3600 }],
   // Public, Unsplash-backed (cached) — a page can show ~20 photos
   photos:       [{ limit: 300, windowSeconds: 3600 }],
+  // Public, YouTube-backed (cached; the API allows ~100 uncached searches a day)
+  videos:       [{ limit: 60, windowSeconds: 3600 }],
 });
 
 const PRUNE_PROBABILITY = 0.01;

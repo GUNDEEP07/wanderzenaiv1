@@ -85,6 +85,11 @@ Parameters:
     NoEcho: true
     Default: ''
     Description: Unsplash Access Key, used only by the backend photo proxy (GET /photos/search). Empty = stock fallback photos.
+  YoutubeApiKey:
+    Type: String
+    NoEcho: true
+    Default: ''
+    Description: YouTube Data API key, used only by the backend video proxy (GET /videos/search). Empty = no videos shown.
   FoursquareEnabled:
     Type: String
     Default: 'true'
@@ -366,12 +371,19 @@ Resources:
           ALLOWED_ORIGINS: !Ref AllowedOrigins
           CLAUDE_API_KEY: !Ref ClaudeApiKey
           UNSPLASH_ACCESS_KEY: !Ref UnsplashAccessKey
+          YOUTUBE_API_KEY: !Ref YoutubeApiKey
       Events:
         GetPhotoSearch:
           Type: Api
           Properties:
             RestApiId: !Ref WanderZenApi
             Path: /photos/search
+            Method: GET
+        GetVideoSearch:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /videos/search
             Method: GET
         GetAutocomplete:
           Type: Api
