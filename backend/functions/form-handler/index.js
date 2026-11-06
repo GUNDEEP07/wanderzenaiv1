@@ -222,7 +222,8 @@ async function handleSubmit(event, db, user) {
     await lambda.send(new InvokeCommand({
       FunctionName: `wanderzenai-itinerary-gen-${process.env.STAGE}`,
       InvocationType: 'Event', // async — fire and forget
-      Payload: Buffer.from(JSON.stringify({ submissionId, isPaid })),
+      // creditSource tells the generator what to give back if generation fails.
+      Payload: Buffer.from(JSON.stringify({ submissionId, isPaid, creditSource: entitlement.source || null })),
     }));
 
     log.info('Itinerary generation triggered', { submissionId });
@@ -280,7 +281,8 @@ async function decideEntitlement(db, email) {
 
   const usageResult = await db.query(
     `SELECT COUNT(*) as count FROM submissions
-     WHERE email = $1 AND created_at > NOW() - INTERVAL '30 days' AND plan = 'free'`,
+     WHERE email = $1 AND created_at > NOW() - INTERVAL '30 days' AND plan = 'free'
+       AND status <> 'failed'`, // a failed generation doesn't use up the free itinerary
     [email]
   );
   if (parseInt(usageResult.rows[0].count, 10) < 1) return { allowed: true, isPaid: false, reason: 'free_monthly', consumedCredit: false };
