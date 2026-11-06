@@ -105,6 +105,11 @@ jobs:
           # Add a repo secret YOUTUBE_API_KEY to switch videos on (empty = no videos).
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
         run: |
+          # Optional keys: sam rejects "Key=" with an empty value, so they are only
+          # passed when the secret exists (otherwise the template default '' applies).
+          OPTIONAL=()
+          [ -n "${UNSPLASH_ACCESS_KEY}" ] && OPTIONAL+=("UnsplashAccessKey=${UNSPLASH_ACCESS_KEY}")
+          [ -n "${YOUTUBE_API_KEY}" ] && OPTIONAL+=("YoutubeApiKey=${YOUTUBE_API_KEY}")
           sam deploy \
             --stack-name ${{ env.STACK_NAME }} \
             --region ${{ env.AWS_REGION }} \
@@ -127,11 +132,10 @@ jobs:
               "FrontendUrl=${FRONTEND_URL}" \
               "FoursquareApiKey=${FOURSQUARE_API_KEY}" \
               "FirebaseProjectId=wanderzenai-9c343" \
-              "UnsplashAccessKey=${UNSPLASH_ACCESS_KEY}" \
-              "YoutubeApiKey=${YOUTUBE_API_KEY}" \
               "ClaudeModelFast=claude-haiku-5-5" \
               "ClaudeModelStrong=claude-opus-5-5" \
-              "ClaudeItineraryEffort=medium"
+              "ClaudeItineraryEffort=medium" \
+              "${OPTIONAL[@]}"
 
       - name: Get stack outputs
         id: get-outputs
