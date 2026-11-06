@@ -31,6 +31,7 @@ Globals:
         # Read by backend/layers/shared/nodejs/claude.js (MODELS).
         CLAUDE_MODEL_FAST: !Ref ClaudeModelFast
         CLAUDE_MODEL_STRONG: !Ref ClaudeModelStrong
+        CLAUDE_ITINERARY_EFFORT: !Ref ClaudeItineraryEffort
 
     Layers:
       - !Ref SharedLayer
@@ -79,6 +80,11 @@ Parameters:
     NoEcho: true
     Default: ''
     Description: Foursquare Places API key for local venue enrichment
+  UnsplashAccessKey:
+    Type: String
+    NoEcho: true
+    Default: ''
+    Description: Unsplash Access Key, used only by the backend photo proxy (GET /photos/search). Empty = stock fallback photos.
   FoursquareEnabled:
     Type: String
     Default: 'true'
@@ -101,14 +107,19 @@ Parameters:
     Description: Reject ID tokens whose email is unverified. Only set 'false' as a temporary rollback.
   ClaudeModelFast:
     Type: String
-    Default: 'claude-haiku-4-5-20251001'
+    Default: 'claude-haiku-5-5'
     AllowedPattern: '^claude-[a-z0-9.-]+$'
-    Description: Model for itineraries, preview, chat, recommendations and insights (see Notion A3 before changing).
+    Description: Model for quick interactive calls — preview, chat, recommendations, destination insights.
   ClaudeModelStrong:
     Type: String
-    Default: 'claude-sonnet-4-6'
+    Default: 'claude-opus-5-5'
     AllowedPattern: '^claude-[a-z0-9.-]+$'
-    Description: Model used to re-try a day batch whose JSON could not be parsed.
+    Description: Model that writes the itinerary (overview, day batches, validation repairs).
+  ClaudeItineraryEffort:
+    Type: String
+    Default: 'medium'
+    AllowedValues: ['low', 'medium', 'high', 'xhigh', 'max']
+    Description: How hard the itinerary model thinks (5.x models only). Higher = better plans, slower and more output tokens.
   AllowedOrigins:
     Type: String
     Default: 'https://www.wanderzenai.com,http://localhost:5173,https://localhost:5173,https://web.postman.co'
@@ -232,7 +243,9 @@ Resources:
       FunctionName: !Sub wanderzenai-itinerary-gen-${Stage}
       CodeUri: ../backend/functions/itinerary-gen
       Handler: index.handler
-      Timeout: 300
+      # Opus writes day batches in parallel; long trips plus validation repairs can take
+      # several minutes. 900 s is the Lambda maximum.
+      Timeout: 900
       MemorySize: 1024
       Description: Calls Claude API with slow-travel prompt, parses structured JSON, stores itinerary
       Policies:
@@ -348,7 +361,14 @@ Resources:
           FRONTEND_URL: !Ref FrontendUrl
           ALLOWED_ORIGINS: !Ref AllowedOrigins
           CLAUDE_API_KEY: !Ref ClaudeApiKey
+          UNSPLASH_ACCESS_KEY: !Ref UnsplashAccessKey
       Events:
+        GetPhotoSearch:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /photos/search
+            Method: GET
         GetAutocomplete:
           Type: Api
           Properties:

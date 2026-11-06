@@ -6,7 +6,8 @@ const {
   requireUser, AuthError, authFailure, checkRateLimit, userSubject, tooManyRequests,
 } = require('/opt/nodejs/index');
 const { sanitizeSelectedVenues } = require('/opt/nodejs/selected-venues');
-const { MODELS, createMessage, firstText } = require('/opt/nodejs/claude');
+const { MODELS, createMessage, firstText, withEffort, maxTokensFor } = require('/opt/nodejs/claude');
+const { SUBSCRIPTION_MONTHLY_ITINERARIES, withMonthlyColumn } = require('./subscription');
 
 const lambda = new LambdaClient({ region: process.env.AWS_REGION || 'ap-southeast-2' });
 
@@ -82,11 +83,11 @@ No activity detail. Titles and atmosphere only. Exactly ${days} items.`;
 
   try {
     // The user is waiting on this one: short timeout, one retry.
-    const claudeData = await createMessage({
+    const claudeData = await createMessage(withEffort({
       model: MODELS.fast,
-      max_tokens: 1024,
+      max_tokens: maxTokensFor(MODELS.fast, 1024, { thinkingHeadroom: 1500 }),
       messages: [{ role: 'user', content: previewPrompt }],
-    }, {
+    }, 'low'), {
       timeoutMs: 15000,
       maxAttempts: 2,
       onRetry: (info) => log.warn('Preview Claude call retrying', info),
@@ -183,12 +184,7 @@ async function handleSubmit(event, db, user) {
           'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': process.env.FRONTEND_URL,
         },
-        body: JSON.stringify({
-          success: false,
-          message: 'Free tier limit reached',
-          upgradeUrl: `${process.env.FRONTEND_URL}/pricing`,
-          code: 'FREE_TIER_EXHAUSTED',
-        }),
+        body: JSON.stringify(limitReachedBody(entitlement.reason)),
       };
     }
 
@@ -233,29 +229,38 @@ async function handleSubmit(event, db, user) {
 
     return ok({
       submissionId,
-      message: 'Your itinerary is being crafted. Check your email in 2–3 minutes.',
-      estimatedTime: '2-3 minutes',
+      message: 'Your itinerary is being crafted. Check your email in about 5 minutes.',
+      estimatedTime: 'about 5 minutes',
     });
   } catch (err) {
     log.error('Form handler error', { error: err.message, submissionId });
-    if (entitlement?.consumedCredit) await refundCredit(db, email, submissionId);
+    if (entitlement?.consumedCredit) await refundCredit(db, email, submissionId, entitlement.source);
     return serverError('Failed to process submission. Please try again.');
   }
 }
 
 // ─── Entitlement ─────────────────────────────────────────────────────────────
 // Order of precedence for who may generate an itinerary:
-//   1. test account               → allowed, recorded as paid
-//   2. a purchased/referral credit → consumed atomically, recorded as paid
-//      (Single Plan = "1 premium itinerary"; referral rewards are +1 credit)
-//   3. subscriber                 → allowed, recorded as paid (unlimited for now —
-//                                   "5/month vs unlimited" is an open pricing decision)
-//   4. the monthly free itinerary  → recorded as free
-// Previously plan 'paid_once' alone meant "paid" and credits were never consumed, so a
-// single $7 purchase allowed unlimited itineraries and referral credits did nothing.
+//   1. test account                 → allowed, recorded as paid
+//   2. Wanderer monthly allowance   → 5 per billing month (see subscription.js), spent
+//                                     first because unused ones expire at renewal
+//   3. a purchased/referral credit  → never expires (Single Plan = 1; referral = +1)
+//   4. the monthly free itinerary   → free-plan users only, recorded as free
+// Each paid source is decremented atomically (UPDATE … WHERE … > 0 RETURNING), so
+// parallel submits can never spend more than the user has.
 async function decideEntitlement(db, email) {
   const testResult = await db.query(`SELECT 1 FROM test_accounts WHERE email = $1`, [email]);
   if (testResult.rows.length) return { allowed: true, isPaid: true, reason: 'test_account', consumedCredit: false };
+
+  const monthly = await withMonthlyColumn(db, (d) => d.query(
+    `UPDATE users SET monthly_remaining = monthly_remaining - 1, updated_at = NOW()
+     WHERE email = $1 AND plan = 'subscriber' AND monthly_remaining > 0
+     RETURNING monthly_remaining`,
+    [email]
+  ));
+  if (monthly.rows.length) {
+    return { allowed: true, isPaid: true, reason: 'subscriber_monthly', consumedCredit: true, source: 'monthly', creditsLeft: monthly.rows[0].monthly_remaining };
+  }
 
   const credit = await db.query(
     `UPDATE users SET itineraries_remaining = itineraries_remaining - 1, updated_at = NOW()
@@ -264,11 +269,14 @@ async function decideEntitlement(db, email) {
     [email]
   );
   if (credit.rows.length) {
-    return { allowed: true, isPaid: true, reason: 'credit', consumedCredit: true, creditsLeft: credit.rows[0].itineraries_remaining };
+    return { allowed: true, isPaid: true, reason: 'credit', consumedCredit: true, source: 'credit', creditsLeft: credit.rows[0].itineraries_remaining };
   }
 
   const userResult = await db.query(`SELECT plan FROM users WHERE email = $1`, [email]);
-  if (userResult.rows[0]?.plan === 'subscriber') return { allowed: true, isPaid: true, reason: 'subscriber', consumedCredit: false };
+  if (userResult.rows[0]?.plan === 'subscriber') {
+    // The 5 already include the free one, so subscribers don't also get the free tier.
+    return { allowed: false, isPaid: false, reason: 'monthly_limit', consumedCredit: false };
+  }
 
   const usageResult = await db.query(
     `SELECT COUNT(*) as count FROM submissions
@@ -280,17 +288,36 @@ async function decideEntitlement(db, email) {
   return { allowed: false, isPaid: false, reason: 'exhausted', consumedCredit: false };
 }
 
-/** Give back a credit taken for a submission that was never stored. Best effort. */
-async function refundCredit(db, email, submissionId) {
+/** Give back what was taken for a submission that was never stored. Best effort. */
+async function refundCredit(db, email, submissionId, source = 'credit') {
+  const column = source === 'monthly' ? 'monthly_remaining' : 'itineraries_remaining';
   try {
     await db.query(
-      `UPDATE users SET itineraries_remaining = itineraries_remaining + 1, updated_at = NOW() WHERE email = $1`,
+      `UPDATE users SET ${column} = ${column} + 1, updated_at = NOW() WHERE email = $1`,
       [email]
     );
-    log.info('Credit refunded after failed submission', { submissionId });
+    log.info('Credit refunded after failed submission', { submissionId, source });
   } catch (err) {
-    log.error('Credit refund failed', { submissionId, error: err.message });
+    log.error('Credit refund failed', { submissionId, source, error: err.message });
   }
+}
+
+/** 402 body: which limit was hit decides what the frontend offers next. */
+function limitReachedBody(reason) {
+  if (reason === 'monthly_limit') {
+    return {
+      success: false,
+      message: `You've used your ${SUBSCRIPTION_MONTHLY_ITINERARIES} itineraries this month. They reset on your next billing date.`,
+      upgradeUrl: `${process.env.FRONTEND_URL}/pricing`,
+      code: 'MONTHLY_LIMIT_REACHED',
+    };
+  }
+  return {
+    success: false,
+    message: 'Free tier limit reached',
+    upgradeUrl: `${process.env.FRONTEND_URL}/pricing`,
+    code: 'FREE_TIER_EXHAUSTED',
+  };
 }
 
 exports.handler = async (event) => {
@@ -321,4 +348,4 @@ exports.handler = async (event) => {
 };
 
 // Exported for unit tests.
-exports._internal = { validatePreviewInput, decideEntitlement };
+exports._internal = { validatePreviewInput, decideEntitlement, refundCredit, limitReachedBody };

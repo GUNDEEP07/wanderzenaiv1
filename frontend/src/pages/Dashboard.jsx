@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useDestinationPhoto, getFallbackPhoto } from '../utils/destinationPhotos';
+import { useDestinationPhotoWithCredit, getFallbackPhoto } from '../utils/destinationPhotos';
+import { PhotoCredit } from '../components/PhotoCredit';
 import { TravelChat } from '../components/TravelChat';
 import './Dashboard.css';
 
@@ -107,11 +108,12 @@ function recCardGradient(i) {
 }
 
 function DestPhoto({ destination, height = 130, children }) {
-  const src = useDestinationPhoto(destination || '', '', 'card');
+  const { src, credit } = useDestinationPhotoWithCredit(destination || '', '', 'card');
   return (
     <div style={{ height, position: 'relative', overflow: 'hidden' }}>
       <img src={src} alt={destination} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.src = getFallbackPhoto('card'); }} />
       {children}
+      <PhotoCredit credit={credit} />
     </div>
   );
 }

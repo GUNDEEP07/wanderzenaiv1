@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { fetchDestinationInsights } from '../../../api/destinationInsights';
 import { DayList } from './DayList';
-import { useDestinationPhoto, getFallbackPhoto } from '../../../utils/destinationPhotos';
+import { CreditedPhoto } from '../../PhotoCredit';
 
 const CATEGORY_COLOURS = {
   'Food':      'rgba(251,146,60,0.5)',
@@ -15,8 +15,7 @@ const CATEGORY_COLOURS = {
 };
 
 function VenuePhoto({ keyword, style }) {
-  const src = useDestinationPhoto('', keyword || '', 'card');
-  return <img src={src} alt={keyword} loading="lazy" style={style} onError={e => { e.target.src = getFallbackPhoto('card'); }} />;
+  return <CreditedPhoto keyword={keyword || ''} size="card" alt={keyword} style={style} />;
 }
 
 export function DestinationInsightsPanel({
@@ -188,6 +187,22 @@ export function DestinationInsightsPanel({
                         height: 3, borderRadius: 2, marginBottom: 10,
                         background: CATEGORY_COLOURS[thing.category] || 'rgba(0,212,170,0.4)',
                       }} />
+
+                      {/* Source: real place (Foursquare) vs AI suggestion */}
+                      {(thing.verified || thing.source === 'ai_suggestion') && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 10, marginBottom: 8 }}>
+                          {thing.verified ? (
+                            <span style={{ color: '#00d4aa', fontWeight: 700 }}>✓ Real place · Foursquare</span>
+                          ) : (
+                            <span style={{ color: 'rgba(255,255,255,0.45)' }}>AI suggestion — check before you go</span>
+                          )}
+                          {thing.mapsUrl && (
+                            <a href={thing.mapsUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa' }}>
+                              View on map
+                            </a>
+                          )}
+                        </div>
+                      )}
 
                       {/* Why visit */}
                       {thing.reason && (

@@ -82,7 +82,7 @@ const PLANS = [
 ];
 
 const FAQS = [
-  { q: 'How long does it take?', a: 'Your itinerary is generated and emailed within 2–3 minutes of submitting the form. No waiting around.' },
+  { q: 'How long does it take?', a: 'Your itinerary is generated and emailed about 5 minutes after you submit the form.' },
   { q: 'What format is the itinerary?', a: 'A beautifully designed PDF — print-ready with day cards, hidden gems, local food picks and cost breakdown.' },
   { q: 'Can I request any destination?', a: 'Yes — any city, region or country worldwide. The more specific your interests, the better the plan.' },
   { q: 'What makes this different?', a: 'We avoid tourist traps by design. Every plan includes hidden gems, local eats and off-the-beaten-path stays that most guides never mention.' },
@@ -127,6 +127,28 @@ export default function Pricing() {
       </nav>
 
       <div style={s.inner}>
+        {reason === 'monthly_limit' && (
+          <div style={{
+            background: 'linear-gradient(135deg,rgba(0,212,170,0.1),rgba(0,168,126,0.06))',
+            border: '1px solid rgba(0,212,170,0.3)',
+            borderRadius: 16,
+            padding: '24px 28px',
+            marginBottom: 40,
+          }}>
+            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#00d4aa', marginBottom: 8 }}>
+              Monthly limit reached
+            </div>
+            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 900, color: '#fff', marginBottom: 6, lineHeight: 1.2 }}>
+              You've used this month's 5 Wanderer itineraries
+            </div>
+            <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', lineHeight: 1.6 }}>
+              They reset on your next billing date. Need one sooner? The Single Plan adds one
+              itinerary that never expires — your {location.state?.destination || 'next destination'} itinerary
+              can generate straight after.
+            </div>
+          </div>
+        )}
+
         {reason === 'free_limit' && (
           <div style={{
             background: 'linear-gradient(135deg,rgba(0,212,170,0.1),rgba(0,168,126,0.06))',
@@ -148,10 +170,10 @@ export default function Pricing() {
             </div>
             <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', marginBottom: 18, lineHeight: 1.6 }}>
               You've used your free itinerary this month.
-              Upgrade to unlock unlimited trips — your {location.state?.destination || 'next destination'} itinerary will generate immediately after.
+              Upgrade to Wanderer for 5 itineraries a month — your {location.state?.destination || 'next destination'} itinerary will generate immediately after.
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              {['Unlimited itineraries', 'Priority generation', 'All destinations', 'Keep all PDFs'].map(f => (
+              {['5 itineraries a month', 'Priority generation', 'All destinations', 'Keep all PDFs'].map(f => (
                 <span key={f} style={{ padding: '5px 12px', background: 'rgba(0,212,170,0.1)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 20, fontSize: 12, fontWeight: 600, color: '#00d4aa' }}>
                   ✓ {f}
                 </span>

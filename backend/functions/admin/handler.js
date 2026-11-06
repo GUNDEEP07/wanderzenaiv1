@@ -87,7 +87,7 @@ export async function handler(event) {
         pool.query(`SELECT COUNT(*) FROM submissions WHERE created_at >= date_trunc('month', NOW())`),
         pool.query(`SELECT COUNT(DISTINCT email) FROM submissions WHERE created_at > NOW() - INTERVAL '30 days'`),
         pool.query(`SELECT ROUND(100.0 * SUM(CASE WHEN status='email_sent' THEN 1 ELSE 0 END) / NULLIF(COUNT(*),0), 1) as rate FROM submissions`),
-        pool.query(`SELECT ROUND(COALESCE(SUM(claude_input_tokens)*3.0/1000000 + SUM(claude_output_tokens)*15.0/1000000, 0), 2) as cost FROM itineraries WHERE created_at >= date_trunc('month', NOW())`),
+        pool.query(`SELECT ROUND(COALESCE(SUM(claude_input_tokens)*4.0/1000000 + SUM(claude_output_tokens)*20.0/1000000, 0), 2) as cost FROM itineraries WHERE created_at >= date_trunc('month', NOW())`),
         pool.query(`SELECT ROUND(AVG(rating),1) as avg FROM feedback`),
       ]);
       return { statusCode: 200, headers: CORS, body: JSON.stringify({
@@ -130,7 +130,7 @@ export async function handler(event) {
 
     if (path === '/charts/tokens' && method === 'GET') {
       const result = await pool.query(
-        `SELECT DATE_TRUNC('month', created_at)::text as month, SUM(claude_input_tokens)::int as input_tokens, SUM(claude_output_tokens)::int as output_tokens, ROUND(SUM(claude_input_tokens)*3.0/1000000, 4) as input_cost_usd, ROUND(SUM(claude_output_tokens)*15.0/1000000, 4) as output_cost_usd, COUNT(*)::int as itineraries FROM itineraries WHERE created_at >= NOW() - INTERVAL '12 months' GROUP BY DATE_TRUNC('month', created_at) ORDER BY month`
+        `SELECT DATE_TRUNC('month', created_at)::text as month, SUM(claude_input_tokens)::int as input_tokens, SUM(claude_output_tokens)::int as output_tokens, ROUND(SUM(claude_input_tokens)*4.0/1000000, 4) as input_cost_usd, ROUND(SUM(claude_output_tokens)*20.0/1000000, 4) as output_cost_usd, COUNT(*)::int as itineraries FROM itineraries WHERE created_at >= NOW() - INTERVAL '12 months' GROUP BY DATE_TRUNC('month', created_at) ORDER BY month`
       );
       return { statusCode: 200, headers: CORS, body: JSON.stringify(result.rows) };
     }

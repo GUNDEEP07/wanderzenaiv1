@@ -2,6 +2,7 @@
 
 const crypto = require('crypto');
 const { getDB, log } = require('/opt/nodejs/index');
+const { SUBSCRIPTION_MONTHLY_ITINERARIES, ENSURE_MONTHLY_COLUMN_SQL } = require('./subscription');
 
 const SIGNATURE_TOLERANCE_SECONDS = 300;
 
@@ -51,9 +52,13 @@ const ENSURE_EVENTS_SQL = `
     received_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
   );`;
 let ensureEventsPromise = null;
+// Also makes sure users.monthly_remaining exists (Wanderer allowance, subscription.js) —
+// once per cold start, before the transaction, because a DDL error inside it would abort it.
 const ensureEventsTable = (db) => {
   if (!ensureEventsPromise) {
-    ensureEventsPromise = db.query(ENSURE_EVENTS_SQL).catch((err) => { ensureEventsPromise = null; throw err; });
+    ensureEventsPromise = db.query(ENSURE_EVENTS_SQL)
+      .then(() => db.query(ENSURE_MONTHLY_COLUMN_SQL))
+      .catch((err) => { ensureEventsPromise = null; throw err; });
   }
   return ensureEventsPromise;
 };
@@ -69,8 +74,8 @@ async function alreadyProcessed(client, event) {
 }
 
 // ─── Fulfilment ──────────────────────────────────────────────────────────────
-const SUBSCRIPTION_CREDITS = 5; // Pricing page: "5 itineraries per month" — see open decision in Notion
 const SINGLE_PLAN_CREDITS = 1;  // Pricing page: "1 premium itinerary"
+// Wanderer: SUBSCRIPTION_MONTHLY_ITINERARIES (5) per billing month, in users.monthly_remaining.
 
 /**
  * Work out which account a completed Checkout Session belongs to.
@@ -126,19 +131,34 @@ async function fulfilCheckout(client, session) {
 
   const isSubscription = session.mode === 'subscription';
   const plan = isSubscription ? 'subscriber' : 'paid_once';
-  const credits = isSubscription ? SUBSCRIPTION_CREDITS : SINGLE_PLAN_CREDITS;
+  const credits = isSubscription ? SUBSCRIPTION_MONTHLY_ITINERARIES : SINGLE_PLAN_CREDITS;
 
-  await client.query(
-    `INSERT INTO users (email, plan, itineraries_remaining, stripe_customer_id, stripe_subscription_id, created_at)
-     VALUES ($1, $2, $3, $4, $5, NOW())
-     ON CONFLICT (email) DO UPDATE
-     SET plan = CASE WHEN users.plan = 'subscriber' AND EXCLUDED.plan = 'paid_once' THEN 'subscriber' ELSE EXCLUDED.plan END,
-         itineraries_remaining = users.itineraries_remaining + $3,
-         stripe_customer_id = COALESCE(EXCLUDED.stripe_customer_id, users.stripe_customer_id),
-         stripe_subscription_id = COALESCE(EXCLUDED.stripe_subscription_id, users.stripe_subscription_id),
-         updated_at = NOW()`,
-    [email, plan, credits, session.customer || null, session.subscription || null]
-  );
+  if (isSubscription) {
+    // Start of the subscription: this month's allowance is set (not added — no stacking
+    // if a checkout is somehow completed twice). Purchased credits are left untouched.
+    await client.query(
+      `INSERT INTO users (email, plan, monthly_remaining, stripe_customer_id, stripe_subscription_id, created_at)
+       VALUES ($1, 'subscriber', $2, $3, $4, NOW())
+       ON CONFLICT (email) DO UPDATE
+       SET plan = 'subscriber',
+           monthly_remaining = $2,
+           stripe_customer_id = COALESCE(EXCLUDED.stripe_customer_id, users.stripe_customer_id),
+           stripe_subscription_id = COALESCE(EXCLUDED.stripe_subscription_id, users.stripe_subscription_id),
+           updated_at = NOW()`,
+      [email, SUBSCRIPTION_MONTHLY_ITINERARIES, session.customer || null, session.subscription || null]
+    );
+  } else {
+    await client.query(
+      `INSERT INTO users (email, plan, itineraries_remaining, stripe_customer_id, created_at)
+       VALUES ($1, 'paid_once', $2, $3, NOW())
+       ON CONFLICT (email) DO UPDATE
+       SET plan = CASE WHEN users.plan = 'subscriber' THEN 'subscriber' ELSE 'paid_once' END,
+           itineraries_remaining = users.itineraries_remaining + $2,
+           stripe_customer_id = COALESCE(EXCLUDED.stripe_customer_id, users.stripe_customer_id),
+           updated_at = NOW()`,
+      [email, SINGLE_PLAN_CREDITS, session.customer || null]
+    );
+  }
   log.info('User plan upgraded', { email, plan, credits, matchedBy, sessionId: session.id });
 
   try {
@@ -147,6 +167,39 @@ async function fulfilCheckout(client, session) {
     log.warn('Referral reward failed', { error: refErr.message });
   }
   return { fulfilled: true, email, plan, credits, matchedBy };
+}
+
+/**
+ * Renewal: reset the Wanderer allowance to 5 (no rollover).
+ * Only billing_reason 'subscription_cycle' — the first invoice ('subscription_create')
+ * is covered by checkout.session.completed, and resetting on plan changes
+ * ('subscription_update') would hand out extra itineraries mid-month.
+ * Matched on invoice.customer (a top-level string id on every API version); only rows
+ * still on plan 'subscriber' are touched, since customer.subscription.deleted moves a
+ * cancelled customer to 'free'.
+ */
+async function renewMonthlyAllowance(client, invoice) {
+  if (invoice?.billing_reason !== 'subscription_cycle') {
+    log.info('invoice.paid ignored (not a renewal)', { invoiceId: invoice?.id, billingReason: invoice?.billing_reason });
+    return { renewed: false, reason: 'not_renewal' };
+  }
+  const customer = typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id;
+  if (!customer) {
+    log.error('Renewal invoice has no customer', { invoiceId: invoice.id });
+    return { renewed: false, reason: 'no_customer' };
+  }
+  const { rowCount } = await client.query(
+    `UPDATE users SET monthly_remaining = $1, updated_at = NOW()
+     WHERE stripe_customer_id = $2 AND plan = 'subscriber'`,
+    [SUBSCRIPTION_MONTHLY_ITINERARIES, customer]
+  );
+  if (!rowCount) {
+    // Paid renewal we can't match to a subscriber — needs a look (ERROR is the alert).
+    log.error('Renewal paid but no subscriber matched', { invoiceId: invoice.id, customer });
+    return { renewed: false, reason: 'no_account' };
+  }
+  log.info('Monthly allowance renewed', { invoiceId: invoice.id, customer, allowance: SUBSCRIPTION_MONTHLY_ITINERARIES });
+  return { renewed: true };
 }
 
 exports.handler = async (event) => {
@@ -192,10 +245,16 @@ exports.handler = async (event) => {
         log.warn('Async checkout payment failed', { sessionId: stripeEvent.data.object.id });
         break;
 
+      case 'invoice.paid':
+        await renewMonthlyAllowance(client, stripeEvent.data.object);
+        break;
+
       case 'customer.subscription.deleted': {
         const sub = stripeEvent.data.object;
+        // Purchased credits (itineraries_remaining) survive cancellation; the monthly
+        // allowance does not.
         await client.query(
-          `UPDATE users SET plan = 'free', updated_at = NOW() WHERE stripe_customer_id = $1`,
+          `UPDATE users SET plan = 'free', monthly_remaining = 0, updated_at = NOW() WHERE stripe_customer_id = $1`,
           [sub.customer]
         );
         log.info('Subscription cancelled', { customerId: sub.customer });
@@ -226,4 +285,4 @@ exports.handler = async (event) => {
 };
 
 // Exported for unit tests.
-exports._internal = { verifyStripeSignature, resolveAccount, fulfilCheckout };
+exports._internal = { verifyStripeSignature, resolveAccount, fulfilCheckout, renewMonthlyAllowance };

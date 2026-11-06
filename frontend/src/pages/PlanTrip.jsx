@@ -398,7 +398,9 @@ export default function PlanTrip() {
       if (status === 402) {
         analytics.freeLimitHit();
         const dest = form.destinations.length > 0 ? form.destinations[0].name : null;
-        navigate('/pricing', { state: { reason: 'free_limit', destination: dest } });
+        // Wanderer subscribers who used this month's 5 see a different message than free users.
+        const reason = data?.code === 'MONTHLY_LIMIT_REACHED' ? 'monthly_limit' : 'free_limit';
+        navigate('/pricing', { state: { reason, destination: dest } });
         return;
       }
       if (!data.success) throw new Error(data.message || 'Submission failed');

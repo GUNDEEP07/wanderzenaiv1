@@ -99,8 +99,54 @@ test('firstText skips a leading thinking block (current models think adaptively)
   assert.equal(firstText(data), '{"days":[]}');
 });
 
-test('MODELS defaults to the models in use before centralising', () => {
-  const { MODELS } = require(path.join(__dirname, '../../layers/shared/nodejs/claude.js'));
-  if (!process.env.CLAUDE_MODEL_FAST) assert.equal(MODELS.fast, 'claude-haiku-4-5-20251001');
-  if (!process.env.CLAUDE_MODEL_STRONG) assert.equal(MODELS.strong, 'claude-sonnet-4-6');
+test('firstText joins several text blocks and ignores thinking between them', () => {
+  const data = { content: [
+    { type: 'thinking', thinking: '', signature: 's' },
+    { type: 'text', text: '{"a":' },
+    { type: 'thinking', thinking: '', signature: 't' },
+    { type: 'text', text: '1}' },
+  ] };
+  assert.equal(firstText(data), '{"a":1}');
+});
+
+const claude = require(path.join(__dirname, '../../layers/shared/nodejs/claude.js'));
+
+test('MODELS: Opus 5.5 writes itineraries, Haiku 5.5 handles quick calls (unless overridden)', () => {
+  if (!process.env.CLAUDE_MODEL_FAST) assert.equal(claude.MODELS.fast, 'claude-haiku-5-5');
+  if (!process.env.CLAUDE_MODEL_STRONG) assert.equal(claude.MODELS.strong, 'claude-opus-5-5');
+});
+
+test('supportsEffort: Claude 5.x and later only', () => {
+  for (const m of ['claude-opus-5-5', 'claude-haiku-5-5', 'claude-sonnet-5-5', 'claude-opus-5', 'claude-fable-5-1']) {
+    assert.equal(claude.supportsEffort(m), true, m);
+  }
+  for (const m of ['claude-haiku-4-5-20251001', 'claude-sonnet-4-6', 'claude-3-5-sonnet-20241022', '', undefined]) {
+    assert.equal(claude.supportsEffort(m), false, String(m));
+  }
+});
+
+test('withEffort adds output_config.effort only for models that accept it', () => {
+  const body = { model: 'claude-opus-5-5', max_tokens: 10, messages: [] };
+  assert.deepEqual(claude.withEffort(body, 'low').output_config, { effort: 'low' });
+  assert.equal(body.output_config, undefined, 'input body is not mutated');
+  const old = { model: 'claude-haiku-4-5-20251001', max_tokens: 10, messages: [] };
+  assert.equal(claude.withEffort(old, 'low'), old);
+  assert.equal(claude.withEffort(body, 'turbo'), body, 'unknown effort ignored');
+});
+
+test('maxTokensFor leaves thinking headroom on 5.x models, unchanged on older ones', () => {
+  assert.equal(claude.maxTokensFor('claude-haiku-4-5-20251001', 1024), 1024);
+  assert.equal(claude.maxTokensFor('claude-opus-5-5', 5800), Math.round(5800 * 1.5) + 4000);
+  assert.equal(claude.maxTokensFor('claude-opus-5-5', 1e6), 64000, 'capped');
+  assert.equal(claude.maxTokensFor('claude-haiku-5-5', 256, { thinkingHeadroom: 1500 }), 384 + 1500);
+});
+
+test('no request body ever carries sampling params (rejected by 5.x models)', async () => {
+  let sent;
+  process.env.CLAUDE_API_KEY = 'k';
+  await claude.createMessage(claude.withEffort({ model: 'claude-opus-5-5', max_tokens: 5, messages: [] }, 'medium'), {
+    fetchImpl: async (_u, init) => { sent = JSON.parse(init.body); return { ok: true, json: async () => ({ content: [{ type: 'text', text: 'x' }] }) }; },
+  });
+  for (const k of ['temperature', 'top_p', 'top_k', 'thinking']) assert.equal(k in sent, false, k);
+  assert.deepEqual(sent.output_config, { effort: 'medium' });
 });

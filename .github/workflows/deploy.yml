@@ -100,6 +100,8 @@ jobs:
           FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
           FOURSQUARE_API_KEY: ${{ secrets.FOURSQUARE_API_KEY }}
           OPENTRIPMAP_API_KEY: ${{ secrets.OPENTRIPMAP_API_KEY }}
+          # Same secret the frontend build used to embed; now only the backend photo proxy sees it.
+          UNSPLASH_ACCESS_KEY: ${{ secrets.VITE_UNSPLASH_ACCESS_KEY }}
         run: |
           sam deploy \
             --stack-name ${{ env.STACK_NAME }} \
@@ -122,7 +124,11 @@ jobs:
               "StripeWandererLink=${STRIPE_WANDERER_LINK}" \
               "FrontendUrl=${FRONTEND_URL}" \
               "FoursquareApiKey=${FOURSQUARE_API_KEY}" \
-              "FirebaseProjectId=wanderzenai-9c343"
+              "FirebaseProjectId=wanderzenai-9c343" \
+              "UnsplashAccessKey=${UNSPLASH_ACCESS_KEY}" \
+              "ClaudeModelFast=claude-haiku-5-5" \
+              "ClaudeModelStrong=claude-opus-5-5" \
+              "ClaudeItineraryEffort=medium"
 
       - name: Get stack outputs
         id: get-outputs
@@ -176,7 +182,8 @@ jobs:
           VITE_FIREBASE_API_KEY: AIzaSyDn3rruHLzzqCIWFuL0_5nwEwB69MvDTnk
           VITE_FIREBASE_AUTH_DOMAIN: wanderzenai-9c343.firebaseapp.com
           VITE_FIREBASE_PROJECT_ID: wanderzenai-9c343
-          VITE_UNSPLASH_ACCESS_KEY: ${{ secrets.VITE_UNSPLASH_ACCESS_KEY }}
+          # No Unsplash key here any more: photos come from the backend proxy (/photos/search),
+          # so the key is no longer shipped in the public bundle.
         run: npm run build
 
       - name: Get S3 bucket name

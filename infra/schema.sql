@@ -122,10 +122,10 @@ SELECT
   COUNT(*) AS itineraries_generated,
   SUM(claude_input_tokens) AS input_tokens,
   SUM(claude_output_tokens) AS output_tokens,
-  -- Claude Sonnet pricing: $3/M input, $15/M output
-  ROUND(SUM(claude_input_tokens) * 3.0 / 1000000, 4) AS claude_input_cost_usd,
-  ROUND(SUM(claude_output_tokens) * 15.0 / 1000000, 4) AS claude_output_cost_usd,
-  ROUND((SUM(claude_input_tokens) * 3.0 + SUM(claude_output_tokens) * 15.0) / 1000000, 4) AS total_claude_cost_usd
+  -- Itineraries are written by Claude Opus 5.5: $4/M input, $20/M output (thinking is billed as output)
+  ROUND(SUM(claude_input_tokens) * 4.0 / 1000000, 4) AS claude_input_cost_usd,
+  ROUND(SUM(claude_output_tokens) * 20.0 / 1000000, 4) AS claude_output_cost_usd,
+  ROUND((SUM(claude_input_tokens) * 4.0 + SUM(claude_output_tokens) * 20.0) / 1000000, 4) AS total_claude_cost_usd
 FROM itineraries
 GROUP BY DATE_TRUNC('month', created_at)
 ORDER BY month DESC;
@@ -139,6 +139,8 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS whatsapp            VARCHAR(50);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS home_city           VARCHAR(255);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS language            VARCHAR(50) DEFAULT 'English';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_complete BOOLEAN DEFAULT FALSE;
+-- Wanderer: itineraries left this billing month (migration 004; reset on renewal).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS monthly_remaining   INTEGER NOT NULL DEFAULT 0;
 
 CREATE INDEX IF NOT EXISTS idx_users_firebase_uid ON users(firebase_uid);
 

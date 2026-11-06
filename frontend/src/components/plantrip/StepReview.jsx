@@ -217,7 +217,7 @@ export default function StepReview({ form, set, onBack, onSubmit, submitting, su
           {submitting ? 'Generating…' : 'Generate full itinerary →'}
         </button>
       </div>
-      <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.78rem', textAlign: 'center', marginTop: '0.75rem' }}>Takes 2–3 minutes · PDF delivered by email</p>
+      <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.78rem', textAlign: 'center', marginTop: '0.75rem' }}>Takes about 5 minutes · PDF delivered by email</p>
     </div>
   );
 }
