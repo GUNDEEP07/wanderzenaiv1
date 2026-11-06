@@ -254,6 +254,10 @@ Resources:
             - Effect: Allow
               Action: [lambda:InvokeFunction]
               Resource: !GetAtt PDFBuilderFunction.Arn
+            # "We couldn't finish your itinerary" email when generation fails (failure.js).
+            - Effect: Allow
+              Action: [ses:SendEmail]
+              Resource: '*'
 
   # ─── PDF Builder Lambda ────────────────────────────────────────────────────
   PDFBuilderFunction:

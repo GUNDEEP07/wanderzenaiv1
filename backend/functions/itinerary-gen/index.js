@@ -5,6 +5,21 @@ const { getDB, generateId, getCurrencySymbol, log, fetchFoursquareTips } = requi
 const { searchVenues } = require('/opt/nodejs/venue-enrichment/foursquare');
 const { MODELS, createMessage, firstText, withEffort, maxTokensFor } = require('/opt/nodejs/claude');
 const { findDuplicateVenues, planRepairs, repairRules } = require('./validate');
+const { GenerationFailed, handleGenerationFailure } = require('./failure');
+const { SESClient, SendEmailCommand } = require('@aws-sdk/client-ses');
+
+const ses = new SESClient({ region: 'ap-southeast-2' });
+const sendEmail = ({ to, subject, text, html }) => ses.send(new SendEmailCommand({
+  Source: `WanderZenAI <${process.env.FROM_EMAIL}>`,
+  Destination: { ToAddresses: [to] },
+  Message: {
+    Subject: { Data: subject, Charset: 'UTF-8' },
+    Body: { Html: { Data: html, Charset: 'UTF-8' }, Text: { Data: text, Charset: 'UTF-8' } },
+  },
+}));
+// Stop this long before the Lambda timeout so a failure is handled (refund + email)
+// instead of the function being killed mid-way with the submission stuck in 'processing'.
+const DEADLINE_MARGIN_MS = 60000;
 const {
   planPicks, formatPicksForDays, formatPicksOverview, findMissingPicks,
 } = require('/opt/nodejs/selected-venues');
@@ -230,37 +245,25 @@ Return ONLY a JSON object with a "days" array containing ${dayNumbers.length} da
   } catch (e) {
     log.error('Days batch parse failed', { submissionId, dayNumbers, raw: raw.substring(0, 400) });
 
-    // Retry this batch once, thinking harder and with more room.
-    log.info('Retrying batch after parse failure', { submissionId, dayNumbers });
-    try {
-      const { raw: retryRaw, usage: retryUsage } = await callClaude(
-        SYSTEM_PROMPT, prompt, textTokens + 1000, submissionId, { effort: 'high', attempt: 2 }
-      );
-      const retryParsed = parseJSON(retryRaw);
-      if (retryParsed.days && Array.isArray(retryParsed.days)) {
-        return { days: retryParsed.days, usage: retryUsage };
+    // Retry up to twice, thinking harder, with more room and a reminder about the format.
+    // No generic filler days are ever shipped: if these fail too, the whole itinerary
+    // fails (refund + email — see failure.js).
+    const strictPrompt = `${prompt}\n\nIMPORTANT: your previous answer could not be parsed. Reply with the JSON object only — start with { and end with }.`;
+    for (let attempt = 2; attempt <= 3; attempt++) {
+      log.info('Retrying batch after parse failure', { submissionId, dayNumbers, attempt });
+      try {
+        const { raw: retryRaw, usage: retryUsage } = await callClaude(
+          SYSTEM_PROMPT, strictPrompt, textTokens + 1000 * attempt, submissionId, { effort: 'high', attempt }
+        );
+        const retryParsed = parseJSON(retryRaw);
+        if (Array.isArray(retryParsed.days) && retryParsed.days.length) {
+          return { days: retryParsed.days, usage: retryUsage };
+        }
+      } catch (retryErr) {
+        log.error('Batch retry failed', { submissionId, dayNumbers, attempt, error: retryErr.message });
       }
-    } catch (retryErr) {
-      log.error('Retry also failed', { submissionId, dayNumbers, error: retryErr.message });
     }
-
-    // Fallback: generic placeholder days. Flagged (isFallback) and logged at ERROR so they
-    // are visible; whether to ship these at all is an open decision (see Notion A4).
-    log.error('Shipping generic fallback days', { submissionId, dayNumbers });
-    return {
-      days: dayNumbers.map(n => ({
-        isFallback: true,
-        dayNumber: n,
-        theme: `Day ${n} — Local Exploration`,
-        morningActivity: { time: '8:00 AM', activity: `Morning walk through local neighbourhood`, location: destination, why: 'The best way to feel the pulse of a place', cost: 0, isFree: true, insiderTip: 'Go before 9am for the quietest experience' },
-        afternoonActivity: { time: '1:00 PM', activity: `Visit a local market`, location: `${destination} market`, why: 'Where locals actually shop and eat', cost: Math.round(dailyBudget * 0.3), isFree: false, insiderTip: 'Prices are lower away from the main entrance' },
-        eveningActivity: { time: '7:00 PM', activity: `Dinner at a local restaurant`, location: `${destination}`, why: 'Eat where the locals eat', cost: Math.round(dailyBudget * 0.4), isFree: false, insiderTip: 'Ask your guesthouse host for their favourite spot' },
-        hiddenGem: `Ask your accommodation host about their favourite local secret — they always know something special`,
-        dailyCost: dailyBudget,
-        localEats: { name: 'Ask locally', dish: 'The daily special', cost: Math.round(dailyBudget * 0.2), vibe: 'Wherever locals are eating' },
-      })),
-      usage: { input_tokens: 0, output_tokens: 0 },
-    };
+    throw new GenerationFailed(`Days ${dayNumbers.join(', ')} could not be generated`, { reason: 'batch_unparseable' });
   }
 };
 
@@ -303,20 +306,60 @@ function buildDayLabel(travelDate, dayIndex) {
   });
 }
 
-exports.handler = async (event) => {
-  const { submissionId, isPaid } = event;
+exports.handler = async (event, context) => {
+  const { submissionId, creditSource = null } = event;
   log.info('Itinerary generation started', { submissionId });
-
   const db = getDB();
+
+  // Generation races an internal deadline; on failure or deadline the submission is
+  // failed, refunded and the user emailed (failure.js). ctl.aborted stops a generation
+  // that is still running in the background from storing anything afterwards.
+  const ctl = { aborted: false };
+  const remaining = typeof context?.getRemainingTimeInMillis === 'function' ? context.getRemainingTimeInMillis() : null;
+  let timer;
+  const deadline = remaining
+    ? new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new GenerationFailed('Generation took too long', { reason: 'deadline' })),
+        Math.max(remaining - DEADLINE_MARGIN_MS, 1000));
+    })
+    : null;
+
+  try {
+    const work = generate(event, db, ctl);
+    await (deadline ? Promise.race([work, deadline]) : work);
+  } catch (err) {
+    ctl.aborted = true;
+    log.error('Itinerary generation failed', { submissionId, reason: err.reason || 'error', error: err.message });
+    try {
+      const outcome = await handleGenerationFailure({
+        db, sendEmail, submissionId, creditSource, errorMessage: err.message,
+        frontendUrl: process.env.FRONTEND_URL, log,
+      });
+      log.info('Generation failure handled', { submissionId, ...outcome });
+    } catch (handlingErr) {
+      log.error('Handling the generation failure failed', { submissionId, error: handlingErr.message });
+    }
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
+async function generate(event, db, ctl) {
+  const { submissionId, isPaid } = event;
   let totalInputTokens = 0;
   let totalOutputTokens = 0;
 
-  try {
+  {
     // ── Fetch submission ──────────────────────────────────────────────────
     const result = await db.query(`SELECT * FROM submissions WHERE id = $1`, [submissionId]);
     if (!result.rows.length) { log.error('Submission not found', { submissionId }); return; }
 
     const row = result.rows[0];
+    // A repeated invocation (Lambda async retry) must not redo or undo finished work.
+    if (['failed', 'itinerary_ready', 'pdf_ready', 'email_sent'].includes(row.status)) {
+      log.warn('Submission already finished — skipping', { submissionId, status: row.status });
+      return;
+    }
     const submission = {
       destination: row.destination,
       days: row.days,
@@ -432,7 +475,7 @@ exports.handler = async (event) => {
       totalInputTokens += r.usage?.input_tokens || 0;
       totalOutputTokens += r.usage?.output_tokens || 0;
       const replacement = r.fixed?.[0];
-      if (!replacement || replacement.isFallback) continue; // keep the original rather than filler
+      if (!replacement) continue; // keep the original day
       replacement.dayNumber = r.dayNumber;
       const idx = itinerary.days.findIndex(d => d.dayNumber === r.dayNumber);
       if (idx >= 0) { itinerary.days[idx] = replacement; repaired.push({ day: r.dayNumber, reasons: r.repair.reasons }); }
@@ -488,7 +531,6 @@ exports.handler = async (event) => {
     log.info('Itinerary assembled', {
       submissionId,
       totalDays: allDays.length,
-      fallbackDays: allDays.filter(d => d.isFallback).length,
       totalInputTokens,
       totalOutputTokens,
       venuesWithSocial: venuesWithSocial.length,
@@ -496,6 +538,8 @@ exports.handler = async (event) => {
     });
 
     // ── Store itinerary ───────────────────────────────────────────────────
+    // Deadline already hit and the user told it failed (and refunded): store nothing.
+    if (ctl.aborted) { log.warn('Generation finished after the deadline — discarded', { submissionId }); return; }
     const itineraryId = generateId();
     await db.query(
       `INSERT INTO itineraries
@@ -524,12 +568,5 @@ exports.handler = async (event) => {
     }));
 
     log.info('PDF builder triggered', { itineraryId });
-
-  } catch (err) {
-    log.error('Itinerary generation failed', { submissionId, error: err.message });
-    await db.query(
-      `UPDATE submissions SET status = 'failed', error_message = $1, updated_at = NOW() WHERE id = $2`,
-      [err.message, submissionId]
-    ).catch(() => {});
   }
-};
+}
