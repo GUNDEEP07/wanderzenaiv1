@@ -1,0 +1,36 @@
+name: Route debug (temporary)
+on:
+  push:
+    branches: ['smoke/route-debug']
+permissions:
+  contents: read
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ap-southeast-2
+      API: https://y44o2x9cu1.execute-api.ap-southeast-2.amazonaws.com/prod
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-southeast-2
+      - name: Preflight /route-plan vs /preview
+        run: |
+          for p in route-plan preview; do
+            echo "== OPTIONS /$p"
+            curl -s -o /dev/null -D - -X OPTIONS "$API/$p" -H 'Origin: https://www.wanderzenai.com' \
+              -H 'Access-Control-Request-Method: POST' -H 'Access-Control-Request-Headers: authorization,content-type'
+          done
+      - name: Form handler logs (last 3 h)
+        run: |
+          G=$(aws logs describe-log-groups --log-group-name-prefix /aws/lambda/ --query 'logGroups[].logGroupName' --output text | tr '\t' '\n' | grep -i form | head -1)
+          echo "group: $G"
+          START=$(( ($(date +%s) - 10800) * 1000 ))
+          aws logs filter-log-events --log-group-name "$G" --start-time $START \
+            --filter-pattern '?ERROR ?Error ?route ?Route ?"Task timed out" ?errorMessage' \
+            --query 'events[].message' --output text | tr '\t' '\n' | tail -80
+      - name: API Gateway access to route-plan (WAF / throttling)
+        run: |
+          aws wafv2 list-web-acls --scope REGIONAL --query 'WebACLs[].Name' --output text || true
