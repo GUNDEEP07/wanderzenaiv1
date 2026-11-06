@@ -1,0 +1,1 @@
+FAIL  run completed  — accounts:signUp: {"code":400,"message":"OPERATION_NOT_ALLOWED","errors":[{"message":"OPERATION_NOT_ALLOWED","domain":"global","reason":"invalid"}]}
