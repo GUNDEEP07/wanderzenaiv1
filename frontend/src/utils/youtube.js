@@ -1,48 +1,28 @@
-// YouTube API key - injected at build time via Vite
-const YOUTUBE_API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY || '';
+// YouTube videos come from our backend (GET /videos/search): the API key stays on the
+// server and results are cached there per destination + activity, so the ~100 searches a
+// day YouTube allows go a long way. No key in the browser any more.
+const API_URL = import.meta.env.VITE_API_URL || '';
 
+/**
+ * @param {string} activity e.g. "Hiking"
+ * @param {string|{name: string}} destination name or destination object
+ * @param {string} [countryCode] ISO 3166-1 alpha-2, optional
+ * @param {number} [maxResults=8]
+ * @returns {Promise<Array<{ id, title, creator, thumbnailUrl }>>} [] when unavailable
+ */
 export async function fetchTrendingVideos(activity, destination, countryCode, maxResults = 8) {
-  if (!YOUTUBE_API_KEY) {
-    console.warn('YouTube API key not configured');
-    return [];
-  }
+  const destName = typeof destination === 'string' ? destination : destination?.name || '';
+  if (!API_URL || !activity || !destName) return [];
 
-  try {
-    const queries = [
-      `#${activity.toLowerCase()}in${destination.toLowerCase()}`,
-      `#${destination.toLowerCase()}2024`,
-      `#${activity.toLowerCase()}`,
-    ];
-    const searchQuery = queries.join(' ');
+  const params = new URLSearchParams({ activity, destination: destName });
+  if (countryCode && /^[A-Za-z]{2}$/.test(countryCode)) params.set('region', countryCode);
 
-    const params = new URLSearchParams({
-      part: 'snippet',
-      q: searchQuery,
-      type: 'video',
-      maxResults: maxResults.toString(),
-      order: 'viewCount',
-      regionCode: countryCode,
-      relevanceLanguage: 'en',
-      key: YOUTUBE_API_KEY,
-    });
-
-    const response = await fetch(`https://www.googleapis.com/youtube/v3/search?${params}`);
-    if (!response.ok) throw new Error(`YouTube API error: ${response.status}`);
-
-    const data = await response.json();
-    if (!data.items) return [];
-
-    return data.items.map(item => ({
-      id: item.id.videoId,
-      title: item.snippet.title,
-      creator: item.snippet.channelTitle,
-      thumbnailUrl: item.snippet.thumbnails.default.url,
-      description: item.snippet.description,
-    }));
-  } catch (error) {
-    console.error('Failed to fetch YouTube videos:', error);
-    return [];
-  }
+  const res = await fetch(`${API_URL}/videos/search?${params}`);
+  // 429 (our rate limit) is worth a retry by the caller; anything else just means no videos.
+  if (res.status === 429) throw new Error('Video search rate limited');
+  if (!res.ok) return [];
+  const { videos } = await res.json();
+  return Array.isArray(videos) ? videos.slice(0, maxResults) : [];
 }
 
 export function getYouTubeUrl(videoId) {

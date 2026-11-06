@@ -8,6 +8,7 @@ const {
 } = require('/opt/nodejs/index');
 const { MODELS, firstText, withEffort, maxTokensFor } = require('/opt/nodejs/claude');
 const { searchPhoto, normaliseQuery } = require('./photos');
+const { searchVideos, normaliseVideoQuery } = require('./videos');
 
 /** Request body for a quick interactive call on the fast model: low effort, room to think. */
 const fastBody = (textTokens, rest) => withEffort({
@@ -73,6 +74,8 @@ exports.handler = async (event) => {
   try {
     if (path.includes('/photos/search')) {
       return await handlePhotoSearch(event);
+    } else if (path.includes('/videos/search')) {
+      return await handleVideoSearch(event);
     } else if (path.includes('/autocomplete')) {
       return await handleAutocomplete(event);
     } else if (path.includes('/venues')) {
@@ -118,6 +121,24 @@ async function handlePhotoSearch(event) {
   } catch (err) {
     log.warn('Photo search failed', { error: err.message });
     return respond(200, { photo: null }, event); // the UI falls back to a stock photo
+  }
+}
+
+// ─── YouTube search proxy (see videos.js) ────────────────────────────────────
+async function handleVideoSearch(event) {
+  const q = normaliseVideoQuery(event.queryStringParameters || {});
+  if (!q) return respond(400, { error: 'activity and destination are required' }, event);
+
+  const limited = await rateLimitedResponse('videos', ipSubject(event), event);
+  if (limited) return limited;
+
+  try {
+    const { videos, cached } = await searchVideos(q, { db: getDB(), apiKey: process.env.YOUTUBE_API_KEY, log });
+    if (!cached) log.info('YouTube search', { destination: q.destination, activity: q.activity, found: videos.length });
+    return respond(200, { videos }, event, { 'Cache-Control': 'public, max-age=3600' });
+  } catch (err) {
+    log.warn('Video search failed', { error: err.message });
+    return respond(200, { videos: [] }, event); // the carousel simply hides
   }
 }
 

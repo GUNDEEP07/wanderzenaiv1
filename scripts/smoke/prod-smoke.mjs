@@ -109,6 +109,13 @@ await check('GET /photos/search → 200 with a credited photo (or null without a
     if (p && !(p.url && p.photographer && /utm_source=wanderzenai/.test(p.unsplashUrl))) throw new Error(`credit fields missing: ${r.text.slice(0, 200)}`);
     return p ? `photo by ${p.photographer}` : 'photo: null (no key or Unsplash limit)';
   });
+await check('GET /videos/search → 200 with a list (empty until YOUTUBE_API_KEY is set)',
+  async () => {
+    const r = await call('GET', '/videos/search?activity=hiking&destination=Kyoto');
+    expectStatus(r, 200);
+    if (!Array.isArray(r.json?.videos)) throw new Error(`no videos array: ${r.text.slice(0, 160)}`);
+    return `${r.json.videos.length} videos`;
+  });
 await check('GET /photos/search rejects an empty query → 400',
   async () => expectStatus(await call('GET', '/photos/search?query=%20'), 400));
 // Fixed dates → served from the 30-day cache after the first run (one Haiku call a month).

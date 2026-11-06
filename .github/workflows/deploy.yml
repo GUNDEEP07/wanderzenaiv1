@@ -102,6 +102,8 @@ jobs:
           OPENTRIPMAP_API_KEY: ${{ secrets.OPENTRIPMAP_API_KEY }}
           # Same secret the frontend build used to embed; now only the backend photo proxy sees it.
           UNSPLASH_ACCESS_KEY: ${{ secrets.VITE_UNSPLASH_ACCESS_KEY }}
+          # Add a repo secret YOUTUBE_API_KEY to switch videos on (empty = no videos).
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
         run: |
           sam deploy \
             --stack-name ${{ env.STACK_NAME }} \
@@ -126,6 +128,7 @@ jobs:
               "FoursquareApiKey=${FOURSQUARE_API_KEY}" \
               "FirebaseProjectId=wanderzenai-9c343" \
               "UnsplashAccessKey=${UNSPLASH_ACCESS_KEY}" \
+              "YoutubeApiKey=${YOUTUBE_API_KEY}" \
               "ClaudeModelFast=claude-haiku-5-5" \
               "ClaudeModelStrong=claude-opus-5-5" \
               "ClaudeItineraryEffort=medium"
