@@ -34,3 +34,15 @@ jobs:
       - name: API Gateway access to route-plan (WAF / throttling)
         run: |
           aws wafv2 list-web-acls --scope REGIONAL --query 'WebACLs[].Name' --output text || true
+      - name: What the live site serves
+        run: |
+          for u in https://www.wanderzenai.com/ https://wanderzenai.com/ https://www.wanderzenai.com/plan; do
+            echo "== $u"; curl -s -o /dev/null -D - "$u" | grep -iE '^(HTTP|cache-control|age|x-cache|last-modified|etag|location)'
+          done
+          curl -s https://www.wanderzenai.com/ > idx.html
+          grep -o 'assets/[^"]*\.js' idx.html | sort -u
+          MAIN=$(grep -o 'assets/index-[^"]*\.js' idx.html | head -1)
+          curl -s "https://www.wanderzenai.com/$MAIN" > main.js
+          PT=$(grep -o 'PlanTrip-[A-Za-z0-9_-]*\.js' main.js | head -1); echo "PlanTrip chunk: $PT"
+          curl -s -D pt.h "https://www.wanderzenai.com/assets/$PT" > pt.js; grep -iE 'cache-control|last-modified' pt.h
+          for s in "WanderZen pick" "travelling" "Show other ideas" "data.route" "options"; do printf '%-20s %s\n' "$s" "$(grep -c "$s" pt.js)"; done
