@@ -36,7 +36,8 @@ jobs:
           aws wafv2 list-web-acls --scope REGIONAL --query 'WebACLs[].Name' --output text || true
       - name: What the live site serves
         run: |
-          for u in https://www.wanderzenai.com/ https://wanderzenai.com/ https://www.wanderzenai.com/plan; do
+          set +e
+          for u in https://www.wanderzenai.com/ https://www.wanderzenai.com/plan; do
             echo "== $u"; curl -s -o /dev/null -D - "$u" | grep -iE '^(HTTP|cache-control|age|x-cache|last-modified|etag|location)'
           done
           curl -s https://www.wanderzenai.com/ > idx.html
