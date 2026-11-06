@@ -13,8 +13,9 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { DestinationSearch } from '../components/plantrip/DestinationSearch';
 import { VenueSelection } from '../components/plantrip/VenueSelection';
 import StepReview from '../components/plantrip/StepReview';
+import StepRoute, { routeKey } from '../components/plantrip/StepRoute';
 import { ErrorBoundary } from '../components/ErrorBoundary';
-import { fetchPreview, submitItinerary } from '../api/itinerary';
+import { submitItinerary, fetchRoutePlan } from '../api/itinerary';
 import { fetchDestinationInsights } from '../api/destinationInsights';
 import { useAuth } from '../context/AuthContext';
 import { analytics } from '../utils/analytics';
@@ -67,7 +68,14 @@ const PREDEFINED_INTERESTS = [
 
 
 // Step names drive the progress bar — keep in sync with step indices
-const STEPS = ['Destination & Preferences', 'Travel dates', 'Trip Overview', 'Review', 'Submit'];
+// 0 Destination · 1 Dates · 2 Your route · 3 Trip overview (skipped when already booked)
+// · 4 Choose experiences (per base) · 5 Review & submit (preview)
+const STEPS = ['Destination & Preferences', 'Travel dates', 'Your route', 'Trip Overview', 'Choose your experiences', 'Review & submit'];
+const STEP_ROUTE = 2;
+const STEP_OVERVIEW = 3;
+const STEP_EXPERIENCES = 4;
+const STEP_REVIEW = 5;
+const stepLabel = (i) => `Step ${i + 1} of ${STEPS.length}`;
 
 // Initial form state — all fields null-safe
 const INITIAL_FORM = {
@@ -161,14 +169,16 @@ export default function PlanTrip() {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
-  const [preview, setPreview] = useState(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
+  // Day-outline preview state lives in StepReview (separate useState, not on the form).
   const [venueSelState, setVenueSelState] = useState(null);
   const { currentUser, getIdToken } = useAuth();
   const [personalRecs, setPersonalRecs] = useState([]);
   const [preferredActivities, setPreferredActivities] = useState([]);
   const [destinationInsights, setDestinationInsights] = useState(null);
   const [insightsLoading, setInsightsLoading] = useState(false);
+  // Route request state (the route itself is on form.route because it is submitted).
+  const [routeLoading, setRouteLoading] = useState(false);
+  const [routeError, setRouteError] = useState('');
 
   useEffect(() => {
     if (!currentUser) return;
@@ -229,9 +239,9 @@ export default function PlanTrip() {
     } catch { /* ignore */ }
   }, [form]);
 
-  // Fetch destination insights when entering step 2
+  // Fetch destination insights when entering the Trip Overview step
   useEffect(() => {
-    if (step !== 2) return;
+    if (step !== STEP_OVERVIEW) return;
     if (!form.destinations.length || !form.travelDate || !form.travelDateEnd) return;
 
     const loadInsights = async () => {
@@ -307,29 +317,45 @@ export default function PlanTrip() {
     }));
   };
 
-  const handleVenueSelect = (venueData) => {
-    setForm(f => ({
-      ...f,
-      // Version 2: named places with coordinates and chosen days (see VenueSelection buildPicks).
-      selected_venues: venueData.selection || { version: 2, picks: [], interests: [] },
-    }));
-    goToStep(3);
-    analytics.stepReached(STEPS[3], 3);
+  // Step 4 → Step 5. Previously this went to step 3, which re-showed the venue screen, so
+  // the review step (preview + submit button) could never be reached. StepReview loads
+  // the day-outline preview itself when it mounts.
+  const goToReview = () => {
+    goToStep(STEP_REVIEW);
+    analytics.stepReached(STEPS[STEP_REVIEW], STEP_REVIEW);
   };
 
-  // Calls /preview and stores result on form._preview
-  const loadPreview = async (formData) => {
-    setPreviewLoading(true);
-    setPreview(null);
+  const handleVenueSelect = (venueData) => {
+    // Version 2: named places with coordinates and chosen days (see VenueSelection buildPicks).
+    setForm(f => ({ ...f, selected_venues: venueData.selection || { version: 2, picks: [], interests: [] } }));
+    goToReview();
+  };
+
+  // Route first: ask the backend for bases; the route is stamped with what it was planned for.
+  const planRoute = async () => {
+    setRouteLoading(true);
+    setRouteError('');
     try {
-      const data = await fetchPreview(formData);
-      setPreview(data.days || null);
-    } catch (e) {
-      console.error('Preview failed', e);
+      const route = await fetchRoutePlan(form);
+      setForm(f => ({ ...f, route: { ...route, forKey: routeKey(f) } }));
+      analytics.stepReached?.('Route planned', STEP_ROUTE);
+    } catch (err) {
+      setRouteError(err.message || 'Could not plan a route right now.');
     } finally {
-      setPreviewLoading(false);
+      setRouteLoading(false);
     }
   };
+
+  // Places Step 4 suggests for: the route's bases, or the destination when there is no route.
+  const experienceDestinations = form.route?.bases?.length
+    ? form.route.bases.map(b => ({
+      name: [b.name, b.country].filter(Boolean).join(', '),
+      country: b.country || form.destinations[0]?.country || '',
+      lat: b.lat ?? form.destinations[0]?.lat ?? 0,
+      lng: b.lng ?? form.destinations[0]?.lng ?? 0,
+    }))
+    : form.destinations;
+
 
   const validate = () => {
     const errs = {};
@@ -361,9 +387,11 @@ export default function PlanTrip() {
         });
       }
     }
-    if (step === 3) {
-      // Delivery goes to the signed-in account's email (set server-side from the token).
-      if (!currentUser?.email) errs.email = 'Your account has no email address — please sign in again';
+    if (step === STEP_ROUTE) {
+      const bases = form.route?.bases || [];
+      const total = bases.reduce((a, b) => a + (b.days || 0), 0);
+      if (!bases.length) errs.route = 'Plan a route first (or add a stop).';
+      else if (total !== +form.days) errs.route = `Your route covers ${total} of ${form.days} days — adjust the days so they add up.`;
     }
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -372,25 +400,23 @@ export default function PlanTrip() {
   const next = () => {
     if (!validate()) return;
     let nextStep = step + 1;
-    // If user says flights/hotels already booked, skip Trip Overview (step 2) and go to Activities (step 3)
-    if (step === 1 && form.alreadyBooked) {
-      nextStep = 3;
-    }
+    // Flights/stays already booked → skip Trip Overview and go straight to experiences.
+    if (step === STEP_ROUTE && form.alreadyBooked) nextStep = STEP_EXPERIENCES;
     goToStep(nextStep);
     analytics.stepReached(STEPS[nextStep], nextStep);
-    if (nextStep === 4) loadPreview(form);
   };
 
   const back = () => {
-    // If on Step 3 and skipped Step 2 (activities only), go back to Step 1
-    if (step === 3 && form.alreadyBooked) {
-      goToStep(1);
-    } else {
-      goToStep(step - 1);
-    }
+    if (step === STEP_EXPERIENCES && form.alreadyBooked) goToStep(STEP_ROUTE);
+    else goToStep(step - 1);
   };
 
   const handleSubmit = async () => {
+    // Delivery goes to the signed-in account's email (set server-side from the token).
+    if (!currentUser?.email) {
+      setSubmitError('Your account has no email address — please sign in again.');
+      return;
+    }
     setSubmitting(true);
     setSubmitError('');
     try {
@@ -446,8 +472,8 @@ export default function PlanTrip() {
     @keyframes spin { to { transform: rotate(360deg); } }
   `;
 
-  /* ── Step 3 (Venues): full-bleed, full-height ────────────────────── */
-  if (step === 3 && form.destinations.length > 0) {
+  /* ── Step 4 (Experiences): full-bleed, full-height ───────────────── */
+  if (step === STEP_EXPERIENCES && form.destinations.length > 0) {
     return (
       <div style={{ ...s.page, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
         <style>{sharedStyles}</style>
@@ -461,20 +487,20 @@ export default function PlanTrip() {
         <div style={{ padding: '12px 24px 0' }}>
           {progressBar}
           <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#00d4aa', marginTop: 8, paddingBottom: 4 }}>
-            Step 4 of 5 — Choose your experiences
+            {stepLabel(STEP_EXPERIENCES)} — Choose your experiences{form.route?.bases?.length > 1 ? ' in each stop' : ''}
           </div>
         </div>
         <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
           <ErrorBoundary scoped={true}>
             <VenueSelection
-              destinations={form.destinations}
+              destinations={experienceDestinations}
               travelStyles={form.travelStyle}
               startDate={form.travelDate}
               endDate={form.travelDateEnd}
               days={form.days}
               onSubmit={handleVenueSelect}
-              onSkip={() => { goToStep(3); analytics.stepReached(STEPS[3], 3); }}
-              onBack={() => goToStep(1)}
+              onSkip={goToReview}
+              onBack={() => goToStep(form.alreadyBooked ? STEP_ROUTE : STEP_OVERVIEW)}
               savedState={venueSelState}
               onSave={setVenueSelState}
               preferredActivities={preferredActivities}
@@ -504,13 +530,13 @@ export default function PlanTrip() {
         <div style={{ marginBottom: '2rem' }}>{progressBar}</div>
 
         {/* All steps — inside the card */}
-        {(step !== 3 || form.destinations.length === 0) && (
+        {(step !== STEP_EXPERIENCES || form.destinations.length === 0) && (
         <div style={s.card}>
 
           {/* ── Step 0: Destination & Preferences ─────────────────────────────────── */}
           {step === 0 && (
             <div>
-              <div style={s.stepLabel}>Step 1 of 5</div>
+              <div style={s.stepLabel}>{stepLabel(0)}</div>
               <h2 style={s.stepTitle}>Where & When</h2>
               <p style={s.stepSub}>Tell us your destination, how long you'll stay, and what interests you.</p>
 
@@ -741,7 +767,7 @@ export default function PlanTrip() {
           {/* ── Step 1: Travel dates ──────────────────────────────── */}
           {step === 1 && (
             <div>
-              <div style={s.stepLabel}>Step 2 of 5</div>
+              <div style={s.stepLabel}>{stepLabel(1)}</div>
               <h2 style={s.stepTitle}>Travel dates</h2>
               <p style={s.stepSub}>When are you heading off?</p>
 
@@ -780,10 +806,30 @@ export default function PlanTrip() {
             </div>
           )}
 
-          {/* ── Step 2: Trip Overview ────────────────────────────────── */}
-          {step === 2 && (
+          {/* ── Step 2: Your route ───────────────────────────────────── */}
+          {step === STEP_ROUTE && (
             <div>
-              <div style={s.stepLabel}>Step 3 of 5</div>
+              <div style={s.stepLabel}>{stepLabel(STEP_ROUTE)}</div>
+              <h2 style={s.stepTitle}>Your route</h2>
+              <p style={s.stepSub}>
+                Where you'll stay for your {form.days} days in {form.destinations[0]?.name || 'your destination'}. Change the days, the order, or add and remove stops.
+              </p>
+              <StepRoute
+                form={form}
+                route={form.route}
+                loading={routeLoading}
+                error={routeError}
+                onPlan={planRoute}
+                onChange={(route) => { setForm(f => ({ ...f, route })); setErrors(e => ({ ...e, route: '' })); }}
+                errorText={errors.route}
+              />
+            </div>
+          )}
+
+          {/* ── Step 3: Trip Overview ────────────────────────────────── */}
+          {step === STEP_OVERVIEW && (
+            <div>
+              <div style={s.stepLabel}>{stepLabel(STEP_OVERVIEW)}</div>
               <h2 style={s.stepTitle}>Trip Overview</h2>
               <p style={s.stepSub}>Here's what to expect for your {form.days}-day trip to {form.destinations.length > 0 ? form.destinations[0].name : 'your destination'}.</p>
 
@@ -835,98 +881,37 @@ export default function PlanTrip() {
           )}
 
 
-          {/* ── Step 3: Review ────────────────────────────────── */}
-          {step === 3 && (
-            <div>
-              <div style={s.stepLabel}>Step 4 of 5</div>
-              <h2 style={s.stepTitle}>Review your trip</h2>
-              <p style={s.stepSub}>Here's everything we'll use to create your personalised itinerary.</p>
-
-              <div style={s.summaryBox}>
-                {[
-                  ['Destinations', form.destinations.map(d => d.name).join(', ') || '—'],
-                  ['Travel Dates', form.travelDate && form.travelDateEnd ? `${form.travelDate} to ${form.travelDateEnd}` : '—'],
-                  ['Duration', `${form.days} days`],
-                  ['Budget', `${form.currency} ${form.budget}`],
-                  ['Traveller Type', form.travelerType || '—'],
-                  ['Travel Pace', form.travelPace],
-                  ['Interests', form.interests || '—'],
-                  ['Language', form.language],
-                  ...(form.userAge ? [['Your age', `${form.userAge} yrs`]] : []),
-                  ...(form.userLocation ? [['Based in', form.userLocation]] : []),
-                ].map(([k, v]) => (
-                  <div key={k} style={s.summaryRow}>
-                    <span style={{ color: 'rgba(255,255,255,0.4)' }}>{k}</span>
-                    <strong style={{ color: '#00d4aa' }}>{v}</strong>
-                  </div>
-                ))}
-              </div>
-
-              <div style={s.fieldWrap}>
-                <label style={s.label}>Your email address</label>
-                {/* Read-only: the backend delivers to the signed-in account's verified email. */}
-                <input
-                  style={{ ...s.input, ...(errors.email ? s.inputError : {}), opacity: 0.7, cursor: 'not-allowed' }}
-                  type="email"
-                  value={currentUser?.email || form.email}
-                  readOnly
-                  aria-readonly="true"
-                />
-                {errors.email && <div style={s.error}>{errors.email}</div>}
-                <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.25)', marginTop: '0.5rem', fontStyle: 'italic' }}>
-                  Your itinerary is sent to the email on your account. No spam, ever.
-                </div>
-              </div>
-
-              {submitError && <div style={s.submitError}>{submitError}</div>}
-            </div>
-          )}
-
-          {/* ── Step 4: Preview & Submit (extracted component) ─────── */}
-          {step === 4 && (
+          {/* ── Step 5: Review, preview & submit (extracted component) ─ */}
+          {step === STEP_REVIEW && (
             <StepReview
               form={form}
               set={set}
-              onBack={back}
+              onBack={() => goToStep(STEP_EXPERIENCES)}
               onSubmit={handleSubmit}
               submitting={submitting}
               submitError={submitError}
+              accountEmail={currentUser?.email || form.email}
             />
           )}
 
-          {/* Nav buttons — steps 0–2 have Back/Next, step 3 has Submit; step 4 (StepReview) has its own buttons */}
-          {step < 4 && (
+          {/* Nav buttons for steps 0–3; Step 4 (experiences) and Step 5 (StepReview) have their own */}
+          {step < STEP_EXPERIENCES && (
             <div style={s.navBtns}>
               {step > 0 && (
-                <button type="button" style={s.backBtnForm} onClick={back} disabled={submitting}>← Back</button>
+                <button type="button" style={s.backBtnForm} onClick={back} disabled={routeLoading}>← Back</button>
               )}
               <div style={{ flex: 1 }} />
-              {step < 3 ? (
-                <button
-                  type="button"
-                  style={{
-                    ...s.nextBtn,
-                    ...(submitting ? { background: 'rgba(0,212,170,0.5)', cursor: 'not-allowed' } : {}),
-                  }}
-                  onClick={next}
-                  disabled={submitting}
-                >
-                  Continue →
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  style={{
-                    ...s.nextBtn,
-                    ...(submitting ? { background: 'rgba(0,212,170,0.5)', cursor: 'not-allowed' } : {}),
-                    minWidth: 200,
-                  }}
-                  onClick={handleSubmit}
-                  disabled={submitting}
-                >
-                  {submitting ? 'Generating...' : 'Generate My Itinerary'}
-                </button>
-              )}
+              <button
+                type="button"
+                style={{
+                  ...s.nextBtn,
+                  ...(routeLoading ? { background: 'rgba(0,212,170,0.5)', cursor: 'not-allowed' } : {}),
+                }}
+                onClick={next}
+                disabled={routeLoading}
+              >
+                Continue →
+              </button>
             </div>
           )}
         </div>

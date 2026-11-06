@@ -162,6 +162,10 @@ Resources:
           HttpMethod: POST
           ThrottlingRateLimit: 3
           ThrottlingBurstLimit: 10
+        - ResourcePath: '/~1route-plan'
+          HttpMethod: POST
+          ThrottlingRateLimit: 3
+          ThrottlingBurstLimit: 10
         - ResourcePath: '/~1recommendations~1chat'
           HttpMethod: POST
           ThrottlingRateLimit: 3
@@ -204,6 +208,12 @@ Resources:
             RestApiId: !Ref WanderZenApi
             Method: POST
             Path: /preview
+        RoutePlan:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Method: POST
+            Path: /route-plan
         FormSubmit:
           Type: Api
           Properties:
@@ -667,6 +677,11 @@ Resources:
                         TextTransformations: [{ Priority: 0, Type: LOWERCASE }]
                     - ByteMatchStatement:
                         SearchString: /preview
+                        FieldToMatch: { UriPath: {} }
+                        PositionalConstraint: CONTAINS
+                        TextTransformations: [{ Priority: 0, Type: LOWERCASE }]
+                    - ByteMatchStatement:
+                        SearchString: /route-plan
                         FieldToMatch: { UriPath: {} }
                         PositionalConstraint: CONTAINS
                         TextTransformations: [{ Priority: 0, Type: LOWERCASE }]

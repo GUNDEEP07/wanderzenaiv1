@@ -23,6 +23,10 @@ const DEADLINE_MARGIN_MS = 60000;
 const {
   planPicks, formatPicksForDays, formatPicksOverview, findMissingPicks,
 } = require('/opt/nodejs/selected-venues');
+const { formatRouteOverview, formatRouteForDays, basesForDays, dayPlan: dayPlanOf } = require('/opt/nodejs/route-plan');
+
+/** "Takayama, Gifu, Japan" — what Foursquare's `near` geocodes best. */
+const placeOf = (b) => [b.name, b.region, b.country].filter(Boolean).join(', ');
 
 const lambda = new LambdaClient({ region: process.env.AWS_REGION || 'ap-southeast-2' });
 
@@ -69,6 +73,12 @@ const META_SCHEMA = `{
   "totalEstimatedCost": number,
   "avoidList": ["string"]
 }`;
+
+// With a confirmed route: one stay suggestion per base, in route order.
+const META_SCHEMA_WITH_STAYS = META_SCHEMA.replace(
+  '"practicalTips"',
+  '"stays": [{"base":"string (base name exactly as in the route)","type":"string (homestay, guesthouse, farm stay…)","priceTier":"budget|mid|upscale","why":"string","searchTerms":["string"]}],\n  "practicalTips"'
+);
 
 // ─── PARSE JSON ROBUSTLY ─────────────────────────────────────────────────────
 const parseJSON = (raw) => {
@@ -174,10 +184,10 @@ ${fsTips ? `
 Real verified venues in ${destination} — reference these specifically by name and include their map links:
 ${fsTips}
 
-For each venue mentioned: include the venue name exactly as given, and add the Google Maps link as [View on map](url) after the activity description.` : ''}${venuesContext}
+For each venue mentioned: include the venue name exactly as given, and add the Google Maps link as [View on map](url) after the activity description.` : ''}${venuesContext}${formatRouteOverview(picksPlan?.route)}
 
 Return ONLY this JSON (no extra text):
-${META_SCHEMA}`;
+${picksPlan?.route ? META_SCHEMA_WITH_STAYS : META_SCHEMA}`;
 
   const { raw, usage } = await callClaude(SYSTEM_PROMPT, prompt, 1500, submissionId);
 
@@ -223,7 +233,7 @@ Rules:
 - One completely free hidden gem per day
 - Specific place names, not generic descriptions
 - Costs in ${currency} (${currencySymbol})
-${fsTips ? `\n\nReal verified venues — when you reference any of these venues, set venueName to the EXACT name from this list:\n${fsTips}\n\nFor EVERY activity that references a verified venue above, set venueName to the exact venue name (e.g. "venueName":"Kiyomizu-dera Temple (清水寺)"). If the activity doesn't reference one of these venues, set venueName to null.` : ''}${venuesContext}${extraRules}
+${fsTips ? `\n\nReal verified venues — when you reference any of these venues, set venueName to the EXACT name from this list:\n${fsTips}\n\nFor EVERY activity that references a verified venue above, set venueName to the exact venue name (e.g. "venueName":"Kiyomizu-dera Temple (清水寺)"). If the activity doesn't reference one of these venues, set venueName to null.` : ''}${formatRouteForDays(picksPlan?.route, dayNumbers)}${venuesContext}${extraRules}
 
 Return ONLY a JSON object with a "days" array containing ${dayNumbers.length} day object(s):
 {
@@ -386,15 +396,29 @@ async function generate(event, db, ctl) {
       picks: submission.picksPlan.picks.length,
       pinned: submission.picksPlan.picks.filter(p => p.pinned).length,
       interests: submission.picksPlan.interests.length,
+      routeBases: submission.picksPlan.route ? submission.picksPlan.route.bases.map(b => `${b.name}:${b.days}`) : null,
     });
+    const route = submission.picksPlan.route;
 
     const currencySymbol = getCurrencySymbol(submission.currency);
 
     await db.query(`UPDATE submissions SET status = 'processing', updated_at = NOW() WHERE id = $1`, [submissionId]);
 
     // ── Fetch Foursquare tips once upfront ───────────────────────────────
-    log.info('Fetching Foursquare tips', { submissionId, destination: submission.destination });
-    const fsTips = await fetchFoursquareTips(submission.destination);
+    // With a route: real venues per base, and each batch only sees its own bases' venues.
+    log.info('Fetching Foursquare tips', { submissionId, destination: submission.destination, bases: route?.bases.length || 0 });
+    const tipsByBase = new Map();
+    let fsTips = null;
+    if (route) {
+      const perBase = await Promise.all(route.bases.map(b => fetchFoursquareTips(placeOf(b))));
+      route.bases.forEach((b, i) => { if (perBase[i]) tipsByBase.set(b.name, perBase[i]); });
+      fsTips = [...tipsByBase.values()].join('\n') || null;
+    } else {
+      fsTips = await fetchFoursquareTips(submission.destination);
+    }
+    const tipsFor = (dayNumbers) => (route
+      ? basesForDays(route, dayNumbers).map(b => tipsByBase.get(b.name)).filter(Boolean).join('\n') || null
+      : fsTips);
     if (fsTips) {
       log.info('Foursquare tips fetched', { submissionId, tipCount: fsTips.split('\n').length });
     } else {
@@ -418,7 +442,7 @@ async function generate(event, db, ctl) {
       generateMeta(submission, currencySymbol, submissionId, fsTips),
       mapLimit(batches, BATCH_CONCURRENCY, (batchNums) => {
         log.info('Generating batch', { submissionId, days: batchNums });
-        return generateDaysBatch(submission, batchNums, currencySymbol, submissionId, fsTips);
+        return generateDaysBatch(submission, batchNums, currencySymbol, submissionId, tipsFor(batchNums));
       }),
     ]);
 
@@ -442,6 +466,16 @@ async function generate(event, db, ctl) {
       days: allDays.sort((a, b) => a.dayNumber - b.dayNumber),
       totalEstimatedCost: meta.totalEstimatedCost || submission.budget,
     };
+    // Route first: keep the confirmed route on the itinerary (PDF "Your route" section) and
+    // tag each day with its base.
+    if (route) {
+      itinerary.route = route;
+      const plan = dayPlanOf(route);
+      for (const d of itinerary.days) {
+        const p = plan.find(x => x.day === d.dayNumber);
+        if (p) { d.base = p.base.name; d.travelDay = p.travelDay; }
+      }
+    }
 
     // ── Q3 validation pass: duplicates + Step 3 picks, repaired once ──────
     const coverageOf = (days) => (submission.picksPlan.picks.length
@@ -462,7 +496,7 @@ async function generate(event, db, ctl) {
     const repairResults = await Promise.all([...repairs].map(async ([dayNumber, repair]) => {
       try {
         const { days: fixed, usage } = await generateDaysBatch(
-          submission, [dayNumber], currencySymbol, submissionId, fsTips, repairRules(repair)
+          submission, [dayNumber], currencySymbol, submissionId, tipsFor([dayNumber]), repairRules(repair)
         );
         return { dayNumber, repair, fixed, usage };
       } catch (err) {
@@ -502,7 +536,9 @@ async function generate(event, db, ctl) {
     });
 
     // Attach full venue objects to activities by matching venueName
-    const allFoursquareVenues = await searchVenues(submission.destination, { limit: 50 });
+    const allFoursquareVenues = route
+      ? (await Promise.all(route.bases.map(b => searchVenues(placeOf(b), { limit: Math.max(10, Math.ceil(50 / route.bases.length)) })))).flat()
+      : await searchVenues(submission.destination, { limit: 50 });
     itinerary = attachVenuesToItinerary(itinerary, allFoursquareVenues);
     log.info('Venues attached to itinerary', { submissionId, foursquareVenuesFetched: allFoursquareVenues.length });
 

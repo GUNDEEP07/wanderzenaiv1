@@ -15,7 +15,7 @@ const fieldLabel = { fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', margin
 const chipBase = (active) => ({ fontSize: '0.72rem', padding: '4px 10px', borderRadius: 20, border: active ? '1px solid #00d4aa' : '1px solid rgba(255,255,255,0.2)', background: active ? 'rgba(0,212,170,0.15)' : 'transparent', color: active ? '#00d4aa' : 'rgba(255,255,255,0.5)', cursor: 'pointer', transition: 'all 0.15s', fontFamily: 'inherit' });
 const segBtn = (active) => ({ flex: 1, fontSize: '0.72rem', padding: '6px 4px', borderRadius: 8, border: active ? '1px solid #00d4aa' : '1px solid rgba(255,255,255,0.2)', background: active ? 'rgba(0,212,170,0.15)' : 'transparent', color: active ? '#00d4aa' : 'rgba(255,255,255,0.5)', cursor: 'pointer', textTransform: 'capitalize', fontFamily: 'inherit' });
 
-export default function StepReview({ form, set, onBack, onSubmit, submitting, submitError }) {
+export default function StepReview({ form, set, onBack, onSubmit, submitting, submitError, accountEmail }) {
   const [preview, setPreview] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
 
@@ -177,6 +177,29 @@ export default function StepReview({ form, set, onBack, onSubmit, submitting, su
         </div>
       </div>
 
+      {/* ── Route (route first) ── */}
+      {form.route?.bases?.length > 0 && (() => {
+        let day = 1;
+        return (
+          <div style={{ ...panel, marginBottom: '1.5rem' }}>
+            <div style={sectionLabel}>Your route</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+              {form.route.bases.map((b, i) => {
+                const from = day; day += b.days;
+                return (
+                  <React.Fragment key={`${b.name}-${i}`}>
+                    {i > 0 && <span style={{ color: 'rgba(255,255,255,0.3)' }}>→</span>}
+                    <span style={{ padding: '5px 12px', borderRadius: 20, background: 'rgba(0,212,170,0.08)', border: '1px solid rgba(0,212,170,0.2)', fontSize: '0.8rem', color: '#fff' }}>
+                      <strong style={{ color: '#00d4aa' }}>{b.days > 1 ? `Days ${from}–${day - 1}` : `Day ${from}`}</strong> · {b.name}
+                    </span>
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── Selected experiences ── */}
       {(() => {
         // selected_venues v2: { picks: [{ name, day, ... }], interests: [...] } — see VenueSelection.
@@ -217,7 +240,9 @@ export default function StepReview({ form, set, onBack, onSubmit, submitting, su
           {submitting ? 'Generating…' : 'Generate full itinerary →'}
         </button>
       </div>
-      <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.78rem', textAlign: 'center', marginTop: '0.75rem' }}>Takes about 5 minutes · PDF delivered by email</p>
+      <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.78rem', textAlign: 'center', marginTop: '0.75rem' }}>
+        Takes about 5 minutes · PDF delivered by email{accountEmail ? ` to ${accountEmail}` : ''}
+      </p>
     </div>
   );
 }

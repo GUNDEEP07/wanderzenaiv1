@@ -261,8 +261,31 @@ body {
     </div>` : ''}
   </div>
 
+  <!-- Route (route-first itineraries) -->
+  ${itinerary.route?.bases?.length ? (() => {
+    let day = 1;
+    const rows = itinerary.route.bases.map(b => {
+      const from = day; day += b.days;
+      const range = b.days > 1 ? `Days ${from}–${day - 1}` : `Day ${from}`;
+      const t = b.transferIn;
+      const how = t ? ` · arrive by ${escapeHtml(t.mode)}${t.hours ? ` (~${escapeHtml(t.hours)} h)` : ''}` : '';
+      const stay = (itinerary.stays || []).find(s => String(s.base || '').toLowerCase() === b.name.toLowerCase());
+      return `
+    <div class="accom-rec">${escapeHtml(range)} — ${escapeHtml(b.name)}${b.country ? `, ${escapeHtml(b.country)}` : ''}<span class="accom-why">${how}</span></div>
+    ${stay ? `<div class="accom-why">Stay: ${escapeHtml(stay.type || '')}${stay.priceTier ? ` (${escapeHtml(stay.priceTier)})` : ''} — ${sanitize(stay.why || '')}</div>` : (b.why ? `<div class="accom-why">${sanitize(b.why)}</div>` : '')}
+    ${b.dayTrips?.length ? `<div class="search-pills" style="margin:1mm 0 2.5mm">${b.dayTrips.map(d => `<span class="search-pill">${escapeHtml(d.name)}</span>`).join('')}</div>` : ''}`;
+    }).join('');
+    return `
+  <div class="accom-box">
+    <div class="accom-header">
+      <div class="accom-dot"></div>
+      <div class="accom-title">Your route</div>
+    </div>${rows}
+  </div>`;
+  })() : ''}
+
   <!-- Accommodation -->
-  ${itinerary.accommodation ? `
+  ${itinerary.accommodation && !itinerary.stays?.length ? `
   <div class="accom-box">
     <div class="accom-header">
       <div class="accom-dot"></div>
@@ -284,7 +307,7 @@ body {
       <div class="day-num">${String(day.dayNumber).padStart(2, '0')}</div>
       <div class="day-info">
         <div class="day-theme">${escapeHtml(day.theme || 'Day ' + day.dayNumber)}</div>
-        <div class="day-budget">Daily budget: ${currencySymbol}${day.dailyCost || 0}</div>
+        <div class="day-budget">${day.base ? `${day.travelDay ? 'Travel day → ' : ''}${escapeHtml(day.base)} · ` : ''}Daily budget: ${currencySymbol}${day.dailyCost || 0}</div>
       </div>
     </div>
     <div class="day-body">
@@ -491,3 +514,6 @@ exports.handler = async (event) => {
     ).catch(() => {});
   }
 };
+
+// Exported for unit tests.
+exports._internal = { buildHTML };

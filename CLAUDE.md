@@ -19,8 +19,12 @@ AI-powered slow-travel itinerary SaaS. Live at wanderzenai.com. Solo-maintained.
   anything sensitive before committing.
 - Frontend itinerary flow: `frontend/src/pages/PlanTrip.jsx` (multi-step form; it lives in
   `pages/`, not `components/`).
-- `StepReview.jsx` is the dedicated Step 4/5 review-preview component under
-  `src/components/plantrip/`.
+- Plan flow (6 steps): Destination → Dates → **Your route** (`StepRoute.jsx`, POST
+  `/route-plan`) → Trip overview → Choose experiences (`VenueSelection`, one tab per route
+  base) → Review & submit (`StepReview.jsx`, loads the /preview outline itself). Step
+  indexes are the `STEP_*` constants in PlanTrip.jsx — never hard-code numbers.
+- Route first: the confirmed route travels in `selected_venues.route` and is shaped by
+  `backend/layers/shared/nodejs/route-plan.js` (sanitize, day→base plan, prompt blocks).
 - `src/api/itinerary.js` is the service layer: `fetchPreview()` + `submitItinerary()`.
 - Step 3 picks travel as `selected_venues` v2 `{ version: 2, picks, interests }` — see
   `backend/layers/shared/nodejs/selected-venues.js`.
