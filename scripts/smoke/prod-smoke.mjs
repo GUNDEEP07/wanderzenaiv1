@@ -99,6 +99,31 @@ await check('GET /recommendations/categories (public) → 200',
 await check('GET /itinerary/{unknown id} status (public) → 404',
   async () => expectStatus(await call('GET', '/itinerary/wz_smoke_doesnotexist'), 404));
 
+// ── Photos (Unsplash via backend proxy) and destination insights ──────────────
+await check('GET /photos/search → 200 with a credited photo (or null without a key)',
+  async () => {
+    const r = await call('GET', '/photos/search?query=kyoto');
+    expectStatus(r, 200);
+    if (!r.json || !('photo' in r.json)) throw new Error(`no photo field: ${r.text.slice(0, 160)}`);
+    const p = r.json.photo;
+    if (p && !(p.url && p.photographer && /utm_source=wanderzenai/.test(p.unsplashUrl))) throw new Error(`credit fields missing: ${r.text.slice(0, 200)}`);
+    return p ? `photo by ${p.photographer}` : 'photo: null (no key or Unsplash limit)';
+  });
+await check('GET /photos/search rejects an empty query → 400',
+  async () => expectStatus(await call('GET', '/photos/search?query=%20'), 400));
+// Fixed dates → served from the 30-day cache after the first run (one Haiku call a month).
+await check('GET /destination-insights → things to do grounded in Foursquare places',
+  async () => {
+    const q = new URLSearchParams({ destination: 'Kyoto, Japan', startDate: '2027-04-05', endDate: '2027-04-12', travelStyles: 'Nature' });
+    const r = await call('GET', `/destination-insights?${q}`);
+    expectStatus(r, 200);
+    const ins = r.json?.insights;
+    if (!ins?.placesSource) throw new Error(`no placesSource: ${r.text.slice(0, 200)}`);
+    const things = ins.thingsToDo || [];
+    const verified = things.filter(t => t.verified).length;
+    return `source ${ins.placesSource}, ${verified}/${things.length} verified${r.json.cached ? ' (cached)' : ''}`;
+  });
+
 // ── CORS preflight allows the methods the app uses ────────────────────────────
 await check('OPTIONS /profile allows PUT',
   async () => {
