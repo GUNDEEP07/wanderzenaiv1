@@ -66,6 +66,12 @@ function validatePreviewInput(body) {
 }
 
 // ─── POST /route-plan ────────────────────────────────────────────────────────
+/**
+ * 200 with the route options. `route` (the first option) keeps browser tabs that still run
+ * the pre-option-B frontend working until they reload — they read `data.route`.
+ */
+const routeOptionsOk = (source, country, options) => ok({ source, country, options, route: options[0] || null });
+
 // Route first (Q2): propose the bases for the trip before Step 3. See route-plan.js.
 async function handleRoutePlan(event, db, user) {
   let body;
@@ -93,7 +99,7 @@ async function handleRoutePlan(event, db, user) {
   const fitting = curated ? curated.options.filter(o => o.fitsConstraints) : [];
   if (fitting.length) {
     log.info('Route options (curated)', { uid: user.uid, country: curated.country, days: input.days, options: curated.options.map(o => o.id), fitting: fitting.length });
-    return ok({ source: 'curated', country: curated.country, options: curated.options.slice(0, 3) });
+    return routeOptionsOk('curated', curated.country, curated.options.slice(0, 3));
   }
 
   // 2. Claude: any other country, "show other options", or when no curated route fits
@@ -121,10 +127,10 @@ async function handleRoutePlan(event, db, user) {
     // Curated routes that didn't fit stay visible below, with their heads-up.
     const options = [...aiOptions, ...(curated ? curated.options : [])].slice(0, 4);
     log.info('Route options (claude)', { uid: user.uid, destination: input.destination, days: input.days, more: wantMore, options: options.map(o => `${o.name}:${o.bases.map(b => b.name).join('>')}`) });
-    return ok({ source: curated ? 'mixed' : 'ai', country: curated?.country || null, options });
+    return routeOptionsOk(curated ? 'mixed' : 'ai', curated?.country || null, options);
   } catch (err) {
     log.error('Route planning failed', { error: err.message });
-    if (curated) return ok({ source: 'curated', country: curated.country, options: curated.options.slice(0, 3) });
+    if (curated) return routeOptionsOk('curated', curated.country, curated.options.slice(0, 3));
     return serverError('Could not plan a route right now. Please try again.');
   }
 }
