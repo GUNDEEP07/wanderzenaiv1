@@ -71,20 +71,66 @@ test('prompt blocks: overview lists day ranges; batch lines name the base and th
   assert.deepEqual(rp.basesForDays(r, [3, 4, 5]).map(b => b.name), ['Kyoto', 'Takayama']);
 });
 
-test('parseRouteResponse: tolerates text around the JSON, balances days, keeps summary', () => {
-  const text = 'Here you go:\n' + JSON.stringify({ summary: 'Temples, then mountains, then the coast', bases: japan.bases.map(b => ({ ...b, days: 5 })) });
-  const r = rp.parseRouteResponse(text, 10);
-  assert.equal(r.bases.reduce((a, b) => a + b.days, 0), 10);
-  assert.equal(r.summary, 'Temples, then mountains, then the coast');
-  assert.throws(() => rp.parseRouteResponse('no json here', 10), /No JSON/);
-  assert.throws(() => rp.parseRouteResponse('{"bases":[]}', 10), /no usable bases/);
+test('parseRouteOptions: several options, text around the JSON, days balanced, junk options dropped', () => {
+  const text = 'Here you go:\n' + JSON.stringify({ options: [
+    { name: 'Temples and Alps', summary: 'Temples, then mountains', bases: japan.bases.map(b => ({ ...b, days: 5 })) },
+    { name: 'Empty', bases: [] },
+    { name: 'Kyoto only', bases: [{ name: 'Kyoto', days: 2 }] },
+  ] });
+  const opts = rp.parseRouteOptions(text, 10);
+  assert.deepEqual(opts.map(o => o.name), ['Temples and Alps', 'Kyoto only']);
+  assert.ok(opts.every(o => o.bases.reduce((a, b) => a + b.days, 0) === 10 && o.source === 'ai'));
+  assert.equal(opts[0].longestTransferHours, 3.5);
+  assert.equal(opts[1].longestTransferHours, 0);
+  // a single-route answer (old shape) still works
+  assert.equal(rp.parseRouteOptions(JSON.stringify(japan), 10).length, 1);
+  assert.throws(() => rp.parseRouteOptions('no json here', 10), /No JSON/);
+  assert.throws(() => rp.parseRouteOptions('{"options":[{"bases":[]}]}', 10), /no usable options/);
 });
 
-test('buildRoutePrompt states the day total and the slow-travel rules', () => {
-  const p = rp.buildRoutePrompt({ destination: 'Japan', days: 10, travelStyle: ['Nature'], travelPace: 'relaxed', interests: 'onsen, hiking' });
+test('buildRouteOptionsPrompt carries the trip length, stop cap, kids, travel-time limit and routes to avoid', () => {
+  const prefs = rp.sanitizePrefs({ adults: 2, kids: [5, 8], transferComfort: 'short', notes: 'must see Sapa' });
+  const p = rp.buildRouteOptionsPrompt({ destination: 'Vietnam', days: 10, travelStyle: ['Nature'], prefs, count: 3, avoid: ['Central coast, easy pace'] });
+  assert.match(p, /Suggest 3 different ROUTES/);
   assert.match(p, /must add up to exactly 10/);
-  assert.match(p, /small towns, villages and nature/);
-  assert.match(p, /interests: onsen, hiking/);
+  assert.match(p, /At most 4 stops/);
+  assert.match(p, /2 adults and children aged 5, 8; no more than ~2.5 hours between stops; no overnight journeys/);
+  assert.match(p, /must see Sapa/);
+  assert.match(p, /keep it easy for the children/);
+  assert.match(p, /Do not repeat these routes they already saw: Central coast, easy pace/);
+  assert.match(rp.buildRouteOptionsPrompt({ destination: 'Bled', days: 3, prefs: rp.sanitizePrefs({}) }), /4 days or less: 1 base/);
+});
+
+test('sanitizePrefs: sensible defaults, bounds, no overnight with under-6s', () => {
+  assert.deepEqual(rp.sanitizePrefs(null), { adults: 2, kids: [], transferComfort: 'medium', overnightOk: false, notes: null });
+  const p = rp.sanitizePrefs({ adults: 40, kids: [3, 'x', 25, 7.6, -1], transferComfort: 'teleport', overnightOk: true, notes: '  see   rice terraces ' });
+  assert.equal(p.adults, 2); // out of range → default
+  assert.deepEqual(p.kids, [3, 7]);
+  assert.equal(p.transferComfort, 'medium');
+  assert.equal(p.overnightOk, false, 'a 3-year-old means no overnight journeys');
+  assert.equal(p.notes, 'see rice terraces');
+  assert.equal(rp.sanitizePrefs({ kids: [9], overnightOk: true }).overnightOk, true);
+});
+
+test('formatPrefsForItinerary: kid rules only when there are kids', () => {
+  const kids = rp.formatPrefsForItinerary(rp.sanitizePrefs({ kids: [4] }));
+  assert.match(kids, /WHO IS TRAVELLING/);
+  assert.match(kids, /youngest 4/);
+  assert.match(kids, /nap window/);
+  const adults = rp.formatPrefsForItinerary(rp.sanitizePrefs({ adults: 1 }));
+  assert.match(adults, /1 adult;/);
+  assert.ok(!/Children/.test(adults));
+  assert.equal(rp.formatPrefsForItinerary(null), '');
+});
+
+test('repeat visits (Hanoi → Sapa → Hanoi) keep separate stops; days for the base cover both visits', () => {
+  const r = rp.sanitizeRoute({ bases: [
+    { name: 'Hanoi', days: 2 }, { name: 'Sapa', days: 3, transferIn: { mode: 'bus', hours: 5.5 } },
+    { name: 'Hanoi', days: 1, transferIn: { mode: 'bus', hours: 5.5 } },
+  ] }, 6);
+  assert.deepEqual(r.bases.map(b => b.name), ['Hanoi', 'Sapa', 'Hanoi']);
+  assert.deepEqual(rp.daysForBase(r, 'Hanoi'), [1, 2, 6]);
+  assert.match(rp.formatRouteForDays(r, [6]), /Day 6: TRAVEL DAY Sapa → Hanoi by bus/);
 });
 
 test('selected_venues keeps a sanitised route; unpinned picks land on their base\'s non-travel days', () => {

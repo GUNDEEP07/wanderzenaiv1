@@ -14,6 +14,7 @@ import { DestinationSearch } from '../components/plantrip/DestinationSearch';
 import { VenueSelection } from '../components/plantrip/VenueSelection';
 import StepReview from '../components/plantrip/StepReview';
 import StepRoute, { routeKey } from '../components/plantrip/StepRoute';
+import { CountryChips, WhoIsTravelling, DEFAULT_TRIP_PREFS } from '../components/plantrip/WhoIsTravelling';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { submitItinerary, fetchRoutePlan } from '../api/itinerary';
 import { fetchDestinationInsights } from '../api/destinationInsights';
@@ -88,6 +89,7 @@ const INITIAL_FORM = {
   selected_venues: { version: 2, picks: [], interests: [] }, // set by VenueSelection (names, places, days)
   budgetScope: 'full-trip',  // 'full-trip' or 'activities-only'
   alreadyBooked: false,  // Skip flights/accommodation if true
+  tripPrefs: DEFAULT_TRIP_PREFS, // who's travelling: adults, kids' ages, travel-time comfort, notes
 };
 
 // ─── Styles ────────────────────────────────────────────────────────────────────
@@ -179,6 +181,7 @@ export default function PlanTrip() {
   // Route request state (the route itself is on form.route because it is submitted).
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeError, setRouteError] = useState('');
+  const [routeOptions, setRouteOptions] = useState({ key: null, list: [] }); // suggested routes, for routeKey(form)
 
   useEffect(() => {
     if (!currentUser) return;
@@ -331,14 +334,17 @@ export default function PlanTrip() {
     goToReview();
   };
 
-  // Route first: ask the backend for bases; the route is stamped with what it was planned for.
-  const planRoute = async () => {
+  // Route first (option B): fetch 2–3 suggested routes; "more" asks for different ideas.
+  // Suggestions are separate state (not submitted); the chosen route goes on the form.
+  const planRoute = async ({ more = false } = {}) => {
+    const key = routeKey(form);
     setRouteLoading(true);
     setRouteError('');
     try {
-      const route = await fetchRoutePlan(form);
-      setForm(f => ({ ...f, route: { ...route, forKey: routeKey(f) } }));
-      analytics.stepReached?.('Route planned', STEP_ROUTE);
+      const avoid = more ? routeOptions.list.map(o => o.name) : [];
+      const result = await fetchRoutePlan(form, { more, avoid });
+      setRouteOptions({ key, list: result.options });
+      analytics.stepReached?.('Route options shown', STEP_ROUTE);
     } catch (err) {
       setRouteError(err.message || 'Could not plan a route right now.');
     } finally {
@@ -346,14 +352,24 @@ export default function PlanTrip() {
     }
   };
 
-  // Places Step 4 suggests for: the route's bases, or the destination when there is no route.
+  const chooseRoute = (option) => {
+    const { fitsConstraints: _f, caution: _c, longestTransferHours: _l, ...route } = option;
+    setForm(f => ({ ...f, route: { ...route, forKey: routeKey(f) } }));
+    setErrors(e => ({ ...e, route: '' }));
+    analytics.stepReached?.('Route chosen', STEP_ROUTE);
+  };
+
+  // Places Step 4 suggests for: the route's bases (once each — a route can pass through a
+  // town twice, e.g. Hanoi → Sapa → Hanoi), or the destination when there is no route.
   const experienceDestinations = form.route?.bases?.length
-    ? form.route.bases.map(b => ({
-      name: [b.name, b.country].filter(Boolean).join(', '),
-      country: b.country || form.destinations[0]?.country || '',
-      lat: b.lat ?? form.destinations[0]?.lat ?? 0,
-      lng: b.lng ?? form.destinations[0]?.lng ?? 0,
-    }))
+    ? form.route.bases
+      .filter((b, i, all) => all.findIndex(x => x.name === b.name) === i)
+      .map(b => ({
+        name: [b.name, b.country].filter(Boolean).join(', '),
+        country: b.country || form.destinations[0]?.country || '',
+        lat: b.lat ?? form.destinations[0]?.lat ?? 0,
+        lng: b.lng ?? form.destinations[0]?.lng ?? 0,
+      }))
     : form.destinations;
 
 
@@ -388,9 +404,10 @@ export default function PlanTrip() {
       }
     }
     if (step === STEP_ROUTE) {
-      const bases = form.route?.bases || [];
+      // A route chosen for another destination, length or group doesn't count.
+      const bases = form.route?.forKey === routeKey(form) ? (form.route.bases || []) : [];
       const total = bases.reduce((a, b) => a + (b.days || 0), 0);
-      if (!bases.length) errs.route = 'Plan a route first (or add a stop).';
+      if (!bases.length) errs.route = 'Pick one of the suggested routes first.';
       else if (total !== +form.days) errs.route = `Your route covers ${total} of ${form.days} days — adjust the days so they add up.`;
     }
     setErrors(errs);
@@ -538,13 +555,17 @@ export default function PlanTrip() {
             <div>
               <div style={s.stepLabel}>{stepLabel(0)}</div>
               <h2 style={s.stepTitle}>Where & When</h2>
-              <p style={s.stepSub}>Tell us your destination, how long you'll stay, and what interests you.</p>
+              <p style={s.stepSub}>Pick a country, tell us who's coming, and we'll suggest the route.</p>
 
-              {/* Destination */}
+              {/* Destination — country first */}
               <div style={s.fieldWrap}>
-                <label style={s.label}>Destination *</label>
+                <label style={s.label}>Where to? *</label>
+                <CountryChips
+                  selectedName={form.destinations[0]?.isCountry ? form.destinations[0].name : null}
+                  onPick={(d) => handleDestinationSelect(d)}
+                />
                 <div style={s.fieldWrap}>
-                  <DestinationSearch onSelect={handleDestinationSelect} disabled={false} allowMultiple={false} initialSelected={form.destinations} />
+                  <DestinationSearch key={form.destinations[0]?.name || 'none'} onSelect={handleDestinationSelect} disabled={false} allowMultiple={false} initialSelected={form.destinations} />
                   {errors.destination && <div style={s.error}>{errors.destination}</div>}
                   {personalRecs.length > 0 && (
                     <div style={{ marginTop: 12 }}>
@@ -674,6 +695,12 @@ export default function PlanTrip() {
                   ))}
                 </div>
                 {errors.travelPace && <div style={s.error}>{errors.travelPace}</div>}
+              </div>
+
+              {/* Who's travelling — asked before any route is suggested */}
+              <div style={s.fieldWrap}>
+                <label style={s.label}>Who's travelling? *</label>
+                <WhoIsTravelling value={form.tripPrefs} onChange={(v) => set('tripPrefs', v)} />
               </div>
 
               {/* Traveler Type (Optional) */}
@@ -812,14 +839,19 @@ export default function PlanTrip() {
               <div style={s.stepLabel}>{stepLabel(STEP_ROUTE)}</div>
               <h2 style={s.stepTitle}>Your route</h2>
               <p style={s.stepSub}>
-                Where you'll stay for your {form.days} days in {form.destinations[0]?.name || 'your destination'}. Change the days, the order, or add and remove stops.
+                {form.route?.forKey === routeKey(form)
+                  ? `Where you'll stay for your ${form.days} days. Change the days, the order, or add and remove stops.`
+                  : `Suggested routes for ${form.days} days in ${form.destinations[0]?.name || 'your destination'}, planned around who's travelling. Pick one — you can tweak it next.`}
               </p>
               <StepRoute
                 form={form}
                 route={form.route}
+                options={routeOptions.list}
+                optionsKey={routeOptions.key}
                 loading={routeLoading}
                 error={routeError}
                 onPlan={planRoute}
+                onChoose={chooseRoute}
                 onChange={(route) => { setForm(f => ({ ...f, route })); setErrors(e => ({ ...e, route: '' })); }}
                 errorText={errors.route}
               />

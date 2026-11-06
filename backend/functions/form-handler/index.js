@@ -6,7 +6,10 @@ const {
   requireUser, AuthError, authFailure, checkRateLimit, userSubject, tooManyRequests,
 } = require('/opt/nodejs/index');
 const { sanitizeSelectedVenues } = require('/opt/nodejs/selected-venues');
-const { sanitizeRoute, buildRoutePrompt, parseRouteResponse } = require('/opt/nodejs/route-plan');
+const {
+  sanitizeRoute, sanitizePrefs, describePrefs, buildRouteOptionsPrompt, parseRouteOptions,
+} = require('/opt/nodejs/route-plan');
+const { curatedOptions } = require('/opt/nodejs/curated-routes');
 const { MODELS, createMessage, firstText, withEffort, maxTokensFor } = require('/opt/nodejs/claude');
 const { SUBSCRIPTION_MONTHLY_ITINERARIES, withMonthlyColumn } = require('./subscription');
 
@@ -71,9 +74,6 @@ async function handleRoutePlan(event, db, user) {
   const { errors, values } = validatePreviewInput(body);
   if (errors.length) return badRequest('destination and days are required', errors);
 
-  const limited = await rateLimited(db, 'route', user);
-  if (limited) return limited;
-
   const input = {
     destination: values.destination,
     days: values.days,
@@ -82,23 +82,49 @@ async function handleRoutePlan(event, db, user) {
     interests: typeof body.interests === 'string' ? body.interests.slice(0, 300) : '',
     travelDate: typeof body.travelDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.travelDate) ? body.travelDate : '',
     userLocation: typeof body.userLocation === 'string' ? body.userLocation.slice(0, 100) : '',
+    prefs: sanitizePrefs(body.prefs),
+    // "Show other options": route names already shown, so Claude suggests new ones.
+    avoid: (Array.isArray(body.avoid) ? body.avoid : []).filter(a => typeof a === 'string').map(a => a.slice(0, 60)).slice(0, 8),
   };
+  const wantMore = body.more === true;
 
+  // 1. Hand-curated routes for the launch countries (option B) — instant, no Claude call.
+  const curated = wantMore ? null : curatedOptions(input);
+  const fitting = curated ? curated.options.filter(o => o.fitsConstraints) : [];
+  if (fitting.length) {
+    log.info('Route options (curated)', { uid: user.uid, country: curated.country, days: input.days, options: curated.options.map(o => o.id), fitting: fitting.length });
+    return ok({ source: 'curated', country: curated.country, options: curated.options.slice(0, 3) });
+  }
+
+  // 2. Claude: any other country, "show other options", or when no curated route fits
+  //    (e.g. young kids and short transfers only).
+  const limited = await rateLimited(db, 'route', user);
+  if (limited) return limited;
   try {
     // Interactive and behind API Gateway's 29 s limit: the fast model, one attempt.
     const data = await createMessage(withEffort({
       model: MODELS.fast,
-      max_tokens: maxTokensFor(MODELS.fast, 1800, { thinkingHeadroom: 3000 }),
-      messages: [{ role: 'user', content: buildRoutePrompt(input) }],
-    }, 'medium'), {
+      max_tokens: maxTokensFor(MODELS.fast, 3600, { thinkingHeadroom: 2000 }),
+      messages: [{
+        role: 'user',
+        content: buildRouteOptionsPrompt({
+          ...input,
+          count: curated ? 2 : 3,
+          avoid: [...input.avoid, ...(curated ? curated.options.map(o => o.name) : [])],
+        }),
+      }],
+    }, 'low'), {
       timeoutMs: 24000,
       maxAttempts: 1,
     });
-    const route = parseRouteResponse(firstText(data), input.days);
-    log.info('Route planned', { uid: user.uid, destination: input.destination, days: input.days, bases: route.bases.map(b => `${b.name}:${b.days}`) });
-    return ok({ route });
+    const aiOptions = parseRouteOptions(firstText(data), input.days);
+    // Curated routes that didn't fit stay visible below, with their heads-up.
+    const options = [...aiOptions, ...(curated ? curated.options : [])].slice(0, 4);
+    log.info('Route options (claude)', { uid: user.uid, destination: input.destination, days: input.days, more: wantMore, options: options.map(o => `${o.name}:${o.bases.map(b => b.name).join('>')}`) });
+    return ok({ source: curated ? 'mixed' : 'ai', country: curated?.country || null, options });
   } catch (err) {
     log.error('Route planning failed', { error: err.message });
+    if (curated) return ok({ source: 'curated', country: curated.country, options: curated.options.slice(0, 3) });
     return serverError('Could not plan a route right now. Please try again.');
   }
 }
@@ -116,9 +142,9 @@ async function handlePreview(event, db, user) {
   const { destination, days, styles, pace, startTime, travelerType, userMustDos } = values;
   // The outline follows the route the traveller confirmed, when there is one.
   const route = sanitizeRoute(body.route || body.selected_venues?.route, days);
-  const routeLine = route
+  const routeLine = (route
     ? `Route (follow it — each day happens around that day's base): ${route.bases.map(b => `${b.name} ${b.days} day${b.days > 1 ? 's' : ''}`).join(' → ')}.`
-    : '';
+    : '') + (body.prefs ? ` Travelling: ${describePrefs(sanitizePrefs(body.prefs))}.` : '');
   const previewPrompt = `Return ONLY a valid JSON array. No markdown, no explanation, no code fences.
 Each item must have exactly: { "day": number, "theme": "short title max 4 words", "vibe": "one evocative line max 10 words" }
 
