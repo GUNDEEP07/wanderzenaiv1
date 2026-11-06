@@ -154,7 +154,7 @@ export default function PlanTrip() {
   const [step, setStep] = useState(() => {
     if (location.state?.startStep != null) return location.state.startStep;
     try {
-      const saved = sessionStorage.getItem('wz_plan_step');
+      const saved = sessionStorage.getItem('wz_plan_step_v2');
       if (saved != null) return parseInt(saved, 10);
     } catch { /* ignore */ }
     return 0;
@@ -163,7 +163,7 @@ export default function PlanTrip() {
   const [form, setForm] = useState(() => {
     if (Object.keys(prefill).length > 0) return { ...INITIAL_FORM, ...prefill };
     try {
-      const saved = sessionStorage.getItem('wz_plan_form');
+      const saved = sessionStorage.getItem('wz_plan_form_v2');
       if (saved) return { ...INITIAL_FORM, ...JSON.parse(saved) };
     } catch { /* ignore corrupt storage */ }
     return { ...INITIAL_FORM };
@@ -238,7 +238,7 @@ export default function PlanTrip() {
   // Persist form to sessionStorage whenever it changes
   useEffect(() => {
     try {
-      sessionStorage.setItem('wz_plan_form', JSON.stringify(form));
+      sessionStorage.setItem('wz_plan_form_v2', JSON.stringify(form));
     } catch { /* ignore */ }
   }, [form]);
 
@@ -268,7 +268,7 @@ export default function PlanTrip() {
   const goToStep = (n) => {
     const clamped = Math.max(0, Math.min(n, STEPS.length - 1));
     setStep(clamped);
-    try { sessionStorage.setItem('wz_plan_step', String(clamped)); } catch { /* ignore */ }
+    try { sessionStorage.setItem('wz_plan_step_v2', String(clamped)); } catch { /* ignore */ }
   };
 
   // Field setter — clears error on change
@@ -449,8 +449,8 @@ export default function PlanTrip() {
       if (!data.success) throw new Error(data.message || 'Submission failed');
       const destinationName = form.destinations.length > 0 ? form.destinations[0].name : 'Unknown';
       analytics.tripSubmitted({ destination: destinationName, days: form.days, travelStyle: form.travelStyle });
-      sessionStorage.removeItem('wz_plan_step');
-      sessionStorage.removeItem('wz_plan_form');
+      sessionStorage.removeItem('wz_plan_step_v2');
+      sessionStorage.removeItem('wz_plan_form_v2');
       navigate('/confirmation', {
         state: { submissionId: data.data.submissionId, destination: destinationName, email: currentUser?.email || form.email },
       });
@@ -499,7 +499,7 @@ export default function PlanTrip() {
             <div style={{ width: 24, height: 24, borderRadius: 6, background: 'linear-gradient(135deg,#00d4aa,#00916a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: '#0a0f1e' }}>W</div>
             <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em' }}>WanderZenAI</span>
           </a>
-          <button type="button" onClick={() => { sessionStorage.removeItem('wz_plan_step'); sessionStorage.removeItem('wz_plan_form'); navigate('/'); }} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontFamily: 'inherit', fontSize: 12, cursor: 'pointer' }}>✕ Exit</button>
+          <button type="button" onClick={() => { sessionStorage.removeItem('wz_plan_step_v2'); sessionStorage.removeItem('wz_plan_form_v2'); navigate('/'); }} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontFamily: 'inherit', fontSize: 12, cursor: 'pointer' }}>✕ Exit</button>
         </nav>
         <div style={{ padding: '12px 24px 0' }}>
           {progressBar}
@@ -540,7 +540,7 @@ export default function PlanTrip() {
           <div style={{ width: 24, height: 24, borderRadius: 6, background: 'linear-gradient(135deg,#00d4aa,#00916a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: '#0a0f1e' }}>W</div>
           <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em' }}>WanderZenAI</span>
         </a>
-        <button type="button" onClick={() => { sessionStorage.removeItem('wz_plan_step'); sessionStorage.removeItem('wz_plan_form'); navigate('/'); }} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontFamily: 'inherit', fontSize: 12, cursor: 'pointer' }}>✕ Exit</button>
+        <button type="button" onClick={() => { sessionStorage.removeItem('wz_plan_step_v2'); sessionStorage.removeItem('wz_plan_form_v2'); navigate('/'); }} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontFamily: 'inherit', fontSize: 12, cursor: 'pointer' }}>✕ Exit</button>
       </nav>
 
       <div style={s.inner}>
