@@ -172,57 +172,134 @@ function basesForDays(route, dayNumbers) {
   return [...seen.values()];
 }
 
-// ─── Proposing a route (POST /route-plan) ────────────────────────────────────
+// ─── Who's travelling (asked before any route is suggested) ─────────────────
 
-const ROUTE_SCHEMA = `{
-  "summary": "one sentence on the shape of the trip",
-  "bases": [
+const COMFORT = new Set(['short', 'medium', 'long']);
+const COMFORT_TEXT = {
+  short: 'no more than ~2.5 hours between stops',
+  medium: 'up to ~4.5 hours between stops',
+  long: 'long journeys are fine',
+};
+
+/**
+ * Validate the "who's travelling" answers. Never throws.
+ * @returns {{ adults: number, kids: number[], transferComfort: 'short'|'medium'|'long',
+ *             overnightOk: boolean, notes: string|null }}
+ */
+function sanitizePrefs(raw) {
+  const p = raw && typeof raw === 'object' ? raw : {};
+  const kids = (Array.isArray(p.kids) ? p.kids : [])
+    .map(a => num(a, 0, 17))
+    .filter(a => a !== null)
+    .map(a => Math.floor(a))
+    .slice(0, 8);
+  const comfort = typeof p.transferComfort === 'string' && COMFORT.has(p.transferComfort) ? p.transferComfort : 'medium';
+  return {
+    adults: Math.floor(num(p.adults, 1, 12) || 2),
+    kids,
+    transferComfort: comfort,
+    overnightOk: p.overnightOk === true && !kids.some(a => a < 6),
+    notes: str(p.notes, 300),
+  };
+}
+
+/** One line for prompts, e.g. "2 adults and children aged 5, 8; up to ~4.5 hours between stops". */
+function describePrefs(prefs) {
+  if (!prefs) return '';
+  const who = `${prefs.adults} adult${prefs.adults === 1 ? '' : 's'}${prefs.kids.length ? ` and ${prefs.kids.length === 1 ? 'a child' : 'children'} aged ${prefs.kids.join(', ')}` : ''}`;
+  return `${who}; ${COMFORT_TEXT[prefs.transferComfort]}${prefs.overnightOk ? '; overnight trains/buses are OK' : '; no overnight journeys'}${prefs.notes ? `; the traveller says: "${prefs.notes}"` : ''}`;
+}
+
+/** Rules for the itinerary itself (kids, travel tolerance, notes). '' when nothing to add. */
+function formatPrefsForItinerary(prefs) {
+  if (!prefs) return '';
+  const lines = [`- Travelling: ${describePrefs(prefs)}.`];
+  if (prefs.kids.length) {
+    const youngest = Math.min(...prefs.kids);
+    lines.push(`- Children (youngest ${youngest}): kid-friendly activities, no early starts${youngest < 6 ? ', a rest/nap window after lunch' : ''}, short walks, easy food options, nothing unsafe for their age.`);
+  }
+  return `
+
+WHO IS TRAVELLING — plan around this:
+${lines.join('\n')}`;
+}
+
+// ─── Proposing routes (POST /route-plan) ────────────────────────────────────
+
+const OPTIONS_SCHEMA = `{
+  "options": [
     {
-      "name": "Town or village to stay in",
-      "region": "province/state",
-      "country": "country",
-      "lat": 0.0,
-      "lng": 0.0,
-      "days": 3,
-      "why": "one sentence: why stay here",
-      "stayType": "e.g. family-run guesthouse, farm stay, boutique homestay",
-      "transferIn": { "mode": "train|bus|car|ferry|flight|walk|other", "hours": 2.5, "note": "short practical tip" },
-      "dayTrips": [{ "name": "Nearby place", "why": "one short line" }]
+      "name": "short name for this route, 2–5 words",
+      "summary": "one sentence on the shape of the trip",
+      "bases": [
+        {
+          "name": "Town or village to stay in",
+          "region": "province/state",
+          "country": "country",
+          "lat": 0.0,
+          "lng": 0.0,
+          "days": 3,
+          "why": "one sentence: why stay here",
+          "stayType": "e.g. family-run guesthouse, farm stay, boutique homestay",
+          "transferIn": { "mode": "train|bus|car|ferry|flight|walk|other", "hours": 2.5, "note": "short practical tip" },
+          "dayTrips": [{ "name": "Nearby place", "why": "one short line" }]
+        }
+      ]
     }
   ]
 }`;
 
 /**
  * @param {object} input validated request: { destination, days, travelStyle[], travelPace,
- *   interests, travelDate, userLocation }
+ *   interests, travelDate, userLocation, prefs, count, avoid[] }
  */
-function buildRoutePrompt(input) {
+function buildRouteOptionsPrompt(input) {
   const styles = input.travelStyle?.length ? input.travelStyle.join(', ') : 'balanced';
-  return `Plan the ROUTE (not the daily activities) for a ${input.days}-day slow-travel trip to ${input.destination}.
+  const count = input.count || 3;
+  return `Suggest ${count} different ROUTES (not daily activities) for a ${input.days}-day slow-travel trip to ${input.destination}, so the traveller can pick one without doing research.
 
-Traveller: style ${styles}; pace ${input.travelPace || 'balanced'}${input.interests ? `; interests: ${input.interests}` : ''}${input.travelDate ? `; starting ${input.travelDate}` : ''}${input.userLocation ? `; travelling from ${input.userLocation}` : ''}.
-
-Rules:
-- Choose 1 base if the destination is a single town or the trip is 4 days or less; otherwise 2–4 bases (never more than one new base per 3 days). Fewer moves is better — this is slow travel.
-- Prefer small towns, villages and nature over big cities; a big city only as an arrival/departure base or if the traveller's interests need it.
-- Order the bases so travel between them is short and logical (no back-tracking). Put the arrival city first if the trip needs one.
-- "days" across all bases must add up to exactly ${input.days}. The first day at each later base is the travel day.
-- transferIn is how to get to this base from the previous one (null for the first base). Realistic hours.
-- 2–3 dayTrips per base, each under ~1.5 h away. Real places only.
-- lat/lng: the base town's coordinates.
+Traveller: ${describePrefs(input.prefs)}. Style ${styles}; pace ${input.travelPace || 'balanced'}${input.interests ? `; interests: ${input.interests}` : ''}${input.travelDate ? `; starting ${input.travelDate}` : ''}${input.userLocation ? `; travelling from ${input.userLocation}` : ''}.
+${input.avoid?.length ? `Do not repeat these routes they already saw: ${input.avoid.join('; ')}.\n` : ''}
+Rules for every route:
+- ${input.days <= 4 ? 'Trips of 4 days or less: 1 base.' : `At most ${Math.ceil(input.days / 2.5)} stops; fewer moves is better — this is slow travel.`} A stop may be visited twice (e.g. back to the arrival city before flying out).
+- Respect the traveller's travel-time limit for every transfer${input.prefs?.kids?.length ? ' and keep it easy for the children' : ''}.
+- Prefer small towns, villages and nature over big cities; big cities only to arrive/leave or if their interests need it.
+- Order stops so travel is short and logical. "days" in each route must add up to exactly ${input.days}; the first day at each later stop is its travel day.
+- transferIn: how to get there from the previous stop (null for the first), realistic door-to-door hours.
+- 2–3 dayTrips per stop, each under ~1.5 h away. Real places only. lat/lng of the stop town.
+- Make the ${count} routes genuinely different (regions, pace, or style), each one that fits the traveller.
 
 Return ONLY this JSON (no other text):
-${ROUTE_SCHEMA}`;
+${OPTIONS_SCHEMA}`;
 }
 
-/** Parse Claude's answer into a sanitised route. Throws when nothing usable came back. */
-function parseRouteResponse(text, totalDays) {
+/** Longest transfer of a route, in hours (0 for a single stop). */
+const longestTransfer = (bases) => Math.max(0, ...(bases || []).map(b => b.transferIn?.hours || 0));
+
+/**
+ * Parse Claude's answer into sanitised route options. Throws when nothing usable came back.
+ * @returns {object[]} [{ id, name, summary, source: 'ai', longestTransferHours, bases }]
+ */
+function parseRouteOptions(text, totalDays) {
   const match = String(text || '').match(/\{[\s\S]*\}/);
   if (!match) throw new Error('No JSON in route response');
   const parsed = JSON.parse(match[0]);
-  const route = sanitizeRoute(parsed, totalDays);
-  if (!route) throw new Error('Route response had no usable bases');
-  return { ...route, summary: str(parsed.summary, 240) };
+  const list = Array.isArray(parsed.options) ? parsed.options : (Array.isArray(parsed.bases) ? [parsed] : []);
+  const options = [];
+  for (const [i, o] of list.entries()) {
+    const route = sanitizeRoute(o, totalDays);
+    if (!route) continue;
+    options.push({
+      id: `ai-${i + 1}`,
+      name: str(o.name, 60) || `Route ${i + 1}`,
+      summary: str(o.summary, 240),
+      source: 'ai',
+      longestTransferHours: longestTransfer(route.bases),
+      bases: route.bases,
+    });
+  }
+  if (!options.length) throw new Error('Route response had no usable options');
+  return options.slice(0, 3);
 }
 
 module.exports = {
@@ -234,6 +311,10 @@ module.exports = {
   basesForDays,
   formatRouteOverview,
   formatRouteForDays,
-  buildRoutePrompt,
-  parseRouteResponse,
+  sanitizePrefs,
+  describePrefs,
+  formatPrefsForItinerary,
+  buildRouteOptionsPrompt,
+  parseRouteOptions,
+  longestTransfer,
 };

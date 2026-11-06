@@ -53,12 +53,15 @@ async function resendVerificationIfNeeded(status, data) {
  * @returns {Promise<{days: Array<{day: number, theme: string, vibe: string}>}>}
  */
 /**
- * Propose a route (bases, days per base, transfers, day trips) for the trip.
- * POST /route-plan — signed-in only, like /preview.
- * @returns {Promise<{ bases: object[], summary?: string }>}
+ * Suggest 2–3 routes (bases, days per base, transfers, day trips) for the trip.
+ * POST /route-plan — signed-in only, like /preview. Curated routes for the launch
+ * countries; Claude for the rest, or for "more" ideas (avoiding the ones shown).
+ * @param {Object} formData
+ * @param {{ more?: boolean, avoid?: string[] }} [opts]
+ * @returns {Promise<{ source: 'curated'|'ai'|'mixed', country: string|null, options: object[] }>}
  * @throws {Error} with a user-facing message
  */
-export async function fetchRoutePlan(formData) {
+export async function fetchRoutePlan(formData, { more = false, avoid = [] } = {}) {
   const primary = Array.isArray(formData.destinations) && formData.destinations.length > 0
     ? formData.destinations[0] : formData.destination;
   const destination = typeof primary === 'object'
@@ -75,14 +78,19 @@ export async function fetchRoutePlan(formData) {
       interests: formData.interests || '',
       travelDate: formData.travelDate || '',
       userLocation: formData.userLocation || '',
+      prefs: formData.tripPrefs || undefined,
+      more: more === true,
+      avoid: (avoid || []).slice(0, 12),
     }),
   });
   let data = {};
   try { data = await res.json(); } catch { /* not JSON */ }
   await resendVerificationIfNeeded(res.status, data);
   if (res.status === 429) throw new Error('You have planned a lot of routes in a short time — please wait a few minutes.');
-  if (!res.ok || !data?.data?.route) throw new Error(data?.message || 'Could not plan a route right now. Please try again.');
-  return data.data.route;
+  if (!res.ok || !Array.isArray(data?.data?.options) || !data.data.options.length) {
+    throw new Error(data?.message || 'Could not plan a route right now. Please try again.');
+  }
+  return data.data;
 }
 
 export async function fetchPreview(formData) {
@@ -103,6 +111,7 @@ export async function fetchPreview(formData) {
         startTime: formData.startTime || '09:00',
         userMustDos: formData.userMustDos || '',
         route: formData.route || undefined, // the outline follows the confirmed route
+        prefs: formData.tripPrefs || undefined, // who's travelling (kids, travel-time comfort)
       }),
     });
     if (!res.ok) throw new Error(`Preview failed: ${res.status}`);
@@ -152,6 +161,7 @@ export async function submitItinerary(formData) {
       selected_venues: {
         ...(formData.selected_venues?.version === 2 ? formData.selected_venues : { version: 2, picks: [], interests: [] }),
         ...(formData.route ? { route: formData.route } : {}),
+        ...(formData.tripPrefs ? { tripPrefs: formData.tripPrefs } : {}),
       },
     }),
   });

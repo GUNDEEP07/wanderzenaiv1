@@ -14,7 +14,7 @@
  * names. Those carry nothing Claude can use, so they normalise to an empty plan.
  */
 
-const { sanitizeRoute, dayPlan, daysForBase } = require('./route-plan');
+const { sanitizeRoute, sanitizePrefs, dayPlan, daysForBase } = require('./route-plan');
 
 const MAX_PICKS = 40;
 const MAX_INTERESTS = 20;
@@ -77,9 +77,13 @@ function sanitizeSelectedVenues(raw, totalDays) {
     if (s && !interests.some(x => x.toLowerCase() === s.toLowerCase())) interests.push(s);
   }
 
-  // Route first (route-plan.js): the bases the traveller confirmed before Step 3.
+  // Route first (route-plan.js): the bases the traveller confirmed before Step 3, and the
+  // "who's travelling" answers (kids, travel-time comfort, notes).
+  const out = { version: 2, picks, interests };
   const route = sanitizeRoute(raw.route, totalDays);
-  return route ? { version: 2, picks, interests, route } : { version: 2, picks, interests };
+  if (route) out.route = route;
+  if (raw.tripPrefs && typeof raw.tripPrefs === 'object') out.tripPrefs = sanitizePrefs(raw.tripPrefs);
+  return out;
 }
 
 /**
@@ -112,7 +116,7 @@ function planPicks(selectedVenues, totalDays) {
     planned.push({ ...p, day: best, pinned: false });
   }
   planned.sort((a, b) => a.day - b.day);
-  return { picks: planned, interests: clean.interests, route };
+  return { picks: planned, interests: clean.interests, route, ...(clean.tripPrefs ? { prefs: clean.tripPrefs } : {}) };
 }
 
 function describePick(p) {

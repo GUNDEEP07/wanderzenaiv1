@@ -23,7 +23,9 @@ const DEADLINE_MARGIN_MS = 60000;
 const {
   planPicks, formatPicksForDays, formatPicksOverview, findMissingPicks,
 } = require('/opt/nodejs/selected-venues');
-const { formatRouteOverview, formatRouteForDays, basesForDays, dayPlan: dayPlanOf } = require('/opt/nodejs/route-plan');
+const {
+  formatRouteOverview, formatRouteForDays, formatPrefsForItinerary, basesForDays, dayPlan: dayPlanOf,
+} = require('/opt/nodejs/route-plan');
 
 /** "Takayama, Gifu, Japan" — what Foursquare's `near` geocodes best. */
 const placeOf = (b) => [b.name, b.region, b.country].filter(Boolean).join(', ');
@@ -184,7 +186,7 @@ ${fsTips ? `
 Real verified venues in ${destination} — reference these specifically by name and include their map links:
 ${fsTips}
 
-For each venue mentioned: include the venue name exactly as given, and add the Google Maps link as [View on map](url) after the activity description.` : ''}${venuesContext}${formatRouteOverview(picksPlan?.route)}
+For each venue mentioned: include the venue name exactly as given, and add the Google Maps link as [View on map](url) after the activity description.` : ''}${venuesContext}${formatRouteOverview(picksPlan?.route)}${formatPrefsForItinerary(picksPlan?.prefs)}
 
 Return ONLY this JSON (no extra text):
 ${picksPlan?.route ? META_SCHEMA_WITH_STAYS : META_SCHEMA}`;
@@ -233,7 +235,7 @@ Rules:
 - One completely free hidden gem per day
 - Specific place names, not generic descriptions
 - Costs in ${currency} (${currencySymbol})
-${fsTips ? `\n\nReal verified venues — when you reference any of these venues, set venueName to the EXACT name from this list:\n${fsTips}\n\nFor EVERY activity that references a verified venue above, set venueName to the exact venue name (e.g. "venueName":"Kiyomizu-dera Temple (清水寺)"). If the activity doesn't reference one of these venues, set venueName to null.` : ''}${formatRouteForDays(picksPlan?.route, dayNumbers)}${venuesContext}${extraRules}
+${fsTips ? `\n\nReal verified venues — when you reference any of these venues, set venueName to the EXACT name from this list:\n${fsTips}\n\nFor EVERY activity that references a verified venue above, set venueName to the exact venue name (e.g. "venueName":"Kiyomizu-dera Temple (清水寺)"). If the activity doesn't reference one of these venues, set venueName to null.` : ''}${formatRouteForDays(picksPlan?.route, dayNumbers)}${formatPrefsForItinerary(picksPlan?.prefs)}${venuesContext}${extraRules}
 
 Return ONLY a JSON object with a "days" array containing ${dayNumbers.length} day object(s):
 {

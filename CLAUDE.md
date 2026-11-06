@@ -25,6 +25,14 @@ AI-powered slow-travel itinerary SaaS. Live at wanderzenai.com. Solo-maintained.
   indexes are the `STEP_*` constants in PlanTrip.jsx — never hard-code numbers.
 - Route first: the confirmed route travels in `selected_venues.route` and is shaped by
   `backend/layers/shared/nodejs/route-plan.js` (sanitize, day→base plan, prompt blocks).
+- Route options (option B): Step 1 asks the country (`CountryChips`) and who's travelling
+  (`WhoIsTravelling` → `form.tripPrefs`, submitted as `selected_venues.tripPrefs`). `/route-plan`
+  returns `{ source, country, options[] }`: hand-curated routes from
+  `layers/shared/nodejs/curated-routes.js` for the 10 launch countries (no Claude call), Claude
+  for other countries, for `more: true`, or when no curated route fits the kids/travel limit.
+  Curated data is reviewed in Notion ("Curated routes — review"); regenerate that page with
+  `node scripts/curated-routes-to-markdown.mjs`. Suggestions live in PlanTrip `routeOptions`
+  state, never on the form.
 - `src/api/itinerary.js` is the service layer: `fetchPreview()` + `submitItinerary()`.
 - Step 3 picks travel as `selected_venues` v2 `{ version: 2, picks, interests }` — see
   `backend/layers/shared/nodejs/selected-venues.js`.
