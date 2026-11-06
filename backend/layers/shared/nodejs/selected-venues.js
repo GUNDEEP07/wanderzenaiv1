@@ -14,6 +14,8 @@
  * names. Those carry nothing Claude can use, so they normalise to an empty plan.
  */
 
+const { sanitizeRoute, dayPlan, daysForBase } = require('./route-plan');
+
 const MAX_PICKS = 40;
 const MAX_INTERESTS = 20;
 
@@ -75,33 +77,42 @@ function sanitizeSelectedVenues(raw, totalDays) {
     if (s && !interests.some(x => x.toLowerCase() === s.toLowerCase())) interests.push(s);
   }
 
-  return { version: 2, picks, interests };
+  // Route first (route-plan.js): the bases the traveller confirmed before Step 3.
+  const route = sanitizeRoute(raw.route, totalDays);
+  return route ? { version: 2, picks, interests, route } : { version: 2, picks, interests };
 }
 
 /**
  * Give every pick a day. User-pinned days are kept; unpinned picks are spread over the
  * least-loaded days (ties → earliest), so each 3-day generation batch knows exactly which
- * places it must include.
- * @returns {{ picks: Array<object & { day: number, pinned: boolean }>, interests: string[] }}
+ * places it must include. With a route, an unpinned pick chosen under a base's tab is
+ * placed on one of that base's days (not a travel day when there is a choice).
+ * @returns {{ picks: Array<object & { day: number, pinned: boolean }>, interests: string[], route: object|null }}
  */
 function planPicks(selectedVenues, totalDays) {
   const clean = sanitizeSelectedVenues(selectedVenues, totalDays);
-  if (clean.version !== 2 || totalDays < 1) return { picks: [], interests: [] };
+  if (clean.version !== 2 || totalDays < 1) return { picks: [], interests: [], route: null };
+  const route = clean.route || null;
+  const travelDays = new Set(route ? dayPlan(route).filter(d => d.travelDay).map(d => d.day) : []);
 
   const load = new Array(totalDays + 1).fill(0);
   const planned = [];
   for (const p of clean.picks) {
     if (p.day) { load[p.day]++; planned.push({ ...p, pinned: true }); }
   }
+  const allDays = Array.from({ length: totalDays }, (_, i) => i + 1);
   for (const p of clean.picks) {
     if (p.day) continue;
-    let best = 1;
-    for (let d = 2; d <= totalDays; d++) if (load[d] < load[best]) best = d;
+    const baseDays = route ? daysForBase(route, p.destination) : [];
+    const restful = baseDays.filter(d => !travelDays.has(d));
+    const candidates = restful.length ? restful : baseDays.length ? baseDays : allDays;
+    let best = candidates[0];
+    for (const d of candidates) if (load[d] < load[best]) best = d;
     load[best]++;
     planned.push({ ...p, day: best, pinned: false });
   }
   planned.sort((a, b) => a.day - b.day);
-  return { picks: planned, interests: clean.interests };
+  return { picks: planned, interests: clean.interests, route };
 }
 
 function describePick(p) {

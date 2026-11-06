@@ -38,8 +38,8 @@ test('sanitize caps the number of picks and field lengths', () => {
 test('legacy ID-only shape is kept as-is and plans to nothing', () => {
   const legacy = { 'Kyoto/Hiking': ['4bf58dd8d48988d159941735'] };
   assert.deepEqual(sv.sanitizeSelectedVenues(legacy, 5), legacy);
-  assert.deepEqual(sv.planPicks(legacy, 5), { picks: [], interests: [] });
-  assert.deepEqual(sv.planPicks(null, 5), { picks: [], interests: [] });
+  assert.deepEqual(sv.planPicks(legacy, 5), { picks: [], interests: [], route: null });
+  assert.deepEqual(sv.planPicks(null, 5), { picks: [], interests: [], route: null });
 });
 
 test('planPicks keeps pinned days and spreads unpinned picks to the least-loaded days', () => {

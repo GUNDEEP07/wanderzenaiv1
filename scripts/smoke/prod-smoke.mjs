@@ -74,6 +74,8 @@ await check('POST /submit without token (body email) → 401',
   async () => expectStatus(await call('POST', '/submit', { body: submitBody }), 401, 'AUTH_REQUIRED'));
 await check('POST /submit with forged token → 401',
   async () => expectStatus(await call('POST', '/submit', { token: FORGED, body: submitBody }), 401, 'TOKEN_INVALID'));
+await check('POST /route-plan without token → 401 (routed, sign-in required)',
+  async () => expectStatus(await call('POST', '/route-plan', { body: { destination: 'Japan', days: 7 } }), 401, 'AUTH_REQUIRED'));
 await check('POST /preview without token → 401',
   async () => expectStatus(await call('POST', '/preview', { body: { destination: 'Kyoto', days: 3 } }), 401));
 await check('POST /recommendations/chat with forged token → 401',

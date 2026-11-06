@@ -6,6 +6,7 @@ const {
   requireUser, AuthError, authFailure, checkRateLimit, userSubject, tooManyRequests,
 } = require('/opt/nodejs/index');
 const { sanitizeSelectedVenues } = require('/opt/nodejs/selected-venues');
+const { sanitizeRoute, buildRoutePrompt, parseRouteResponse } = require('/opt/nodejs/route-plan');
 const { MODELS, createMessage, firstText, withEffort, maxTokensFor } = require('/opt/nodejs/claude');
 const { SUBSCRIPTION_MONTHLY_ITINERARIES, withMonthlyColumn } = require('./subscription');
 
@@ -61,6 +62,47 @@ function validatePreviewInput(body) {
   return { errors, values: { destination, days, styles, pace, startTime, travelerType, userMustDos } };
 }
 
+// ─── POST /route-plan ────────────────────────────────────────────────────────
+// Route first (Q2): propose the bases for the trip before Step 3. See route-plan.js.
+async function handleRoutePlan(event, db, user) {
+  let body;
+  try { body = JSON.parse(event.body || '{}'); } catch { return badRequest('Invalid JSON'); }
+
+  const { errors, values } = validatePreviewInput(body);
+  if (errors.length) return badRequest('destination and days are required', errors);
+
+  const limited = await rateLimited(db, 'route', user);
+  if (limited) return limited;
+
+  const input = {
+    destination: values.destination,
+    days: values.days,
+    travelStyle: values.styles,
+    travelPace: values.pace,
+    interests: typeof body.interests === 'string' ? body.interests.slice(0, 300) : '',
+    travelDate: typeof body.travelDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.travelDate) ? body.travelDate : '',
+    userLocation: typeof body.userLocation === 'string' ? body.userLocation.slice(0, 100) : '',
+  };
+
+  try {
+    // Interactive and behind API Gateway's 29 s limit: the fast model, one attempt.
+    const data = await createMessage(withEffort({
+      model: MODELS.fast,
+      max_tokens: maxTokensFor(MODELS.fast, 1800, { thinkingHeadroom: 3000 }),
+      messages: [{ role: 'user', content: buildRoutePrompt(input) }],
+    }, 'medium'), {
+      timeoutMs: 24000,
+      maxAttempts: 1,
+    });
+    const route = parseRouteResponse(firstText(data), input.days);
+    log.info('Route planned', { uid: user.uid, destination: input.destination, days: input.days, bases: route.bases.map(b => `${b.name}:${b.days}`) });
+    return ok({ route });
+  } catch (err) {
+    log.error('Route planning failed', { error: err.message });
+    return serverError('Could not plan a route right now. Please try again.');
+  }
+}
+
 async function handlePreview(event, db, user) {
   let body;
   try { body = JSON.parse(event.body || '{}'); } catch { return badRequest('Invalid JSON'); }
@@ -72,11 +114,17 @@ async function handlePreview(event, db, user) {
   if (limited) return limited;
 
   const { destination, days, styles, pace, startTime, travelerType, userMustDos } = values;
+  // The outline follows the route the traveller confirmed, when there is one.
+  const route = sanitizeRoute(body.route || body.selected_venues?.route, days);
+  const routeLine = route
+    ? `Route (follow it — each day happens around that day's base): ${route.bases.map(b => `${b.name} ${b.days} day${b.days > 1 ? 's' : ''}`).join(' → ')}.`
+    : '';
   const previewPrompt = `Return ONLY a valid JSON array. No markdown, no explanation, no code fences.
 Each item must have exactly: { "day": number, "theme": "short title max 4 words", "vibe": "one evocative line max 10 words" }
 
 Create a ${days}-day slow travel day outline for ${destination}.
 Traveller: ${travelerType || 'Couple'} | Style: ${styles.join(', ') || 'balanced'} | Pace: ${pace}
+${routeLine}
 ${startTime !== '09:00' ? `Day starts around ${startTime}.` : ''}
 ${userMustDos ? `User must-dos to weave in: ${userMustDos}` : ''}
 No activity detail. Titles and atmosphere only. Exactly ${days} items.`;
@@ -346,6 +394,7 @@ exports.handler = async (event) => {
 
   const db = getDB();
   if (isPath(event, '/preview')) return handlePreview(event, db, user);
+  if (isPath(event, '/route-plan')) return handleRoutePlan(event, db, user);
   return handleSubmit(event, db, user);
 };
 

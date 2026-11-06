@@ -25,6 +25,7 @@ const DEFAULT_LIMITS = Object.freeze({
   chat:         [{ limit: 60, windowSeconds: 3600 }, { limit: 300, windowSeconds: 86400 }],
   personalised: [{ limit: 30, windowSeconds: 3600 }],
   welcome:      [{ limit: 2, windowSeconds: 86400 }],
+  route:        [{ limit: 20, windowSeconds: 3600 }, { limit: 60, windowSeconds: 86400 }],
   // Public, Claude-backed — keyed by hashed client IP
   trending:     [{ limit: 30, windowSeconds: 3600 }],
   insights:     [{ limit: 60, windowSeconds: 3600 }],
