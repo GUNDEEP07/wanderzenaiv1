@@ -48,10 +48,11 @@ const pool = new Pool({
  * @returns {Promise<object>} Created post object
  * @throws {Error} On insert failure
  */
-const createPost = async (userId, title, description, content, location, country, travelDates, category) => {
+const createPost = async (userId, title, description, content, location, country, travelDates, category, { publish = false } = {}) => {
+  // Team posts (Nov 8 2026: admin-only blog) go live at once; anything else starts as a draft.
   const sql = `
-    INSERT INTO blog_posts (user_id, title, description, content, location, country, travel_dates, category, status, created_at, updated_at)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'draft', NOW(), NOW())
+    INSERT INTO blog_posts (user_id, title, description, content, location, country, travel_dates, category, status, published_at, created_at, updated_at)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, ${publish ? "'published', NOW()" : "'draft', NULL"}, NOW(), NOW())
     RETURNING id, user_id, title, description, content, location, country, travel_dates, category, status, admin_notes, created_at, updated_at, published_at;
   `;
 
@@ -165,7 +166,7 @@ const listPosts = async (filters = {}) => {
  * @returns {Promise<object>} Updated post object
  * @throws {Error} "Unauthorized" if user doesn't own post, "Can only edit draft or rejected posts" if published
  */
-const updatePost = async (postId, userId, updates) => {
+const updatePost = async (postId, userId, updates, { isAdmin = false } = {}) => {
   // Verify ownership and status
   const checkSql = `
     SELECT id, user_id, status
@@ -181,13 +182,14 @@ const updatePost = async (postId, userId, updates) => {
 
   const post = checkResult.rows[0];
 
+  // Admins (the WanderZen team) may edit any post, published ones included.
   // Check authorization
-  if (post.user_id !== userId) {
+  if (!isAdmin && post.user_id !== userId) {
     throw new Error('Unauthorized');
   }
 
   // Check status — can only edit draft or rejected
-  if (post.status !== 'draft' && post.status !== 'rejected') {
+  if (!isAdmin && post.status !== 'draft' && post.status !== 'rejected') {
     throw new Error('Can only edit draft or rejected posts');
   }
 

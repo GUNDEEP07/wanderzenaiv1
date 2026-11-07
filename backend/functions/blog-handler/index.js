@@ -98,7 +98,7 @@ exports.handler = async (event) => {
 
     // POST /blog — Create new post
     if (httpMethod === 'POST' && (path === '/blog' || path.endsWith('/blog'))) {
-      return await postsHandler.createPost(body, userId, userEmail);
+      return await postsHandler.createPost(body, userId, userEmail, userRole);
     }
 
     // GET /blog — List all posts
@@ -115,7 +115,7 @@ exports.handler = async (event) => {
     if (/^\/blog\/[^/]+$/.test(path) && !isReservedId(segments[2])) {
       const postId = pathParameters.id || segments[2];
       if (httpMethod === 'GET') return await postsHandler.getPost(postId, userId, userRole);
-      if (httpMethod === 'PUT') return await postsHandler.updatePost(postId, body, userId);
+      if (httpMethod === 'PUT') return await postsHandler.updatePost(postId, body, userId, userRole);
       if (httpMethod === 'DELETE') return await postsHandler.deletePost(postId, userId, userRole);
     }
 

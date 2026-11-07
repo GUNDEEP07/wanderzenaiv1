@@ -56,7 +56,7 @@ test.beforeEach(() => {
 test('accepts a valid token and returns the identity', async () => {
   const user = await auth.requireUser(eventWith(sign()));
   assert.deepEqual(user, {
-    uid: 'uid-123', email: 'traveller@example.com', emailVerified: true, signInProvider: 'google.com',
+    uid: 'uid-123', email: 'traveller@example.com', emailVerified: true, signInProvider: 'google.com', name: null,
   });
 });
 
@@ -157,4 +157,15 @@ test('optionalUser returns null for missing or invalid tokens', async () => {
 
 test('rejects oversized tokens without parsing', async () => {
   await expectAuthError(auth.requireUser(eventWith('a'.repeat(5000))), 401, 'TOKEN_INVALID');
+});
+
+test('the verified identity carries a clean display name (saved to profiles when missing)', async () => {
+  let user = await auth.requireUser(eventWith(sign({ claims: { name: '  Gundeep\u0000  Singh ' } })));
+  assert.equal(user.name, 'Gundeep Singh');
+  user = await auth.requireUser(eventWith(sign({ claims: { name: 'x'.repeat(300) } })));
+  assert.equal(user.name.length, 120);
+  user = await auth.requireUser(eventWith(sign()));
+  assert.equal(user.name, null);
+  user = await auth.requireUser(eventWith(sign({ claims: { name: { evil: true } } })));
+  assert.equal(user.name, null);
 });

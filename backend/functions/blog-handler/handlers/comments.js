@@ -5,6 +5,11 @@ const errors = require('../utils/errors');
 const { log } = require('/opt/nodejs/index');
 const { viewComment } = require('../utils/publicView');
 
+// Comments are closed until launch (Gundeep, Nov 8 2026: "3C"). Set BLOG_COMMENTS_OPEN=true on
+// the blog function to reopen. Listing and deleting still work, so old comments can be removed.
+const commentsOpen = () => process.env.BLOG_COMMENTS_OPEN === 'true';
+const closed = () => buildResponse(403, { success: false, code: 'COMMENTS_CLOSED', error: 'Comments are closed for now' });
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': process.env.FRONTEND_URL || '*',
   'Content-Type': 'application/json',
@@ -23,6 +28,7 @@ const created = (data) => buildResponse(201, { success: true, data });
 
 const createComment = async (postId, body, userId, userEmail) => {
   try {
+    if (!commentsOpen()) return closed();
     if (!userId) {
       log.warn('Create comment: unauthorized attempt', { postId, userEmail });
       return errors.unauthorized();
@@ -57,6 +63,7 @@ const createComment = async (postId, body, userId, userEmail) => {
 
 const updateComment = async (commentId, body, userId) => {
   try {
+    if (!commentsOpen()) return closed();
     if (!userId) {
       log.warn('Update comment: unauthorized attempt', { commentId });
       return errors.unauthorized();
