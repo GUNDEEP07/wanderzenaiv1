@@ -88,8 +88,43 @@ test('parseRouteOptions: several options, text around the JSON, days balanced, j
   assert.throws(() => rp.parseRouteOptions('{"options":[{"bases":[]}]}', 10), /no usable options/);
 });
 
+test('near-duplicate routes are dropped (half the stops shared)', () => {
+  const r = (...names) => ({ bases: names.map(n => ({ name: n })) });
+  const dalatA = r('Da Lat', 'Bao Loc', 'Da Lat');
+  const dalatB = r('Da Lat', 'Di Linh', 'Da Lat');
+  const north = r('Mai Chau', 'Pu Luong', 'Cuc Phuong');
+  assert.equal(rp.overlapsRoute(dalatA, dalatB), true);
+  assert.equal(rp.overlapsRoute(north, dalatA), false);
+  assert.equal(rp.overlapsRoute(r('Hanoi', 'Sapa', 'Ha Giang'), r('Hanoi', 'Ninh Binh', 'Hue')), false); // 1 of 3
+  assert.deepEqual(rp.dedupeRoutes([north, dalatA, dalatB]), [north, dalatA]);
+  // against routes already on screen (curated)
+  assert.deepEqual(rp.dedupeRoutes([dalatB, north], [dalatA]), [north]);
+});
+
+test('day trips may come back as plain names', () => {
+  const route = rp.sanitizeRoute({ bases: [{ name: 'Huaraz', days: 4, dayTrips: ['Laguna 69', { name: 'Chavín', why: 'ruins' }, ''] }] }, 4);
+  assert.deepEqual(route.bases[0].dayTrips, [{ name: 'Laguna 69', why: '' }, { name: 'Chavín', why: 'ruins' }]);
+});
+
+test('settleEnough: returns once enough succeeded + grace, marks the slow one late', async () => {
+  const later = (ms, v, fail) => new Promise((res, rej) => setTimeout(() => (fail ? rej(new Error(v)) : res(v)), ms));
+  let t = Date.now();
+  let out = await rp.settleEnough([later(10, 'a'), later(20, 'b'), later(2000, 'slow')], { enough: 2, graceMs: 50, deadlineMs: 5000 });
+  assert.ok(Date.now() - t < 500, 'did not wait for the slow call');
+  assert.deepEqual(out.map(o => o.status), ['fulfilled', 'fulfilled', 'late']);
+  // a failure doesn't count towards "enough"; all settled → returns at once
+  t = Date.now();
+  out = await rp.settleEnough([later(10, 'a'), later(20, 'boom', true), later(30, 'c')], { enough: 2, graceMs: 1000, deadlineMs: 5000 });
+  assert.deepEqual(out.map(o => o.status), ['fulfilled', 'rejected', 'fulfilled']);
+  assert.ok(Date.now() - t < 500);
+  // deadline
+  out = await rp.settleEnough([later(10, 'a'), later(3000, 'x')], { enough: 2, graceMs: 50, deadlineMs: 100 });
+  assert.deepEqual(out.map(o => o.status), ['fulfilled', 'late']);
+  assert.deepEqual(await rp.settleEnough([], { enough: 2, graceMs: 1, deadlineMs: 10 }), []);
+});
+
 test('angles: one route per call; "more" and curated countries skip the classic route', () => {
-  assert.deepEqual(rp.routeAngles(), ['classic', 'quiet', 'compact']);
+  assert.deepEqual(rp.routeAngles(), ['classic', 'quiet', 'region']);
   assert.deepEqual(rp.routeAngles({ curated: true }), ['quiet', 'compact']);
   assert.deepEqual(rp.routeAngles({ more: true }), ['quiet', 'compact', 'region']);
   const p = rp.buildRouteOptionsPrompt({ destination: 'Peru', days: 7, prefs: rp.sanitizePrefs({ kids: [3], transferComfort: 'short' }), angle: 'quiet', avoid: ['Andes slow'] });

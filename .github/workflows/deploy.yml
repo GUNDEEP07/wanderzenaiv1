@@ -37,6 +37,12 @@ jobs:
       - name: Backend auth + rate-limit unit tests
         run: node --test backend/tests/unit/*.test.js
 
+      # Frontend Jest suites (route step, who's travelling, venue selection…). They drifted
+      # while CI didn't run them; now a red suite blocks the deploy like the backend tests.
+      - name: Frontend unit tests
+        working-directory: frontend
+        run: npx jest --ci
+
   deploy-backend:
     name: Deploy Backend
     runs-on: ubuntu-latest

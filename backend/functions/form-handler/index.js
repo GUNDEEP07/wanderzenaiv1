@@ -7,7 +7,7 @@ const {
 } = require('/opt/nodejs/index');
 const { sanitizeSelectedVenues } = require('/opt/nodejs/selected-venues');
 const {
-  sanitizeRoute, sanitizePrefs, describePrefs, buildRouteOptionsPrompt, parseRouteOptions, routeAngles,
+  sanitizeRoute, sanitizePrefs, describePrefs, buildRouteOptionsPrompt, parseRouteOptions, routeAngles, dedupeRoutes, settleEnough,
 } = require('/opt/nodejs/route-plan');
 const { curatedOptions } = require('/opt/nodejs/curated-routes');
 const { MODELS, createMessage, firstText, withEffort, maxTokensFor } = require('/opt/nodejs/claude');
@@ -72,6 +72,11 @@ function validatePreviewInput(body) {
  */
 const routeOptionsOk = (source, country, options) => ok({ source, country, options, route: options[0] || null });
 
+/** How long /route-plan waits for its parallel Claude calls (API Gateway cuts off at 29 s). */
+// Measured Nov 7: the three calls finish within ~4 s of each other (6–12 s each).
+const ROUTE_WAIT = { enough: 2, graceMs: 5000, deadlineMs: 23000 };
+
+
 // Route first (Q2): propose the bases for the trip before Step 3. See route-plan.js.
 async function handleRoutePlan(event, db, user) {
   let body;
@@ -111,18 +116,19 @@ async function handleRoutePlan(event, db, user) {
     // calls in parallel (one call for three routes took >24 s). Whatever arrives in time is used.
     const avoid = [...input.avoid, ...(curated ? curated.options.map(o => o.name) : [])];
     const angles = routeAngles({ more: wantMore, curated: !!curated });
-    const settled = await Promise.allSettled(angles.map(angle => createMessage(withEffort({
+    const settled = await settleEnough(angles.map(angle => createMessage(withEffort({
       model: MODELS.fast,
       max_tokens: maxTokensFor(MODELS.fast, 2500, { thinkingHeadroom: 2500 }), // prod: up to ~3.3k incl. thinking
       messages: [{ role: 'user', content: buildRouteOptionsPrompt({ ...input, avoid, angle }) }],
     }, 'low'), { timeoutMs: 22000, maxAttempts: 1 })
-      .then(data => parseRouteOptions(firstText(data), input.days, `ai-${angle}`))));
-    const failed = settled.filter(s => s.status === 'rejected').map(s => s.reason?.message);
-    if (failed.length) log.warn('Route angles failed', { failed, of: angles.length });
-    const seen = new Set();
-    const aiOptions = settled
-      .flatMap(s => (s.status === 'fulfilled' ? s.value : []))
-      .filter(o => { const k = o.bases.map(b => b.name.toLowerCase()).join('>'); return seen.has(k) ? false : seen.add(k); });
+      .then(data => parseRouteOptions(firstText(data), input.days, `ai-${angle}`))), ROUTE_WAIT);
+    const failed = settled.filter(s => s.status !== 'fulfilled').map((s, i) => `${angles[i]}: ${s.reason?.message || s.status}`);
+    if (failed.length) log.warn('Route angles failed or late', { failed, of: angles.length });
+    // Near-duplicates (same main stops) of each other or of curated routes on screen are dropped.
+    const aiOptions = dedupeRoutes(
+      settled.flatMap(s => (s.status === 'fulfilled' ? s.value : [])),
+      curated ? curated.options : [],
+    );
     if (!aiOptions.length) throw new Error(`No route came back (${failed.join('; ')})`);
     // Curated routes that didn't fit stay visible below, with their heads-up.
     const options = [...aiOptions, ...(curated ? curated.options : [])].slice(0, 4);
@@ -431,4 +437,4 @@ exports.handler = async (event) => {
 };
 
 // Exported for unit tests.
-exports._internal = { validatePreviewInput, decideEntitlement, refundCredit, limitReachedBody };
+exports._internal = { validatePreviewInput, decideEntitlement, refundCredit, limitReachedBody, ROUTE_WAIT };

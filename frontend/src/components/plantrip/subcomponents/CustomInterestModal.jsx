@@ -184,14 +184,18 @@ export function CustomInterestModal({ destination, isOpen, onClose, onSubmit, lo
     }
   };
 
+  // Closed = not mounted: a hidden-but-mounted modal kept its autoFocus input and buttons
+  // reachable by keyboard (and grabbed focus when the step loaded).
+  if (!isOpen) return null;
+
   const modalContent = (
     <>
       <div
         style={s.overlay(isOpen)}
         onClick={handleCancel}
       />
-      <div style={s.modal(isOpen)}>
-        <div style={s.header}>Add Custom Interest</div>
+      <div style={s.modal(isOpen)} role="dialog" aria-modal="true" aria-labelledby="custom-interest-title">
+        <div style={s.header} id="custom-interest-title">Add Custom Interest</div>
         <div style={s.prompt}>What interests you in {destination?.name}?</div>
 
         <input
