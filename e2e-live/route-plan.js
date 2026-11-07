@@ -83,7 +83,7 @@ function sanitizeRoute(raw, totalDays) {
         note: str(t.note, 160),
       } : null,
       dayTrips: (Array.isArray(b.dayTrips) ? b.dayTrips : [])
-        .map(d => ({ name: str(d?.name, 80), why: str(d?.why, 160) }))
+        .map(d => (typeof d === 'string' ? { name: str(d, 80), why: '' } : { name: str(d?.name, 80), why: str(d?.why, 160) }))
         .filter(d => d.name)
         .slice(0, MAX_DAY_TRIPS),
     });
@@ -257,8 +257,8 @@ const OPTIONS_SCHEMA = `{
 const ROUTE_ANGLES = {
   classic: 'the classic route a first-timer would love: the best-known highlights, done slowly',
   quiet: 'a quieter route: smaller towns, villages and nature, away from the main tourist trail',
-  compact: 'a compact route: one region, the fewest and shortest transfers',
-  region: 'a route through a region most visitors skip',
+  compact: 'a compact route: one region around a main arrival airport, the fewest and shortest transfers',
+  region: 'a route through a region most visitors skip, in a different part of the country from the usual highlights; at least two different stop towns',
 };
 
 /**
@@ -270,10 +270,52 @@ function routeAngles({ more = false, curated = false } = {}) {
   return curated ? ['quiet', 'compact'] : ['classic', 'quiet', 'compact'];
 }
 
-const SINGLE_ROUTE_SCHEMA = OPTIONS_SCHEMA
-  .replace(/^\{\s*"options": \[\s*/, '')
-  .replace(/\s*\]\s*\}$/, '')
-  .replace(/\n {4}/g, '\n');
+// Leaner than OPTIONS_SCHEMA (day trips as plain names, short texts): output length is
+// most of the wait on this interactive step.
+const SINGLE_ROUTE_SCHEMA = `{
+  "name": "2–5 words",
+  "summary": "one short sentence",
+  "bases": [
+    {
+      "name": "Town or village to stay in",
+      "region": "province/state",
+      "country": "country",
+      "lat": 0.0,
+      "lng": 0.0,
+      "days": 3,
+      "why": "under 15 words",
+      "stayType": "e.g. family-run guesthouse",
+      "transferIn": { "mode": "train|bus|car|ferry|flight|walk|other", "hours": 2.5, "note": "under 10 words" },
+      "dayTrips": ["Nearby place", "Another nearby place"]
+    }
+  ]
+}`;
+
+/** Distinct stop names of a route, lower-cased. */
+const stopSet = (route) => new Set((route.bases || []).map(b => String(b.name || '').toLowerCase().trim()).filter(Boolean));
+
+/**
+ * Two routes are near-duplicates when at least half of the smaller one's distinct stops
+ * are also in the other (e.g. Da Lat → Bao Loc → Da Lat vs Da Lat → Di Linh → Da Lat).
+ */
+function overlapsRoute(a, b) {
+  const A = stopSet(a); const B = stopSet(b);
+  const small = A.size <= B.size ? A : B; const big = small === A ? B : A;
+  if (!small.size) return false;
+  let shared = 0;
+  for (const s of small) if (big.has(s)) shared += 1;
+  return shared / small.size >= 0.5;
+}
+
+/** Keep routes in order, dropping any that nearly repeat one already kept (or one in `against`). */
+function dedupeRoutes(routes, against = []) {
+  const kept = [];
+  for (const r of routes) {
+    if ([...against, ...kept].some(k => overlapsRoute(k, r))) continue;
+    kept.push(r);
+  }
+  return kept;
+}
 
 /**
  * @param {object} input validated request: { destination, days, travelStyle[], travelPace,
@@ -345,6 +387,35 @@ function parseRouteOptions(text, totalDays, idPrefix = 'ai') {
   return options.slice(0, 3);
 }
 
+/**
+ * Like Promise.allSettled, but returns early: once `enough` have succeeded it waits at most
+ * `graceMs` more for the rest, and never longer than `deadlineMs` overall. Calls still running
+ * then come back as { status: 'late' } (their results are ignored).
+ * @returns {Promise<Array<{status:'fulfilled'|'rejected'|'late', value?, reason?}>>}
+ */
+function settleEnough(promises, { enough, graceMs, deadlineMs }) {
+  return new Promise((resolve) => {
+    const results = promises.map(() => ({ status: 'late' }));
+    let done = 0; let ok = 0; let finished = false; let grace = null;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(deadline); clearTimeout(grace);
+      resolve(results.map(r => ({ ...r })));
+    };
+    const deadline = setTimeout(finish, deadlineMs);
+    promises.forEach((p, i) => p.then(
+      (value) => { results[i] = { status: 'fulfilled', value }; ok += 1; },
+      (reason) => { results[i] = { status: 'rejected', reason }; },
+    ).finally(() => {
+      done += 1;
+      if (done === promises.length) return finish();
+      if (ok >= enough && !grace) grace = setTimeout(finish, graceMs);
+    }));
+    if (!promises.length) finish();
+  });
+}
+
 module.exports = {
   MAX_BASES,
   sanitizeRoute,
@@ -361,5 +432,8 @@ module.exports = {
   parseRouteOptions,
   ROUTE_ANGLES,
   routeAngles,
+  overlapsRoute,
+  dedupeRoutes,
+  settleEnough,
   longestTransfer,
 };
