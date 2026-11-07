@@ -67,7 +67,7 @@ export function createRouteMap(container, { stops, activeIndex = -1, onError }) 
     if (s.length === 1) { map.jumpTo({ center: [s[0].lng, s[0].lat], zoom: 8 }); return; }
     const b = new maplibregl.LngLatBounds();
     s.forEach(p => b.extend([p.lng, p.lat]));
-    map.fitBounds(b, { padding: { top: 40, bottom: 30, left: 40, right: 90 }, maxZoom: 9, duration: animate ? 600 : 0 });
+    map.fitBounds(b, { padding: { top: 40, bottom: 60, left: 40, right: 110 }, maxZoom: 10, duration: animate ? 600 : 0 });
   };
 
   const draw = (animate) => {
