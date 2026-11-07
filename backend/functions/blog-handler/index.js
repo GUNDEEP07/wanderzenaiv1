@@ -103,7 +103,7 @@ exports.handler = async (event) => {
 
     // GET /blog — List all posts
     if (httpMethod === 'GET' && (path === '/blog' || path.endsWith('/blog'))) {
-      return await postsHandler.listPosts(queryStringParameters);
+      return await postsHandler.listPosts(queryStringParameters, { userId, userRole });
     }
 
     // GET /blog/admin/pending — List pending posts (checked before /blog/{id})
@@ -120,6 +120,11 @@ exports.handler = async (event) => {
     }
 
     // ─── COMMENTS ROUTES ──────────────────────────────────────────────────────
+
+    // GET /blog/{id}/comments — List comments (the page called this but no route existed)
+    if (httpMethod === 'GET' && /^\/blog\/[^/]+\/comments$/.test(path)) {
+      return await commentsHandler.listComments(pathParameters.id || segments[2], { userId, userRole });
+    }
 
     // POST /blog/{id}/comments — Create comment
     if (httpMethod === 'POST' && /^\/blog\/[^/]+\/comments$/.test(path)) {

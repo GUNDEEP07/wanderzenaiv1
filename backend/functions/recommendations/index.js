@@ -757,17 +757,20 @@ FLOW — collect these details one at a time, in this order:
 1. Destination
 2. How many days?
 3. When? (travel date or month — ok if vague)
-4. Travelling as — Solo / Couple / Family / Group of friends?
+4. Who's coming — how many adults, and any children (their ages)?
 5. Travel vibe — Nature / Cultural / Foodie / Adventure / Relaxation / Wellness (can pick multiple)
 6. Budget — Budget / Mid-range / Luxury?
 
 Rules:
 - Ask EXACTLY ONE question per reply. Never combine two questions.
+- Never ask for something the user already told you, even in passing — "with my wife and our 4 year old" already answers who's coming (2 adults, one child aged 4). Skip straight to the next missing detail.
+- If they mention children but not ages, ask only for the ages.
 - Keep every reply under 40 words.
 - Be warm and casual — like a knowledgeable friend, not a form.
 - Acknowledge each answer briefly before asking the next question (e.g. "Nice! 7 days is perfect for..." → next question).
 - Once you have ALL 6 details, output ONLY this (no other text):
-  READY:{"destination":"City, Country","days":N,"travelDate":"YYYY-MM-DD or null","travelerType":"Solo|Couple|Family|Group of friends","travelStyle":["Style1","Style2"],"budget":"Budget|Mid-range|Luxury","currency":"USD"}
+  READY:{"destination":"City, Country or just Country","days":N,"travelDate":"YYYY-MM-DD or null","travelerType":"Solo|Couple|Family|Group of friends","adults":N,"kids":[ages],"travelStyle":["Style1","Style2"],"budget":"Budget|Mid-range|Luxury"}
+- travelerType: Family whenever children come; kids is [] when none.
 - Use null for travelDate if they gave a vague time like "next month" or "summer".
 - If they ask for recommendations without trip intent, give ONE specific suggestion + one-line reason, then ask "Want me to plan this trip for you?"`;
 
@@ -809,7 +812,7 @@ Rules:
           ).catch(() => { /* non-fatal */ });
         }
         return ok({
-          reply: `✦ I have everything I need! Here's your trip summary:\n\n📍 ${tripData.destination} · ${tripData.days} days · ${tripData.travelerType} · ${(tripData.travelStyle || []).join(', ')} · ${tripData.budget}\n\nReady to build your full itinerary?`,
+          reply: `✦ I have everything I need! Here's your trip summary:\n\n📍 ${tripData.destination} · ${tripData.days} days · ${whoLine(tripData)} · ${(tripData.travelStyle || []).join(', ')} · ${tripData.budget}\n\nReady to build your full itinerary? You can check everything on the next screen.`,
           readyToPlan: true,
           tripData,
         }, event);
@@ -821,6 +824,15 @@ Rules:
     log.error('Chat failed', { error: err.message });
     return ok({ reply: 'I\'m having trouble connecting right now. Please try again in a moment.' }, event);
   }
+}
+
+/** "2 adults + child (4)" for the chat summary; falls back to the traveller type. */
+function whoLine(trip) {
+  const adults = Number.isFinite(Number(trip.adults)) && Number(trip.adults) > 0 ? Number(trip.adults) : null;
+  const kids = Array.isArray(trip.kids) ? trip.kids.filter(a => Number.isFinite(Number(a))) : [];
+  if (!adults) return trip.travelerType || 'Travellers';
+  const a = `${adults} adult${adults > 1 ? 's' : ''}`;
+  return kids.length ? `${a} + ${kids.length > 1 ? 'children' : 'child'} (${kids.join(', ')})` : a;
 }
 
 async function handleTrending(event) {

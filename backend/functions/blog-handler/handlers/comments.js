@@ -3,6 +3,7 @@
 const blog = require('../db/blog');
 const errors = require('../utils/errors');
 const { log } = require('/opt/nodejs/index');
+const { viewComment } = require('../utils/publicView');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': process.env.FRONTEND_URL || '*',
@@ -41,7 +42,7 @@ const createComment = async (postId, body, userId, userEmail) => {
     const comment = await blog.createComment(postId, userId, userEmail, content.trim());
 
     log.info('Comment created', { commentId: comment.id, postId, userId });
-    return created(comment);
+    return created(viewComment(comment, { userId }));
 
   } catch (err) {
     if (err.message === 'Post not found or not available for comments') {
@@ -75,7 +76,7 @@ const updateComment = async (commentId, body, userId) => {
     const comment = await blog.updateComment(commentId, userId, content.trim());
 
     log.info('Comment updated', { commentId, userId });
-    return success(comment);
+    return success(viewComment(comment, { userId }));
 
   } catch (err) {
     if (err.message === 'Comment not found') {
@@ -129,7 +130,25 @@ const deleteComment = async (commentId, userId, userRole) => {
   }
 };
 
+/**
+ * GET /blog/{id}/comments — comments on a published post, newest first. Public (no email
+ * addresses; display names only — see utils/publicView.js).
+ */
+const listComments = async (postId, viewer = {}) => {
+  try {
+    if (!postId) return errors.badRequest('Post ID is required');
+    // Post ids are UUIDs; anything else would only make Postgres throw (→ 500).
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(postId)) return errors.notFound('Post not found');
+    const comments = await blog.listCommentsByPost(postId);
+    return success(comments.map(c => viewComment(c, viewer)));
+  } catch (err) {
+    log.error('List comments: error', { error: err.message, postId });
+    return errors.serverError('Failed to load comments');
+  }
+};
+
 module.exports = {
+  listComments,
   createComment,
   updateComment,
   deleteComment,

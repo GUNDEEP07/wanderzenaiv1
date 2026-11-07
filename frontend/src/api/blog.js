@@ -5,6 +5,13 @@
 const API_URL = import.meta.env.VITE_API_URL;
 const BLOG_API = `${API_URL}/blog`;
 
+/** The API answers { success, data }; these return the payload itself. */
+const unwrap = (json) => (json && typeof json === 'object' && 'data' in json ? json.data : json);
+const asList = (json) => {
+  const v = unwrap(json);
+  return Array.isArray(v) ? v : [];
+};
+
 /**
  * Helper function to build Authorization header if token is provided
  * @param {string|null} token - Optional auth token
@@ -206,7 +213,7 @@ export async function fetchComments(postId, token = null) {
     }
 
     const data = await res.json();
-    return Array.isArray(data) ? data : data.comments || [];
+    return asList(data); // { success, data: [...] }
   } catch (err) {
     throw new Error(`Failed to fetch comments: ${err.message}`);
   }
@@ -234,7 +241,7 @@ export async function createComment(postId, content, token = null) {
       await handleError(res);
     }
 
-    return await res.json();
+    return unwrap(await res.json()); // the created comment, not the envelope
   } catch (err) {
     throw new Error(`Failed to create comment: ${err.message}`);
   }
@@ -262,7 +269,7 @@ export async function updateComment(commentId, content, token = null) {
       await handleError(res);
     }
 
-    return await res.json();
+    return unwrap(await res.json());
   } catch (err) {
     throw new Error(`Failed to update comment: ${err.message}`);
   }
@@ -406,7 +413,7 @@ export async function fetchPhotos(postId, token = null) {
     }
 
     const data = await res.json();
-    return Array.isArray(data) ? data : data.photos || [];
+    return asList(data);
   } catch (err) {
     throw new Error(`Failed to fetch photos: ${err.message}`);
   }

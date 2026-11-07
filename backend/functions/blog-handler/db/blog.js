@@ -84,7 +84,7 @@ const getPost = async (postId, userId = null, userRole = null) => {
       bp.id, bp.user_id, bp.title, bp.description, bp.content,
       bp.location, bp.country, bp.travel_dates, bp.category,
       bp.status, bp.admin_notes, bp.created_at, bp.updated_at, bp.published_at,
-      u.email AS author_email
+      u.email AS author_email, u.name AS author_name
     FROM blog_posts bp
     JOIN users u ON bp.user_id = u.id
     WHERE bp.id = $1
@@ -106,7 +106,7 @@ const listPosts = async (filters = {}) => {
       bp.id, bp.user_id, bp.title, bp.description, bp.content,
       bp.location, bp.country, bp.travel_dates, bp.category,
       bp.status, bp.admin_notes, bp.created_at, bp.updated_at, bp.published_at,
-      u.email AS author_email
+      u.email AS author_email, u.name AS author_name
     FROM blog_posts bp
     JOIN users u ON bp.user_id = u.id
     WHERE bp.status = 'published'
@@ -312,7 +312,8 @@ const createComment = async (postId, userId, userEmail, content) => {
   const sql = `
     INSERT INTO blog_comments (post_id, user_id, user_email, content, created_at, updated_at)
     VALUES ($1, $2, $3, $4, NOW(), NOW())
-    RETURNING id, post_id, user_id, user_email, content, created_at, updated_at;
+    RETURNING id, post_id, user_id, user_email, content, created_at, updated_at,
+      (SELECT name FROM users WHERE users.id = blog_comments.user_id) AS author_name;
   `;
 
   const result = await pool.query(sql, [postId, userId, userEmail, content]);
@@ -358,7 +359,8 @@ const updateComment = async (commentId, userId, content) => {
     UPDATE blog_comments
     SET content = $1, updated_at = NOW()
     WHERE id = $2
-    RETURNING id, post_id, user_id, user_email, content, created_at, updated_at;
+    RETURNING id, post_id, user_id, user_email, content, created_at, updated_at,
+      (SELECT name FROM users WHERE users.id = blog_comments.user_id) AS author_name;
   `;
 
   const result = await pool.query(sql, [content, commentId]);
@@ -411,10 +413,13 @@ const deleteComment = async (commentId, userId, userRole) => {
  */
 const listCommentsByPost = async (postId) => {
   const sql = `
-    SELECT id, post_id, user_id, user_email, content, created_at, updated_at
-    FROM blog_comments
-    WHERE post_id = $1
-    ORDER BY created_at DESC;
+    SELECT c.id, c.post_id, c.user_id, c.user_email, c.content, c.created_at, c.updated_at,
+           u.name AS author_name
+    FROM blog_comments c
+    JOIN blog_posts bp ON bp.id = c.post_id AND bp.status = 'published'
+    LEFT JOIN users u ON u.id = c.user_id
+    WHERE c.post_id = $1
+    ORDER BY c.created_at DESC;
   `;
 
   const result = await pool.query(sql, [postId]);

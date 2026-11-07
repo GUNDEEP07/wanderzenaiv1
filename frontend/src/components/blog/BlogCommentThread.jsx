@@ -3,7 +3,7 @@ import { useState } from 'react';
 /**
  * BlogCommentThread - Displays comments for a blog post with edit/delete functionality
  * Props:
- *   - comments: Array of comment objects { id, user_id, user_email, content, created_at, updated_at }
+ *   - comments: Array of comment objects { id, user_id, author_name, is_mine, content, created_at, updated_at }
  *   - postId: ID of the blog post
  *   - currentUserId: UUID of logged-in user
  *   - onCommentAdded: Callback when a new comment is posted
@@ -179,7 +179,8 @@ export function BlogCommentThread({
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {comments.map((comment) => {
-              const isOwn = currentUserId && comment.user_id === currentUserId;
+              // The API says whether it's yours (Firebase uid ≠ the comment's users.id).
+              const isOwn = !!currentUserId && comment.is_mine === true;
               const isEditing = editingId === comment.id;
 
               return (
@@ -203,7 +204,7 @@ export function BlogCommentThread({
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px', gap: '8px' }}>
                     <div>
                       <span style={{ fontSize: '13px', fontWeight: '600', color: '#00d4aa' }}>
-                        {comment.user_email}
+                        {comment.author_name || 'A WanderZen traveller'}
                       </span>
                       <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', marginLeft: '8px' }}>
                         {formatDate(comment.created_at)}

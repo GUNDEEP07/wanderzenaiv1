@@ -52,7 +52,7 @@ export default function BlogDetailPage() {
     try {
       const token = await getIdToken();
       const newComment = await createComment(postId, content, token);
-      setComments([...comments, newComment]);
+      setComments([newComment, ...comments]); // newest first, like the list
     } catch (err) {
       alert(`Failed to add comment: ${err.message}`);
     }
@@ -221,7 +221,7 @@ export default function BlogDetailPage() {
                 <span>·</span>
                 <span>{new Date(post.published_at || post.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
                 <span>·</span>
-                <span style={{ color: 'rgba(255,255,255,0.35)' }}>by {post.author_email}</span>
+                <span style={{ color: 'rgba(255,255,255,0.35)' }}>by {post.author_name || 'A WanderZen traveller'}</span>
               </div>
               <h1 style={s.title}>{post.title}</h1>
               {post.description && <p style={s.description}>{post.description}</p>}

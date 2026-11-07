@@ -32,6 +32,7 @@ function ChatFeedback({ destination }) {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { analytics } from '../utils/analytics';
+import { chatTripToPrefill } from '../utils/chatHandoff';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -135,7 +136,8 @@ export function TravelChat() {
       {/* Chat panel */}
       <div style={{
         position: 'fixed', bottom: 96, right: 28, zIndex: 999,
-        width: 380, height: 560,
+        // Fits short windows and phones: the header was cut off below ~680 px tall.
+        width: 'min(380px, calc(100vw - 32px))', height: 'min(560px, calc(100vh - 120px))',
         background: 'rgba(10,14,24,0.97)', backdropFilter: 'blur(20px)',
         border: '1px solid rgba(255,255,255,0.1)',
         borderRadius: 20, display: 'flex', flexDirection: 'column',
@@ -248,22 +250,8 @@ export function TravelChat() {
           <div style={{ padding: '10px 14px 0', flexShrink: 0 }}>
             <button
               onClick={() => {
-                const dest = pendingTrip.destination?.split(',')[0]?.trim();
-                const budgetMap = { Budget: '1500', 'Mid-range': '3000', Luxury: '6000' };
-                navigate('/plan', {
-                  state: {
-                    startStep: 1,   // skip Step 0 — chat already collected it
-                    prefill: {
-                      destinations: dest ? [{ name: dest, lat: 0, lng: 0 }] : [],
-                      days: pendingTrip.days || 5,
-                      travelDate: pendingTrip.travelDate || '',
-                      travelerType: pendingTrip.travelerType || '',
-                      travelStyle: Array.isArray(pendingTrip.travelStyle) ? pendingTrip.travelStyle : [],
-                      budget: budgetMap[pendingTrip.budget] || '3000',
-                      currency: pendingTrip.currency || 'USD',
-                    },
-                  },
-                });
+                // Step 1, pre-filled — so "Who's travelling?" (kids!) and the budget get a check.
+                navigate('/plan', { state: { startStep: 0, prefill: chatTripToPrefill(pendingTrip) } });
                 setOpen(false);
               }}
               style={{

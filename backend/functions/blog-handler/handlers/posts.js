@@ -4,6 +4,7 @@ const blog = require('../db/blog');
 const { validatePostInput } = require('../utils/validation');
 const errors = require('../utils/errors');
 const { log } = require('/opt/nodejs/index');
+const { viewPost } = require('../utils/publicView');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': process.env.FRONTEND_URL || '*',
@@ -62,7 +63,7 @@ const getPost = async (postId, userId = null, userRole = null) => {
     }
 
     log.info('Post retrieved', { postId, userId });
-    return success(post);
+    return success(viewPost(post, { userId, userRole }));
 
   } catch (err) {
     log.error('Get post: error', { error: err.message, postId });
@@ -70,7 +71,7 @@ const getPost = async (postId, userId = null, userRole = null) => {
   }
 };
 
-const listPosts = async (queryStringParameters = {}) => {
+const listPosts = async (queryStringParameters = {}, viewer = {}) => {
   try {
     const filters = {};
     const params = queryStringParameters || {};
@@ -98,7 +99,7 @@ const listPosts = async (queryStringParameters = {}) => {
     const posts = await blog.listPosts(filters);
 
     log.info('Posts listed', { count: posts.length, filters });
-    return success(posts);
+    return success(posts.map(p => viewPost(p, viewer)));
 
   } catch (err) {
     log.error('List posts: error', { error: err.message });
