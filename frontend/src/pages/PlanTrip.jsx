@@ -451,7 +451,7 @@ export default function PlanTrip() {
       analytics.tripSubmitted({ destination: destinationName, days: form.days, travelStyle: form.travelStyle });
       sessionStorage.removeItem('wz_plan_step_v2');
       sessionStorage.removeItem('wz_plan_form_v2');
-      navigate('/confirmation', {
+      navigate(`/confirmation?id=${encodeURIComponent(data.data.submissionId)}`, {
         state: { submissionId: data.data.submissionId, destination: destinationName, email: currentUser?.email || form.email },
       });
     } catch (err) {

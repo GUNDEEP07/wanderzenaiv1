@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS submissions (
   itinerary_id        VARCHAR(50),
   error_message       TEXT,
   email_sent_at       TIMESTAMPTZ,
+  progress            JSONB,           -- live generation progress (migration 005)
   created_at          TIMESTAMPTZ DEFAULT NOW(),
   updated_at          TIMESTAMPTZ DEFAULT NOW()
 );

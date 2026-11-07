@@ -175,3 +175,23 @@ export async function submitItinerary(formData) {
   await resendVerificationIfNeeded(res.status, data);
   return { status: res.status, data };
 }
+
+/**
+ * Live progress of a trip being written (owner only).
+ * GET /itinerary/{id}/progress → { status, stage, totalDays, route[], days[], failed, message }
+ * @param {string} submissionId
+ * @returns {Promise<{ ok: true, data: object } | { ok: false, status: number }>}
+ */
+export async function fetchProgress(submissionId) {
+  try {
+    const res = await fetch(`${API_URL}/itinerary/${encodeURIComponent(submissionId)}/progress`, {
+      headers: await authHeaders(),
+      cache: 'no-store',
+    });
+    if (!res.ok) return { ok: false, status: res.status };
+    const data = await res.json();
+    return data?.success ? { ok: true, data: data.data } : { ok: false, status: res.status };
+  } catch {
+    return { ok: false, status: 0 }; // offline / network hiccup — the caller keeps polling
+  }
+}

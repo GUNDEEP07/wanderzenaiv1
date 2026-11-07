@@ -6,6 +6,7 @@ const { searchVenues } = require('/opt/nodejs/venue-enrichment/foursquare');
 const { MODELS, createMessage, firstText, withEffort, maxTokensFor } = require('/opt/nodejs/claude');
 const { findDuplicateVenues, planRepairs, repairRules } = require('./validate');
 const { GenerationFailed, handleGenerationFailure } = require('./failure');
+const { progressRecorder, daySummary } = require('/opt/nodejs/progress');
 const { SESClient, SendEmailCommand } = require('@aws-sdk/client-ses');
 
 const ses = new SESClient({ region: 'ap-southeast-2' });
@@ -406,6 +407,12 @@ async function generate(event, db, ctl) {
 
     await db.query(`UPDATE submissions SET status = 'processing', updated_at = NOW() WHERE id = $1`, [submissionId]);
 
+    // Live progress for the confirmation page (best-effort; never fails the generation).
+    const progress = progressRecorder(db, submissionId, log);
+    const routePlan = route ? dayPlanOf(route) : null;
+    const summaries = (days) => days.map(d => daySummary(d, routePlan));
+    await progress.start({ totalDays: submission.days, route });
+
     // ── Fetch Foursquare tips once upfront ───────────────────────────────
     // With a route: real venues per base, and each batch only sees its own bases' venues.
     log.info('Fetching Foursquare tips', { submissionId, destination: submission.destination, bases: route?.bases.length || 0 });
@@ -440,11 +447,16 @@ async function generate(event, db, ctl) {
     }
 
     log.info('Generating overview and day batches', { submissionId, destination: submission.destination, batches: batches.length });
+    await progress.stage('writing');
     const [metaResult, batchResults] = await Promise.all([
       generateMeta(submission, currencySymbol, submissionId, fsTips),
-      mapLimit(batches, BATCH_CONCURRENCY, (batchNums) => {
+      mapLimit(batches, BATCH_CONCURRENCY, async (batchNums) => {
         log.info('Generating batch', { submissionId, days: batchNums });
-        return generateDaysBatch(submission, batchNums, currencySymbol, submissionId, tipsFor(batchNums));
+        const res = await generateDaysBatch(submission, batchNums, currencySymbol, submissionId, tipsFor(batchNums));
+        // Each finished batch shows up on the confirmation page straight away.
+        res.days.forEach((day, idx) => { day.dayNumber = batchNums[idx] || batchNums[0] + idx; });
+        await progress.addDays(summaries(res.days));
+        return res;
       }),
     ]);
 
@@ -489,6 +501,7 @@ async function generate(event, db, ctl) {
       wrongDayPicks: cov.wrongDay.map(p => ({ name: p.name, day: p.day })),
     });
 
+    await progress.stage('checking');
     const coverageBefore = coverageOf(itinerary.days);
     const before = summarise(itinerary.days, coverageBefore);
     const repairs = planRepairs({ days: itinerary.days, coverage: coverageBefore });
@@ -536,6 +549,10 @@ async function generate(event, db, ctl) {
       repairedDays: repaired.map(r => r.day),
       after,
     });
+
+    // Repaired days replace what the progress page showed; then the final touches.
+    if (repaired.length) await progress.setDays(summaries(itinerary.days));
+    await progress.stage('finishing');
 
     // Attach full venue objects to activities by matching venueName
     const allFoursquareVenues = route

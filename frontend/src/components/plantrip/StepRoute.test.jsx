@@ -3,6 +3,8 @@ import StepRoute, { dayRanges, routeKey } from './StepRoute';
 
 // DestinationSearch talks to the API; not needed here.
 jest.mock('./DestinationSearch', () => ({ DestinationSearch: () => <div data-testid="dest-search" /> }));
+// The real map needs WebGL; the stub shows which stops it was given.
+jest.mock('../map/RouteMap', () => ({ __esModule: true, default: ({ stops }) => <div data-testid="route-map">{stops.map(s => s.name).join(' > ')}</div> }));
 
 const form = { destinations: [{ name: 'Japan' }], days: 10, tripPrefs: { adults: 2, kids: [], transferComfort: 'medium', overnightOk: false } };
 const key = routeKey(form);
@@ -53,7 +55,7 @@ test('suggestions planned for another trip are hidden and re-fetched', () => {
 test('shows option cards with stops, transfer, badges and caution; choosing one calls onChoose', () => {
   const onChoose = jest.fn();
   render(<StepRoute {...props} route={null} options={options} optionsKey={key} onChoose={onChoose} />);
-  expect(screen.getByText('Alps & old towns')).toBeInTheDocument();
+  expect(screen.getAllByText('Alps & old towns').length).toBeGreaterThan(0);
   expect(screen.getByText('WanderZen pick')).toBeInTheDocument();
   expect(screen.getByText('Kid-friendly')).toBeInTheDocument();
   expect(screen.getByText('Longest transfer: ~3.5 h')).toBeInTheDocument();
@@ -136,7 +138,26 @@ test('mismatch counter; "Choose a different route" goes back to the options', ()
   render(<StepRoute {...props} route={off} options={options} optionsKey={key} />);
   expect(screen.getByText(/12 of 10 days placed/)).toBeInTheDocument();
   fireEvent.click(screen.getByText('↺ Choose a different route'));
-  expect(screen.getByText('Alps & old towns')).toBeInTheDocument();
+  expect(screen.getAllByText('Alps & old towns').length).toBeGreaterThan(0);
   fireEvent.click(screen.getByText('← Back to my route'));
   expect(screen.getByText(/12 of 10 days placed/)).toBeInTheDocument();
+});
+
+test('map shows the first suggestion, then whichever route is hovered or tapped', () => {
+  render(<StepRoute {...props} route={null} options={options} optionsKey={key} />);
+  expect(screen.getByTestId('route-map')).toHaveTextContent('Kyoto > Takayama > Kanazawa');
+  fireEvent.mouseEnter(screen.getByText('Coast & islands', { selector: 'div' }).closest('[data-focused]'));
+  expect(screen.getByTestId('route-map')).toHaveTextContent('Hiroshima > Naoshima');
+  expect(screen.getByText('Coast & islands', { selector: 'div' }).closest('[data-focused]')).toHaveAttribute('data-focused', 'true');
+  fireEvent.click(screen.getByText('Alps & old towns', { selector: 'div' }).closest('[data-focused]'));
+  expect(screen.getByTestId('route-map')).toHaveTextContent('Kyoto > Takayama > Kanazawa');
+});
+
+test('the chosen route has a map that follows edits', () => {
+  const onChange = jest.fn();
+  const { rerender } = render(<StepRoute {...props} route={route} onChange={onChange} />);
+  expect(screen.getByTestId('route-map')).toHaveTextContent('Kyoto > Takayama > Kanazawa');
+  fireEvent.click(screen.getAllByText('↑ Earlier')[0]);
+  rerender(<StepRoute {...props} route={onChange.mock.calls[0][0]} onChange={onChange} />);
+  expect(screen.getByTestId('route-map')).toHaveTextContent('Takayama > Kyoto > Kanazawa');
 });
