@@ -186,6 +186,18 @@ const COMFORT_TEXT = {
  * @returns {{ adults: number, kids: number[], transferComfort: 'short'|'medium'|'long',
  *             overnightOk: boolean, notes: string|null }}
  */
+/**
+ * Traveller type when the optional Step 1 choice was skipped, from who's travelling
+ * (same labels as the frontend's TRAVELER_TYPES).
+ */
+function travelerTypeFromPrefs(raw) {
+  const p = sanitizePrefs(raw);
+  if (p.kids.length) return 'Family';
+  if (p.adults === 1) return 'Solo';
+  if (p.adults === 2) return 'Couple';
+  return 'Group of friends';
+}
+
 function sanitizePrefs(raw) {
   const p = raw && typeof raw === 'object' ? raw : {};
   const kids = (Array.isArray(p.kids) ? p.kids : [])
@@ -429,6 +441,7 @@ module.exports = {
   formatRouteOverview,
   formatRouteForDays,
   sanitizePrefs,
+  travelerTypeFromPrefs,
   describePrefs,
   formatPrefsForItinerary,
   buildRouteOptionsPrompt,

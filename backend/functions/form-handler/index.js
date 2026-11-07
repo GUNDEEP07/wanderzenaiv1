@@ -8,6 +8,7 @@ const {
 const { sanitizeSelectedVenues } = require('/opt/nodejs/selected-venues');
 const {
   sanitizeRoute, sanitizePrefs, describePrefs, buildRouteOptionsPrompt, parseRouteOptions, routeAngles, dedupeRoutes, settleEnough,
+  travelerTypeFromPrefs, dayPlan,
 } = require('/opt/nodejs/route-plan');
 const { curatedOptions } = require('/opt/nodejs/curated-routes');
 const { readProgress } = require('/opt/nodejs/progress');
@@ -155,9 +156,13 @@ async function handlePreview(event, db, user) {
   const { destination, days, styles, pace, startTime, travelerType, userMustDos } = values;
   // The outline follows the route the traveller confirmed, when there is one.
   const route = sanitizeRoute(body.route || body.selected_venues?.route, days);
+  // Day by day, travel days included — "Hoi An 3 days" alone let the outline put a Hoi An
+  // farewell on the day the traveller actually moves on to Hue (seen live, Nov 7 2026).
   const routeLine = (route
-    ? `Route (follow it — each day happens around that day's base): ${route.bases.map(b => `${b.name} ${b.days} day${b.days > 1 ? 's' : ''}`).join(' → ')}.`
-    : '') + (body.prefs ? ` Travelling: ${describePrefs(sanitizePrefs(body.prefs))}.` : '');
+    ? `Route (follow it exactly — each day happens around that day's base):\n${dayPlan(route).map((d, i, all) => (d.travelDay
+      ? `Day ${d.day}: travel ${all[i - 1].base.name} → ${d.base.name}, then settle in`
+      : `Day ${d.day}: ${d.base.name}`)).join('\n')}`
+    : '') + (body.prefs ? `\nTravelling: ${describePrefs(sanitizePrefs(body.prefs))}.` : '');
   const previewPrompt = `Return ONLY a valid JSON array. No markdown, no explanation, no code fences.
 Each item must have exactly: { "day": number, "theme": "short title max 4 words", "vibe": "one evocative line max 10 words" }
 
@@ -225,8 +230,15 @@ async function handleSubmit(event, db, user) {
   let body;
   try { body = JSON.parse(event.body || '{}'); } catch { return badRequest('Invalid JSON body'); }
 
+  // Traveler Type is optional on Step 1 (Nov 7 2026: skipping it made every submit fail with
+  // "Validation failed"): fill it from who's travelling.
+  if (!body.travelerType || typeof body.travelerType !== 'string') {
+    body.travelerType = travelerTypeFromPrefs(body.selected_venues?.tripPrefs);
+  }
+  body.travelerType = body.travelerType.slice(0, 40);
+
   const errors = validateFormInput(body);
-  if (errors.length) return badRequest('Validation failed', errors);
+  if (errors.length) return badRequest(`Please check: ${errors.join('; ')}`, errors);
 
   const limited = await rateLimited(db, 'submit', user);
   if (limited) return limited;

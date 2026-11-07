@@ -213,3 +213,11 @@ test('a submission without a route behaves exactly as before', () => {
   assert.equal(plan.picks[0].day, 1);
   assert.equal('route' in sv.sanitizeSelectedVenues({ version: 2, picks: [], interests: [], route: { bases: [] } }, 3), false);
 });
+
+test('travelerTypeFromPrefs: Step 1 traveller type is optional, so /submit derives it', () => {
+  assert.equal(rp.travelerTypeFromPrefs({ adults: 2, kids: [3] }), 'Family');
+  assert.equal(rp.travelerTypeFromPrefs({ adults: 1 }), 'Solo');
+  assert.equal(rp.travelerTypeFromPrefs({ adults: 2 }), 'Couple');
+  assert.equal(rp.travelerTypeFromPrefs({ adults: 5 }), 'Group of friends');
+  assert.equal(rp.travelerTypeFromPrefs(undefined), 'Couple'); // defaults: 2 adults
+});
