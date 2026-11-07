@@ -5,6 +5,8 @@ const { validatePostInput } = require('../utils/validation');
 const errors = require('../utils/errors');
 const { log } = require('/opt/nodejs/index');
 const { viewPost } = require('../utils/publicView');
+const photosHandler = require('./photos');
+const s3 = require('../utils/s3');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': process.env.FRONTEND_URL || '*',
@@ -70,8 +72,13 @@ const getPost = async (postId, userId = null, userRole = null) => {
       return errors.notFound('Post not found');
     }
 
+    // Photos never block the story: if they can't be read, the post shows without them.
+    const photos = await photosHandler.photosFor(postId).catch((err) => {
+      log.warn('Get post: photos unavailable', { postId, error: err.message });
+      return [];
+    });
     log.info('Post retrieved', { postId, userId });
-    return success(viewPost(post, { userId, userRole }));
+    return success({ ...viewPost(post, { userId, userRole }), photos, thumbnail_url: photos[0]?.url || null });
 
   } catch (err) {
     log.error('Get post: error', { error: err.message, postId });
@@ -106,8 +113,15 @@ const listPosts = async (queryStringParameters = {}, viewer = {}) => {
 
     const posts = await blog.listPosts(filters);
 
+    // The first photo of each story is its cover on the list.
+    const covers = await blog.coverKeys(posts.map(p => p.id)).catch((err) => {
+      log.warn('List posts: covers unavailable', { error: err.message });
+      return new Map();
+    });
+    const coverUrls = await Promise.all(posts.map(p => (covers.has(p.id) ? s3.imageUrl(covers.get(p.id)) : null)));
+
     log.info('Posts listed', { count: posts.length, filters });
-    return success(posts.map(p => viewPost(p, viewer)));
+    return success(posts.map((p, i) => ({ ...viewPost(p, viewer), thumbnail_url: coverUrls[i] })));
 
   } catch (err) {
     log.error('List posts: error', { error: err.message });
@@ -185,7 +199,10 @@ const deletePost = async (postId, userId, userRole) => {
       return errors.badRequest('Post ID is required');
     }
 
+    // Photo rows go with the post (ON DELETE CASCADE); their S3 objects are removed after.
+    const photoKeys = (await blog.listPhotos(postId).catch(() => [])).map(p => p.s3_key);
     await blog.deletePost(postId, userId, userRole);
+    await photosHandler.deleteObjects(photoKeys);
 
     log.info('Post deleted', { postId, userId });
     return {

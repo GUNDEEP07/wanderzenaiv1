@@ -141,19 +141,19 @@ exports.handler = async (event) => {
     // ─── PHOTOS ROUTES ────────────────────────────────────────────────────────
     // Routes match infra/template.yaml and frontend/src/api/blog.js.
 
-    // POST /blog/{id}/photos/request — Request a signed upload URL
-    if (httpMethod === 'POST' && /^\/blog\/[^/]+\/photos\/request$/.test(path)) {
-      return await photosHandler.requestPhotoUploadUrl(segments[2], body, userId);
+    // /blog/{id}/photos — list (public rules) or add one (team only)
+    if (/^\/blog\/[^/]+\/photos$/.test(path)) {
+      const postId = pathParameters.id || segments[2];
+      if (httpMethod === 'GET') return await photosHandler.listPhotos(postId, { userId, userRole });
+      if (httpMethod === 'POST') return await photosHandler.uploadPhoto(postId, body, { userId, userRole });
     }
 
-    // POST /blog/{id}/photos/confirm — Confirm an uploaded photo
-    if (httpMethod === 'POST' && /^\/blog\/[^/]+\/photos\/confirm$/.test(path)) {
-      return await photosHandler.confirmPhotoUpload(segments[2], body, userId);
-    }
-
-    // GET /blog/{id}/photos — List post photos
-    if (httpMethod === 'GET' && /^\/blog\/[^/]+\/photos$/.test(path)) {
-      return await photosHandler.listPhotos(segments[2], userId, userRole);
+    // /blog/{id}/photos/{photoId} — caption edit or delete (team only)
+    if (/^\/blog\/[^/]+\/photos\/[^/]+$/.test(path)) {
+      const postId = pathParameters.id || segments[2];
+      const photoId = pathParameters.photoId || segments[4];
+      if (httpMethod === 'PUT') return await photosHandler.updatePhoto(postId, photoId, body, { userId, userRole });
+      if (httpMethod === 'DELETE') return await photosHandler.deletePhoto(postId, photoId, { userId, userRole });
     }
 
     // ─── ADMIN ROUTES ─────────────────────────────────────────────────────────

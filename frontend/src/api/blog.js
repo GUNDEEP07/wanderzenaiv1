@@ -307,89 +307,54 @@ export async function deleteComment(commentId, token = null) {
  */
 
 /**
- * Request a presigned URL for uploading a photo to S3
+ * Add a photo to a story (team only). The image is already resized in the browser
+ * (utils/resizeImage.js) and is sent as a base64 data URL; the first photo is the cover.
  * @param {string} postId
- * @param {string} fileName - Original file name
- * @param {number} fileSize - File size in bytes
- * @param {string|null} token - Auth token (required)
- * @returns {Promise<{uploadUrl: string, s3Key: string}>}
+ * @param {string} image - data URL or base64 (JPEG, PNG or WebP)
+ * @param {string|null} caption
+ * @returns {Promise<{id: string, url: string, caption: string|null}>}
  */
-export async function requestPhotoUploadUrl(postId, fileName, fileSize, token = null) {
+export async function uploadPhoto(postId, image, caption = null, token = null) {
   try {
     if (!postId) throw new Error('postId is required');
-    if (!fileName) throw new Error('fileName is required');
-    if (!fileSize || fileSize <= 0) throw new Error('fileSize is required and must be > 0');
-
-    const res = await fetch(`${BLOG_API}/${postId}/photos/request`, {
+    const res = await fetch(`${BLOG_API}/${postId}/photos`, {
       method: 'POST',
       headers: getHeaders(token),
-      body: JSON.stringify({ fileName, fileSize }),
+      body: JSON.stringify({ image, caption: caption || null }),
     });
-
-    if (!res.ok) {
-      await handleError(res);
-    }
-
-    return await res.json();
-  } catch (err) {
-    throw new Error(`Failed to request upload URL: ${err.message}`);
-  }
-}
-
-/**
- * Upload a photo directly to S3 using presigned URL
- * @param {string} uploadUrl - Presigned URL from requestPhotoUploadUrl
- * @param {File} file - File object to upload
- * @returns {Promise<{success: boolean}>}
- */
-export async function uploadPhotoToS3(uploadUrl, file) {
-  try {
-    if (!uploadUrl) throw new Error('uploadUrl is required');
-    if (!file || !(file instanceof File)) throw new Error('file must be a valid File object');
-
-    const res = await fetch(uploadUrl, {
-      method: 'PUT',
-      headers: { 'Content-Type': file.type || 'application/octet-stream' },
-      body: file,
-    });
-
-    if (!res.ok) {
-      throw new Error(`S3 upload failed: ${res.status}`);
-    }
-
-    return { success: true };
+    if (!res.ok) await handleError(res);
+    return unwrap(await res.json());
   } catch (err) {
     throw new Error(`Failed to upload photo: ${err.message}`);
   }
 }
 
-/**
- * Confirm photo upload in database
- * @param {string} postId
- * @param {string} s3Key - S3 object key returned from requestPhotoUploadUrl
- * @param {number} displayOrder - Order in which to display the photo
- * @param {string|null} token - Auth token (required)
- * @returns {Promise<Object>} Photo metadata object
- */
-export async function confirmPhotoUpload(postId, s3Key, displayOrder, token = null) {
+/** Change a photo's caption (team only). */
+export async function updatePhotoCaption(postId, photoId, caption, token = null) {
   try {
-    if (!postId) throw new Error('postId is required');
-    if (!s3Key) throw new Error('s3Key is required');
-    if (typeof displayOrder !== 'number') throw new Error('displayOrder is required and must be a number');
-
-    const res = await fetch(`${BLOG_API}/${postId}/photos/confirm`, {
-      method: 'POST',
+    const res = await fetch(`${BLOG_API}/${postId}/photos/${photoId}`, {
+      method: 'PUT',
       headers: getHeaders(token),
-      body: JSON.stringify({ s3Key, displayOrder }),
+      body: JSON.stringify({ caption: caption || null }),
     });
-
-    if (!res.ok) {
-      await handleError(res);
-    }
-
-    return await res.json();
+    if (!res.ok) await handleError(res);
+    return unwrap(await res.json());
   } catch (err) {
-    throw new Error(`Failed to confirm photo upload: ${err.message}`);
+    throw new Error(`Failed to save caption: ${err.message}`);
+  }
+}
+
+/** Remove a photo from a story (team only). */
+export async function deletePhoto(postId, photoId, token = null) {
+  try {
+    const res = await fetch(`${BLOG_API}/${postId}/photos/${photoId}`, {
+      method: 'DELETE',
+      headers: getHeaders(token),
+    });
+    if (!res.ok) await handleError(res);
+    return { success: true };
+  } catch (err) {
+    throw new Error(`Failed to delete photo: ${err.message}`);
   }
 }
 
