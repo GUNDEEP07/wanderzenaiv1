@@ -432,44 +432,94 @@ const listCommentsByPost = async (postId) => {
 // PHOTOS (2 functions)
 // ═════════════════════════════════════════════════════════════════════════════
 
-/**
- * addPhoto — Insert new blog photo
- * @param {string} postId — Post ID (UUID)
- * @param {string} s3Key — S3 object key (path in bucket)
- * @param {number} displayOrder — Display order index (0, 1, 2, ...)
- * @returns {Promise<object>} Created photo object
- */
-const addPhoto = async (postId, s3Key, displayOrder) => {
-  const sql = `
-    INSERT INTO blog_photos (post_id, s3_key, display_order, uploaded_at)
-    VALUES ($1, $2, $3, NOW())
-    RETURNING id, post_id, s3_key, display_order, uploaded_at;
-  `;
+const MAX_PHOTOS_PER_POST = 12;
 
-  const result = await pool.query(sql, [postId, s3Key, displayOrder]);
-
-  if (!result.rows.length) {
-    throw new Error('Failed to add photo');
+/** blog_photos (+ caption, Nov 2026) creates itself: CI cannot reach RDS (migration 006). */
+let photosReady = null;
+const ensurePhotoTable = () => {
+  if (!photosReady) {
+    photosReady = pool.query(`
+      CREATE TABLE IF NOT EXISTS blog_photos (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        post_id UUID NOT NULL REFERENCES blog_posts(id) ON DELETE CASCADE,
+        s3_key VARCHAR(500) NOT NULL,
+        display_order INTEGER NOT NULL,
+        uploaded_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_blog_photos_post ON blog_photos(post_id);
+      ALTER TABLE blog_photos ADD COLUMN IF NOT EXISTS caption VARCHAR(200);
+    `).catch((err) => { photosReady = null; throw err; });
   }
-
-  return result.rows[0];
+  return photosReady;
 };
 
 /**
- * listPhotos — Fetch all photos for a post, ordered by display_order
- * @param {string} postId — Post ID (UUID)
- * @returns {Promise<array>} Array of photos
+ * addPhoto — append a photo to a post (placed after the existing ones; the first is the cover).
+ * The count check and insert run in one statement, so two parallel uploads can't pass 12.
+ * @returns {Promise<object|null>} the row, or null when the post already has the maximum
  */
-const listPhotos = async (postId) => {
-  const sql = `
-    SELECT id, post_id, s3_key, display_order, uploaded_at
-    FROM blog_photos
-    WHERE post_id = $1
-    ORDER BY display_order ASC;
-  `;
+const addPhoto = async (postId, s3Key, caption = null) => {
+  await ensurePhotoTable();
+  const result = await pool.query(
+    `INSERT INTO blog_photos (post_id, s3_key, display_order, caption, uploaded_at)
+     SELECT $1, $2, COALESCE(MAX(display_order) + 1, 0), $3, NOW()
+     FROM blog_photos WHERE post_id = $1
+     HAVING COUNT(*) < $4
+     RETURNING id, post_id, s3_key, display_order, caption, uploaded_at`,
+    [postId, s3Key, caption, MAX_PHOTOS_PER_POST]
+  );
+  return result.rows[0] || null;
+};
 
-  const result = await pool.query(sql, [postId]);
+/** postExists — any status (photo routes are admin-only, so drafts count too). */
+const postExists = async (postId) => {
+  const result = await pool.query('SELECT 1 FROM blog_posts WHERE id = $1', [postId]);
+  return result.rows.length > 0;
+};
+
+/** listPhotos — a post's photos in display order. */
+const listPhotos = async (postId) => {
+  await ensurePhotoTable();
+  const result = await pool.query(
+    `SELECT id, post_id, s3_key, display_order, caption, uploaded_at
+     FROM blog_photos WHERE post_id = $1 ORDER BY display_order ASC, uploaded_at ASC`,
+    [postId]
+  );
   return result.rows;
+};
+
+/** coverKeys — first photo of each post: Map(postId → s3_key). */
+const coverKeys = async (postIds) => {
+  if (!postIds.length) return new Map();
+  await ensurePhotoTable();
+  const result = await pool.query(
+    `SELECT DISTINCT ON (post_id) post_id, s3_key
+     FROM blog_photos WHERE post_id = ANY($1::uuid[])
+     ORDER BY post_id, display_order ASC, uploaded_at ASC`,
+    [postIds]
+  );
+  return new Map(result.rows.map(r => [r.post_id, r.s3_key]));
+};
+
+/** updatePhotoCaption — returns the row, or null if the photo isn't on that post. */
+const updatePhotoCaption = async (postId, photoId, caption) => {
+  await ensurePhotoTable();
+  const result = await pool.query(
+    `UPDATE blog_photos SET caption = $3 WHERE id = $2 AND post_id = $1
+     RETURNING id, post_id, s3_key, display_order, caption, uploaded_at`,
+    [postId, photoId, caption]
+  );
+  return result.rows[0] || null;
+};
+
+/** deletePhoto — removes the row; returns its s3_key (to delete the object) or null. */
+const deletePhoto = async (postId, photoId) => {
+  await ensurePhotoTable();
+  const result = await pool.query(
+    'DELETE FROM blog_photos WHERE id = $2 AND post_id = $1 RETURNING s3_key',
+    [postId, photoId]
+  );
+  return result.rows[0]?.s3_key || null;
 };
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -568,8 +618,13 @@ module.exports = {
   listCommentsByPost,
 
   // Photos
+  MAX_PHOTOS_PER_POST,
+  postExists,
   addPhoto,
   listPhotos,
+  coverKeys,
+  updatePhotoCaption,
+  deletePhoto,
 
   // Admin
   approvePost,

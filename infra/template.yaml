@@ -551,6 +551,13 @@ Resources:
       Timeout: 30
       MemorySize: 512
       Description: Handles blog posts, comments, photos, and moderation workflows
+      # Story photos live privately under blog/ in the PDF bucket (served via signed URLs).
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action: [s3:PutObject, s3:GetObject, s3:DeleteObject]
+              Resource: !Sub arn:aws:s3:::${PDFBucket}/blog/*
       Events:
         # ─── Posts Routes ─────────────────────────────────────────────────────
         PostCreate:
@@ -615,18 +622,24 @@ Resources:
             RestApiId: !Ref WanderZenApi
             Path: /blog/{id}/photos
             Method: GET
-        PhotoRequest:
+        PhotoUpload:
           Type: Api
           Properties:
             RestApiId: !Ref WanderZenApi
-            Path: /blog/{id}/photos/request
+            Path: /blog/{id}/photos
             Method: POST
-        PhotoConfirm:
+        PhotoUpdate:
           Type: Api
           Properties:
             RestApiId: !Ref WanderZenApi
-            Path: /blog/{id}/photos/confirm
-            Method: POST
+            Path: /blog/{id}/photos/{photoId}
+            Method: PUT
+        PhotoDelete:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /blog/{id}/photos/{photoId}
+            Method: DELETE
         # ─── Admin Routes ─────────────────────────────────────────────────────
         PostApprove:
           Type: Api

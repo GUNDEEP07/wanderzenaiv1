@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { fetchPosts, createPost, updatePost, deletePost } from '../api/blog';
+import { fetchPosts, createPost, updatePost, deletePost, fetchPhotos, uploadPhoto, updatePhotoCaption, deletePhoto } from '../api/blog';
+import { resizeImage, ACCEPTED_TYPES } from '../utils/resizeImage';
 
 /**
  * Admin → Blog (Nov 8 2026, Gundeep's decision "2B"): only the WanderZen team writes
@@ -17,6 +18,8 @@ export const CATEGORIES = [
   { val: 'budget', label: 'Budget' },
   { val: 'other', label: 'Other' },
 ];
+
+export const MAX_PHOTOS = 12; // same limit as the API
 
 const EMPTY = { title: '', description: '', content: '', location: '', country: '', category: 'culture', start: '', end: '' };
 
@@ -70,8 +73,53 @@ const s = {
   input: { width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.03)', color: '#fff', fontFamily: 'inherit', fontSize: 14, boxSizing: 'border-box' },
   fieldErr: { fontSize: 12, color: '#ff6b6b', marginTop: 4 },
   hint: { fontSize: 12, color: 'rgba(255,255,255,0.35)', marginTop: 4 },
+  photoGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12 },
+  photoCard: { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: 8 },
+  photoImg: { width: '100%', height: 110, objectFit: 'cover', borderRadius: 6, display: 'block', background: 'rgba(0,0,0,0.3)' },
+  coverTag: { position: 'absolute', top: 6, left: 6, padding: '2px 8px', borderRadius: 10, background: '#00d4aa', color: '#06090f', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' },
   empty: { color: 'rgba(255,255,255,0.35)', fontSize: 14, padding: 32, textAlign: 'center' },
 };
+
+/**
+ * Story photos. The first one is the cover (blog list + top of the story); the rest show
+ * under the story. Nothing uploads until the story is saved.
+ */
+function PhotosField({ items, onAdd, onRemove, onCaption, disabled }) {
+  const left = MAX_PHOTOS - items.length;
+  return (
+    <div>
+      <label style={s.label}>Photos (optional)</label>
+      {items.length > 0 && (
+        <div style={s.photoGrid}>
+          {items.map((p, i) => (
+            <div key={p.key} style={s.photoCard}>
+              <div style={{ position: 'relative' }}>
+                <img src={p.url} alt={p.caption || `Photo ${i + 1}`} style={s.photoImg} />
+                {i === 0 && <span style={s.coverTag}>Cover</span>}
+                {p.file && <span style={{ ...s.coverTag, left: 'auto', right: 6, background: 'rgba(6,9,15,0.75)', color: '#fff' }}>New</span>}
+              </div>
+              <input aria-label={`Caption for photo ${i + 1}`} style={{ ...s.input, fontSize: 12, padding: '6px 8px', marginTop: 6 }} value={p.caption} maxLength={200}
+                placeholder="Caption (optional)" onChange={e => onCaption(p.key, e.target.value)} disabled={disabled} />
+              <button type="button" style={{ ...s.btn('danger'), marginTop: 6, width: '100%', padding: '6px 8px' }} onClick={() => onRemove(p.key)} disabled={disabled}>
+                Remove
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      {left > 0 ? (
+        <label style={{ ...s.btn(), display: 'inline-block', marginTop: 10, opacity: disabled ? 0.5 : 1 }}>
+          + Add photos
+          <input type="file" aria-label="Add photos" accept={ACCEPTED_TYPES.join(',')} multiple style={{ display: 'none' }} disabled={disabled}
+            onChange={e => { onAdd([...e.target.files].slice(0, left)); e.target.value = ''; }} />
+        </label>
+      ) : null}
+      <div style={s.hint}>
+        The first photo is the cover. JPEG, PNG or WebP, up to {MAX_PHOTOS}. Photos are resized and their location data removed before upload.
+      </div>
+    </div>
+  );
+}
 
 function Field({ label, error, hint, children }) {
   return (
@@ -96,6 +144,10 @@ export default function AdminBlogPanel() {
   const [fieldErrs, setFieldErrs] = useState({});
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null); // post id awaiting "Yes, delete"
+  // Photos being edited: saved ones ({ id, url, caption, savedCaption }) and new ones ({ file, url: preview }).
+  const [photos, setPhotos] = useState([]);
+  const [removedPhotoIds, setRemovedPhotoIds] = useState([]);
+  const [progress, setProgress] = useState(null);
 
   const load = async () => {
     try {
@@ -116,15 +168,73 @@ export default function AdminBlogPanel() {
   const flash = (msg) => { setNotice(msg); setTimeout(() => setNotice(null), 4000); };
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-  const startNew = () => { setEditing('new'); setForm(EMPTY); setFieldErrs({}); setError(null); };
+  const dropPreviews = (list) => list.forEach(p => p.file && URL.revokeObjectURL?.(p.url));
+  const resetPhotos = (list = []) => {
+    setPhotos(prev => { dropPreviews(prev); return list; });
+    setRemovedPhotoIds([]);
+  };
+  const loadPhotos = async (postId) => {
+    try {
+      const token = await getIdToken();
+      const saved = await fetchPhotos(postId, token);
+      resetPhotos(saved.map(p => ({ key: p.id, id: p.id, url: p.url, caption: p.caption || '', savedCaption: p.caption || '' })));
+    } catch (err) {
+      setError(`Could not load this story's photos: ${err.message}`);
+    }
+  };
+  const addPhotos = (files) => {
+    const bad = files.filter(f => !ACCEPTED_TYPES.includes(f.type));
+    if (bad.length) setError(`Skipped ${bad.map(f => f.name).join(', ')}: use JPEG, PNG or WebP (export iPhone HEIC photos as JPEG).`);
+    const ok = files.filter(f => ACCEPTED_TYPES.includes(f.type));
+    setPhotos(prev => [...prev, ...ok.slice(0, MAX_PHOTOS - prev.length).map((file, i) => ({
+      key: `new-${Date.now()}-${i}-${file.name}`, file, url: URL.createObjectURL(file), caption: '',
+    }))]);
+  };
+  const removePhoto = (key) => setPhotos(prev => {
+    const p = prev.find(x => x.key === key);
+    if (p?.file) URL.revokeObjectURL?.(p.url);
+    if (p?.id) setRemovedPhotoIds(ids => [...ids, p.id]);
+    return prev.filter(x => x.key !== key);
+  });
+  const captionPhoto = (key, caption) => setPhotos(prev => prev.map(p => (p.key === key ? { ...p, caption } : p)));
+
+  /**
+   * After the story text is saved: delete removed photos, save changed captions, upload new
+   * photos in order. Returns the new photos that failed (they stay in the editor to retry).
+   */
+  const syncPhotos = async (postId, token) => {
+    const failed = [];
+    for (const id of removedPhotoIds) {
+      try { await deletePhoto(postId, id, token); } catch (err) { failed.push({ err }); }
+    }
+    const newOnes = photos.filter(p => p.file);
+    for (const p of photos.filter(x => x.id && x.caption.trim() !== x.savedCaption)) {
+      try { await updatePhotoCaption(postId, p.id, p.caption.trim(), token); } catch (err) { failed.push({ err }); }
+    }
+    for (let i = 0; i < newOnes.length; i++) {
+      const p = newOnes[i];
+      setProgress(`Uploading photo ${i + 1} of ${newOnes.length}…`);
+      try {
+        await uploadPhoto(postId, await resizeImage(p.file), p.caption.trim() || null, token);
+      } catch (err) {
+        failed.push({ item: p, err });
+      }
+    }
+    setProgress(null);
+    return failed;
+  };
+
+  const startNew = () => { setEditing('new'); setForm(EMPTY); setFieldErrs({}); setError(null); resetPhotos(); };
   const startEdit = (p) => {
+    resetPhotos();
+    loadPhotos(p.id);
     setEditing(p.id);
     setForm({ title: p.title || '', description: p.description || '', content: p.content || '', location: p.location || '', country: p.country || '', category: p.category || 'other', ...datesOf(p.travel_dates) });
     setFieldErrs({});
     setError(null);
     window.scrollTo?.({ top: 0, behavior: 'smooth' });
   };
-  const cancel = () => { setEditing(null); setForm(EMPTY); setFieldErrs({}); };
+  const cancel = () => { setEditing(null); setForm(EMPTY); setFieldErrs({}); resetPhotos(); };
 
   const save = async () => {
     const errs = validateStory(form);
@@ -140,9 +250,21 @@ export default function AdminBlogPanel() {
         ...(form.start && form.end ? { travelDates: { start: form.start, end: form.end } } : {}),
       };
       const saved = unwrap(editing === 'new' ? await createPost(payload, token) : await updatePost(editing, payload, token));
+      const postId = editing === 'new' ? saved?.id : editing;
+      const failed = postId ? await syncPhotos(postId, token) : [];
+      if (failed.length) {
+        // The story is saved; keep the editor open on it so the failed photos can be retried.
+        setEditing(postId);
+        await loadPhotos(postId);
+        setPhotos(prev => [...prev, ...failed.filter(f => f.item).map(f => f.item)]);
+        await load(); // before the message: load() clears errors
+        setError(`The story is saved, but ${failed.length} photo change${failed.length > 1 ? 's' : ''} failed: ${failed[0].err.message}. Press save again to retry.`);
+        return saved;
+      }
       flash(editing === 'new' ? 'Published — it is live on the blog now.' : 'Saved.');
       setEditing(null);
       setForm(EMPTY);
+      resetPhotos();
       await load();
       return saved;
     } catch (err) {
@@ -225,11 +347,13 @@ export default function AdminBlogPanel() {
             <Field label="Story" error={fieldErrs.content} hint="Plain text. Leave an empty line between paragraphs.">
               <textarea aria-label="Story" style={{ ...s.input, minHeight: 260, resize: 'vertical', lineHeight: 1.6 }} value={form.content} maxLength={50000} onChange={e => set('content', e.target.value)} />
             </Field>
-            <div style={{ ...s.actions, marginTop: 16 }}>
+            <PhotosField items={photos} onAdd={addPhotos} onRemove={removePhoto} onCaption={captionPhoto} disabled={saving} />
+            <div style={{ ...s.actions, marginTop: 16, alignItems: 'center' }}>
               <button type="button" style={s.btn('primary')} onClick={save} disabled={saving}>
                 {saving ? 'Saving…' : editing === 'new' ? 'Publish' : 'Save changes'}
               </button>
               <button type="button" style={s.btn()} onClick={cancel} disabled={saving}>Cancel</button>
+              {progress && <span style={s.hint} role="status">{progress}</span>}
             </div>
           </div>
         )}
@@ -238,6 +362,7 @@ export default function AdminBlogPanel() {
         {!loading && posts.length === 0 && <div style={s.empty}>No stories yet — write the first one.</div>}
         {!loading && posts.map(p => (
           <div key={p.id} style={s.card}>
+            {p.thumbnail_url && <img src={p.thumbnail_url} alt="" style={{ width: 64, height: 48, objectFit: 'cover', borderRadius: 6 }} />}
             <div style={{ flex: 1, minWidth: 220 }}>
               <div style={s.title}>{p.title}</div>
               <div style={s.meta}>

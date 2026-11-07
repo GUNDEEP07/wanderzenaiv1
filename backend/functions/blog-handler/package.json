@@ -1,13 +1,12 @@
 {
   "name": "blog-handler",
   "version": "1.0.0",
-  "description": "Blog CRUD and admin approval Lambda function",
+  "description": "Blog posts, photos and comments Lambda function",
   "main": "index.js",
   "scripts": {
     "test": "jest --coverage"
   },
   "dependencies": {
-    "aws-sdk": "^2.1000.0",
     "pg": "^8.10.0"
   },
   "devDependencies": {

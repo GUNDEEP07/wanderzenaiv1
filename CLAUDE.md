@@ -59,6 +59,10 @@ AI-powered slow-travel itinerary SaaS. Live at wanderzenai.com. Solo-maintained.
   immediately; editor at `/admin/blog` (`AdminBlogPanel.jsx`). Readers see `author_name` only
   (`blog-handler/utils/publicView.js`), never emails. Comments are closed until launch: API returns
   403 COMMENTS_CLOSED unless `BLOG_COMMENTS_OPEN=true`, and `COMMENTS_OPEN` in BlogDetailPage.jsx.
+- Blog photos: admins add them in the editor; `utils/resizeImage.js` shrinks them in the browser
+  (≤1920 px JPEG, strips EXIF/GPS) and POSTs base64 to `/blog/{id}/photos` (type sniffed from bytes,
+  ≤4 MB, ≤12 per story). Stored privately in the PDF bucket under `blog/{postId}/`, served as 6 h
+  signed URLs; the first photo is the cover (`thumbnail_url`). `blog_photos` self-creates (006).
 - Profile name: GET /profile fills an empty `users.name` from the verified token's `name` claim
   (never overwrites one set in Settings).
 - Photos: Unsplash only through the backend `GET /photos/search` (key stays server-side, cached);

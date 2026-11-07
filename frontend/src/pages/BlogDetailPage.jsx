@@ -184,6 +184,28 @@ export default function BlogDetailPage() {
       whiteSpace: 'pre-wrap',
       wordWrap: 'break-word',
     },
+    caption: {
+      fontSize: 13,
+      color: 'rgba(255,255,255,0.45)',
+      marginTop: -16,
+      marginBottom: 24,
+      textAlign: 'center',
+    },
+    gallery: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+      gap: 16,
+      marginBottom: 48,
+    },
+    figure: { margin: 0 },
+    galleryImg: {
+      width: '100%',
+      aspectRatio: '4 / 3',
+      objectFit: 'cover',
+      borderRadius: 10,
+      display: 'block',
+      background: 'rgba(0,0,0,0.2)',
+    },
     commentsSection: {
       paddingTop: 24,
       borderTop: '1px solid rgba(255,255,255,0.08)',
@@ -242,8 +264,22 @@ export default function BlogDetailPage() {
               </div>
             )}
 
+            {post.photos?.[0]?.caption && <div style={s.caption}>{post.photos[0].caption}</div>}
+
             {/* Post content */}
             {post.content && <div style={s.content_body}>{post.content}</div>}
+
+            {/* Photos after the cover (the cover is shown above as the thumbnail) */}
+            {post.photos?.length > 1 && (
+              <div style={s.gallery}>
+                {post.photos.slice(1).filter(p => p.url).map(p => (
+                  <figure key={p.id} style={s.figure}>
+                    <img src={p.url} alt={p.caption || post.title} loading="lazy" style={s.galleryImg} />
+                    {p.caption && <figcaption style={{ ...s.caption, marginTop: 8, marginBottom: 0 }}>{p.caption}</figcaption>}
+                  </figure>
+                ))}
+              </div>
+            )}
 
             {/* Comments section */}
             {!COMMENTS_OPEN && (
