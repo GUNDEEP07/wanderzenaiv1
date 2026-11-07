@@ -26,6 +26,13 @@ const DEFAULT_LIMITS = Object.freeze({
   personalised: [{ limit: 30, windowSeconds: 3600 }],
   welcome:      [{ limit: 2, windowSeconds: 86400 }],
   route:        [{ limit: 20, windowSeconds: 3600 }, { limit: 60, windowSeconds: 86400 }],
+  // Guests planning a trip before signing up (Nov 8 2026) — keyed by hashed client IP.
+  // A route request is up to 3 Claude calls (none when curated or cached).
+  guestRoute:   [{ limit: 6, windowSeconds: 3600 }, { limit: 15, windowSeconds: 86400 }],
+  guestPreview: [{ limit: 10, windowSeconds: 3600 }, { limit: 25, windowSeconds: 86400 }],
+  // Shared ceiling on ALL guest route+preview requests per day (subject 'all'), so many
+  // IPs together still can't run up the Claude bill. Signed-in users are not affected.
+  guestAi:      [{ limit: 1500, windowSeconds: 86400 }],
   // Public, Claude-backed — keyed by hashed client IP
   trending:     [{ limit: 30, windowSeconds: 3600 }],
   insights:     [{ limit: 60, windowSeconds: 3600 }],

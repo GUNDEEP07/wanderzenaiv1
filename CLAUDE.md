@@ -18,7 +18,7 @@ AI-powered slow-travel itinerary SaaS. Live at wanderzenai.com. Solo-maintained.
   before any `sam deploy`. If regenerating, use `sam deploy --guided` then scrub it of
   anything sensitive before committing.
 - Frontend itinerary flow: `frontend/src/pages/PlanTrip.jsx` (multi-step form; it lives in
-  `pages/`, not `components/`).
+  `pages/`, not `components/`). Open to guests — see "Guest planning" below.
 - Plan flow (6 steps): Destination → Dates → **Your route** (`StepRoute.jsx`, POST
   `/route-plan`) → Trip overview → Choose experiences (`VenueSelection`, one tab per route
   base) → Review & submit (`StepReview.jsx`, loads the /preview outline itself). Step
@@ -63,6 +63,14 @@ AI-powered slow-travel itinerary SaaS. Live at wanderzenai.com. Solo-maintained.
   (≤1920 px JPEG, strips EXIF/GPS) and POSTs base64 to `/blog/{id}/photos` (type sniffed from bytes,
   ≤4 MB, ≤12 per story). Stored privately in the PDF bucket under `blog/{postId}/`, served as 6 h
   signed URLs; the first photo is the cover (`thumbnail_url`). `blog_photos` self-creates (006).
+- Guest planning (Nov 2026): `/plan` is public; `/route-plan` and `/preview` take `optionalUser`
+  (guests rate-limited by hashed IP via `guestRoute`/`guestPreview`, plus a shared daily
+  `guestAi` cap). Only `/submit`, progress and `GET /entitlement` need sign-in. The Review step
+  shows a sign-up prompt to guests (`/signup?next=/plan`, `utils/safeNext.js` blocks open
+  redirects) and, signed in, what Submit will use (`GET /entitlement`, read-only twin of
+  `decideEntitlement` — keep them in step). Claude route ideas are cached 7 days per trip shape
+  (`route_plan_cache`). The planner saves the plan to `/profile/draft` (`plan_drafts`) for the
+  dashboard "Continue planning" card. Both tables self-create (007).
 - Profile name: GET /profile fills an empty `users.name` from the verified token's `name` claim
   (never overwrites one set in Settings).
 - Photos: Unsplash only through the backend `GET /photos/search` (key stays server-side, cached);

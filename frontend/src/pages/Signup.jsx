@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { nextQuery } from '../utils/safeNext';
 import { useAuth } from '../context/AuthContext';
 import { updateProfile, sendEmailVerification } from 'firebase/auth';
 import { auth, FIREBASE_CONFIGURED } from '../firebase';
@@ -45,7 +46,10 @@ export default function Signup() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const refCode = searchParams.get('ref');
-  const onboardingPath = refCode ? `/onboarding?ref=${refCode}` : '/onboarding';
+  // ?next= (a guest's planned trip) rides along through onboarding and comes back after.
+  const nextQ = nextQuery(searchParams.get('next'));
+  const onboardingQuery = [refCode ? `ref=${encodeURIComponent(refCode)}` : '', nextQ].filter(Boolean).join('&');
+  const onboardingPath = onboardingQuery ? `/onboarding?${onboardingQuery}` : '/onboarding';
 
   const handleGoogle = async () => {
     setError(''); setLoading(true);
@@ -148,7 +152,7 @@ export default function Signup() {
         </form>
 
         <div style={s.footer}>
-          Already have an account? <Link to="/login" style={s.link}>Sign in</Link>
+          Already have an account? <Link to={nextQ ? `/login?${nextQ}` : '/login'} style={s.link}>Sign in</Link>
         </div>
         <div style={{ textAlign: 'center', marginTop: 24, fontSize: 11, color: 'rgba(255,255,255,0.2)' }}>
           <Link to="/privacy" style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'none' }}>Privacy Policy</Link>

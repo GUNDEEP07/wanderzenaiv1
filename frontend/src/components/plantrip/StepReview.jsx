@@ -15,7 +15,38 @@ const fieldLabel = { fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', margin
 const chipBase = (active) => ({ fontSize: '0.72rem', padding: '4px 10px', borderRadius: 20, border: active ? '1px solid #00d4aa' : '1px solid rgba(255,255,255,0.2)', background: active ? 'rgba(0,212,170,0.15)' : 'transparent', color: active ? '#00d4aa' : 'rgba(255,255,255,0.5)', cursor: 'pointer', transition: 'all 0.15s', fontFamily: 'inherit' });
 const segBtn = (active) => ({ flex: 1, fontSize: '0.72rem', padding: '6px 4px', borderRadius: 8, border: active ? '1px solid #00d4aa' : '1px solid rgba(255,255,255,0.2)', background: active ? 'rgba(0,212,170,0.15)' : 'transparent', color: active ? '#00d4aa' : 'rgba(255,255,255,0.5)', cursor: 'pointer', textTransform: 'capitalize', fontFamily: 'inherit' });
 
-export default function StepReview({ form, set, onBack, onSubmit, submitting, submitError, accountEmail }) {
+/**
+ * The line under "Generate" saying what this itinerary uses (Nov 2026 — no surprise paywall
+ * after six steps). `e` comes from GET /entitlement; null → nothing shown.
+ */
+export function entitlementLine(e) {
+  if (!e || !e.allowed) return null;
+  const n = Number(e.remaining) || 0;
+  if (e.source === 'free') return 'Uses your free itinerary for this month.';
+  if (e.source === 'credit') return n <= 1 ? 'Uses your last itinerary credit.' : `Uses 1 of your ${n} itinerary credits.`;
+  if (e.source === 'monthly') return n <= 1 ? 'Uses your last Wanderer itinerary this month.' : `Uses 1 of the ${n} Wanderer itineraries left this month.`;
+  return null; // test accounts
+}
+
+/** Why Submit won't work, said before it's pressed. */
+export function limitMessage(e) {
+  if (!e || e.allowed) return null;
+  return e.code === 'MONTHLY_LIMIT_REACHED'
+    ? "You've used this month's Wanderer itineraries — they reset on your next billing date. A single plan gets you one now."
+    : "You've used this month's free itinerary. A single plan or Wanderer gets you this one now.";
+}
+
+const gatePanel = {
+  background: 'linear-gradient(135deg, rgba(0,212,170,0.1), rgba(0,212,170,0.03))',
+  border: '1px solid rgba(0,212,170,0.25)', borderRadius: 14, padding: '1.25rem 1.5rem', marginBottom: '0.75rem',
+};
+const primaryBtn = { flex: 1, padding: '14px 24px', background: '#00d4aa', border: 'none', borderRadius: 10, color: '#0a1628', fontWeight: 700, fontSize: '1rem', cursor: 'pointer', fontFamily: 'inherit' };
+const ghostBtn = { padding: '14px 24px', background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 10, color: 'rgba(255,255,255,0.75)', fontSize: '0.95rem', cursor: 'pointer', fontFamily: 'inherit' };
+
+export default function StepReview({
+  form, set, onBack, onSubmit, submitting, submitError, accountEmail,
+  signedIn = true, entitlement = null, onSignUp, onSignIn, onSeePlans,
+}) {
   const [preview, setPreview] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
 
@@ -234,14 +265,40 @@ export default function StepReview({ form, set, onBack, onSubmit, submitting, su
       })()}
 
       {submitError && <p style={{ color: '#ff6b6b', marginBottom: '1rem', fontSize: '0.9rem' }}>{submitError}</p>}
-      <div style={{ display: 'flex', gap: 12 }}>
-        <button onClick={onBack} style={{ padding: '14px 24px', background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 10, color: 'rgba(255,255,255,0.6)', fontSize: '0.95rem', cursor: 'pointer', fontFamily: 'inherit' }}>← Edit</button>
-        <button onClick={onSubmit} disabled={submitting} style={{ flex: 1, padding: '14px 24px', background: submitting ? 'rgba(0,212,170,0.4)' : '#00d4aa', border: 'none', borderRadius: 10, color: '#0a1628', fontWeight: 700, fontSize: '1rem', cursor: submitting ? 'not-allowed' : 'pointer', transition: 'all 0.2s', fontFamily: 'inherit' }}>
-          {submitting ? 'Generating…' : 'Generate full itinerary →'}
-        </button>
+
+      {/* Guests plan everything first; the account is asked for here (Nov 2026). */}
+      {!signedIn && (
+        <div style={gatePanel} data-testid="signin-gate">
+          <div style={{ fontWeight: 700, color: '#fff', marginBottom: 4 }}>Create a free account to get this itinerary</div>
+          <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>
+            Your first itinerary is free, and the full guide is emailed to you. Everything you've planned is kept — you'll come straight back here.
+          </div>
+        </div>
+      )}
+      {signedIn && limitMessage(entitlement) && (
+        <div style={{ ...gatePanel, borderColor: 'rgba(255,190,90,0.35)', background: 'rgba(255,190,90,0.06)' }} role="status">
+          <div style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>{limitMessage(entitlement)}</div>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+        <button onClick={onBack} style={{ ...ghostBtn, color: 'rgba(255,255,255,0.6)' }}>← Edit</button>
+        {!signedIn ? (
+          <>
+            <button onClick={onSignUp} style={primaryBtn}>Create free account →</button>
+            <button onClick={onSignIn} style={ghostBtn}>I have an account</button>
+          </>
+        ) : limitMessage(entitlement) ? (
+          <button onClick={onSeePlans} style={primaryBtn}>See plans →</button>
+        ) : (
+          <button onClick={onSubmit} disabled={submitting} style={{ ...primaryBtn, background: submitting ? 'rgba(0,212,170,0.4)' : '#00d4aa', cursor: submitting ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}>
+            {submitting ? 'Generating…' : 'Generate full itinerary →'}
+          </button>
+        )}
       </div>
       <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.78rem', textAlign: 'center', marginTop: '0.75rem' }}>
-        Takes about 5 minutes · PDF delivered by email{accountEmail ? ` to ${accountEmail}` : ''}
+        {signedIn && entitlementLine(entitlement) ? `${entitlementLine(entitlement)} · ` : ''}
+        Takes about 5 minutes · PDF delivered by email{signedIn && accountEmail ? ` to ${accountEmail}` : ''}
       </p>
     </div>
   );

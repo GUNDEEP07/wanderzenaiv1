@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { safeNext, nextQuery } from '../utils/safeNext';
 import { useAuth } from '../context/AuthContext';
 import { analytics } from '../utils/analytics';
 
@@ -45,10 +46,14 @@ export default function Login() {
   const [resetLoading, setResetLoading] = useState(false);
   const { signInWithGoogle, signInWithEmail, resetPassword, isDemo } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // Guests who planned a trip come back to it after signing in (?next=/plan).
+  const next = safeNext(searchParams.get('next'));
+  const nextQ = nextQuery(searchParams.get('next'));
 
   const handleGoogle = async () => {
     setError(''); setLoading(true);
-    try { await signInWithGoogle(); analytics.login('google'); navigate('/dashboard'); }
+    try { await signInWithGoogle(); analytics.login('google'); navigate(next); }
     catch { setError('Google sign-in failed. Try again.'); }
     finally { setLoading(false); }
   };
@@ -56,7 +61,7 @@ export default function Login() {
   const handleEmail = async (e) => {
     e.preventDefault();
     setError(''); setLoading(true);
-    try { await signInWithEmail(email, password); analytics.login('email'); navigate('/dashboard'); }
+    try { await signInWithEmail(email, password); analytics.login('email'); navigate(next); }
     catch (err) {
       setError(err?.code === 'auth/invalid-credential' ? 'Invalid email or password.' : 'Sign-in failed. Try again.');
     } finally { setLoading(false); }
@@ -103,7 +108,7 @@ export default function Login() {
         </form>
 
         <div style={s.footer}>
-          <Link to="/signup" style={s.link}>No account? Sign up</Link>
+          <Link to={nextQ ? `/signup?${nextQ}` : '/signup'} style={s.link}>No account? Sign up</Link>
           {' · '}
           <span style={{ cursor: 'pointer', color: 'rgba(255,255,255,0.4)', textDecoration: 'underline', textUnderlineOffset: 2 }} onClick={() => { setShowReset(!showReset); setResetSent(false); }}>
             Forgot password?

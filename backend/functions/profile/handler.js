@@ -274,9 +274,68 @@ async function handlePutProfile(event, db, user) {
   }
 }
 
+// ─── /profile/draft — the trip being planned, saved to the account ───────────
+// So a plan survives closing the tab or moving from phone to laptop ("Continue your plan"
+// on the dashboard). One draft per account; the planner overwrites it as you go.
+const DRAFT_MAX_BYTES = 64 * 1024;
+const DRAFT_DDL = `
+  CREATE TABLE IF NOT EXISTS plan_drafts (
+    email      VARCHAR(255) PRIMARY KEY,
+    draft      JSONB        NOT NULL,
+    updated_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+  );`;
+let draftsReady = null;
+const ensureDrafts = (db) => {
+  if (!draftsReady) draftsReady = db.query(DRAFT_DDL).catch((err) => { draftsReady = null; throw err; });
+  return draftsReady;
+};
+
+/** { form: object, step: 0–5 } or an error message. Only the shape is checked here: the
+ *  draft is the user's own data, read back only by them, and /submit validates everything. */
+function validateDraft(body) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return { error: 'Invalid draft' };
+  const { form, step } = body;
+  if (!form || typeof form !== 'object' || Array.isArray(form)) return { error: 'form must be an object' };
+  if (!Number.isInteger(step) || step < 0 || step > 5) return { error: 'step must be 0–5' };
+  const serialized = JSON.stringify({ form, step });
+  if (Buffer.byteLength(serialized) > DRAFT_MAX_BYTES) return { error: 'Draft is too large' };
+  return { value: serialized };
+}
+
+async function handleDraft(event, db, user) {
+  try {
+    await ensureDrafts(db);
+    if (event.httpMethod === 'GET') {
+      const { rows } = await db.query('SELECT draft, updated_at FROM plan_drafts WHERE email = $1', [user.email]);
+      return json(200, { draft: rows[0] ? { ...rows[0].draft, updatedAt: rows[0].updated_at } : null });
+    }
+    if (event.httpMethod === 'PUT') {
+      if ((event.body || '').length > DRAFT_MAX_BYTES * 2) return json(413, { error: 'Draft is too large' });
+      let body;
+      try { body = JSON.parse(event.body || '{}'); } catch { return json(400, { error: 'Invalid JSON' }); }
+      const { error, value } = validateDraft(body);
+      if (error) return json(400, { error });
+      await db.query(
+        `INSERT INTO plan_drafts (email, draft, updated_at) VALUES ($1, $2, NOW())
+         ON CONFLICT (email) DO UPDATE SET draft = EXCLUDED.draft, updated_at = NOW()`,
+        [user.email, value]
+      );
+      return json(200, { ok: true });
+    }
+    if (event.httpMethod === 'DELETE') {
+      await db.query('DELETE FROM plan_drafts WHERE email = $1', [user.email]);
+      return json(200, { ok: true });
+    }
+    return json(405, { error: 'Method not allowed' });
+  } catch (err) {
+    log.error('Plan draft failed', { method: event.httpMethod, error: err.message });
+    return json(500, { error: 'Could not save your plan' });
+  }
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers: { ...CORS, 'Access-Control-Allow-Methods': 'GET,PUT,POST,OPTIONS' }, body: '' };
+    return { statusCode: 200, headers: { ...CORS, 'Access-Control-Allow-Methods': 'GET,PUT,POST,DELETE,OPTIONS' }, body: '' };
   }
 
   const db = getDB();
@@ -297,6 +356,7 @@ exports.handler = async (event) => {
     return json(500, { error: 'Authentication is temporarily unavailable' });
   }
 
+  if (path.endsWith('/profile/draft')) return handleDraft(event, db, user);
   if (path.includes('/customer-portal') && event.httpMethod === 'POST') {
     return handleCustomerPortal(event, db, user.email);
   }
@@ -307,4 +367,4 @@ exports.handler = async (event) => {
 };
 
 // Exported for unit tests.
-exports._internal = { validateProfileInput, safeReturnUrl };
+exports._internal = { validateProfileInput, safeReturnUrl, validateDraft };

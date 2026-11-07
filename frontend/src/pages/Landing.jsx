@@ -58,7 +58,8 @@ const SAMPLES = [
 export default function Landing() {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const planRoute = () => navigate(currentUser ? '/plan' : '/signup');
+  // Anyone can plan; sign-in comes at Submit (Nov 2026).
+  const planRoute = () => navigate('/plan');
   const sectionsRef = useRef([]);
 
   const [stats, setStats] = useState({
@@ -107,7 +108,7 @@ export default function Landing() {
             <a href="/login" className="nav-link nav-signin">Sign in</a>
           )}
           <button className="nav-cta" onClick={planRoute}>
-            {currentUser ? 'Plan my trip' : 'Sign up free'}
+            {currentUser ? 'Plan my trip' : 'Try it free'}
           </button>
         </div>
       </nav>
