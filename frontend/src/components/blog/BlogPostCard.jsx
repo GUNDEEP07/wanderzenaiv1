@@ -20,7 +20,7 @@ export function BlogPostCard({ post, currentUserId, onEdit, onDelete }) {
     day: 'numeric',
   });
 
-  const isOwnPost = currentUserId && post.user_id === currentUserId;
+  const isOwnPost = !!currentUserId && post.is_mine === true; // set by the API
 
   const handleCardClick = (e) => {
     // Don't navigate if clicking buttons

@@ -584,6 +584,12 @@ Resources:
             Path: /blog/{id}
             Method: DELETE
         # ─── Comments Routes ──────────────────────────────────────────────────
+        CommentList:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /blog/{id}/comments
+            Method: GET
         CommentCreate:
           Type: Api
           Properties:

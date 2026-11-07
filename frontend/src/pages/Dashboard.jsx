@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useDestinationPhotoWithCredit, getFallbackPhoto } from '../utils/destinationPhotos';
 import { PhotoCredit } from '../components/PhotoCredit';
 import { TravelChat } from '../components/TravelChat';
+import { timeAgo, extractCountry, lastPlanHeadline } from '../utils/tripStats';
 import './Dashboard.css';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -13,55 +14,6 @@ const API_URL = import.meta.env.VITE_API_URL;
 function formatDate(iso) {
   if (!iso) return '';
   return new Date(iso).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
-}
-
-function timeAgo(iso) {
-  if (!iso) return null;
-  const days = Math.floor((Date.now() - new Date(iso)) / 86400000);
-  if (days < 7) return `${days} day${days !== 1 ? 's' : ''} ago`;
-  const weeks = Math.floor(days / 7);
-  if (weeks < 5) return `${weeks} week${weeks !== 1 ? 's' : ''} ago`;
-  const months = Math.floor(days / 30);
-  return `${months} month${months !== 1 ? 's' : ''} ago`;
-}
-
-// City → canonical country name (so "Bali" and "Bali, Indonesia" both resolve to "Indonesia")
-const CITY_TO_COUNTRY = {
-  bali: 'Indonesia', lombok: 'Indonesia', flores: 'Indonesia', java: 'Indonesia',
-  goa: 'India', shimla: 'India', manali: 'India', bir: 'India', delhi: 'India',
-  'new delhi': 'India', mumbai: 'India', bangalore: 'India', kerala: 'India',
-  kashmir: 'India', himachal: 'India', triund: 'India', coorg: 'India',
-  kyoto: 'Japan', tokyo: 'Japan', osaka: 'Japan', hiroshima: 'Japan',
-  oaxaca: 'Mexico', 'mexico city': 'Mexico',
-  bangkok: 'Thailand', 'chiang mai': 'Thailand', phuket: 'Thailand',
-  barcelona: 'Spain', madrid: 'Spain',
-  amsterdam: 'Netherlands',
-  rome: 'Italy', milan: 'Italy', florence: 'Italy', venice: 'Italy',
-  dubai: 'UAE', 'abu dhabi': 'UAE',
-  singapore: 'Singapore',
-  'hong kong': 'Hong Kong',
-  lisbon: 'Portugal', porto: 'Portugal',
-  berlin: 'Germany', munich: 'Germany',
-  paris: 'France', nice: 'France',
-  prague: 'Czech Republic',
-  budapest: 'Hungary',
-  reykjavik: 'Iceland',
-  tbilisi: 'Georgia',
-  marrakech: 'Morocco', casablanca: 'Morocco',
-  petra: 'Jordan',
-  muscat: 'Oman',
-};
-
-function extractCountry(destination) {
-  if (!destination) return null;
-  const lower = destination.toLowerCase();
-  // Check if any known city name appears in the destination string
-  for (const [city, country] of Object.entries(CITY_TO_COUNTRY)) {
-    if (lower.includes(city)) return country;
-  }
-  // Fall back to last comma segment
-  const parts = destination.split(',');
-  return parts[parts.length - 1].trim();
 }
 
 function getFlag(dest) {
@@ -76,6 +28,9 @@ function getFlag(dest) {
     shimla:'🇮🇳', manali:'🇮🇳', bir:'🇮🇳', 'new delhi':'🇮🇳', delhi:'🇮🇳',
     oaxaca:'🇲🇽', bangkok:'🇹🇭', singapore:'🇸🇬', dubai:'🇦🇪',
     'hong kong':'🇭🇰', barcelona:'🇪🇸', amsterdam:'🇳🇱', rome:'🇮🇹',
+    slovenia:'🇸🇮', croatia:'🇭🇷', 'sri lanka':'🇱🇰', laos:'🇱🇦', georgia:'🇬🇪', 'new zealand':'🇳🇿',
+    bhutan:'🇧🇹', uzbekistan:'🇺🇿', netherlands:'🇳🇱', 'czech republic':'🇨🇿', hungary:'🇭🇺', iceland:'🇮🇸',
+    jordan:'🇯🇴', oman:'🇴🇲', uae:'🇦🇪',
   };
   for (const [k, v] of Object.entries(map)) { if (d.includes(k)) return v; }
   return '✦';
@@ -191,7 +146,6 @@ export default function Dashboard() {
   const countryCount  = countries.size;
   const lastTrip      = pastTrips[0];
   const sinceLastTrip = timeAgo(lastTrip?.createdAt);
-  const lastDestName  = lastTrip?.destination?.split(',')[0] || 'your last trip';
   const avgTripDays   = totalTrips > 0 ? (totalDays / totalTrips).toFixed(1) : '–';
 
   const greeting = (() => {
@@ -305,8 +259,8 @@ export default function Dashboard() {
               <div style={s.statLabel}>Days planned</div>
             </div>
             <div style={s.stat} className="dash-stat">
-              <div style={{ ...s.statNum, fontSize: sinceLastTrip ? 18 : 28 }}>{sinceLastTrip || '–'}</div>
-              <div style={s.statLabel}>Since last trip</div>
+              <div style={{ ...s.statNum, fontSize: sinceLastTrip ? 18 : 28 }}>{sinceLastTrip ? sinceLastTrip[0].toUpperCase() + sinceLastTrip.slice(1) : '–'}</div>
+              <div style={s.statLabel}>Last trip planned</div>
             </div>
           </div>
         )}
@@ -328,9 +282,7 @@ export default function Dashboard() {
                   AI Personalised
                 </div>
                 <div style={{ fontFamily: "'Fraunces', serif", fontSize: 24, fontWeight: 900, marginBottom: 6 }}>
-                  {sinceLastTrip
-                    ? `It's been ${sinceLastTrip} since ${lastDestName}.`
-                    : 'Your slow travel journey starts here.'}
+                  {lastPlanHeadline(lastTrip?.createdAt, lastTrip?.destination) || 'Your slow travel journey starts here.'}
                   <br />Time to wander again?
                 </div>
                 <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', fontStyle: 'italic' }}>
