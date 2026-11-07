@@ -267,7 +267,10 @@ const ROUTE_ANGLES = {
  */
 function routeAngles({ more = false, curated = false } = {}) {
   if (more) return ['quiet', 'compact', 'region'];
-  return curated ? ['quiet', 'compact'] : ['classic', 'quiet', 'compact'];
+  // Curated country with no fitting route (e.g. toddler + short hops): quiet + compact.
+  // Elsewhere classic + quiet + region — "compact" next to "classic" tended to land in the
+  // same city (Marrakech, Cusco) and get dropped as a near-duplicate.
+  return curated ? ['quiet', 'compact'] : ['classic', 'quiet', 'region'];
 }
 
 // Leaner than OPTIONS_SCHEMA (day trips as plain names, short texts): output length is

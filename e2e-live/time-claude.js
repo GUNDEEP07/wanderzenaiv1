@@ -18,7 +18,7 @@ const call = async (prompt) => {
     const input = { destination: dest, days: 7, travelPace: 'balanced', interests: 'Hiking, Food tours', prefs: r.sanitizePrefs(prefs), avoid };
     const angles = r.routeAngles({ more, curated: false });
     const t = Date.now(); const each = [];
-    const settled = await r.settleEnough(angles.map(a => { const s = Date.now(); return call(r.buildRouteOptionsPrompt({ ...input, angle: a })).then(x => { each.push(`${a} ${Date.now() - s}ms ${x.out}tok`); return r.parseRouteOptions(x.text, 7, `ai-${a}`); }); }), { enough: 2, graceMs: 3000, deadlineMs: 23000 });
+    const settled = await r.settleEnough(angles.map(a => { const s = Date.now(); return call(r.buildRouteOptionsPrompt({ ...input, angle: a })).then(x => { each.push(`${a} ${Date.now() - s}ms ${x.out}tok`); return r.parseRouteOptions(x.text, 7, `ai-${a}`); }); }), { enough: 2, graceMs: 5000, deadlineMs: 23000 });
     const wall = Date.now() - t;
     const kept = r.dedupeRoutes(settled.flatMap(s => s.status === 'fulfilled' ? s.value : []));
     console.log(`\n== ${dest} 7d ${JSON.stringify(prefs)} more=${more}: wall ${wall} ms; statuses ${settled.map(s => s.status)}; calls ${each.join(', ')}`);
