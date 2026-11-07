@@ -50,5 +50,7 @@ test('shows loading state', () => {
 
 test('shows empty state when no venues', () => {
   render(<VenuesList {...DEFAULT_PROPS} venues={[]} />);
-  expect(screen.getByText(/No venues found/i)).toBeInTheDocument();
+  expect(screen.getByText(/No hiking trails found nearby/i)).toBeInTheDocument();
+  render(<VenuesList {...DEFAULT_PROPS} activity="Kayaking" venues={[]} />);
+  expect(screen.getByText(/No venues found for Kayaking/i)).toBeInTheDocument();
 });

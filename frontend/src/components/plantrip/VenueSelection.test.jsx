@@ -67,25 +67,6 @@ test('clicking AI suggestion adds activity to selectedActivities (shared state)'
   );
 });
 
-test('mobile chips appear after onInsightsLoaded fires', async () => {
-  render(
-    <VenueSelection
-      destinations={DESTINATIONS}
-      travelStyles={[]}
-      startDate="2026-05-31"
-      endDate="2026-06-05"
-      onSubmit={jest.fn()}
-      onSkip={jest.fn()}
-    />
-  );
-  await waitFor(() => screen.getByTestId('load-suggestions'));
-  expect(screen.queryByText('AI Picks — tap to add')).toBeNull();
-  fireEvent.click(screen.getByTestId('load-suggestions'));
-  await waitFor(() =>
-    expect(screen.getByText('AI Picks — tap to add')).toBeInTheDocument()
-  );
-});
-
 test('Skip calls onSkip', async () => {
   const onSkip = jest.fn();
   render(

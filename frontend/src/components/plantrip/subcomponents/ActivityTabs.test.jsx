@@ -21,7 +21,8 @@ test('ActivityTabs highlights active tab', () => {
     <ActivityTabs selectedActivities={['Hiking', 'Food']} activeTab="Hiking" onTabChange={() => {}} />
   );
   const tabs = container.querySelectorAll('button');
-  expect(tabs[0].style.border).toContain('rgb(0, 212, 170)');
+  expect(tabs[0].style.borderBottom).toContain('rgb(0, 212, 170)');
+  expect(tabs[1].style.borderBottom).toContain('transparent');
 });
 
 test('ActivityTabs calls onTabChange when tab clicked', () => {

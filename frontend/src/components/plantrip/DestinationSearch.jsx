@@ -4,6 +4,16 @@ import './styles/destinationsearch.css';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
+/** "Hoi An, Vietnam" — but just "Vietnam" when the place is the country itself. */
+export function destinationLabel(d) {
+  if (!d) return '';
+  const name = (d.name || '').trim();
+  const country = (d.country || '').trim();
+  if (!name || !country) return name || country || 'Unknown';
+  const lower = name.toLowerCase();
+  return lower === country.toLowerCase() || lower.endsWith(`, ${country.toLowerCase()}`) ? name : `${name}, ${country}`;
+}
+
 export function DestinationSearch({ onSelect, disabled, allowMultiple = false, initialSelected = null }) {
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
@@ -230,7 +240,7 @@ export function DestinationSearch({ onSelect, disabled, allowMultiple = false, i
           <div className="selected-destinations">
             {selected.map((dest) => (
               <div key={dest.fsq_id} className="selected-destination-tag">
-                <span>{dest.name && dest.country ? `${dest.name}, ${dest.country}` : (dest.name || dest.country || 'Unknown')}</span>
+                <span>{destinationLabel(dest)}</span>
                 <button
                   className="remove-btn"
                   onClick={(e) => {
@@ -249,7 +259,7 @@ export function DestinationSearch({ onSelect, disabled, allowMultiple = false, i
           <div className="selected-destination">
             <div className="checkmark">✓</div>
             <div className="selected-text">
-              {selected.name && selected.country ? `${selected.name}, ${selected.country}` : (selected.name || selected.country)}
+              {destinationLabel(selected)}
             </div>
             <button
               className="remove-btn"
