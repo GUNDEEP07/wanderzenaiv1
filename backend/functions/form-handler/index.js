@@ -7,7 +7,7 @@ const {
 } = require('/opt/nodejs/index');
 const { sanitizeSelectedVenues } = require('/opt/nodejs/selected-venues');
 const {
-  sanitizeRoute, sanitizePrefs, describePrefs, buildRouteOptionsPrompt, parseRouteOptions,
+  sanitizeRoute, sanitizePrefs, describePrefs, buildRouteOptionsPrompt, parseRouteOptions, routeAngles,
 } = require('/opt/nodejs/route-plan');
 const { curatedOptions } = require('/opt/nodejs/curated-routes');
 const { MODELS, createMessage, firstText, withEffort, maxTokensFor } = require('/opt/nodejs/claude');
@@ -107,23 +107,23 @@ async function handleRoutePlan(event, db, user) {
   const limited = await rateLimited(db, 'route', user);
   if (limited) return limited;
   try {
-    // Interactive and behind API Gateway's 29 s limit: the fast model, one attempt.
-    const data = await createMessage(withEffort({
+    // Interactive and behind API Gateway's 29 s limit: the fast model, one route per call,
+    // calls in parallel (one call for three routes took >24 s). Whatever arrives in time is used.
+    const avoid = [...input.avoid, ...(curated ? curated.options.map(o => o.name) : [])];
+    const angles = routeAngles({ more: wantMore, curated: !!curated });
+    const settled = await Promise.allSettled(angles.map(angle => createMessage(withEffort({
       model: MODELS.fast,
-      max_tokens: maxTokensFor(MODELS.fast, 3600, { thinkingHeadroom: 2000 }),
-      messages: [{
-        role: 'user',
-        content: buildRouteOptionsPrompt({
-          ...input,
-          count: curated ? 2 : 3,
-          avoid: [...input.avoid, ...(curated ? curated.options.map(o => o.name) : [])],
-        }),
-      }],
-    }, 'low'), {
-      timeoutMs: 24000,
-      maxAttempts: 1,
-    });
-    const aiOptions = parseRouteOptions(firstText(data), input.days);
+      max_tokens: maxTokensFor(MODELS.fast, 2500, { thinkingHeadroom: 2500 }), // prod: up to ~3.3k incl. thinking
+      messages: [{ role: 'user', content: buildRouteOptionsPrompt({ ...input, avoid, angle }) }],
+    }, 'low'), { timeoutMs: 22000, maxAttempts: 1 })
+      .then(data => parseRouteOptions(firstText(data), input.days, `ai-${angle}`))));
+    const failed = settled.filter(s => s.status === 'rejected').map(s => s.reason?.message);
+    if (failed.length) log.warn('Route angles failed', { failed, of: angles.length });
+    const seen = new Set();
+    const aiOptions = settled
+      .flatMap(s => (s.status === 'fulfilled' ? s.value : []))
+      .filter(o => { const k = o.bases.map(b => b.name.toLowerCase()).join('>'); return seen.has(k) ? false : seen.add(k); });
+    if (!aiOptions.length) throw new Error(`No route came back (${failed.join('; ')})`);
     // Curated routes that didn't fit stay visible below, with their heads-up.
     const options = [...aiOptions, ...(curated ? curated.options : [])].slice(0, 4);
     log.info('Route options (claude)', { uid: user.uid, destination: input.destination, days: input.days, more: wantMore, options: options.map(o => `${o.name}:${o.bases.map(b => b.name).join('>')}`) });

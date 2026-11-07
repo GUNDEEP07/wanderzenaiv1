@@ -88,6 +88,22 @@ test('parseRouteOptions: several options, text around the JSON, days balanced, j
   assert.throws(() => rp.parseRouteOptions('{"options":[{"bases":[]}]}', 10), /no usable options/);
 });
 
+test('angles: one route per call; "more" and curated countries skip the classic route', () => {
+  assert.deepEqual(rp.routeAngles(), ['classic', 'quiet', 'compact']);
+  assert.deepEqual(rp.routeAngles({ curated: true }), ['quiet', 'compact']);
+  assert.deepEqual(rp.routeAngles({ more: true }), ['quiet', 'compact', 'region']);
+  const p = rp.buildRouteOptionsPrompt({ destination: 'Peru', days: 7, prefs: rp.sanitizePrefs({ kids: [3], transferComfort: 'short' }), angle: 'quiet', avoid: ['Andes slow'] });
+  assert.match(p, /Suggest ONE ROUTE/);
+  assert.match(p, /quieter route/);
+  assert.match(p, /already saw: Andes slow/);
+  assert.match(p, /exactly 7/);
+  assert.match(p, /children/);
+  // single-route schema: no "options" wrapper, and it parses
+  assert.doesNotMatch(p.split('Return ONLY')[1], /"options"/);
+  const one = rp.parseRouteOptions(JSON.stringify({ name: 'Q', summary: 's', bases: [{ name: 'Huaraz', days: 4 }, { name: 'Caraz', days: 3 }] }), 7, 'ai-quiet');
+  assert.equal(one[0].id, 'ai-quiet-1');
+});
+
 test('buildRouteOptionsPrompt carries the trip length, stop cap, kids, travel-time limit and routes to avoid', () => {
   const prefs = rp.sanitizePrefs({ adults: 2, kids: [5, 8], transferComfort: 'short', notes: 'must see Sapa' });
   const p = rp.buildRouteOptionsPrompt({ destination: 'Vietnam', days: 10, travelStyle: ['Nature'], prefs, count: 3, avoid: ['Central coast, easy pace'] });
