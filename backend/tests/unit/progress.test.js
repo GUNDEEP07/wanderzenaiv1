@@ -89,3 +89,10 @@ test('readProgress: owner only; days sorted; internal errors not exposed', async
   const fresh = await pr.readProgress(fakeDb({ rows: [{ ...row, status: 'pending', progress: null }] }), 'wz_x', { email: 'gundeep07@gmail.com' });
   assert.deepEqual([fresh.days, fresh.totalDays, fresh.stage], [[], 6, null]);
 });
+
+test('long activities are shortened at a word, never mid-word or after "("', () => {
+  const s = pr.daySummary({ dayNumber: 1, morningActivity: { activity: 'Sunrise hike on the Son Tra Peninsula forest trail up to Ban Co Peak (King Chess Peak) for views' }, eveningActivity: { activity: 'Rent bicycles and ride west along the river to Thuy Bieu village, famous for pomelos' } });
+  assert.equal(s.stops[0], 'Sunrise hike on the Son Tra Peninsula forest trail up to Ban Co Peak…');
+  assert.equal(s.stops[1], 'Rent bicycles and ride west along the river to Thuy Bieu village…');
+  assert.ok(s.stops.every(x => x.length <= 71));
+});

@@ -23,6 +23,13 @@ const STAGES = ['places', 'writing', 'checking', 'finishing'];
 
 const clip = (v, n) => (typeof v === 'string' ? v.trim().slice(0, n) : '');
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : null);
+/** Shorten at a word boundary with "…" — never mid-word ("famo") or after an open bracket. */
+function clipWords(v, n) {
+  const t = typeof v === 'string' ? v.trim().replace(/\s+/g, ' ') : '';
+  if (t.length <= n) return t;
+  const cut = t.slice(0, n + 1).replace(/\s+\S*$/, '').replace(/[\s,;:(–—-]+$/, '');
+  return `${cut || t.slice(0, n)}…`;
+}
 
 /** Route as the map and the progress page need it — no free text beyond the town names. */
 function routeForProgress(route) {
@@ -38,16 +45,16 @@ function routeForProgress(route) {
 /** A finished day reduced to what the progress page shows. */
 function daySummary(day, plan = null) {
   const stops = ['morningActivity', 'afternoonActivity', 'eveningActivity']
-    .map(k => clip(day?.[k]?.venueName || day?.[k]?.activity, 70))
+    .map(k => clipWords(day?.[k]?.venueName || day?.[k]?.activity, 70))
     .filter(Boolean);
   const p = plan?.find(x => x.day === day?.dayNumber);
   return {
     day: num(day?.dayNumber),
-    theme: clip(day?.theme, 90),
+    theme: clipWords(day?.theme, 90),
     base: p ? clip(p.base?.name, 80) : clip(day?.base, 80) || null,
     travelDay: p ? !!p.travelDay : !!day?.travelDay,
     stops,
-    eat: clip(day?.localEats?.venueName || day?.localEats?.name, 70) || null,
+    eat: clipWords(day?.localEats?.venueName || day?.localEats?.name, 70) || null,
   };
 }
 
