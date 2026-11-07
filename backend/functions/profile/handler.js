@@ -132,6 +132,18 @@ async function handleGetProfile(db, user) {
         } catch { /* graceful */ }
       }
 
+      // No name saved yet (Google sign-in, or onboarding skipped): take it from the sign-in.
+      // Only fills an empty name — a name changed in Settings is never overwritten.
+      if (userResult.rows.length > 0 && !userResult.rows[0].name?.trim() && user.name) {
+        try {
+          const { rowCount } = await db.query(
+            `UPDATE users SET name = $2 WHERE email = $1 AND (name IS NULL OR btrim(name) = '')`,
+            [email, user.name]
+          );
+          if (rowCount) userResult.rows[0].name = user.name;
+        } catch { /* best-effort */ }
+      }
+
       if (userResult.rows.length > 0 && !userResult.rows[0].referral_code) {
         const code = generateReferralCode();
         try {

@@ -167,7 +167,16 @@ async function verifyIdToken(token, opts) {
     email,
     emailVerified,
     signInProvider: payload.firebase?.sign_in_provider || null,
+    // Display name from Google, or from the name typed at email sign-up (Firebase profile).
+    name: cleanName(payload.name),
   };
+}
+
+/** A display name safe to store: trimmed, no control characters, at most 120 chars. */
+function cleanName(raw) {
+  if (typeof raw !== 'string') return null;
+  const name = raw.replace(/[\u0000-\u001f\u007f]/g, '').replace(/\s+/g, ' ').trim().slice(0, 120);
+  return name || null;
 }
 
 function authConfigFromEnv(overrides = {}) {

@@ -55,6 +55,12 @@ AI-powered slow-travel itinerary SaaS. Live at wanderzenai.com. Solo-maintained.
 - Plans: Wanderer = 5 itineraries per billing month (`users.monthly_remaining`, reset on Stripe
   `invoice.paid` with `billing_reason=subscription_cycle`); purchased credits live in
   `itineraries_remaining` and never expire. See `form-handler/subscription.js`.
+- Blog (Nov 2026): team-only. `POST /blog` and edits need the admin/superadmin role and publish
+  immediately; editor at `/admin/blog` (`AdminBlogPanel.jsx`). Readers see `author_name` only
+  (`blog-handler/utils/publicView.js`), never emails. Comments are closed until launch: API returns
+  403 COMMENTS_CLOSED unless `BLOG_COMMENTS_OPEN=true`, and `COMMENTS_OPEN` in BlogDetailPage.jsx.
+- Profile name: GET /profile fills an empty `users.name` from the verified token's `name` claim
+  (never overwrites one set in Settings).
 - Photos: Unsplash only through the backend `GET /photos/search` (key stays server-side, cached);
   every API photo shows its credit via `components/PhotoCredit.jsx` (Unsplash API Guidelines).
 

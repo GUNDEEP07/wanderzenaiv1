@@ -4,6 +4,10 @@ import { useAuth } from '../context/AuthContext';
 import { fetchPost, fetchComments, createComment, updateComment, deleteComment } from '../api/blog';
 import { BlogCommentThread } from '../components/blog/BlogCommentThread';
 
+/** Comments stay closed until launch (Nov 8 2026, "3C"). The API refuses them too
+ *  (BLOG_COMMENTS_OPEN); flip both to reopen. */
+export const COMMENTS_OPEN = false;
+
 export default function BlogDetailPage() {
   const { postId } = useParams();
   const { currentUser, getIdToken } = useAuth();
@@ -28,7 +32,7 @@ export default function BlogDetailPage() {
       const postData = response.data || response;
       setPost(postData);
       // Comments are fetched separately
-      if (postData.id) {
+      if (COMMENTS_OPEN && postData.id) {
         try {
           const commentsData = await fetchComments(postData.id, token);
           setComments(commentsData || []);
@@ -242,7 +246,15 @@ export default function BlogDetailPage() {
             {post.content && <div style={s.content_body}>{post.content}</div>}
 
             {/* Comments section */}
-            {currentUser && (
+            {!COMMENTS_OPEN && (
+              <div style={{ ...s.commentsSection, paddingTop: 32 }}>
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>
+                  Comments are closed for now.
+                </div>
+              </div>
+            )}
+
+            {COMMENTS_OPEN && currentUser && (
               <div style={s.commentsSection}>
                 <h2 style={s.commentTitle}>Comments</h2>
                 <BlogCommentThread
@@ -256,7 +268,7 @@ export default function BlogDetailPage() {
               </div>
             )}
 
-            {!currentUser && (
+            {COMMENTS_OPEN && !currentUser && (
               <div style={{ ...s.commentsSection, paddingTop: 32 }}>
                 <div style={{
                   padding: '16px',

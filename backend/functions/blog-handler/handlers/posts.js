@@ -22,21 +22,29 @@ const buildResponse = (statusCode, data) => ({
 const success = (data, statusCode = 200) => buildResponse(statusCode, { success: true, data });
 const created = (data) => buildResponse(201, { success: true, data });
 
-const createPost = async (body, userId, userEmail) => {
+const ADMIN_ROLES = new Set(['admin', 'superadmin']);
+
+// Nov 8 2026 (Gundeep's decision "2B"): only the WanderZen team writes stories, and they
+// publish straight away. User submissions can come back later via the review queue.
+const createPost = async (body, userId, userEmail, userRole = 'user') => {
   try {
     if (!userId) {
       log.warn('Create post: unauthorized attempt', { userEmail });
       return errors.unauthorized();
+    }
+    if (!ADMIN_ROLES.has(userRole)) {
+      log.warn('Create post: not a team member', { userId });
+      return buildResponse(403, { success: false, error: 'Only the WanderZen team can publish stories right now' });
     }
 
     const { title, description, content, location, country, travelDates, category } = body;
 
     validatePostInput(title, description, content, location, country, travelDates, category);
 
-    const post = await blog.createPost(userId, title, description, content, location, country, travelDates, category);
+    const post = await blog.createPost(userId, title, description, content, location, country, travelDates, category, { publish: true });
 
-    log.info('Post created', { postId: post.id, userId, title });
-    return created(post);
+    log.info('Post published', { postId: post.id, userId, title });
+    return created(viewPost(post, { userId, userRole }));
 
   } catch (err) {
     if (err.message.includes('is required') || err.message.includes('must be')) {
@@ -107,7 +115,7 @@ const listPosts = async (queryStringParameters = {}, viewer = {}) => {
   }
 };
 
-const updatePost = async (postId, body, userId) => {
+const updatePost = async (postId, body, userId, userRole = 'user') => {
   try {
     if (!userId) {
       log.warn('Update post: unauthorized attempt', { postId });
@@ -135,10 +143,10 @@ const updatePost = async (postId, body, userId) => {
       updates.travel_dates = travelDates;
     }
 
-    const post = await blog.updatePost(postId, userId, updates);
+    const post = await blog.updatePost(postId, userId, updates, { isAdmin: ADMIN_ROLES.has(userRole) });
 
     log.info('Post updated', { postId, userId });
-    return success(post);
+    return success(viewPost(post, { userId, userRole }));
 
   } catch (err) {
     if (err.message === 'Post not found') {
