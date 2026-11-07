@@ -46,7 +46,8 @@ export default function App() {
               <Route path="/login"        element={<Login />} />
               <Route path="/signup"       element={<Signup />} />
               <Route path="/onboarding"   element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
-              <Route path="/plan"         element={<ProtectedRoute><PlanTrip /></ProtectedRoute>} />
+              {/* Open to guests (Nov 2026): sign-in is asked for at Submit, on the Review step. */}
+              <Route path="/plan"         element={<PlanTrip />} />
               <Route path="/confirmation" element={<Confirmation />} />
               <Route path="/pricing"      element={<Pricing />} />
               <Route path="/dashboard"    element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

@@ -3,7 +3,7 @@
 const { LambdaClient, InvokeCommand } = require('@aws-sdk/client-lambda');
 const {
   getDB, ok, badRequest, notFound, serverError, validateFormInput, generateId, log,
-  requireUser, AuthError, authFailure, checkRateLimit, userSubject, tooManyRequests,
+  requireUser, optionalUser, AuthError, authFailure, checkRateLimit, userSubject, ipSubject, tooManyRequests,
 } = require('/opt/nodejs/index');
 const { sanitizeSelectedVenues } = require('/opt/nodejs/selected-venues');
 const {
@@ -36,12 +36,39 @@ async function authenticate(event) {
   }
 }
 
-/** Returns a 429 response if the caller is over the bucket's limit, else null. */
-async function rateLimited(db, bucket, user) {
-  const blocked = await checkRateLimit(db, bucket, userSubject(user));
-  if (!blocked) return null;
-  log.warn('Rate limited', { bucket, uid: user.uid });
-  return tooManyRequests(blocked.retryAfterSeconds);
+/**
+ * The caller for the planning steps (/route-plan, /preview): signed in, or a guest.
+ * Guests can plan a whole trip before creating an account (Nov 8 2026); only /submit and
+ * progress need sign-in. A present-but-invalid token counts as a guest.
+ * @returns {Promise<{ user: object|null, response?: object }>}
+ */
+async function plannerCaller(event) {
+  try {
+    return { user: await optionalUser(event) };
+  } catch (err) {
+    log.error('Auth misconfigured', { error: err.message });
+    return { user: null, response: serverError('Authentication is temporarily unavailable') };
+  }
+}
+
+/**
+ * Returns a 429 response if the caller is over the limit, else null.
+ * Signed-in callers use `bucket` keyed by account. Guests use `guest<Bucket>` keyed by
+ * hashed IP, plus one shared daily cap on all guest Claude calls (`guestAi`), so a spread
+ * of IPs still can't run up the bill.
+ */
+async function rateLimited(db, bucket, user, event) {
+  const checks = user
+    ? [[bucket, userSubject(user)]]
+    : [[`guest${bucket[0].toUpperCase()}${bucket.slice(1)}`, ipSubject(event)], ['guestAi', 'all']];
+  for (const [b, subject] of checks) {
+    const blocked = await checkRateLimit(db, b, subject);
+    if (blocked) {
+      log.warn('Rate limited', { bucket: b, uid: user?.uid || 'guest' });
+      return tooManyRequests(blocked.retryAfterSeconds);
+    }
+  }
+  return null;
 }
 
 // ─── POST /preview ───────────────────────────────────────────────────────────
@@ -80,6 +107,65 @@ const ROUTE_WAIT = { enough: 2, graceMs: 5000, deadlineMs: 23000 };
 
 
 // Route first (Q2): propose the bases for the trip before Step 3. See route-plan.js.
+// Route ideas from Claude are cached per trip shape (7 days), for guests and users alike:
+// the same "Peru, 10 days, two adults" asked again costs nothing and returns instantly.
+const ROUTE_CACHE_TTL = '7 days';
+const ROUTE_CACHE_DDL = `
+  CREATE TABLE IF NOT EXISTS route_plan_cache (
+    cache_key  CHAR(64)    PRIMARY KEY,
+    result     JSONB       NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );`;
+let routeCacheReady = null;
+const ensureRouteCache = (db) => {
+  if (!routeCacheReady) routeCacheReady = db.query(ROUTE_CACHE_DDL).catch((err) => { routeCacheReady = null; throw err; });
+  return routeCacheReady;
+};
+
+/** Everything that changes which routes Claude suggests; nothing about who is asking. */
+function routeCacheKey(input) {
+  const shape = {
+    v: 1,
+    destination: input.destination.trim().toLowerCase(),
+    days: input.days,
+    styles: [...(input.travelStyle || [])].map(s => String(s).toLowerCase()).sort(),
+    pace: input.travelPace || '',
+    interests: (input.interests || '').trim().toLowerCase(),
+    month: (input.travelDate || '').slice(0, 7),
+    prefs: input.prefs || null,
+  };
+  return require('crypto').createHash('sha256').update(JSON.stringify(shape)).digest('hex');
+}
+
+/** Cached result or null. Never fails the request. */
+async function readRouteCache(db, key) {
+  try {
+    await ensureRouteCache(db);
+    const { rows } = await db.query(
+      `SELECT result FROM route_plan_cache WHERE cache_key = $1 AND created_at > NOW() - INTERVAL '${ROUTE_CACHE_TTL}'`,
+      [key]
+    );
+    const r = rows[0]?.result;
+    return r && Array.isArray(r.options) && r.options.length ? r : null;
+  } catch (err) {
+    log.warn('Route cache read failed', { error: err.message });
+    return null;
+  }
+}
+
+async function writeRouteCache(db, key, result) {
+  try {
+    await ensureRouteCache(db);
+    await db.query(
+      `INSERT INTO route_plan_cache (cache_key, result, created_at) VALUES ($1, $2, NOW())
+       ON CONFLICT (cache_key) DO UPDATE SET result = EXCLUDED.result, created_at = NOW()`,
+      [key, JSON.stringify(result)]
+    );
+  } catch (err) {
+    log.warn('Route cache write failed', { error: err.message });
+  }
+}
+
 async function handleRoutePlan(event, db, user) {
   let body;
   try { body = JSON.parse(event.body || '{}'); } catch { return badRequest('Invalid JSON'); }
@@ -105,13 +191,21 @@ async function handleRoutePlan(event, db, user) {
   const curated = wantMore ? null : curatedOptions(input);
   const fitting = curated ? curated.options.filter(o => o.fitsConstraints) : [];
   if (fitting.length) {
-    log.info('Route options (curated)', { uid: user.uid, country: curated.country, days: input.days, options: curated.options.map(o => o.id), fitting: fitting.length });
+    log.info('Route options (curated)', { uid: user?.uid || 'guest', country: curated.country, days: input.days, options: curated.options.map(o => o.id), fitting: fitting.length });
     return routeOptionsOk('curated', curated.country, curated.options.slice(0, 3));
   }
 
   // 2. Claude: any other country, "show other options", or when no curated route fits
   //    (e.g. young kids and short transfers only).
-  const limited = await rateLimited(db, 'route', user);
+  // Same trip asked before (any user): reuse those routes — no Claude call, no wait.
+  const cacheKey = wantMore || input.avoid.length ? null : routeCacheKey(input);
+  const hit = cacheKey ? await readRouteCache(db, cacheKey) : null;
+  if (hit) {
+    log.info('Route options (cache)', { uid: user?.uid || 'guest', destination: input.destination, days: input.days });
+    return routeOptionsOk(hit.source, hit.country, hit.options);
+  }
+
+  const limited = await rateLimited(db, 'route', user, event);
   if (limited) return limited;
   try {
     // Interactive and behind API Gateway's 29 s limit: the fast model, one route per call,
@@ -134,7 +228,8 @@ async function handleRoutePlan(event, db, user) {
     if (!aiOptions.length) throw new Error(`No route came back (${failed.join('; ')})`);
     // Curated routes that didn't fit stay visible below, with their heads-up.
     const options = [...aiOptions, ...(curated ? curated.options : [])].slice(0, 4);
-    log.info('Route options (claude)', { uid: user.uid, destination: input.destination, days: input.days, more: wantMore, options: options.map(o => `${o.name}:${o.bases.map(b => b.name).join('>')}`) });
+    if (cacheKey) await writeRouteCache(db, cacheKey, { source: curated ? 'mixed' : 'ai', country: curated?.country || null, options });
+    log.info('Route options (claude)', { uid: user?.uid || 'guest', destination: input.destination, days: input.days, more: wantMore, options: options.map(o => `${o.name}:${o.bases.map(b => b.name).join('>')}`) });
     return routeOptionsOk(curated ? 'mixed' : 'ai', curated?.country || null, options);
   } catch (err) {
     log.error('Route planning failed', { error: err.message });
@@ -150,7 +245,7 @@ async function handlePreview(event, db, user) {
   const { errors, values } = validatePreviewInput(body);
   if (errors.length) return badRequest('destination and days are required', errors);
 
-  const limited = await rateLimited(db, 'preview', user);
+  const limited = await rateLimited(db, 'preview', user, event);
   if (limited) return limited;
 
   const { destination, days, styles, pace, startTime, travelerType, userMustDos } = values;
@@ -389,6 +484,45 @@ async function decideEntitlement(db, email) {
   return { allowed: false, isPaid: false, reason: 'exhausted', consumedCredit: false };
 }
 
+/**
+ * What the next submission would use — read-only twin of decideEntitlement (same order),
+ * shown on the Review step so nobody fills in six steps only to meet the paywall.
+ * @returns {Promise<{ allowed: boolean, source: 'test'|'monthly'|'credit'|'free'|null, remaining: number|null, code?: string }>}
+ */
+async function peekEntitlement(db, email) {
+  const test = await db.query(`SELECT 1 FROM test_accounts WHERE email = $1`, [email]);
+  if (test.rows.length) return { allowed: true, source: 'test', remaining: null };
+
+  const userRow = await withMonthlyColumn(db, (d) => d.query(
+    `SELECT plan, COALESCE(itineraries_remaining, 0) AS credits, COALESCE(monthly_remaining, 0) AS monthly
+     FROM users WHERE email = $1`,
+    [email]
+  ));
+  const u = userRow.rows[0] || { plan: 'free', credits: 0, monthly: 0 };
+  if (u.plan === 'subscriber' && Number(u.monthly) > 0) return { allowed: true, source: 'monthly', remaining: Number(u.monthly) };
+  if (Number(u.credits) > 0) return { allowed: true, source: 'credit', remaining: Number(u.credits) };
+  if (u.plan === 'subscriber') return { allowed: false, source: null, remaining: 0, code: 'MONTHLY_LIMIT_REACHED' };
+
+  const usage = await db.query(
+    `SELECT COUNT(*) AS count FROM submissions
+     WHERE email = $1 AND created_at > NOW() - INTERVAL '30 days' AND plan = 'free' AND status <> 'failed'`,
+    [email]
+  );
+  return parseInt(usage.rows[0].count, 10) < 1
+    ? { allowed: true, source: 'free', remaining: 1 }
+    : { allowed: false, source: null, remaining: 0, code: 'FREE_TIER_EXHAUSTED' };
+}
+
+/** GET /entitlement */
+async function handleEntitlement(db, user) {
+  try {
+    return ok(await peekEntitlement(db, user.email));
+  } catch (err) {
+    log.error('Entitlement check failed', { error: err.message });
+    return serverError('Could not check your plan');
+  }
+}
+
 /** Give back what was taken for a submission that was never stored. Best effort. */
 async function refundCredit(db, email, submissionId, source = 'credit') {
   const column = source === 'monthly' ? 'monthly_remaining' : 'itineraries_remaining';
@@ -460,19 +594,30 @@ exports.handler = async (event) => {
 
   if (isPath(event, '/feedback')) return handleFeedback(event);
 
-  // /preview and /submit both spend Claude tokens and require a signed-in, verified user.
+  // Planning steps are open to guests (rate limited by IP); see plannerCaller.
+  if (event.httpMethod === 'POST' && (isPath(event, '/preview') || isPath(event, '/route-plan'))) {
+    const { user, response } = await plannerCaller(event);
+    if (response) return response;
+    const db = getDB();
+    return isPath(event, '/preview') ? handlePreview(event, db, user) : handleRoutePlan(event, db, user);
+  }
+
+  // /submit, progress and entitlement need a signed-in, verified user.
   const { user, response } = await authenticate(event);
   if (response) return response;
 
   const db = getDB();
   if (event.httpMethod === 'GET') {
+    if (isPath(event, '/entitlement')) return handleEntitlement(db, user);
     const id = progressIdOf(event);
     return id ? handleProgress(db, id, user) : notFound();
   }
-  if (isPath(event, '/preview')) return handlePreview(event, db, user);
-  if (isPath(event, '/route-plan')) return handleRoutePlan(event, db, user);
-  return handleSubmit(event, db, user);
+  if (isPath(event, '/submit')) return handleSubmit(event, db, user);
+  return notFound();
 };
 
 // Exported for unit tests.
-exports._internal = { validatePreviewInput, decideEntitlement, refundCredit, limitReachedBody, ROUTE_WAIT, progressIdOf };
+exports._internal = {
+  validatePreviewInput, decideEntitlement, peekEntitlement, refundCredit, limitReachedBody, ROUTE_WAIT, progressIdOf,
+  routeCacheKey, rateLimited,
+};

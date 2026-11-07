@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { safeNext } from '../utils/safeNext';
 import { useAuth } from '../context/AuthContext';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -39,6 +40,7 @@ export default function Onboarding() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const refCode = searchParams.get('ref') || null;
+  const next = safeNext(searchParams.get('next'));
 
   const saveProfile = async (complete) => {
     setSaving(true);
@@ -64,8 +66,8 @@ export default function Onboarding() {
   };
 
   const handleNext = async () => { await saveProfile(false); setScreen(2); };
-  const handleFinish = async () => { await saveProfile(true); navigate('/dashboard'); };
-  const handleSkip = async () => { await saveProfile(screen === 2); navigate('/dashboard'); };
+  const handleFinish = async () => { await saveProfile(true); navigate(next); };
+  const handleSkip = async () => { await saveProfile(screen === 2); navigate(next); };
 
   return (
     <div style={s.page}>

@@ -231,6 +231,12 @@ Resources:
             RestApiId: !Ref WanderZenApi
             Method: POST
             Path: /submit
+        Entitlement:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Method: GET
+            Path: /entitlement
       Policies:
         - Version: '2012-10-17'
           Statement:
@@ -501,6 +507,24 @@ Resources:
             RestApiId: !Ref WanderZenApi
             Path: /profile
             Method: PUT
+        GetPlanDraft:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /profile/draft
+            Method: GET
+        PutPlanDraft:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /profile/draft
+            Method: PUT
+        DeletePlanDraft:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /profile/draft
+            Method: DELETE
         GetItinerary:
           Type: Api
           Properties:

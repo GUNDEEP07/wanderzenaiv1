@@ -54,7 +54,7 @@ async function resendVerificationIfNeeded(status, data) {
  */
 /**
  * Suggest 2–3 routes (bases, days per base, transfers, day trips) for the trip.
- * POST /route-plan — signed-in only, like /preview. Curated routes for the launch
+ * POST /route-plan — open to guests (rate limited by IP), like /preview. Curated routes for the launch
  * countries; Claude for the rest, or for "more" ideas (avoiding the ones shown).
  * @param {Object} formData
  * @param {{ more?: boolean, avoid?: string[] }} [opts]
@@ -86,7 +86,12 @@ export async function fetchRoutePlan(formData, { more = false, avoid = [] } = {}
   let data = {};
   try { data = await res.json(); } catch { /* not JSON */ }
   await resendVerificationIfNeeded(res.status, data);
-  if (res.status === 429) throw new Error('You have planned a lot of routes in a short time — please wait a few minutes.');
+  if (res.status === 429) {
+    const signedIn = FIREBASE_CONFIGURED && !!auth?.currentUser;
+    throw new Error(signedIn
+      ? 'You have planned a lot of routes in a short time — please wait a few minutes.'
+      : 'You have tried a lot of routes — create a free account to keep planning (your trip is kept).');
+  }
   if (!res.ok || !Array.isArray(data?.data?.options) || !data.data.options.length) {
     throw new Error(data?.message || 'Could not plan a route right now. Please try again.');
   }
@@ -194,4 +199,60 @@ export async function fetchProgress(submissionId) {
   } catch {
     return { ok: false, status: 0 }; // offline / network hiccup — the caller keeps polling
   }
+}
+
+/**
+ * What the next itinerary would use, shown on the Review step before Submit (read-only).
+ * GET /entitlement → { allowed, source: 'test'|'monthly'|'credit'|'free'|null, remaining, code? }
+ * @returns {Promise<object|null>} null when signed out or the check fails (the page then
+ *   behaves as before: Submit decides)
+ */
+export async function fetchEntitlement() {
+  try {
+    const headers = await authHeaders();
+    if (!headers.Authorization) return null;
+    const res = await fetch(`${API_URL}/entitlement`, { headers, cache: 'no-store' });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.success ? data.data : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The trip being planned, saved to the account so it survives closing the tab or switching
+ * device. GET / PUT / DELETE /profile/draft. All best-effort: failures never block planning.
+ */
+export async function fetchPlanDraft() {
+  try {
+    const headers = await authHeaders();
+    if (!headers.Authorization) return null;
+    const res = await fetch(`${API_URL}/profile/draft`, { headers, cache: 'no-store' });
+    if (!res.ok) return null;
+    return (await res.json())?.draft || null;
+  } catch {
+    return null;
+  }
+}
+
+export async function savePlanDraft(form, step) {
+  try {
+    const headers = await authHeaders();
+    if (!headers.Authorization) return false;
+    // The address comes from the account; no need to store it in the draft.
+    const { email: _e, ...rest } = form || {};
+    const res = await fetch(`${API_URL}/profile/draft`, { method: 'PUT', headers, body: JSON.stringify({ form: rest, step }) });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function deletePlanDraft() {
+  try {
+    const headers = await authHeaders();
+    if (!headers.Authorization) return;
+    await fetch(`${API_URL}/profile/draft`, { method: 'DELETE', headers });
+  } catch { /* best effort */ }
 }

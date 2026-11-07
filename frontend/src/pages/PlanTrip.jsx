@@ -16,7 +16,7 @@ import StepReview from '../components/plantrip/StepReview';
 import StepRoute, { routeKey } from '../components/plantrip/StepRoute';
 import { CountryChips, WhoIsTravelling, DEFAULT_TRIP_PREFS } from '../components/plantrip/WhoIsTravelling';
 import { ErrorBoundary } from '../components/ErrorBoundary';
-import { submitItinerary, fetchRoutePlan } from '../api/itinerary';
+import { submitItinerary, fetchRoutePlan, fetchEntitlement, savePlanDraft, deletePlanDraft } from '../api/itinerary';
 import { fetchDestinationInsights } from '../api/destinationInsights';
 import { useAuth } from '../context/AuthContext';
 import { analytics } from '../utils/analytics';
@@ -174,6 +174,8 @@ export default function PlanTrip() {
   // Day-outline preview state lives in StepReview (separate useState, not on the form).
   const [venueSelState, setVenueSelState] = useState(null);
   const { currentUser, getIdToken } = useAuth();
+  // What Submit would use (GET /entitlement), shown on the Review step. Separate state.
+  const [entitlement, setEntitlement] = useState(null);
   const [personalRecs, setPersonalRecs] = useState([]);
   const [preferredActivities, setPreferredActivities] = useState([]);
   const [destinationInsights, setDestinationInsights] = useState(null);
@@ -234,6 +236,22 @@ export default function PlanTrip() {
       })
       .catch(() => {});
   }, []);
+
+  // Review step: say up front what this itinerary uses, or that none are left.
+  useEffect(() => {
+    if (step !== STEP_REVIEW || !currentUser) { setEntitlement(null); return undefined; }
+    let live = true;
+    fetchEntitlement().then(e => { if (live) setEntitlement(e); });
+    return () => { live = false; };
+  }, [step, currentUser]);
+
+  // Signed in: keep the plan on the account too (dashboard "Continue your plan"), a few
+  // seconds after the last change. Best effort — never blocks planning.
+  useEffect(() => {
+    if (!currentUser || !form.destinations?.length) return undefined;
+    const timer = setTimeout(() => { savePlanDraft(form, step); }, 3000);
+    return () => clearTimeout(timer);
+  }, [form, step, currentUser]);
 
   // Persist form to sessionStorage whenever it changes
   useEffect(() => {
@@ -429,8 +447,13 @@ export default function PlanTrip() {
   };
 
   const handleSubmit = async () => {
+    // Guests are asked to sign in on the Review step; this is only a safety net.
+    if (!currentUser) {
+      navigate('/signup?next=%2Fplan');
+      return;
+    }
     // Delivery goes to the signed-in account's email (set server-side from the token).
-    if (!currentUser?.email) {
+    if (!currentUser.email) {
       setSubmitError('Your account has no email address — please sign in again.');
       return;
     }
@@ -451,6 +474,7 @@ export default function PlanTrip() {
       analytics.tripSubmitted({ destination: destinationName, days: form.days, travelStyle: form.travelStyle });
       sessionStorage.removeItem('wz_plan_step_v2');
       sessionStorage.removeItem('wz_plan_form_v2');
+      deletePlanDraft(); // the plan became a trip; nothing left to continue
       navigate(`/confirmation?id=${encodeURIComponent(data.data.submissionId)}`, {
         state: { submissionId: data.data.submissionId, destination: destinationName, email: currentUser?.email || form.email },
       });
@@ -923,6 +947,16 @@ export default function PlanTrip() {
               submitting={submitting}
               submitError={submitError}
               accountEmail={currentUser?.email || form.email}
+              signedIn={!!currentUser}
+              entitlement={entitlement}
+              onSignUp={() => { analytics.stepReached('signup_gate', STEP_REVIEW); navigate('/signup?next=%2Fplan'); }}
+              onSignIn={() => navigate('/login?next=%2Fplan')}
+              onSeePlans={() => navigate('/pricing', {
+                state: {
+                  reason: entitlement?.code === 'MONTHLY_LIMIT_REACHED' ? 'monthly_limit' : 'free_limit',
+                  destination: form.destinations[0]?.name || null,
+                },
+              })}
             />
           )}
 

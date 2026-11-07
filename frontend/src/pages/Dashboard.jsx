@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useDestinationPhotoWithCredit, getFallbackPhoto } from '../utils/destinationPhotos';
 import { PhotoCredit } from '../components/PhotoCredit';
 import { TravelChat } from '../components/TravelChat';
+import ContinuePlan from '../components/dashboard/ContinuePlan';
 import { timeAgo, extractCountry, lastPlanHeadline } from '../utils/tripStats';
 import './Dashboard.css';
 
@@ -271,6 +272,7 @@ export default function Dashboard() {
         {/* ── READY FOR NEXT ADVENTURE ── */}
         {!loading && (
           <div>
+            <ContinuePlan />
             <div style={s.secHeader}>
               <div style={s.secTitle}>Ready for your next adventure?</div>
             </div>
