@@ -250,11 +250,54 @@ const OPTIONS_SCHEMA = `{
 }`;
 
 /**
+ * One route per Claude call, each from a different angle, run in parallel: asking for three
+ * full routes in one call took Haiku 5.5 over 24 s in prod (Nov 7 2026), past what the
+ * interactive step (and API Gateway's 29 s) allows. One route is ~⅓ of the output.
+ */
+const ROUTE_ANGLES = {
+  classic: 'the classic route a first-timer would love: the best-known highlights, done slowly',
+  quiet: 'a quieter route: smaller towns, villages and nature, away from the main tourist trail',
+  compact: 'a compact route: one region, the fewest and shortest transfers',
+  region: 'a route through a region most visitors skip',
+};
+
+/**
+ * Angles to ask for. "More ideas" and curated countries already showed the classic route.
+ * @returns {string[]} keys of ROUTE_ANGLES
+ */
+function routeAngles({ more = false, curated = false } = {}) {
+  if (more) return ['quiet', 'compact', 'region'];
+  return curated ? ['quiet', 'compact'] : ['classic', 'quiet', 'compact'];
+}
+
+const SINGLE_ROUTE_SCHEMA = OPTIONS_SCHEMA
+  .replace(/^\{\s*"options": \[\s*/, '')
+  .replace(/\s*\]\s*\}$/, '')
+  .replace(/\n {4}/g, '\n');
+
+/**
  * @param {object} input validated request: { destination, days, travelStyle[], travelPace,
- *   interests, travelDate, userLocation, prefs, count, avoid[] }
+ *   interests, travelDate, userLocation, prefs, count, avoid[], angle? }
+ *   With `angle` (a ROUTE_ANGLES key) it asks for ONE route from that angle.
  */
 function buildRouteOptionsPrompt(input) {
   const styles = input.travelStyle?.length ? input.travelStyle.join(', ') : 'balanced';
+  const angle = ROUTE_ANGLES[input.angle];
+  if (angle) {
+    return `Suggest ONE ROUTE (not daily activities) for a ${input.days}-day slow-travel trip to ${input.destination}, so the traveller can say yes without doing research. Make it ${angle}.
+
+Traveller: ${describePrefs(input.prefs)}. Style ${styles}; pace ${input.travelPace || 'balanced'}${input.interests ? `; interests: ${input.interests}` : ''}${input.travelDate ? `; starting ${input.travelDate}` : ''}.
+${input.avoid?.length ? `It must differ from these routes they already saw: ${input.avoid.join('; ')}.\n` : ''}
+Rules:
+- ${input.days <= 4 ? 'Trips of 4 days or less: 1 base.' : `At most ${Math.ceil(input.days / 2.5)} stops; fewer moves is better — this is slow travel.`} A stop may be visited twice (e.g. back to the arrival city before flying out).
+- Respect the traveller's travel-time limit for every transfer${input.prefs?.kids?.length ? ' and keep it easy for the children' : ''}.
+- Order stops so travel is short and logical. "days" must add up to exactly ${input.days}; the first day at each later stop is its travel day.
+- transferIn: from the previous stop (null for the first), realistic door-to-door hours.
+- 2 dayTrips per stop, each under ~1.5 h away. Real places only. lat/lng of the stop town. Keep every text field short.
+
+Return ONLY this JSON (no other text):
+${SINGLE_ROUTE_SCHEMA}`;
+  }
   const count = input.count || 3;
   return `Suggest ${count} different ROUTES (not daily activities) for a ${input.days}-day slow-travel trip to ${input.destination}, so the traveller can pick one without doing research.
 
@@ -280,7 +323,7 @@ const longestTransfer = (bases) => Math.max(0, ...(bases || []).map(b => b.trans
  * Parse Claude's answer into sanitised route options. Throws when nothing usable came back.
  * @returns {object[]} [{ id, name, summary, source: 'ai', longestTransferHours, bases }]
  */
-function parseRouteOptions(text, totalDays) {
+function parseRouteOptions(text, totalDays, idPrefix = 'ai') {
   const match = String(text || '').match(/\{[\s\S]*\}/);
   if (!match) throw new Error('No JSON in route response');
   const parsed = JSON.parse(match[0]);
@@ -290,7 +333,7 @@ function parseRouteOptions(text, totalDays) {
     const route = sanitizeRoute(o, totalDays);
     if (!route) continue;
     options.push({
-      id: `ai-${i + 1}`,
+      id: `${idPrefix}-${i + 1}`,
       name: str(o.name, 60) || `Route ${i + 1}`,
       summary: str(o.summary, 240),
       source: 'ai',
@@ -316,5 +359,7 @@ module.exports = {
   formatPrefsForItinerary,
   buildRouteOptionsPrompt,
   parseRouteOptions,
+  ROUTE_ANGLES,
+  routeAngles,
   longestTransfer,
 };
