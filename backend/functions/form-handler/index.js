@@ -2,7 +2,7 @@
 
 const { LambdaClient, InvokeCommand } = require('@aws-sdk/client-lambda');
 const {
-  getDB, ok, badRequest, serverError, validateFormInput, generateId, log,
+  getDB, ok, badRequest, notFound, serverError, validateFormInput, generateId, log,
   requireUser, AuthError, authFailure, checkRateLimit, userSubject, tooManyRequests,
 } = require('/opt/nodejs/index');
 const { sanitizeSelectedVenues } = require('/opt/nodejs/selected-venues');
@@ -10,6 +10,7 @@ const {
   sanitizeRoute, sanitizePrefs, describePrefs, buildRouteOptionsPrompt, parseRouteOptions, routeAngles, dedupeRoutes, settleEnough,
 } = require('/opt/nodejs/route-plan');
 const { curatedOptions } = require('/opt/nodejs/curated-routes');
+const { readProgress } = require('/opt/nodejs/progress');
 const { MODELS, createMessage, firstText, withEffort, maxTokensFor } = require('/opt/nodejs/claude');
 const { SUBSCRIPTION_MONTHLY_ITINERARIES, withMonthlyColumn } = require('./subscription');
 
@@ -408,6 +409,27 @@ function limitReachedBody(reason) {
   };
 }
 
+// ─── GET /itinerary/{id}/progress ────────────────────────────────────────────
+// Live progress for the confirmation page. Owner only: another user's id (or an unknown
+// one) is a plain 404 so ids can't be probed. Polled every few seconds; no Claude call.
+const SUBMISSION_ID = /^wz_[a-z0-9]{6,12}_[A-Za-z0-9_-]{16}$/;
+
+function progressIdOf(event) {
+  const id = event.pathParameters?.id || (event.path || '').match(/\/itinerary\/([^/]+)\/progress$/)?.[1];
+  return id && /\/progress$/.test(event.path || '') && SUBMISSION_ID.test(id) ? id : null;
+}
+
+async function handleProgress(db, submissionId, user) {
+  try {
+    const data = await readProgress(db, submissionId, user);
+    if (!data) return notFound('Trip not found');
+    return ok(data);
+  } catch (err) {
+    log.error('Progress read failed', { submissionId, error: err.message });
+    return serverError('Could not load progress');
+  }
+}
+
 exports.handler = async (event) => {
   log.info('Form submission received', { path: event.path });
 
@@ -418,7 +440,7 @@ exports.handler = async (event) => {
       headers: {
         'Access-Control-Allow-Origin': process.env.FRONTEND_URL,
         'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-        'Access-Control-Allow-Methods': 'POST,OPTIONS',
+        'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
       },
       body: '',
     };
@@ -431,10 +453,14 @@ exports.handler = async (event) => {
   if (response) return response;
 
   const db = getDB();
+  if (event.httpMethod === 'GET') {
+    const id = progressIdOf(event);
+    return id ? handleProgress(db, id, user) : notFound();
+  }
   if (isPath(event, '/preview')) return handlePreview(event, db, user);
   if (isPath(event, '/route-plan')) return handleRoutePlan(event, db, user);
   return handleSubmit(event, db, user);
 };
 
 // Exported for unit tests.
-exports._internal = { validatePreviewInput, decideEntitlement, refundCredit, limitReachedBody, ROUTE_WAIT };
+exports._internal = { validatePreviewInput, decideEntitlement, refundCredit, limitReachedBody, ROUTE_WAIT, progressIdOf };

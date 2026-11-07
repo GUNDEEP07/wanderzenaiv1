@@ -33,7 +33,14 @@ AI-powered slow-travel itinerary SaaS. Live at wanderzenai.com. Solo-maintained.
   Curated data is reviewed in Notion ("Curated routes — review"); regenerate that page with
   `node scripts/curated-routes-to-markdown.mjs`. Suggestions live in PlanTrip `routeOptions`
   state, never on the form.
-- `src/api/itinerary.js` is the service layer: `fetchPreview()` + `submitItinerary()`.
+- Live progress: the generator records the route and each finished day in
+  `submissions.progress` via `layers/shared/nodejs/progress.js` (best-effort, never fails a
+  generation; column self-creates). `GET /itinerary/{id}/progress` (form-handler, owner only,
+  404 otherwise) feeds `pages/Confirmation.jsx` (`/confirmation?id=…`), which polls every 4 s.
+- Maps: `components/map/RouteMap.jsx` — MapLibre (lazy chunk) + OpenFreeMap tiles (free,
+  commercial OK, no key; attribution is automatic). Hides itself without WebGL or tiles.
+- `src/api/itinerary.js` is the service layer: `fetchPreview()`, `submitItinerary()`,
+  `fetchRoutePlan()`, `fetchProgress()`.
 - Step 3 picks travel as `selected_venues` v2 `{ version: 2, picks, interests }` — see
   `backend/layers/shared/nodejs/selected-venues.js`.
 - Claude calls: model IDs come from `MODELS` in `backend/layers/shared/nodejs/claude.js`

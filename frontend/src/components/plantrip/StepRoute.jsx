@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { DestinationSearch } from './DestinationSearch';
+import RouteMap from '../map/RouteMap';
 
 /**
  * Step 3 of 6 — "Your route" (route first, option B — Gundeep, Nov 6 2026).
@@ -75,9 +76,16 @@ const transferText = (t) => (t
   ? `${t.mode[0].toUpperCase()}${t.mode.slice(1)}${t.hours ? ` · ~${t.hours} h` : ''}${t.note ? ` — ${t.note}` : ''}`
   : 'Getting here: we\'ll suggest the best way in your itinerary');
 
-function OptionCard({ option, onChoose }) {
+function OptionCard({ option, onChoose, focused, onFocusCard }) {
   return (
-    <div style={s.option(option.fitsConstraints !== false)}>
+    // Hover, focus or tap shows this route on the map above.
+    <div
+      style={{ ...s.option(option.fitsConstraints !== false), ...(focused ? { boxShadow: '0 0 0 2px rgba(0,212,170,0.55)' } : {}) }}
+      onMouseEnter={onFocusCard}
+      onFocusCapture={onFocusCard}
+      onClick={onFocusCard}
+      data-focused={focused ? 'true' : 'false'}
+    >
       <div style={s.optionTop}>
         <div style={s.optionName}>{option.name}</div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -111,6 +119,9 @@ export default function StepRoute({ form, route, options = [], optionsKey = null
   const asked = useRef(null);
   const [browsing, setBrowsing] = useState(false); // showing the options again after choosing
   const shown = optionsKey === key ? options : []; // never show routes planned for another trip
+  const [focus, setFocus] = useState(0); // which suggested route the map shows
+  const focusIndex = focus < shown.length ? focus : 0;
+  const focusedOption = shown[focusIndex] || null;
 
   // Suggest routes on arrival, and again when the trip or the travellers changed.
   useEffect(() => {
@@ -170,8 +181,20 @@ export default function StepRoute({ form, route, options = [], optionsKey = null
             </div>
           </div>
         )}
-        {shown.map(o => (
-          <OptionCard key={o.id + o.name} option={o} onChoose={(opt) => { setBrowsing(false); onChoose(opt); }} />
+        {focusedOption && (
+          <>
+            <RouteMap stops={focusedOption.bases} height={220} label={`Map of ${focusedOption.name}: ${focusedOption.bases.map(b => b.name).join(' → ')}`} />
+            {shown.length > 1 && <div style={{ ...s.meta, marginTop: '-0.5rem', marginBottom: '0.9rem' }}>On the map: <strong style={{ color: '#fff' }}>{focusedOption.name}</strong> — tap a route to see it.</div>}
+          </>
+        )}
+        {shown.map((o, i) => (
+          <OptionCard
+            key={o.id + o.name}
+            option={o}
+            focused={shown.length > 1 && i === focusIndex}
+            onFocusCard={() => setFocus(i)}
+            onChoose={(opt) => { setBrowsing(false); onChoose(opt); }}
+          />
         ))}
         {shown.length > 0 && (
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: '0.5rem' }}>
@@ -189,6 +212,8 @@ export default function StepRoute({ form, route, options = [], optionsKey = null
     <div>
       {chosen.name && <div style={{ color: '#fff', fontWeight: 800, marginBottom: 4 }}>{chosen.name}</div>}
       {chosen.summary && <p style={s.summary}>{chosen.summary}</p>}
+
+      <RouteMap stops={bases} height={240} />
 
       <div style={s.counter(total === days)}>
         {total === days ? `✓ All ${days} days placed` : `${total} of ${days} days placed — adjust the days so they add up to ${days}`}

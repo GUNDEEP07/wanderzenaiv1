@@ -166,6 +166,11 @@ Resources:
           HttpMethod: POST
           ThrottlingRateLimit: 3
           ThrottlingBurstLimit: 10
+        # Polled every ~4 s by the confirmation page while a trip is written; no Claude call.
+        - ResourcePath: '/~1itinerary~1{id}~1progress'
+          HttpMethod: GET
+          ThrottlingRateLimit: 10
+          ThrottlingBurstLimit: 20
         - ResourcePath: '/~1recommendations~1chat'
           HttpMethod: POST
           ThrottlingRateLimit: 3
@@ -214,6 +219,12 @@ Resources:
             RestApiId: !Ref WanderZenApi
             Method: POST
             Path: /route-plan
+        GenerationProgress:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Method: GET
+            Path: /itinerary/{id}/progress
         FormSubmit:
           Type: Api
           Properties:
