@@ -756,7 +756,7 @@ User context: ${userContext}
 FLOW — collect these details one at a time, in this order:
 1. Destination
 2. How many days?
-3. When? (travel date or month — ok if vague)
+3. When? (travel date or month — a month or season is a complete answer; never ask for exact dates after that)
 4. Who's coming — how many adults, and any children (their ages)?
 5. Travel vibe — Nature / Cultural / Foodie / Adventure / Relaxation / Wellness (can pick multiple)
 6. Budget — Budget / Mid-range / Luxury?
