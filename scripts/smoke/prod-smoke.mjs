@@ -74,10 +74,22 @@ await check('POST /submit without token (body email) → 401',
   async () => expectStatus(await call('POST', '/submit', { body: submitBody }), 401, 'AUTH_REQUIRED'));
 await check('POST /submit with forged token → 401',
   async () => expectStatus(await call('POST', '/submit', { token: FORGED, body: submitBody }), 401, 'TOKEN_INVALID'));
-await check('POST /route-plan without token → 401 (routed, sign-in required)',
-  async () => expectStatus(await call('POST', '/route-plan', { body: { destination: 'Japan', days: 7 } }), 401, 'AUTH_REQUIRED'));
-await check('POST /preview without token → 401',
-  async () => expectStatus(await call('POST', '/preview', { body: { destination: 'Kyoto', days: 3 } }), 401));
+// Guests may plan before signing up (Nov 2026): /route-plan and /preview are open but
+// rate-limited by IP. Japan is a curated country, so this costs no Claude call.
+await check('POST /route-plan as a guest → 200 curated routes (no AI call)',
+  async () => {
+    const r = await call('POST', '/route-plan', { body: { destination: 'Japan', days: 7 } });
+    expectStatus(r, 200);
+    if (r.json?.data?.source !== 'curated' || !r.json.data.options?.length) throw new Error(`expected curated options, got ${r.text.slice(0, 160)}`);
+    return `200 curated (${r.json.data.options.length} options)`;
+  });
+// An invalid body proves /preview is reachable for guests without spending a Claude call.
+await check('POST /preview as a guest with no destination → 400 (open, still validated)',
+  async () => expectStatus(await call('POST', '/preview', { body: {} }), 400));
+await check('GET /entitlement without token → 401',
+  async () => expectStatus(await call('GET', '/entitlement'), 401, 'AUTH_REQUIRED'));
+await check('GET /profile/draft without token → 401',
+  async () => expectStatus(await call('GET', '/profile/draft'), 401));
 await check('POST /recommendations/chat with forged token → 401',
   async () => expectStatus(await call('POST', '/recommendations/chat', { token: FORGED, body: { message: 'hi' } }), 401));
 await check('GET /recommendations/personalised with forged token → 401',
