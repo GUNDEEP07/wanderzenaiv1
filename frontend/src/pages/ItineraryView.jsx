@@ -1,7 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { analytics } from '../utils/analytics';
+import { fetchAdjustments, startDayAdjustment } from '../api/itinerary';
+import AdjustDay from '../components/itinerary/AdjustDay';
+
+/** How often the page checks on a day being rewritten. */
+export const ADJUST_POLL_MS = 5000;
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -54,21 +59,28 @@ export default function ItineraryView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [shareMsg, setShareMsg] = useState('');
+  // "Adjust this day": null unless the viewer owns this trip (the API decides).
+  const [adjust, setAdjust] = useState(null);
+  const [adjustNotice, setAdjustNotice] = useState(null); // { tone: 'ok'|'error', text }
+  const watchedId = useRef(null); // the adjustment this page is waiting on
+
+  const loadItinerary = useCallback(async () => {
+    // Try with auth token if logged in, fall through to public if not
+    const headers = {};
+    try {
+      const token = await getIdToken();
+      if (token) headers.Authorization = `Bearer ${token}`;
+    } catch { /* not logged in — public view */ }
+    const res = await fetch(`${API_URL}/itinerary?id=${id}`, { headers, cache: 'no-store' });
+    if (!res.ok) throw new Error('Could not load itinerary');
+    return res.json();
+  }, [id, getIdToken]);
 
   useEffect(() => {
     if (!id) return;
     (async () => {
       try {
-        // Try with auth token if logged in, fall through to public if not
-        const headers = {};
-        try {
-          const token = await getIdToken();
-          if (token) headers.Authorization = `Bearer ${token}`;
-        } catch { /* not logged in — public view */ }
-
-        const res = await fetch(`${API_URL}/itinerary?id=${id}`, { headers });
-        if (!res.ok) throw new Error('Could not load itinerary');
-        const d = await res.json();
+        const d = await loadItinerary();
         setData(d);
         analytics.itineraryViewed(d.destination);
       } catch (e) {
@@ -77,7 +89,45 @@ export default function ItineraryView() {
         setLoading(false);
       }
     })();
-  }, [id]);
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Owner? Then load what's left; keep checking while a day is being rewritten.
+  useEffect(() => {
+    if (!id || !currentUser) { setAdjust(null); return undefined; }
+    let live = true;
+    fetchAdjustments(id).then(a => {
+      if (!live) return;
+      setAdjust(a);
+      if (a?.pending) watchedId.current = a.pending.id;
+    });
+    return () => { live = false; };
+  }, [id, currentUser]);
+
+  useEffect(() => {
+    if (!adjust?.pending) return undefined;
+    const timer = setInterval(async () => {
+      const a = await fetchAdjustments(id);
+      if (!a) return;
+      setAdjust(a);
+      const done = a.items.find(x => x.id === watchedId.current);
+      if (a.pending || !done) return;
+      watchedId.current = null;
+      if (done.status === 'done') {
+        try { setData(await loadItinerary()); } catch { /* keep showing the old day */ }
+        setAdjustNotice({ tone: 'ok', text: `Day ${done.day} is updated. The new PDF is on its way to your email.` });
+      } else {
+        setAdjustNotice({ tone: 'error', text: `We couldn't rewrite day ${done.day} this time — it didn't use up a change, so please try again.` });
+      }
+    }, ADJUST_POLL_MS);
+    return () => clearInterval(timer);
+  }, [adjust?.pending, id, loadItinerary]);
+
+  const startAdjust = async (dayNumber, note) => {
+    const a = await startDayAdjustment(id, dayNumber, note); // throws with a message
+    watchedId.current = a.pending?.id || null;
+    setAdjust(a);
+    setAdjustNotice(null);
+  };
 
   const shareUrl = `https://www.wanderzenai.com/itinerary/${id}`;
 
@@ -125,6 +175,7 @@ export default function ItineraryView() {
   return (
     <div style={{ minHeight: '100vh', background: '#06090f', fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#fff' }}>
       <style>{`        * { box-sizing: border-box; }
+        @keyframes wzPulse { 0%,100% { opacity: .35; transform: scale(.85); } 50% { opacity: 1; transform: scale(1); } }
       `}</style>
 
       {/* Nav */}
@@ -195,6 +246,19 @@ export default function ItineraryView() {
 
       {/* Days */}
       <div style={{ maxWidth: 860, margin: '0 auto', padding: '0 28px 80px' }}>
+        {adjustNotice && (
+          <div role="status" style={{ marginBottom: 24, padding: '12px 16px', borderRadius: 12, fontSize: 13, lineHeight: 1.5,
+            background: adjustNotice.tone === 'ok' ? 'rgba(0,212,170,0.1)' : 'rgba(255,107,107,0.08)',
+            border: `1px solid ${adjustNotice.tone === 'ok' ? 'rgba(0,212,170,0.3)' : 'rgba(255,107,107,0.3)'}`,
+            color: adjustNotice.tone === 'ok' ? '#00d4aa' : '#ff8a8a' }}>
+            {adjustNotice.text}
+          </div>
+        )}
+        {adjust && adjust.remaining > 0 && !adjust.pending && !adjustNotice && (
+          <div style={{ marginBottom: 24, fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
+            Not quite right? Adjust any day below — {adjust.remaining} free change{adjust.remaining === 1 ? '' : 's'} left on this trip.
+          </div>
+        )}
         {(itin?.days || []).map((day, i) => (
           <div key={i} style={{ marginBottom: 48 }}>
             {/* Day header */}
@@ -206,6 +270,11 @@ export default function ItineraryView() {
                 <div style={{ fontFamily: "'Fraunces', serif", fontSize: 20, fontWeight: 700, color: '#fff', marginBottom: 2 }}>Day {day.dayNumber}</div>
                 {day.theme && <div style={{ fontSize: 13, color: '#00d4aa', fontStyle: 'italic' }}>{day.theme}</div>}
               </div>
+              {day.adjusted && (
+                <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#a78bfa', background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.25)', borderRadius: 6, padding: '3px 8px' }}>
+                  Updated
+                </span>
+              )}
               {day.dailyCost > 0 && (
                 <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
                   <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>Est. daily cost</div>
@@ -240,6 +309,8 @@ export default function ItineraryView() {
                 </div>
               </div>
             )}
+
+            <AdjustDay dayNumber={day.dayNumber} summary={adjust} onStart={startAdjust} />
           </div>
         ))}
 

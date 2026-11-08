@@ -6,6 +6,7 @@ const {
   requireUser, optionalUser, AuthError, authFailure, checkRateLimit, userSubject, ipSubject, tooManyRequests,
 } = require('/opt/nodejs/index');
 const { sanitizeSelectedVenues } = require('/opt/nodejs/selected-venues');
+const adjustDay = require('./adjust-day');
 const {
   sanitizeRoute, sanitizePrefs, describePrefs, buildRouteOptionsPrompt, parseRouteOptions, routeAngles, dedupeRoutes, settleEnough,
   travelerTypeFromPrefs, dayPlan,
@@ -602,11 +603,21 @@ exports.handler = async (event) => {
     return isPath(event, '/preview') ? handlePreview(event, db, user) : handleRoutePlan(event, db, user);
   }
 
-  // /submit, progress and entitlement need a signed-in, verified user.
+  // /submit, progress, entitlement and day adjustments need a signed-in, verified user.
   const { user, response } = await authenticate(event);
   if (response) return response;
 
   const db = getDB();
+  const adjustRoute = adjustDay.adjustRouteOf(event);
+  if (adjustRoute) {
+    if (adjustRoute.kind === 'bad') return notFound();
+    if (adjustRoute.kind === 'list') return adjustDay.handleList(db, adjustRoute.id, user);
+    return adjustDay.handleStart(event, db, user, adjustRoute.id, adjustRoute.day, (payload) => lambda.send(new InvokeCommand({
+      FunctionName: `wanderzenai-itinerary-gen-${process.env.STAGE}`,
+      InvocationType: 'Event',
+      Payload: Buffer.from(JSON.stringify(payload)),
+    })));
+  }
   if (event.httpMethod === 'GET') {
     if (isPath(event, '/entitlement')) return handleEntitlement(db, user);
     const id = progressIdOf(event);
