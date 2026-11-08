@@ -26,6 +26,8 @@ const DEFAULT_LIMITS = Object.freeze({
   personalised: [{ limit: 30, windowSeconds: 3600 }],
   welcome:      [{ limit: 2, windowSeconds: 86400 }],
   route:        [{ limit: 20, windowSeconds: 3600 }, { limit: 60, windowSeconds: 86400 }],
+  // "Adjust this day" — one Opus call each; the per-trip cap (3) is in day-adjust.js.
+  adjustDay:    [{ limit: 6, windowSeconds: 3600 }, { limit: 20, windowSeconds: 86400 }],
   // Guests planning a trip before signing up (Nov 8 2026) — keyed by hashed client IP.
   // A route request is up to 3 Claude calls (none when curated or cached).
   guestRoute:   [{ limit: 6, windowSeconds: 3600 }, { limit: 15, windowSeconds: 86400 }],

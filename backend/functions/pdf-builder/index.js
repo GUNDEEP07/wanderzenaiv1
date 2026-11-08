@@ -391,7 +391,10 @@ body {
 
 exports.handler = async (event) => {
   const { itineraryId, submissionId, email, isPaid, submission } = event;
-  log.info('PDF build started', { itineraryId, email });
+  // `update` = a rebuild after "Adjust this day": the trip is already delivered, so its
+  // status is never changed here (a failed rebuild must not mark a finished trip failed).
+  const update = event.update && Number.isInteger(event.update.dayNumber) ? { dayNumber: event.update.dayNumber } : null;
+  log.info('PDF build started', { itineraryId, update });
 
   const db = getDB();
   let browser;
@@ -486,12 +489,14 @@ exports.handler = async (event) => {
       [s3Key, itineraryId]
     );
 
-    await db.query(
-      `UPDATE submissions SET status = 'pdf_ready', updated_at = NOW() WHERE id = $1`,
-      [submissionId]
-    );
+    if (!update) {
+      await db.query(
+        `UPDATE submissions SET status = 'pdf_ready', updated_at = NOW() WHERE id = $1`,
+        [submissionId]
+      );
+    }
 
-    log.info('PDF uploaded', { itineraryId, s3Key });
+    log.info('PDF uploaded', { itineraryId, s3Key, update });
 
     await lambda.send(new InvokeCommand({
       FunctionName: `wanderzenai-email-sender-${process.env.STAGE}`,
@@ -502,12 +507,14 @@ exports.handler = async (event) => {
         days: submission.days,
         isPaid,
         itineraryTitle: itinerary.title,
+        ...(update ? { update } : {}),
       })),
     }));
 
   } catch (err) {
-    log.error('PDF build failed', { itineraryId, error: err.message });
+    log.error('PDF build failed', { itineraryId, update, error: err.message });
     if (browser) await browser.close().catch(() => {});
+    if (update) return; // the trip and its previous PDF stay as they were
     await db.query(
       `UPDATE submissions SET status = 'failed', error_message = $1, updated_at = NOW() WHERE id = $2`,
       [err.message, submissionId]

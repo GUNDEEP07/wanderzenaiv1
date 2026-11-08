@@ -256,3 +256,38 @@ export async function deletePlanDraft() {
     await fetch(`${API_URL}/profile/draft`, { method: 'DELETE', headers });
   } catch { /* best effort */ }
 }
+
+/**
+ * "Adjust this day": what's left/running for this trip. Also the owner check — null for
+ * anyone who isn't signed in as the trip's owner (the API says 401/404), so the page then
+ * simply doesn't offer adjustments.
+ * GET /itinerary/{id}/adjustments → { max, used, remaining, pending, last, items }
+ */
+export async function fetchAdjustments(submissionId) {
+  try {
+    const headers = await authHeaders();
+    if (!headers.Authorization) return null;
+    const res = await fetch(`${API_URL}/itinerary/${encodeURIComponent(submissionId)}/adjustments`, { headers, cache: 'no-store' });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.success ? data.data : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Ask for one day to be rewritten. Resolves with the new summary (pending set); the rewrite
+ * runs in the background (~1 min). Throws with a message the page can show.
+ */
+export async function startDayAdjustment(submissionId, dayNumber, note) {
+  const headers = await authHeaders();
+  const res = await fetch(`${API_URL}/itinerary/${encodeURIComponent(submissionId)}/days/${dayNumber}/adjust`, {
+    method: 'POST', headers, body: JSON.stringify({ note }),
+  });
+  let body = null;
+  try { body = await res.json(); } catch { /* empty */ }
+  if (res.status === 202 && body?.success) return body.data;
+  if (res.status === 429) throw new Error("You've changed a lot of days in a short time — please try again in a little while.");
+  throw new Error(body?.message || body?.errors?.[0] || 'Could not start the change — please try again.');
+}

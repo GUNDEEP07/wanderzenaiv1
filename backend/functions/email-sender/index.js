@@ -8,7 +8,7 @@ const { getDB, log } = require('/opt/nodejs/index');
 const ses = new SESClient({ region: 'ap-southeast-2' });
 const s3 = new S3Client({ region: 'ap-southeast-2' });
 
-const buildEmailHTML = ({ itineraryTitle, destination, days, downloadUrl, isPaid }) => `
+const buildEmailHTML = ({ itineraryTitle, destination, days, downloadUrl, isPaid, update = null }) => `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -76,13 +76,15 @@ const buildEmailHTML = ({ itineraryTitle, destination, days, downloadUrl, isPaid
   </div>
 
   <div class="body">
-    <div class="greeting">Your itinerary is ready ✦</div>
+    <div class="greeting">${update ? 'Your itinerary is updated ✦' : 'Your itinerary is ready ✦'}</div>
     <div class="destination-pill">${destination} · ${days} days</div>
 
     <div class="intro">
-      We've crafted a slow travel itinerary tailored to how you actually want to travel —
+      ${update
+        ? `Day ${update.dayNumber} has been rewritten the way you asked. The rest of your trip is unchanged — here is the full guide with the new day in it.`
+        : `We've crafted a slow travel itinerary tailored to how you actually want to travel —
       hidden cafes, local guesthouses, morning markets, and scenic walks away from the crowds.
-      No tourist traps. Just the real ${destination}.
+      No tourist traps. Just the real ${destination}.`}
     </div>
 
     <div class="download-section">
@@ -136,6 +138,8 @@ const buildEmailHTML = ({ itineraryTitle, destination, days, downloadUrl, isPaid
 
 exports.handler = async (event) => {
   const { itineraryId, submissionId, email, s3Key, destination, days, isPaid, itineraryTitle } = event;
+  // After "Adjust this day": a different subject/intro, and the trip status is left alone.
+  const update = event.update && Number.isInteger(event.update.dayNumber) ? { dayNumber: event.update.dayNumber } : null;
   log.info('Email send started', { itineraryId, email });
 
   const db = getDB();
@@ -149,20 +153,22 @@ exports.handler = async (event) => {
     );
 
     // ─── Send email via SES ──────────────────────────────────────────────────
-    const htmlBody = buildEmailHTML({ itineraryTitle, destination, days, downloadUrl: signedUrl, isPaid });
+    const htmlBody = buildEmailHTML({ itineraryTitle, destination, days, downloadUrl: signedUrl, isPaid, update });
 
     await ses.send(new SendEmailCommand({
       Source: `WanderZenAI <${process.env.FROM_EMAIL}>`,
       Destination: { ToAddresses: [email] },
       Message: {
         Subject: {
-          Data: `Your ${destination} itinerary is ready · WanderZenAI`,
+          Data: update
+            ? `Your ${destination} itinerary is updated (day ${update.dayNumber}) · WanderZenAI`
+            : `Your ${destination} itinerary is ready · WanderZenAI`,
           Charset: 'UTF-8',
         },
         Body: {
           Html: { Data: htmlBody, Charset: 'UTF-8' },
           Text: {
-            Data: `Your WanderZenAI itinerary for ${destination} (${days} days) is ready.\n\nDownload it here: ${signedUrl}\n\nThis link expires in 7 days.\n\nWanderZenAI — wanderzenai.com`,
+            Data: `${update ? `Day ${update.dayNumber} of your WanderZenAI itinerary for ${destination} has been updated.` : `Your WanderZenAI itinerary for ${destination} (${days} days) is ready.`}\n\nDownload it here: ${signedUrl}\n\nThis link expires in 7 days.\n\nWanderZenAI — wanderzenai.com`,
             Charset: 'UTF-8',
           },
         },
@@ -170,10 +176,12 @@ exports.handler = async (event) => {
     }));
 
     // ─── Update DB ───────────────────────────────────────────────────────────
-    await db.query(
-      `UPDATE submissions SET status = 'email_sent', email_sent_at = NOW(), updated_at = NOW() WHERE id = $1`,
-      [submissionId]
-    );
+    if (!update) {
+      await db.query(
+        `UPDATE submissions SET status = 'email_sent', email_sent_at = NOW(), updated_at = NOW() WHERE id = $1`,
+        [submissionId]
+      );
+    }
 
     await db.query(
       `INSERT INTO email_log (submission_id, itinerary_id, email, sent_at, signed_url_expires_at)
@@ -184,7 +192,8 @@ exports.handler = async (event) => {
     log.info('Email sent successfully', { itineraryId, email });
 
   } catch (err) {
-    log.error('Email send failed', { itineraryId, email, error: err.message });
+    log.error('Email send failed', { itineraryId, update, error: err.message });
+    if (update) return; // the trip was already delivered; don't mark it failed
 
     await db.query(
       `UPDATE submissions SET status = 'failed', error_message = $1, updated_at = NOW() WHERE id = $2`,

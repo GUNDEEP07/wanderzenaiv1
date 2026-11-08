@@ -7,6 +7,7 @@ const { MODELS, createMessage, firstText, withEffort, maxTokensFor } = require('
 const { findDuplicateVenues, planRepairs, repairRules } = require('./validate');
 const { GenerationFailed, handleGenerationFailure } = require('./failure');
 const { progressRecorder, daySummary } = require('/opt/nodejs/progress');
+const dayAdjust = require('/opt/nodejs/day-adjust');
 const { SESClient, SendEmailCommand } = require('@aws-sdk/client-ses');
 
 const ses = new SESClient({ region: 'ap-southeast-2' });
@@ -319,7 +320,112 @@ function buildDayLabel(travelDate, dayIndex) {
   });
 }
 
+/** The generator's view of a submissions row (also used by day adjustments). */
+function submissionFromRow(row) {
+  const submission = {
+    destination: row.destination,
+    days: row.days,
+    budget: row.budget,
+    currency: row.currency,
+    travelerType: row.traveler_type,
+    travelStyle: row.travel_style,
+    interests: row.interests,
+    travelDate: row.travel_date || null,
+    startTime: row.start_time || '09:00',
+    userMustDos: row.user_must_dos || null,
+    travelPace: row.travel_pace,
+    wantsHotelRecs: row.wants_hotel_recs,
+    language: row.language || 'English',
+    userAge: row.user_age || null,
+    userLocation: row.user_location || '',
+    email: row.email,
+    selectedVenues: row.selected_venues || {},
+  };
+  // Step 3 picks with a day each (pinned by the user, or spread across the trip).
+  submission.picksPlan = planPicks(submission.selectedVenues, submission.days);
+  return submission;
+}
+
+/**
+ * "Adjust this day" (form-handler adjust-day.js claims the slot; this does the rewrite).
+ * Rewrites one day with the traveller's note, keeps its base/travel day, avoids places used
+ * on other days, saves it, then rebuilds the PDF and emails the updated guide.
+ * Any failure marks the adjustment failed (it doesn't count) and leaves the trip untouched.
+ */
+async function adjustOneDay({ adjustmentId, submissionId }, db) {
+  const adj = await dayAdjust.loadPending(db, adjustmentId);
+  if (!adj || adj.submission_id !== submissionId) {
+    log.warn('Adjust: nothing pending — skipping', { submissionId, adjustmentId });
+    return;
+  }
+  const dayNumber = adj.day_number;
+  log.info('Day adjustment started', { submissionId, adjustmentId, dayNumber });
+  try {
+    const [subRes, itinRes] = await Promise.all([
+      db.query('SELECT * FROM submissions WHERE id = $1', [submissionId]),
+      db.query('SELECT id, itinerary_data FROM itineraries WHERE submission_id = $1 ORDER BY created_at DESC LIMIT 1', [submissionId]),
+    ]);
+    const row = subRes.rows[0];
+    const itinRow = itinRes.rows[0];
+    if (!row || !itinRow) throw new Error('Trip not found');
+
+    const submission = submissionFromRow(row);
+    const itinerary = itinRow.itinerary_data;
+    const idx = (itinerary.days || []).findIndex(d => d.dayNumber === dayNumber);
+    if (idx < 0) throw new Error(`Day ${dayNumber} not in itinerary`);
+
+    const route = submission.picksPlan.route;
+    const planned = route ? dayPlanOf(route).find(x => x.day === dayNumber) : null;
+    const place = planned ? placeOf(planned.base) : submission.destination;
+    const tips = await fetchFoursquareTips(place);
+    const rules = dayAdjust.adjustmentRules({
+      note: adj.note,
+      currentDay: itinerary.days[idx],
+      otherVenues: dayAdjust.venuesOutside(itinerary.days, dayNumber),
+    });
+
+    const { days: fresh, usage } = await generateDaysBatch(
+      submission, [dayNumber], getCurrencySymbol(submission.currency), submissionId, tips, rules
+    );
+    const day = fresh?.[0];
+    if (!day || !day.morningActivity) throw new Error('No usable day came back');
+    day.dayNumber = dayNumber;
+    if (planned) { day.base = planned.base.name; day.travelDay = planned.travelDay; }
+    // Only when — the note stays in day_adjustments (owner only); share links show the trip.
+    day.adjusted = { at: new Date().toISOString() };
+    attachVenuesToItinerary({ days: [day] }, await searchVenues(place, { limit: 20 }));
+
+    itinerary.days[idx] = day;
+    itinerary.adjustments = (itinerary.adjustments || 0) + 1;
+    await db.query(
+      `UPDATE itineraries
+       SET itinerary_data = $1,
+           claude_input_tokens = COALESCE(claude_input_tokens, 0) + $2,
+           claude_output_tokens = COALESCE(claude_output_tokens, 0) + $3
+       WHERE id = $4`,
+      [JSON.stringify(itinerary), usage?.input_tokens || 0, usage?.output_tokens || 0, itinRow.id]
+    );
+    await dayAdjust.finishAdjustment(db, adjustmentId, 'done');
+    log.info('Day adjustment saved', { submissionId, adjustmentId, dayNumber, outputTokens: usage?.output_tokens });
+
+    // New PDF + "updated itinerary" email. The page already shows the new day; a failure
+    // here never touches the trip's status (pdf-builder/email-sender check `update`).
+    await lambda.send(new InvokeCommand({
+      FunctionName: `wanderzenai-pdf-builder-${process.env.STAGE}`,
+      InvocationType: 'Event',
+      Payload: Buffer.from(JSON.stringify({
+        itineraryId: itinRow.id, submissionId, email: submission.email,
+        isPaid: row.plan === 'paid', submission, update: { dayNumber },
+      })),
+    }));
+  } catch (err) {
+    log.error('Day adjustment failed', { submissionId, adjustmentId, dayNumber, error: err.message });
+    await dayAdjust.finishAdjustment(db, adjustmentId, 'failed', err.message).catch(() => {});
+  }
+}
+
 exports.handler = async (event, context) => {
+  if (event?.mode === 'adjustDay') return adjustOneDay(event, getDB());
   const { submissionId, creditSource = null } = event;
   log.info('Itinerary generation started', { submissionId });
   const db = getDB();
@@ -373,27 +479,7 @@ async function generate(event, db, ctl) {
       log.warn('Submission already finished — skipping', { submissionId, status: row.status });
       return;
     }
-    const submission = {
-      destination: row.destination,
-      days: row.days,
-      budget: row.budget,
-      currency: row.currency,
-      travelerType: row.traveler_type,
-      travelStyle: row.travel_style,
-      interests: row.interests,
-      travelDate: row.travel_date || null,
-      startTime: row.start_time || '09:00',
-      userMustDos: row.user_must_dos || null,
-      travelPace: row.travel_pace,
-      wantsHotelRecs: row.wants_hotel_recs,
-      language: row.language || 'English',
-      userAge: row.user_age || null,
-      userLocation: row.user_location || '',
-      email: row.email,
-      selectedVenues: row.selected_venues || {},
-    };
-    // Step 3 picks with a day each (pinned by the user, or spread across the trip).
-    submission.picksPlan = planPicks(submission.selectedVenues, submission.days);
+    const submission = submissionFromRow(row);
     log.info('Step 3 picks planned', {
       submissionId,
       picks: submission.picksPlan.picks.length,

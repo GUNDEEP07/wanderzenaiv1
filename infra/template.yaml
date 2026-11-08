@@ -237,6 +237,18 @@ Resources:
             RestApiId: !Ref WanderZenApi
             Method: GET
             Path: /entitlement
+        DayAdjustments:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Method: GET
+            Path: /itinerary/{id}/adjustments
+        AdjustDay:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Method: POST
+            Path: /itinerary/{id}/days/{day}/adjust
       Policies:
         - Version: '2012-10-17'
           Statement:

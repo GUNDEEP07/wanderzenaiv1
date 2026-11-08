@@ -71,6 +71,16 @@ AI-powered slow-travel itinerary SaaS. Live at wanderzenai.com. Solo-maintained.
   `decideEntitlement` — keep them in step). Claude route ideas are cached 7 days per trip shape
   (`route_plan_cache`). The planner saves the plan to `/profile/draft` (`plan_drafts`) for the
   dashboard "Continue planning" card. Both tables self-create (007).
+- Adjust a day (option A, Nov 2026): the trip owner rewrites one day with a note on
+  `pages/ItineraryView.jsx` (`components/itinerary/AdjustDay.jsx`). `POST
+  /itinerary/{id}/days/{n}/adjust` (form-handler `adjust-day.js`: owner only, 404 otherwise;
+  `adjustDay` rate limit) claims a slot in `day_adjustments` (`layers/shared/nodejs/day-adjust.js`:
+  3 per trip, failed don't count, one pending at a time via unique index, stale after 15 min) and
+  invokes itinerary-gen with `{ mode: 'adjustDay', adjustmentId }` — Opus is too slow for API
+  Gateway. The generator rewrites that day (same base, avoids other days' places), saves it, then
+  pdf-builder/email-sender run with `update: { dayNumber }`, which never change the trip status.
+  The page polls `GET /itinerary/{id}/adjustments`. Notes stay in the table, never in the
+  shareable itinerary (008).
 - Profile name: GET /profile fills an empty `users.name` from the verified token's `name` claim
   (never overwrites one set in Settings).
 - Photos: Unsplash only through the backend `GET /photos/search` (key stays server-side, cached);
