@@ -126,6 +126,9 @@ Before recommending any new integration, confirm current docs + access.
 - Any endpoint that calls Claude must call `checkRateLimit()` (`rate-limit.js`) before the
   Claude call — keyed by `userSubject(user)`, or `ipSubject(event)` for public endpoints.
 - Tests: `node --test backend/tests/unit/*.test.js` (runs in CI before deploy).
+- E2E: `backend/tests/e2e/run.sh` runs the real handlers against Postgres built from
+  `infra/schema.sql` + migrations (CI job "E2E (Postgres)", blocks deploy). Any table/column the
+  code needs must be in a migration — 009 caught ones added to RDS by hand.
 
 ## Security defaults (this repo is internet-facing + wired to prod)
 - Never hardcode secrets. Stripe keys, SES creds, DB password → SSM Parameter Store /
