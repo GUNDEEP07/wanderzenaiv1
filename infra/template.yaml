@@ -4,7 +4,7 @@ Description: WanderZenAI - AI-powered slow travel itinerary platform
 
 Globals:
   Function:
-    Runtime: nodejs20.x
+    Runtime: nodejs24.x
     Timeout: 60
     MemorySize: 512
     Environment:
@@ -195,7 +195,7 @@ Resources:
     Properties:
       LayerName: !Sub wanderzenai-shared-${Stage}
       ContentUri: ../backend/layers/shared
-      CompatibleRuntimes: [nodejs20.x]
+      CompatibleRuntimes: [nodejs24.x]
       RetentionPolicy: Delete
 
   # ─── Form Handler Lambda ───────────────────────────────────────────────────
@@ -322,7 +322,7 @@ Resources:
               Action: [lambda:InvokeFunction]
               Resource: !GetAtt EmailSenderFunction.Arn
     Metadata:
-      BuildMethod: nodejs20.x
+      BuildMethod: nodejs24.x
 
   # ─── Email Sender Lambda ───────────────────────────────────────────────────
   EmailSenderFunction:
