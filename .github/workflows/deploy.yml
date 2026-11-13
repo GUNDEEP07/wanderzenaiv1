@@ -43,10 +43,54 @@ jobs:
         working-directory: frontend
         run: npx jest --ci
 
+  # The real Lambda handlers against a real Postgres built from infra/schema.sql + migrations
+  # (backend/tests/e2e): guest planning, billing/credits, Stripe webhooks, day adjustments,
+  # blog, generator failure paths. Claude/AWS/Stripe are stubbed; no secrets needed.
+  e2e:
+    name: E2E (Postgres)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install backend deps used by the suites
+        run: |
+          for dir in backend/layers/shared/nodejs backend/functions/form-handler backend/functions/blog-handler backend/functions/profile; do
+            (cd "$dir" && npm ci --no-audit --no-fund)
+          done
+
+      # The runner ships PostgreSQL; the shared layer always connects with SSL (as RDS needs).
+      - name: Start Postgres with SSL
+        run: |
+          sudo systemctl start postgresql.service
+          sudo -u postgres psql -q -c "ALTER USER postgres PASSWORD 'postgres'"
+          if [ "$(sudo -u postgres psql -Atc 'show ssl')" != "on" ]; then
+            D=$(sudo -u postgres psql -Atc 'show data_directory')
+            sudo openssl req -new -x509 -days 2 -nodes -subj /CN=localhost -out "$D/server.crt" -keyout "$D/server.key"
+            sudo chown postgres:postgres "$D/server.crt" "$D/server.key" && sudo chmod 600 "$D/server.key"
+            sudo -u postgres psql -q -c "ALTER SYSTEM SET ssl_cert_file = '$D/server.crt'" -c "ALTER SYSTEM SET ssl_key_file = '$D/server.key'" -c "ALTER SYSTEM SET ssl = on"
+            sudo systemctl restart postgresql.service
+          fi
+          sudo -u postgres psql -Atc 'show ssl'
+
+      - name: Lambda layer path (/opt/nodejs)
+        run: sudo ln -sfn "$GITHUB_WORKSPACE/backend/layers/shared/nodejs" /opt/nodejs
+
+      - name: E2E suites
+        env:
+          E2E_DB_HOST: 127.0.0.1
+          E2E_DB_USER: postgres
+          E2E_DB_PASSWORD: postgres
+        run: backend/tests/e2e/run.sh
+
   deploy-backend:
     name: Deploy Backend
     runs-on: ubuntu-latest
-    needs: test
+    needs: [test, e2e]
     if: github.ref == 'refs/heads/main'
     outputs:
       api-url: ${{ steps.get-outputs.outputs.api-url }}

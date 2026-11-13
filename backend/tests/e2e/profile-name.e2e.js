@@ -1,0 +1,36 @@
+'use strict';
+// Profile name saved from the sign-in when missing (Nov 8), on local Postgres.
+const crypto = require('crypto');
+Object.assign(process.env, { DB_HOST: process.env.E2E_DB_HOST || '127.0.0.1', DB_NAME: process.env.E2E_DB_NAME || 'wz', DB_USER: process.env.E2E_DB_USER || 'postgres', DB_PASSWORD: process.env.E2E_DB_PASSWORD || '', FIREBASE_PROJECT_ID: 'wanderzenai-9c343', STAGE: 'test', FRONTEND_URL: 'https://www.wanderzenai.com', STRIPE_SECRET_KEY: 'sk_test_x' });
+const { getDB } = require('/opt/nodejs/index');
+const auth = require('/opt/nodejs/auth.js');
+const profile = require(require('path').resolve(__dirname, '../../functions/profile/handler.js'));
+const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+auth.__setCertsForTesting({ k: publicKey.export({ type: 'spki', format: 'pem' }) });
+const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
+const token = (sub, email, name) => { const t = Math.floor(Date.now()/1000); const h=b64({alg:'RS256',kid:'k'}), p=b64({iss:'https://securetoken.google.com/wanderzenai-9c343',aud:'wanderzenai-9c343',sub,iat:t-5,exp:t+3600,email,email_verified:true,...(name?{name}:{})}); return `${h}.${p}.${crypto.sign('RSA-SHA256',Buffer.from(`${h}.${p}`),privateKey).toString('base64url')}`; };
+const out = []; const check = (n, c, d = '') => out.push(`${c ? 'PASS' : 'FAIL'}  ${n}${d && !c ? '  — ' + d : ''}`);
+const get = (tok) => profile.handler({ httpMethod: 'GET', path: '/profile', headers: { Authorization: `Bearer ${tok}` } });
+(async () => {
+  const db = getDB(); const n = Date.now();
+  const a = `noname${n}@example.com`, b = `named${n}@example.com`, c = `brandnew${n}@example.com`;
+  await db.query(`insert into users (email, firebase_uid) values ($1,'u1')`, [a]);
+  await db.query(`insert into users (email, firebase_uid, name) values ($1,'u2','Gundeep S. (custom)')`, [b]);
+  console._l = console.log; console.log = () => {};
+  let r = await get(token('u1' + n, a, 'Gundeep Singh'));
+  const nameA = (await db.query('select name from users where email=$1', [a])).rows[0].name;
+  check('existing user without a name gets it from sign-in', r.statusCode === 200 && nameA === 'Gundeep Singh' && JSON.parse(r.body).profile?.name !== undefined || nameA === 'Gundeep Singh', `${r.statusCode} ${nameA}`);
+  await get(token('u2' + n, b, 'Gundeep Singh'));
+  const nameB = (await db.query('select name from users where email=$1', [b])).rows[0].name;
+  check('a name set in Settings is never overwritten', nameB === 'Gundeep S. (custom)', nameB);
+  await get(token('u3' + n, c, 'Ana López'));
+  const nameC = (await db.query('select name from users where email=$1', [c])).rows[0]?.name;
+  check('brand-new user: row created with the sign-in name', nameC === 'Ana López', String(nameC));
+  const d = `none${n}@example.com`; await db.query(`insert into users (email, firebase_uid) values ($1,'u4')`, [d]);
+  r = await get(token('u4' + n, d, null));
+  const nameD = (await db.query('select name from users where email=$1', [d])).rows[0].name;
+  check('no name in the sign-in: nothing invented', r.statusCode === 200 && nameD === null, `${r.statusCode} ${nameD}`);
+  console.log = console._l;
+  console.log(out.join('\n')); console.log(`\n${out.filter(x => x.startsWith('PASS')).length}/${out.length} passed`);
+  await db.end(); process.exit(out.some(x => x.startsWith('FAIL')) ? 1 : 0);
+})().catch(e => { if (console._l) console.log = console._l; console.error('ERR', e); process.exit(1); });
