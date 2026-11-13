@@ -33,7 +33,7 @@ const COMFORT = [
 ];
 
 const s = {
-  hint: { fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)', marginBottom: '0.6rem' },
+  hint: { fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', marginBottom: '0.6rem' },
   chips: { display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: '0.9rem' },
   chip: (sel) => ({
     padding: '7px 14px', borderRadius: 100, cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem',

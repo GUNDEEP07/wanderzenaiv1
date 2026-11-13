@@ -10,7 +10,7 @@ const teal  = '#00d4aa';
 const tealGlow   = 'rgba(0,212,170,0.12)';
 const tealBorder = 'rgba(0,212,170,0.25)';
 const border = 'rgba(255,255,255,0.08)';
-const w40   = 'rgba(255,255,255,0.4)';
+const w40   = 'rgba(255,255,255,0.6)'; // secondary text (raised from 0.4 for contrast, Nov 2026)
 const w60   = 'rgba(255,255,255,0.6)';
 
 const STYLES = [

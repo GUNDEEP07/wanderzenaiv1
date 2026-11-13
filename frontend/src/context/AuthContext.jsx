@@ -20,12 +20,18 @@ const DEMO_USER = {
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [userRoles, setUserRoles] = useState([]);
+  // `loading`: is anyone signed in? Known in ~0.5 s, and the app renders as soon as it is.
+  // `rolesLoading`: roles come from GET /profile, which can take seconds on a cold start —
+  // only RoleGate (admin/agency pages) waits for them. (Nov 2026: pages used to wait for
+  // /profile before showing anything — 2–8 s blank screen for signed-in users.)
   const [loading, setLoading] = useState(true);
+  const [rolesLoading, setRolesLoading] = useState(true);
 
   useEffect(() => {
     if (!FIREBASE_CONFIGURED) {
       // Demo mode: not logged in by default, login buttons will set demo user
       setLoading(false);
+      setRolesLoading(false);
       return;
     }
     let controller = new AbortController();
@@ -33,22 +39,26 @@ export function AuthProvider({ children }) {
       controller.abort();
       controller = new AbortController();
       setCurrentUser(user);
-      if (user) {
-        try {
-          const token = await user.getIdToken();
-          const res = await fetch(`${import.meta.env.VITE_API_URL}/profile`, {
-            headers: { Authorization: `Bearer ${token}` },
-            signal: controller.signal,
-          });
-          if (res.ok) {
-            const d = await res.json();
-            setUserRoles(d.roles || []);
-          }
-        } catch { /* graceful — includes AbortError on sign-out */ }
-      } else {
+      setLoading(false); // render now; roles follow
+      if (!user) {
         setUserRoles([]);
+        setRolesLoading(false);
+        return;
       }
-      setLoading(false);
+      setRolesLoading(true);
+      const { signal } = controller;
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/profile`, {
+          headers: { Authorization: `Bearer ${token}` },
+          signal,
+        });
+        if (res.ok) {
+          const d = await res.json();
+          if (!signal.aborted) setUserRoles(d.roles || []);
+        }
+      } catch { /* graceful — includes AbortError on sign-out */ }
+      if (!signal.aborted) setRolesLoading(false);
     });
     return () => { unsub(); controller.abort(); };
   }, []);
@@ -93,7 +103,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{
-      currentUser, loading,
+      currentUser, loading, rolesLoading,
       signInWithGoogle, signInWithEmail, signUpWithEmail,
       signOut, resetPassword, getIdToken,
       isDemo: !FIREBASE_CONFIGURED,

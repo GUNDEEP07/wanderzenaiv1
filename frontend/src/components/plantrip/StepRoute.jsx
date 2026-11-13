@@ -26,30 +26,30 @@ const s = {
   optionName: { color: '#fff', fontWeight: 800, fontSize: '1.05rem' },
   badge: (tone) => ({ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.04em', padding: '2px 8px', borderRadius: 100, border: `1px solid ${tone === 'teal' ? 'rgba(0,212,170,0.35)' : 'rgba(255,255,255,0.15)'}`, color: tone === 'teal' ? '#00d4aa' : 'rgba(255,255,255,0.55)' }),
   chain: { color: '#fff', fontSize: '0.9rem', margin: '0.55rem 0', lineHeight: 1.6 },
-  meta: { color: 'rgba(255,255,255,0.45)', fontSize: '0.8rem' },
+  meta: { color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem' },
   caution: { color: '#ffb86b', fontSize: '0.8rem', marginTop: '0.4rem' },
   choose: { marginTop: '0.8rem', padding: '0.6rem 1.2rem', borderRadius: 10, border: 'none', background: '#00d4aa', color: '#0a1628', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.9rem' },
   card: { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '1rem 1.1rem' },
   cardTop: { display: 'flex', alignItems: 'flex-start', gap: '0.75rem' },
   num: { width: 28, height: 28, borderRadius: '50%', background: 'rgba(0,212,170,0.12)', color: '#00d4aa', fontWeight: 800, fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   name: { color: '#fff', fontWeight: 700, fontSize: '1.05rem', lineHeight: 1.3 },
-  place: { color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem' },
+  place: { color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem' },
   range: { color: '#00d4aa', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', marginTop: 2 },
   why: { color: 'rgba(255,255,255,0.55)', fontSize: '0.85rem', lineHeight: 1.55, marginTop: '0.5rem' },
-  stay: { color: 'rgba(255,255,255,0.45)', fontSize: '0.8rem', marginTop: '0.35rem' },
+  stay: { color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', marginTop: '0.35rem' },
   chips: { display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: '0.6rem' },
   chip: { fontSize: '0.75rem', padding: '3px 10px', borderRadius: 100, border: '1px solid rgba(0,212,170,0.25)', color: '#00d4aa', background: 'rgba(0,212,170,0.05)' },
   stepper: { display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto', flexShrink: 0 },
   stepBtn: { width: 28, height: 28, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.04)', color: '#fff', cursor: 'pointer', fontSize: '1rem', lineHeight: 1 },
   stepNum: { color: '#fff', fontWeight: 700, minWidth: 48, textAlign: 'center', fontSize: '0.85rem' },
   actions: { display: 'flex', gap: 10, marginTop: '0.75rem' },
-  link: { background: 'none', border: 'none', padding: 0, color: 'rgba(255,255,255,0.45)', fontSize: '0.8rem', cursor: 'pointer', fontFamily: 'inherit' },
-  transfer: { display: 'flex', alignItems: 'center', gap: 8, color: 'rgba(255,255,255,0.45)', fontSize: '0.8rem', padding: '0.6rem 0 0.6rem 1.1rem', borderLeft: '2px dashed rgba(0,212,170,0.25)', marginLeft: '1.6rem' },
+  link: { background: 'none', border: 'none', padding: 0, color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', cursor: 'pointer', fontFamily: 'inherit' },
+  transfer: { display: 'flex', alignItems: 'center', gap: 8, color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', padding: '0.6rem 0 0.6rem 1.1rem', borderLeft: '2px dashed rgba(0,212,170,0.25)', marginLeft: '1.6rem' },
   loading: { textAlign: 'center', padding: '3rem 1rem', color: 'rgba(255,255,255,0.55)' },
   spinner: { width: 28, height: 28, margin: '0 auto 1rem', borderRadius: '50%', border: '2px solid #00d4aa', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' },
   errorBox: { background: 'rgba(255,107,107,0.08)', border: '1px solid rgba(255,107,107,0.3)', borderRadius: 12, padding: '1rem', color: '#ff9b9b', fontSize: '0.9rem', marginBottom: '1rem' },
   secondaryBtn: { padding: '0.6rem 1.1rem', borderRadius: 10, border: '1px solid rgba(0,212,170,0.35)', background: 'transparent', color: '#00d4aa', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', fontWeight: 600 },
-  note: { color: 'rgba(255,255,255,0.35)', fontSize: '0.8rem', fontStyle: 'italic', marginTop: '1.25rem' },
+  note: { color: 'rgba(255,255,255,0.55)', fontSize: '0.8rem', fontStyle: 'italic', marginTop: '1.25rem' },
 };
 
 /** Day ranges for each base, e.g. ["Days 1–4", "Days 5–7", "Day 8"]. */
@@ -96,7 +96,7 @@ function OptionCard({ option, onChoose, focused, onFocusCard }) {
       <div style={s.chain}>
         {option.bases.map((b, i) => (
           <React.Fragment key={`${b.name}-${i}`}>
-            {i > 0 && <span style={{ color: 'rgba(255,255,255,0.3)' }}> → </span>}
+            {i > 0 && <span style={{ color: 'rgba(255,255,255,0.55)' }}> → </span>}
             <strong>{b.name}</strong> <span style={{ color: '#00d4aa' }}>{b.days}d</span>
           </React.Fragment>
         ))}
@@ -164,7 +164,7 @@ export default function StepRoute({ form, route, options = [], optionsKey = null
       <div style={s.loading}>
         <div style={s.spinner} />
         <div>Finding the best routes through {form.destinations?.[0]?.name || 'your destination'}…</div>
-        <div style={{ fontSize: '0.8rem', marginTop: 6, color: 'rgba(255,255,255,0.35)' }}>Matching stops and travel times to who's travelling.</div>
+        <div style={{ fontSize: '0.8rem', marginTop: 6, color: 'rgba(255,255,255,0.55)' }}>Matching stops and travel times to who's travelling.</div>
       </div>
     );
   }

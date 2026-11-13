@@ -76,18 +76,18 @@ export default function AdminDashboard() {
     kpiGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))', gap: 12, marginBottom: 28 },
     kpi: { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '15px 16px' },
     kpiNum: { fontFamily: "'Fraunces', serif", fontSize: 26, fontWeight: 700, color: '#00d4aa', lineHeight: 1, marginBottom: 4 },
-    kpiLabel: { fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)' },
+    kpiLabel: { fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)' },
     secTitle: { fontFamily: "'Fraunces', serif", fontSize: 18, fontWeight: 700, color: '#fff', marginBottom: 16 },
     table: { width: '100%', borderCollapse: 'collapse', fontSize: 12 },
-    th: { textAlign: 'left', padding: '7px 12px', fontSize: 9, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', borderBottom: '1px solid rgba(255,255,255,0.07)' },
+    th: { textAlign: 'left', padding: '7px 12px', fontSize: 9, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', borderBottom: '1px solid rgba(255,255,255,0.07)' },
     td: { padding: '9px 12px', borderBottom: '1px solid rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.75)', verticalAlign: 'middle' },
     statusBadge: (st) => ({ padding: '2px 8px', borderRadius: 20, fontSize: 9, fontWeight: 800, textTransform: 'uppercase', background: st === 'email_sent' ? 'rgba(0,212,170,0.12)' : st === 'pending' ? 'rgba(255,217,61,0.1)' : 'rgba(255,255,255,0.06)', color: st === 'email_sent' ? '#00d4aa' : st === 'pending' ? '#ffd93d' : 'rgba(255,255,255,0.4)' }),
     barRow: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 },
     barLabel: { width: 150, fontSize: 12, color: '#fff', flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
     barBg: { flex: 1, height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' },
     barFill: (pct, color) => ({ width: `${pct}%`, height: '100%', background: color || '#00d4aa', borderRadius: 3 }),
-    barCount: { width: 32, fontSize: 11, color: 'rgba(255,255,255,0.4)', textAlign: 'right', flexShrink: 0 },
-    empty: { color: 'rgba(255,255,255,0.25)', fontSize: 12, fontStyle: 'italic', padding: '16px 0' },
+    barCount: { width: 32, fontSize: 11, color: 'rgba(255,255,255,0.6)', textAlign: 'right', flexShrink: 0 },
+    empty: { color: 'rgba(255,255,255,0.55)', fontSize: 12, fontStyle: 'italic', padding: '16px 0' },
   };
 
   const Loader = () => <div style={s.empty}>Loading…</div>;
@@ -101,9 +101,9 @@ export default function AdminDashboard() {
           <span style={s.badge}>Admin</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>{currentUser?.email}</span>
+          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>{currentUser?.email}</span>
           <button type="button" onClick={() => navigate('/admin/blog')} style={{ background: 'none', border: 'none', color: '#00d4aa', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, fontWeight: 600 }}>Manage Blog</button>
-          <button type="button" onClick={() => { signOut(); navigate('/login'); }} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12 }}>Sign out</button>
+          <button type="button" onClick={() => { signOut(); navigate('/login'); }} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.55)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12 }}>Sign out</button>
         </div>
       </nav>
 
@@ -145,7 +145,7 @@ export default function AdminDashboard() {
               <div style={s.secTitle}>Activity</div>
               {!tabData.activity ? <Loader /> : <>
                 <div style={{ marginBottom: 24 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Top destinations</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Top destinations</div>
                   {tabData.activity[1]?.slice(0, 12).map((d) => (
                     <div key={d.destination} style={s.barRow}>
                       <div style={s.barLabel}>{d.destination}</div>
@@ -154,7 +154,7 @@ export default function AdminDashboard() {
                     </div>
                   ))}
                 </div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>Recent submissions</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>Recent submissions</div>
                 <table style={s.table}>
                   <thead><tr>{['Destination','Email','Plan','Status','Date'].map(h => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
                   <tbody>
@@ -308,7 +308,7 @@ export default function AdminDashboard() {
           {tab === 'roles' && isSuperAdmin && (
             <div>
               <div style={s.secTitle}>Role management</div>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginBottom: 16 }}>Assign or revoke roles. Changes take effect on next login.</div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', marginBottom: 16 }}>Assign or revoke roles. Changes take effect on next login.</div>
               {!tabData.roles ? <Loader /> : (
                 <table style={s.table}>
                   <thead><tr>{['Email','Current roles','Assign role'].map(h => <th key={h} style={s.th}>{h}</th>)}</tr></thead>

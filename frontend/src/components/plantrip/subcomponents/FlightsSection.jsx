@@ -116,7 +116,7 @@ export function FlightsSection({ destination, origin, travelDate, budgetEstimate
       {!alwaysOpen && (
         <div onClick={() => setOpen(!open)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, cursor: 'pointer' }}>
           <div style={{ fontSize: 12, fontWeight: 800, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.1em' }}>✈️ Your flight</div>
-          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>{isOpen ? '▲' : '▼'}</span>
+          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.55)' }}>{isOpen ? '▲' : '▼'}</span>
         </div>
       )}
       {alwaysOpen && (
@@ -129,7 +129,7 @@ export function FlightsSection({ destination, origin, travelDate, budgetEstimate
           {/* From / To */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 10, marginBottom: 16 }}>
             <div>
-              <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: 5 }}>From</div>
+              <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 5 }}>From</div>
               {origin ? (
                 <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '9px 12px' }}>
                   <div style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>{originCity}</div>
@@ -184,7 +184,7 @@ export function FlightsSection({ destination, origin, travelDate, budgetEstimate
                           onMouseLeave={(e) => e.target.style.background = 'none'}
                         >
                           {city.name}
-                          {city.country && <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>{city.country}</div>}
+                          {city.country && <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.6)', marginTop: 2 }}>{city.country}</div>}
                         </button>
                       ))}
                     </div>
@@ -196,10 +196,10 @@ export function FlightsSection({ destination, origin, travelDate, budgetEstimate
             <div style={{ fontSize: 20, color: '#60a5fa', textAlign: 'center', paddingTop: 14 }}>✈️</div>
 
             <div>
-              <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: 5 }}>To</div>
+              <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 5 }}>To</div>
               <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '9px 12px' }}>
                 <div style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>{destName || '—'}</div>
-                {dateLabel && <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>{dateLabel}</div>}
+                {dateLabel && <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.55)', marginTop: 1 }}>{dateLabel}</div>}
               </div>
             </div>
           </div>
@@ -210,7 +210,7 @@ export function FlightsSection({ destination, origin, travelDate, budgetEstimate
               <span style={{ fontFamily: "'Fraunces', serif", fontSize: 30, fontWeight: 700, color: '#60a5fa' }}>
                 {fmt(flightsLow, currency)}
               </span>
-              <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginLeft: 8 }}>– {fmt(flightsHigh, currency)} return</span>
+              <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', marginLeft: 8 }}>– {fmt(flightsHigh, currency)} return</span>
             </div>
           )}
 

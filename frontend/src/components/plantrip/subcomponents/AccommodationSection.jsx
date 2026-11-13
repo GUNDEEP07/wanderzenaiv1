@@ -74,7 +74,7 @@ export function AccommodationSection({ destination, insights, budget, currency, 
       {!alwaysOpen && (
         <div onClick={() => setOpen(o => !o)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, cursor: 'pointer' }}>
           <div style={{ fontSize: 12, fontWeight: 800, color: '#00d4aa', textTransform: 'uppercase', letterSpacing: '0.1em' }}>🏡 Where to stay</div>
-          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>{isOpen ? '▲' : '▼'}</span>
+          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.55)' }}>{isOpen ? '▲' : '▼'}</span>
         </div>
       )}
       {alwaysOpen && (
@@ -111,32 +111,32 @@ export function AccommodationSection({ destination, insights, budget, currency, 
             <div style={{ marginBottom: 14, padding: '12px 14px', background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.15)', borderRadius: 10 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 8 }}>
                 <div>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>Per Night</div>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>Per Night</div>
                   <div style={{ fontSize: 14, fontWeight: 800, color: '#60a5fa' }}>
                     {fmt(toUserCurrency(budgetEstimateUSD.accommodationPerNightLow, currency), currency)} – {fmt(toUserCurrency(budgetEstimateUSD.accommodationPerNightHigh, currency), currency)}
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>For {days} nights</div>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>For {days} nights</div>
                   <div style={{ fontSize: 14, fontWeight: 800, color: '#60a5fa' }}>
                     {fmt(toUserCurrency(budgetEstimateUSD.accommodationPerNightLow * days, currency), currency)} – {fmt(toUserCurrency(budgetEstimateUSD.accommodationPerNightHigh * days, currency), currency)}
                   </div>
                 </div>
               </div>
-              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', lineHeight: 1.5 }}>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>
                 📍 {destName} · Typical price range for {days}-day trip
               </div>
             </div>
           )}
 
           {/* Disclaimer */}
-          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', fontStyle: 'italic', marginBottom: 12, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.55)', fontStyle: 'italic', marginBottom: 12, lineHeight: 1.5 }}>
             AI-suggested stay types with typical price estimates · Links open search on Airbnb / Booking.com
           </div>
 
           {/* Loading */}
           {accommodation.length === 0 && (
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', fontStyle: 'italic', padding: '16px 0', textAlign: 'center' }}>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', fontStyle: 'italic', padding: '16px 0', textAlign: 'center' }}>
               Loading stay suggestions…
             </div>
           )}
@@ -173,7 +173,7 @@ export function AccommodationSection({ destination, insights, budget, currency, 
                     {/* Info */}
                     <div style={{ padding: '8px 9px' }}>
                       <div style={{ fontSize: 11, fontWeight: 700, color: '#fff', marginBottom: 2, lineHeight: 1.2 }}>{a.type}</div>
-                      <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', marginBottom: 2, lineHeight: 1.4 }}>{a.whyItFits}</div>
+                      <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.55)', marginBottom: 2, lineHeight: 1.4 }}>{a.whyItFits}</div>
                       <div style={{ fontSize: 10, fontWeight: 600, color: '#60a5fa', marginBottom: 6 }}>
                         {fmt(low * days, currency)} total
                       </div>
@@ -201,13 +201,13 @@ export function AccommodationSection({ destination, insights, budget, currency, 
               <div style={{ background: cfg.bg, border: `1px solid ${cfg.border}`, borderRadius: 12, padding: '12px 14px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   <span style={{ fontSize: 12, fontWeight: 800, color: cfg.color }}>{cfg.label}</span>
-                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{fmt(health.total, currency)} of {fmt(+budget, currency)}</span>
+                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>{fmt(health.total, currency)} of {fmt(+budget, currency)}</span>
                 </div>
                 {/* Progress bar */}
                 <div style={{ height: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
                   <div style={{ width: `${health.pct}%`, height: '100%', background: `linear-gradient(90deg, ${cfg.barColor}, ${cfg.barColor}cc)`, borderRadius: 3, transition: 'width 0.5s ease' }} />
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'rgba(255,255,255,0.55)' }}>
                   <span>✈️ {fmt(health.flights, currency)} · 🏡 {fmt(health.stay, currency)} · 🎯 {fmt(health.activities, currency)}</span>
                   {health.status !== 'ok' && <span style={{ color: cfg.color }}>over by {fmt(health.total - +budget, currency)}</span>}
                 </div>

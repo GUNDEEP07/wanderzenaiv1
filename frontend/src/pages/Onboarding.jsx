@@ -15,15 +15,15 @@ const s = {
   seg:      (on) => ({ flex: 1, height: 3, borderRadius: 2, background: on ? '#00d4aa' : 'rgba(255,255,255,0.1)', transition: 'background 0.3s' }),
   eyebrow:  { fontSize: 10, fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#00d4aa', marginBottom: 6 },
   title:    { fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 900, color: '#fff', lineHeight: 1.1, marginBottom: 6 },
-  sub:      { fontSize: 13, color: 'rgba(255,255,255,0.4)', fontStyle: 'italic', marginBottom: 28 },
-  label:    { display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginBottom: 7 },
+  sub:      { fontSize: 13, color: 'rgba(255,255,255,0.6)', fontStyle: 'italic', marginBottom: 28 },
+  label:    { display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)', marginBottom: 7 },
   input:    { width: '100%', padding: '12px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#fff', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 14, outline: 'none', marginBottom: 20, boxSizing: 'border-box' },
   select:   { width: '100%', padding: '12px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#fff', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 14, outline: 'none', marginBottom: 20, appearance: 'none', cursor: 'pointer', boxSizing: 'border-box' },
   row2:     { display: 'grid', gridTemplateColumns: '120px 1fr', gap: 12, marginBottom: 20 },
   genderRow:{ display: 'flex', gap: 8, marginBottom: 20 },
   gBtn:     (sel) => ({ flex: 1, padding: '10px', border: `1.5px solid ${sel ? '#00d4aa' : 'rgba(255,255,255,0.1)'}`, background: sel ? 'rgba(0,212,170,0.1)' : 'rgba(255,255,255,0.04)', color: sel ? '#00d4aa' : 'rgba(255,255,255,0.5)', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: sel ? 700 : 400, transition: 'all 0.15s' }),
   btn:      { width: '100%', padding: 13, background: 'linear-gradient(135deg,#00d4aa,#00a87e)', border: 'none', borderRadius: 12, color: '#06090f', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 14, fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 18px rgba(0,212,170,0.25)', marginBottom: 12, boxSizing: 'border-box' },
-  skip:     { width: '100%', background: 'none', border: 'none', color: 'rgba(255,255,255,0.25)', fontFamily: 'inherit', fontSize: 13, cursor: 'pointer', textDecoration: 'underline', textDecorationColor: 'rgba(255,255,255,0.1)', textUnderlineOffset: 3 },
+  skip:     { width: '100%', background: 'none', border: 'none', color: 'rgba(255,255,255,0.55)', fontFamily: 'inherit', fontSize: 13, cursor: 'pointer', textDecoration: 'underline', textDecorationColor: 'rgba(255,255,255,0.1)', textUnderlineOffset: 3 },
 };
 
 export default function Onboarding() {
@@ -71,7 +71,7 @@ export default function Onboarding() {
 
   return (
     <div style={s.page}>
-      <style>{`        input::placeholder { color: rgba(255,255,255,0.2); }
+      <style>{`        input::placeholder { color: rgba(255,255,255,0.55); }
         input:focus, select:focus { border-color: rgba(0,212,170,0.4) !important; }
         select option { background: #111827; color: #fff; }
       `}</style>
@@ -107,7 +107,7 @@ export default function Onboarding() {
 
             <label style={s.label}>
               WhatsApp&nbsp;
-              <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'rgba(255,255,255,0.2)' }}>(optional)</span>
+              <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'rgba(255,255,255,0.55)' }}>(optional)</span>
             </label>
             <input style={s.input} placeholder="+61 4xx xxx xxx" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} />
 

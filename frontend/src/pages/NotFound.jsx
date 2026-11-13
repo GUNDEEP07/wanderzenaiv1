@@ -8,7 +8,7 @@ export default function NotFound() {
       <div>
         <div style={{ fontFamily: "'Fraunces', serif", fontSize: 96, fontWeight: 900, color: 'rgba(255,255,255,0.06)', lineHeight: 1, marginBottom: 4 }}>404</div>
         <div style={{ fontFamily: "'Fraunces', serif", fontSize: 32, fontWeight: 900, marginBottom: 10 }}>Page not found</div>
-        <div style={{ fontSize: 15, color: 'rgba(255,255,255,0.4)', marginBottom: 36, fontStyle: 'italic' }}>This destination doesn't exist on our map</div>
+        <div style={{ fontSize: 15, color: 'rgba(255,255,255,0.6)', marginBottom: 36, fontStyle: 'italic' }}>This destination doesn't exist on our map</div>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
           <button onClick={() => navigate('/')} style={{ padding: '12px 24px', background: 'linear-gradient(135deg,#00d4aa,#00a87e)', border: 'none', borderRadius: 12, color: '#06090f', fontFamily: 'inherit', fontSize: 14, fontWeight: 800, cursor: 'pointer' }}>
             Go home

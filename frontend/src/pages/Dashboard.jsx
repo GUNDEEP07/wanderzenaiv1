@@ -168,13 +168,13 @@ export default function Dashboard() {
     navRight: { display: 'flex', alignItems: 'center', gap: 14 },
     avatar: { width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#00d4aa,#00916a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: '#06090f', overflow: 'hidden', flexShrink: 0 },
     navName: { fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.75)' },
-    signOut: { background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12 },
+    signOut: { background: 'none', border: 'none', color: 'rgba(255,255,255,0.55)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12 },
     eyebrow: { fontSize: 11, fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#00d4aa', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 },
     heroTitle: { fontFamily: "'Fraunces', serif", fontWeight: 900, lineHeight: 1.05, letterSpacing: '-0.025em', marginBottom: 6 },
-    heroSub: { fontSize: 15, color: 'rgba(255,255,255,0.4)', marginBottom: 36, fontStyle: 'italic' },
+    heroSub: { fontSize: 15, color: 'rgba(255,255,255,0.6)', marginBottom: 36, fontStyle: 'italic' },
     stat: { flex: 1 },
     statNum: { fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 900, lineHeight: 1, marginBottom: 4 },
-    statLabel: { fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)' },
+    statLabel: { fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)' },
     secHeader: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 18 },
     secTitle: { fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 700 },
     secLink: { fontSize: 12, color: '#00d4aa', textDecoration: 'none', fontWeight: 600, cursor: 'pointer', background: 'none', border: 'none', fontFamily: 'inherit' },
@@ -206,7 +206,7 @@ export default function Dashboard() {
         <div style={s.navRight}>
           <div style={s.avatar}><Avatar user={currentUser} /></div>
           <span style={s.navName}>{firstName}</span>
-          <button style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12 }} onClick={() => navigate('/settings')}>Settings</button>
+          <button style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12 }} onClick={() => navigate('/settings')}>Settings</button>
           <button style={{ background: 'none', border: 'none', color: '#00d4aa', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, fontWeight: 600 }} onClick={() => navigate('/feedback')}>💬 Feedback</button>
           <button style={{ background: 'none', border: 'none', color: 'rgba(0,212,170,0.6)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12 }} onClick={() => navigate('/contact')}>Contact us</button>
           <button style={s.signOut} onClick={handleSignOut}>Sign out</button>
@@ -287,7 +287,7 @@ export default function Dashboard() {
                   {lastPlanHeadline(lastTrip?.createdAt, lastTrip?.destination) || 'Your slow travel journey starts here.'}
                   <br />Time to wander again?
                 </div>
-                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', fontStyle: 'italic' }}>
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}>
                   {totalTrips > 1
                     ? `You've averaged a new trip every ${Math.round(30 * totalTrips / Math.max(1, Math.floor((Date.now() - new Date(pastTrips[pastTrips.length - 1]?.createdAt)) / 86400000) / 30))} days`
                     : 'Discover hidden destinations matched to your travel style'}
@@ -328,7 +328,7 @@ export default function Dashboard() {
                   </DestPhoto>
                   <div style={{ padding: '16px 18px' }}>
                     <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>{rec.destination}</div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', lineHeight: 1.45, marginBottom: 12 }}>{rec.reason}</div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', lineHeight: 1.45, marginBottom: 12 }}>{rec.reason}</div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#00d4aa', background: 'rgba(0,212,170,0.08)', border: '1px solid rgba(0,212,170,0.15)', borderRadius: 4, padding: '3px 7px' }}>
                         AI pick
@@ -371,8 +371,8 @@ export default function Dashboard() {
                     </span>
                   </div>
                   <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 4 }}>{item.destination}</div>
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', lineHeight: 1.45, marginBottom: 10 }}>{item.why}</div>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)' }}>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', lineHeight: 1.45, marginBottom: 10 }}>{item.why}</div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.55)' }}>
                     ~{item.count} travelers this month
                   </div>
                 </div>
@@ -392,7 +392,7 @@ export default function Dashboard() {
 
               {/* Top activities */}
               <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '20px 22px' }}>
-                <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: 14 }}>Top activities</div>
+                <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 14 }}>Top activities</div>
                 {prefActivities.length > 0 ? prefActivities.map((act, i) => {
                   const emojis = { Nature:'🌳', Cultural:'🏛️', Foodie:'🍜', Adventure:'🧗', Relaxation:'🌿', Wellness:'🧘', Luxury:'💎' };
                   const width = [90, 70, 50][i] || 40;
@@ -406,25 +406,25 @@ export default function Dashboard() {
                     </div>
                   );
                 }) : (
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', fontStyle: 'italic' }}>Plan more trips to build your DNA</div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', fontStyle: 'italic' }}>Plan more trips to build your DNA</div>
                 )}
               </div>
 
               {/* Trip stats */}
               <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '20px 22px' }}>
-                <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: 14 }}>Trip patterns</div>
+                <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 14 }}>Trip patterns</div>
                 <div style={{ marginBottom: 18 }}>
                   <div style={{ fontFamily: "'Fraunces', serif", fontSize: 36, fontWeight: 900, color: '#00d4aa', lineHeight: 1, marginBottom: 4 }}>
-                    {avgTripDays}<span style={{ fontSize: 16, color: 'rgba(255,255,255,0.4)' }}> days</span>
+                    {avgTripDays}<span style={{ fontSize: 16, color: 'rgba(255,255,255,0.6)' }}> days</span>
                   </div>
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Average trip length</div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>Average trip length</div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ fontSize: 14 }}>🌍</span>
                     <div>
                       <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.8)' }}>{countryCount} countr{countryCount !== 1 ? 'ies' : 'y'} explored</div>
-                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>across {totalTrips} journeys</div>
+                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.55)' }}>across {totalTrips} journeys</div>
                     </div>
                   </div>
                   {profile?.home_city && (
@@ -432,7 +432,7 @@ export default function Dashboard() {
                       <span style={{ fontSize: 14 }}>📍</span>
                       <div>
                         <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.8)' }}>Based in {profile.home_city}</div>
-                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>Your home base</div>
+                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.55)' }}>Your home base</div>
                       </div>
                     </div>
                   )}
@@ -441,7 +441,7 @@ export default function Dashboard() {
 
               {/* Countries visited */}
               <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '20px 22px' }}>
-                <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: 14 }}>Countries visited</div>
+                <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 14 }}>Countries visited</div>
                 {countryCount > 0 ? (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {[...countries].slice(0, 8).map(c => {
@@ -464,13 +464,13 @@ export default function Dashboard() {
                       </span>
                     )}
                     {filterCountry && (
-                      <button type="button" onClick={() => setFilterCountry(null)} style={{ padding: '5px 10px', borderRadius: 20, background: 'none', border: '1px solid rgba(255,255,255,0.1)', fontSize: 10, color: 'rgba(255,255,255,0.35)', cursor: 'pointer', fontFamily: 'inherit' }}>
+                      <button type="button" onClick={() => setFilterCountry(null)} style={{ padding: '5px 10px', borderRadius: 20, background: 'none', border: '1px solid rgba(255,255,255,0.1)', fontSize: 10, color: 'rgba(255,255,255,0.55)', cursor: 'pointer', fontFamily: 'inherit' }}>
                         Clear ✕
                       </button>
                     )}
                   </div>
                 ) : (
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', fontStyle: 'italic' }}>Your passport awaits its first stamp</div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', fontStyle: 'italic' }}>Your passport awaits its first stamp</div>
                 )}
               </div>
 
@@ -482,14 +482,14 @@ export default function Dashboard() {
         <div>
           <div style={s.secHeader}>
             <div style={s.secTitle}>Your journeys</div>
-            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>{pastTrips.length} total</span>
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>{pastTrips.length} total</span>
           </div>
 
           {/* Search + filter bar — only show when there are trips */}
           {!loading && pastTrips.length > 0 && (
             <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
               <div className="dash-search-input" style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '8px 12px' }}>
-                <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', flexShrink: 0 }}>🔍</span>
+                <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', flexShrink: 0 }}>🔍</span>
                 <input
                   type="text"
                   value={search}
@@ -498,7 +498,7 @@ export default function Dashboard() {
                   style={{ flex: 1, background: 'none', border: 'none', outline: 'none', color: '#fff', fontFamily: 'inherit', fontSize: 13 }}
                 />
                 {search && (
-                  <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontSize: 14, padding: 0 }}>✕</button>
+                  <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.55)', cursor: 'pointer', fontSize: 14, padding: 0 }}>✕</button>
                 )}
               </div>
               <div style={{ display: 'flex', gap: 6 }}>
@@ -535,7 +535,7 @@ export default function Dashboard() {
               ))}
             </div>
           ) : pastTrips.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255,255,255,0.3)' }}>
+            <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255,255,255,0.55)' }}>
               <div style={{ fontSize: 40, marginBottom: 12 }}>🌍</div>
               <div style={{ fontSize: 16, fontFamily: "'Fraunces', serif", fontWeight: 700, marginBottom: 8 }}>No journeys yet</div>
               <div style={{ fontSize: 13, marginBottom: 20 }}>Your slow travel story starts here</div>
@@ -551,7 +551,7 @@ export default function Dashboard() {
               return matchSearch && matchStatus && matchCountry;
             });
             if (filtered.length === 0) return (
-              <div style={{ textAlign: 'center', padding: '40px 0', color: 'rgba(255,255,255,0.3)' }}>
+              <div style={{ textAlign: 'center', padding: '40px 0', color: 'rgba(255,255,255,0.55)' }}>
                 <div style={{ fontSize: 24, marginBottom: 8 }}>🔍</div>
                 <div style={{ fontSize: 14 }}>No trips match your search</div>
                 <button onClick={() => { setSearch(''); setFilterStatus('all'); setFilterCountry(null); }} style={{ marginTop: 12, background: 'none', border: 'none', color: '#00d4aa', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, textDecoration: 'underline' }}>

@@ -9,14 +9,14 @@ const s = {
   box: { width: '100%', maxWidth: 400, padding: '0 24px' },
   logo: { width: 40, height: 40, background: 'linear-gradient(135deg,#00d4aa,#00916a)', borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 800, color: '#06090f', margin: '0 auto 16px' },
   headline: { fontFamily: "'Fraunces', serif", fontSize: 32, fontWeight: 900, color: '#fff', textAlign: 'center', lineHeight: 1.1, marginBottom: 6 },
-  sub: { fontSize: 13, color: 'rgba(255,255,255,0.4)', textAlign: 'center', fontStyle: 'italic', marginBottom: 32 },
+  sub: { fontSize: 13, color: 'rgba(255,255,255,0.6)', textAlign: 'center', fontStyle: 'italic', marginBottom: 32 },
   googleBtn: { width: '100%', padding: '12px', background: '#fff', border: 'none', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#111', fontFamily: 'inherit', marginBottom: 20, boxSizing: 'border-box' },
   divider: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 },
   divLine: { flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' },
-  divText: { fontSize: 11, color: 'rgba(255,255,255,0.3)' },
+  divText: { fontSize: 11, color: 'rgba(255,255,255,0.55)' },
   input: { width: '100%', padding: '12px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#fff', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 14, outline: 'none', marginBottom: 10, boxSizing: 'border-box' },
   btn: { width: '100%', padding: 13, background: 'linear-gradient(135deg,#00d4aa,#00a87e)', border: 'none', borderRadius: 12, color: '#06090f', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 14, fontWeight: 800, cursor: 'pointer', marginBottom: 16, boxShadow: '0 4px 18px rgba(0,212,170,0.25)', boxSizing: 'border-box' },
-  footer: { textAlign: 'center', fontSize: 13, color: 'rgba(255,255,255,0.35)', marginBottom: 14 },
+  footer: { textAlign: 'center', fontSize: 13, color: 'rgba(255,255,255,0.55)', marginBottom: 14 },
   link: { color: '#00d4aa', textDecoration: 'none', fontWeight: 600 },
   error: { background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.3)', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#ff6b6b', marginBottom: 12 },
   success: { background: 'rgba(0,212,170,0.08)', border: '1px solid rgba(0,212,170,0.25)', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#00d4aa', marginBottom: 12 },
@@ -82,12 +82,12 @@ export default function Login() {
   return (
     <div style={s.page}>
       <style>{`
-        input::placeholder { color: rgba(255,255,255,0.2); }
+        input::placeholder { color: rgba(255,255,255,0.55); }
         input:focus { border-color: rgba(0,212,170,0.4) !important; }
       `}</style>
       <div style={s.box}>
         <div style={s.logo}>W</div>
-        <div style={s.headline}>Plan your next<br /><em style={{ fontWeight: 300, color: 'rgba(255,255,255,0.45)' }}>slow journey</em></div>
+        <div style={s.headline}>Plan your next<br /><em style={{ fontWeight: 300, color: 'rgba(255,255,255,0.6)' }}>slow journey</em></div>
         <div style={s.sub}>Sign in to access your trips and recommendations</div>
 
         {isDemo && <div style={s.demo}>✦ Demo mode — sign in with any credentials</div>}
@@ -110,14 +110,14 @@ export default function Login() {
         <div style={s.footer}>
           <Link to={nextQ ? `/signup?${nextQ}` : '/signup'} style={s.link}>No account? Sign up</Link>
           {' · '}
-          <span style={{ cursor: 'pointer', color: 'rgba(255,255,255,0.4)', textDecoration: 'underline', textUnderlineOffset: 2 }} onClick={() => { setShowReset(!showReset); setResetSent(false); }}>
+          <span style={{ cursor: 'pointer', color: 'rgba(255,255,255,0.6)', textDecoration: 'underline', textUnderlineOffset: 2 }} onClick={() => { setShowReset(!showReset); setResetSent(false); }}>
             Forgot password?
           </span>
         </div>
-        <div style={{ textAlign: 'center', marginTop: 24, fontSize: 11, color: 'rgba(255,255,255,0.2)' }}>
-          <Link to="/privacy" style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'none' }}>Privacy Policy</Link>
+        <div style={{ textAlign: 'center', marginTop: 24, fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>
+          <Link to="/privacy" style={{ color: 'rgba(255,255,255,0.55)', textDecoration: 'none' }}>Privacy Policy</Link>
           {' · '}
-          <Link to="/terms" style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'none' }}>Terms</Link>
+          <Link to="/terms" style={{ color: 'rgba(255,255,255,0.55)', textDecoration: 'none' }}>Terms</Link>
         </div>
 
         {/* Inline password reset */}

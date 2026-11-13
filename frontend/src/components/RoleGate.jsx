@@ -11,7 +11,9 @@ const ROLE_LANDING = {
 };
 
 export function RoleGate({ requiredRoles, children, fallback = null }) {
-  const { currentUser, userRoles, loading, primaryRole } = useAuth();
+  const { currentUser, userRoles, loading: authLoading, rolesLoading, primaryRole } = useAuth();
+  // Role checks wait for the roles themselves (they load after the page appears).
+  const loading = authLoading || (!!currentUser && rolesLoading);
   const navigate = useNavigate();
 
   useEffect(() => {

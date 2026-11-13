@@ -117,7 +117,7 @@ export default function BlogDetailPage() {
     loader: {
       textAlign: 'center',
       padding: '48px 24px',
-      color: 'rgba(255,255,255,0.4)',
+      color: 'rgba(255,255,255,0.6)',
       fontSize: 14,
     },
     error: {
@@ -186,7 +186,7 @@ export default function BlogDetailPage() {
     },
     caption: {
       fontSize: 13,
-      color: 'rgba(255,255,255,0.45)',
+      color: 'rgba(255,255,255,0.6)',
       marginTop: -16,
       marginBottom: 24,
       textAlign: 'center',
@@ -247,7 +247,7 @@ export default function BlogDetailPage() {
                 <span>·</span>
                 <span>{new Date(post.published_at || post.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
                 <span>·</span>
-                <span style={{ color: 'rgba(255,255,255,0.35)' }}>by {post.author_name || 'A WanderZen traveller'}</span>
+                <span style={{ color: 'rgba(255,255,255,0.55)' }}>by {post.author_name || 'A WanderZen traveller'}</span>
               </div>
               <h1 style={s.title}>{post.title}</h1>
               {post.description && <p style={s.description}>{post.description}</p>}
@@ -284,7 +284,7 @@ export default function BlogDetailPage() {
             {/* Comments section */}
             {!COMMENTS_OPEN && (
               <div style={{ ...s.commentsSection, paddingTop: 32 }}>
-                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', textAlign: 'center' }}>
                   Comments are closed for now.
                 </div>
               </div>

@@ -28,6 +28,7 @@ export function CategoryFilter({ onCategoryChange, selectedCategory = 'all' }) {
         Category:
       </label>
       <select
+        aria-label="Category"
         value={selectedCategory}
         onChange={(e) => onCategoryChange(e.target.value)}
         style={{

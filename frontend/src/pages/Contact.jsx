@@ -6,7 +6,7 @@ const navy3 = '#141d33';
 const teal = '#00d4aa';
 const border = 'rgba(255,255,255,0.08)';
 const w60 = 'rgba(255,255,255,0.6)';
-const w40 = 'rgba(255,255,255,0.4)';
+const w40 = 'rgba(255,255,255,0.6)'; // secondary text (raised from 0.4 for contrast, Nov 2026)
 
 export default function Contact() {
   const [inquiryType, setInquiryType] = useState('general');
@@ -65,7 +65,7 @@ export default function Contact() {
   };
 
   return (
-    <div style={{ background: navy, minHeight: '100vh', padding: '3rem 2rem', color: '#fff' }}>
+    <div style={{ background: navy, minHeight: '100vh', padding: '3rem clamp(16px, 4vw, 2rem)', color: '#fff' }}>
       <div style={{ maxWidth: 800, margin: '0 auto' }}>
         {/* Header */}
         <div style={{ marginBottom: '3rem', textAlign: 'center' }}>
@@ -78,7 +78,7 @@ export default function Contact() {
         </div>
 
         {/* Inquiry Type Selector */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: '2rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12, marginBottom: '2rem' }}>
           <button
             type="button"
             onClick={() => setInquiryType('general')}
@@ -120,7 +120,7 @@ export default function Contact() {
         </div>
 
         {/* Form Card */}
-        <div style={{ background: navy3, border: `1px solid ${border}`, borderRadius: 16, padding: '2rem' }}>
+        <div style={{ background: navy3, border: `1px solid ${border}`, borderRadius: 16, padding: 'clamp(1.25rem, 4vw, 2rem)' }}>
 
           {submitted && (
             <div style={{ padding: '1rem', background: 'rgba(0,212,170,0.1)', border: `1px solid ${teal}`, borderRadius: 10, marginBottom: '1.5rem', color: teal, fontSize: '0.95rem' }}>
@@ -244,7 +244,7 @@ export default function Contact() {
                 <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.75rem', color: '#fff' }}>
                   Partnership type
                 </label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
                   {['API Integration', 'White Label', 'Affiliate', 'Content', 'Other'].map(type => (
                     <label key={type} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '0.75rem', borderRadius: 8, border: `1px solid ${formData.partnershipType === type ? teal : border}`, background: formData.partnershipType === type ? 'rgba(0,212,170,0.08)' : 'transparent' }}>
                       <input
@@ -344,7 +344,7 @@ export default function Contact() {
         </div>
 
         {/* Quick Contact Info */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '2rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginTop: '2rem' }}>
           <div style={{ background: 'rgba(0,212,170,0.08)', border: `1px solid ${teal}`, borderRadius: 12, padding: '1.5rem' }}>
             <div style={{ fontWeight: 700, marginBottom: '0.5rem', color: teal }}>📧 Email</div>
             <div style={{ fontSize: '0.9rem', color: w60 }}>contact@wanderzenai.com</div>
