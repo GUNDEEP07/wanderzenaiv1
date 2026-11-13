@@ -1,7 +1,29 @@
 'use strict';
 
-const chromium = require('@sparticuz/chromium');
-const puppeteer = require('puppeteer-core');
+// Both are ES modules since @sparticuz/chromium 133 / puppeteer-core 24; Node 24 loads them
+// with require() and hands back the module namespace, so take the default export.
+const chromiumModule = require('@sparticuz/chromium');
+const puppeteerModule = require('puppeteer-core');
+const chromium = chromiumModule.default || chromiumModule;
+const puppeteer = puppeteerModule.default || puppeteerModule;
+// PDFs need no GPU; skip unpacking SwiftShader (smaller /tmp, faster cold start).
+chromium.setGraphicsMode = false;
+
+/** A4-ish viewport; page.pdf() sets the paper size itself. */
+const PDF_VIEWPORT = { width: 1240, height: 1754, deviceScaleFactor: 1, isMobile: false, hasTouch: false, isLandscape: false };
+
+/**
+ * Start Chromium the way @sparticuz/chromium documents for v153 on Lambda
+ * (headless "shell"). Exported for the Node 24 render test.
+ */
+async function launchBrowser() {
+  return puppeteer.launch({
+    args: await puppeteer.defaultArgs({ args: chromium.args, headless: 'shell' }),
+    defaultViewport: PDF_VIEWPORT,
+    executablePath: await chromium.executablePath(),
+    headless: 'shell',
+  });
+}
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const { LambdaClient, InvokeCommand } = require('@aws-sdk/client-lambda');
 const { getDB, getCurrencySymbol, log } = require('/opt/nodejs/index');
@@ -450,12 +472,7 @@ exports.handler = async (event) => {
       log.warn('Hero image fetch failed', { destination: submission.destination });
     }
 
-    browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
-    });
+    browser = await launchBrowser();
 
     const page = await browser.newPage();
     const html = buildHTML(itinerary, submission, currencySymbol, heroImageUrl);
@@ -523,4 +540,4 @@ exports.handler = async (event) => {
 };
 
 // Exported for unit tests.
-exports._internal = { buildHTML };
+exports._internal = { buildHTML, launchBrowser };

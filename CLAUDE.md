@@ -4,7 +4,7 @@ AI-powered slow-travel itinerary SaaS. Live at wanderzenai.com. Solo-maintained.
 
 ## Architecture
 - **Frontend:** React + Vite, deployed to S3 + CloudFront (distribution `E329HHUPH0JQTP`).
-- **Backend:** AWS Lambda (Node 20) via AWS SAM. API Gateway prod stage:
+- **Backend:** AWS Lambda (Node 24, `nodejs24.x` since Nov 2026) via AWS SAM. API Gateway prod stage:
   `y44o2x9cu1.execute-api.ap-southeast-2.amazonaws.com/prod`.
 - **DB:** RDS PostgreSQL.
 - **AI:** Claude (full itinerary generation + the lightweight `/preview` endpoint).

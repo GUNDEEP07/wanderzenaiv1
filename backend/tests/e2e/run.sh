@@ -5,7 +5,7 @@
 #
 # Needs: Postgres with SSL on (the shared layer always connects with SSL, as RDS needs),
 #        /opt/nodejs -> backend/layers/shared/nodejs (as in Lambda), and `npm ci` run in
-#        the layer, blog-handler and profile folders.
+#        the layer, form-handler, blog-handler, profile and pdf-builder folders.
 # Env:   E2E_DB_HOST (127.0.0.1) E2E_DB_USER (postgres) E2E_DB_PASSWORD ('') E2E_DB_NAME (wz_e2e)
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/../../.." && pwd)
@@ -26,7 +26,7 @@ for f in $(ls "$ROOT"/infra/migrations/*.sql | grep -v '\.down\.sql$' | sort); d
   "${PSQL[@]}" -d "$E2E_DB_NAME" -f "$f" >/dev/null
 done
 
-export NODE_PATH="/opt/nodejs/node_modules:$ROOT/backend/functions/blog-handler/node_modules:$ROOT/backend/functions/profile/node_modules${NODE_PATH:+:$NODE_PATH}"
+export NODE_PATH="/opt/nodejs/node_modules:$ROOT/backend/functions/blog-handler/node_modules:$ROOT/backend/functions/profile/node_modules:$ROOT/backend/functions/pdf-builder/node_modules${NODE_PATH:+:$NODE_PATH}"
 export PDF_BUCKET=e2e-test-bucket
 
 failed=()

@@ -20,7 +20,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
           cache-dependency-path: frontend/package.json
 
@@ -55,11 +55,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Install backend deps used by the suites
         run: |
-          for dir in backend/layers/shared/nodejs backend/functions/form-handler backend/functions/blog-handler backend/functions/profile; do
+          for dir in backend/layers/shared/nodejs backend/functions/form-handler backend/functions/blog-handler backend/functions/profile backend/functions/pdf-builder; do
             (cd "$dir" && npm ci --no-audit --no-fund)
           done
 
@@ -113,7 +113,7 @@ jobs:
       - name: Setup Node.js for Lambda deps
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Install shared layer dependencies
         working-directory: backend/layers/shared/nodejs
@@ -221,7 +221,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
           cache-dependency-path: frontend/package.json
 
@@ -294,7 +294,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
           cache-dependency-path: frontend/package.json
 
