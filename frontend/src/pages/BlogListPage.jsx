@@ -151,13 +151,13 @@ export default function BlogListPage() {
     empty: {
       textAlign: 'center',
       padding: '48px 24px',
-      color: 'rgba(255,255,255,0.3)',
+      color: 'rgba(255,255,255,0.55)',
       fontSize: 14,
     },
     loader: {
       textAlign: 'center',
       padding: '32px 24px',
-      color: 'rgba(255,255,255,0.4)',
+      color: 'rgba(255,255,255,0.6)',
       fontSize: 14,
     },
     error: {

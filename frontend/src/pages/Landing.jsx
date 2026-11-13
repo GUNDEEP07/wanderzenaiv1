@@ -119,7 +119,7 @@ export default function Landing() {
           {/* Subtle background image with dark overlay */}
           <div style={{
             position: 'absolute', inset: 0, zIndex: 0,
-            backgroundImage: 'url(https://images.unsplash.com/photo-1506929562872-bb421503ef21?w=1600&h=900&fit=crop&auto=format)',
+            backgroundImage: 'url(https://images.unsplash.com/photo-1506929562872-bb421503ef21?w=1000&h=560&fit=crop&auto=format&q=45)', // at 8% opacity a small image looks the same
             backgroundSize: 'cover', backgroundPosition: 'center',
             opacity: 0.08,
           }} />
@@ -153,7 +153,7 @@ export default function Landing() {
           </button>
         </div>
 
-        <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', fontStyle: 'italic', marginBottom: '1.5rem' }}>
+        <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.55)', fontStyle: 'italic', marginBottom: '1.5rem' }}>
           Trusted by {stats.totalTrips}+ slow travelers · Free to start
         </div>
 
@@ -209,7 +209,7 @@ export default function Landing() {
               );
             })}
             {stats.totalTrips > stats.destinations.length && (
-              <div style={{ padding: '8px 18px', borderRadius: 100, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.4)', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+              <div style={{ padding: '8px 18px', borderRadius: 100, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.6)', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                 +{stats.totalTrips - stats.destinations.length} more destinations
               </div>
             )}
@@ -257,7 +257,7 @@ export default function Landing() {
               </div>
             ))}
           </div>
-          <div style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.25)', fontStyle: 'italic' }}>
+          <div style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.55)', fontStyle: 'italic' }}>
             Photos via Unsplash
           </div>
         </div>
@@ -403,7 +403,7 @@ export default function Landing() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 2 }}>{t.name}</div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>{t.location}</div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>{t.location}</div>
                   </div>
                   <div style={{ padding: '5px 12px', background: 'rgba(0,212,170,0.08)', border: '1px solid rgba(0,212,170,0.15)', borderRadius: 20, fontSize: 12, fontWeight: 600, color: '#00d4aa' }}>
                     {t.dest}
@@ -487,7 +487,7 @@ export default function Landing() {
           <button className="btn-primary" style={{ fontSize: '1.1rem', padding: '1.1rem 3rem' }} onClick={planRoute}>
             Plan my trip — free →
           </button>
-          <div style={{ marginTop: '1.5rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.3)' }}>
+          <div style={{ marginTop: '1.5rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.55)' }}>
             No credit card · Delivered in 3 minutes · PDF yours forever
           </div>
         </div>

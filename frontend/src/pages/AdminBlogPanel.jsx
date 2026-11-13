@@ -54,12 +54,12 @@ const s = {
   content: { padding: '28px 32px', maxWidth: 960, margin: '0 auto' },
   head: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20, flexWrap: 'wrap' },
   secTitle: { fontFamily: "'Fraunces', serif", fontSize: 24, fontWeight: 700, color: '#fff' },
-  sub: { fontSize: 13, color: 'rgba(255,255,255,0.45)', marginTop: 4 },
+  sub: { fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 4 },
   success: { padding: '12px 16px', borderRadius: 8, background: 'rgba(0,212,170,0.12)', border: '1px solid rgba(0,212,170,0.25)', color: '#00d4aa', fontSize: 14, marginBottom: 16 },
   error: { padding: '12px 16px', borderRadius: 8, background: 'rgba(255,107,107,0.12)', border: '1px solid rgba(255,107,107,0.25)', color: '#ff6b6b', fontSize: 14, marginBottom: 16 },
   card: { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: 16, marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' },
   title: { fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 4 },
-  meta: { fontSize: 12, color: 'rgba(255,255,255,0.45)' },
+  meta: { fontSize: 12, color: 'rgba(255,255,255,0.6)' },
   actions: { display: 'flex', gap: 8, flexWrap: 'wrap' },
   btn: (tone = 'plain') => ({
     padding: '8px 14px', borderRadius: 8, fontFamily: 'inherit', fontSize: 12, fontWeight: 700, cursor: 'pointer',
@@ -72,12 +72,12 @@ const s = {
   label: { display: 'block', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', margin: '12px 0 6px' },
   input: { width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.03)', color: '#fff', fontFamily: 'inherit', fontSize: 14, boxSizing: 'border-box' },
   fieldErr: { fontSize: 12, color: '#ff6b6b', marginTop: 4 },
-  hint: { fontSize: 12, color: 'rgba(255,255,255,0.35)', marginTop: 4 },
+  hint: { fontSize: 12, color: 'rgba(255,255,255,0.55)', marginTop: 4 },
   photoGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12 },
   photoCard: { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: 8 },
   photoImg: { width: '100%', height: 110, objectFit: 'cover', borderRadius: 6, display: 'block', background: 'rgba(0,0,0,0.3)' },
   coverTag: { position: 'absolute', top: 6, left: 6, padding: '2px 8px', borderRadius: 10, background: '#00d4aa', color: '#06090f', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' },
-  empty: { color: 'rgba(255,255,255,0.35)', fontSize: 14, padding: 32, textAlign: 'center' },
+  empty: { color: 'rgba(255,255,255,0.55)', fontSize: 14, padding: 32, textAlign: 'center' },
 };
 
 /**
@@ -295,8 +295,8 @@ export default function AdminBlogPanel() {
           <span style={s.badge}>Admin</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>{currentUser?.email}</span>
-          <button type="button" onClick={() => navigate('/admin')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12 }}>
+          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>{currentUser?.email}</span>
+          <button type="button" onClick={() => navigate('/admin')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12 }}>
             Back to dashboard
           </button>
         </div>

@@ -11,7 +11,7 @@ const PACE_OPTIONS = ['relaxed', 'balanced', 'packed'];
 
 const panel = { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: '1.25rem' };
 const sectionLabel = { fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#00d4aa', marginBottom: '1rem' };
-const fieldLabel = { fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: 6 };
+const fieldLabel = { fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', marginBottom: 6 };
 const chipBase = (active) => ({ fontSize: '0.72rem', padding: '4px 10px', borderRadius: 20, border: active ? '1px solid #00d4aa' : '1px solid rgba(255,255,255,0.2)', background: active ? 'rgba(0,212,170,0.15)' : 'transparent', color: active ? '#00d4aa' : 'rgba(255,255,255,0.5)', cursor: 'pointer', transition: 'all 0.15s', fontFamily: 'inherit' });
 const segBtn = (active) => ({ flex: 1, fontSize: '0.72rem', padding: '6px 4px', borderRadius: 8, border: active ? '1px solid #00d4aa' : '1px solid rgba(255,255,255,0.2)', background: active ? 'rgba(0,212,170,0.15)' : 'transparent', color: active ? '#00d4aa' : 'rgba(255,255,255,0.5)', cursor: 'pointer', textTransform: 'capitalize', fontFamily: 'inherit' });
 
@@ -94,11 +94,11 @@ export default function StepReview({
             {form.destinations?.[0]?.name || 'Unknown'}{form.destinations?.length > 1 ? ` +${form.destinations.length - 1}` : ''}
           </div>
           {form.travelDate ? (
-            <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)', marginTop: 4 }}>
+            <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', marginTop: 4 }}>
               From {new Date(form.travelDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} · {form.days} days
             </div>
           ) : (
-            <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)', marginTop: 4 }}>{form.days} days</div>
+            <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', marginTop: 4 }}>{form.days} days</div>
           )}
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -172,7 +172,7 @@ export default function StepReview({
           <div>
             <div style={fieldLabel}>Anything you want included?</div>
             <textarea value={form.userMustDos || ''} onChange={e => set('userMustDos', e.target.value)} onBlur={() => loadPreview(form)} placeholder="e.g. Already booked dinner at Noma on Day 3" maxLength={300} rows={4} style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, color: '#fff', fontSize: '0.8rem', padding: '10px 12px', resize: 'none', outline: 'none', fontFamily: 'inherit', lineHeight: 1.5 }} />
-            <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.3)', textAlign: 'right', marginTop: 3 }}>{(form.userMustDos || '').length} / 300</div>
+            <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.55)', textAlign: 'right', marginTop: 3 }}>{(form.userMustDos || '').length} / 300</div>
           </div>
         </div>
 
@@ -193,7 +193,7 @@ export default function StepReview({
             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
               {preview.map((d, i) => (
                 <li key={i} style={{ display: 'flex', gap: 10, padding: '8px 0', borderBottom: i < preview.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
-                  <span style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.3)', minWidth: 36, paddingTop: 2, flexShrink: 0 }}>Day {d.day}</span>
+                  <span style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.55)', minWidth: 36, paddingTop: 2, flexShrink: 0 }}>Day {d.day}</span>
                   <div>
                     <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#fff', marginBottom: 2 }}>{d.theme}</div>
                     <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', fontStyle: 'italic' }}>{d.vibe}</div>
@@ -203,7 +203,7 @@ export default function StepReview({
             </ul>
           )}
           {!previewLoading && !preview && (
-            <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.85rem', fontStyle: 'italic', paddingTop: '0.5rem' }}>Generating your day outline…</div>
+            <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.85rem', fontStyle: 'italic', paddingTop: '0.5rem' }}>Generating your day outline…</div>
           )}
         </div>
       </div>
@@ -219,7 +219,7 @@ export default function StepReview({
                 const from = day; day += b.days;
                 return (
                   <React.Fragment key={`${b.name}-${i}`}>
-                    {i > 0 && <span style={{ color: 'rgba(255,255,255,0.3)' }}>→</span>}
+                    {i > 0 && <span style={{ color: 'rgba(255,255,255,0.55)' }}>→</span>}
                     <span style={{ padding: '5px 12px', borderRadius: 20, background: 'rgba(0,212,170,0.08)', border: '1px solid rgba(0,212,170,0.2)', fontSize: '0.8rem', color: '#fff' }}>
                       <strong style={{ color: '#00d4aa' }}>{b.days > 1 ? `Days ${from}–${day - 1}` : `Day ${from}`}</strong> · {b.name}
                     </span>
@@ -256,7 +256,7 @@ export default function StepReview({
               </div>
             )}
             {interests.length > 0 && (
-              <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)' }}>
+              <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)' }}>
                 Interests: {interests.join(', ')}
               </div>
             )}
@@ -296,7 +296,7 @@ export default function StepReview({
           </button>
         )}
       </div>
-      <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.78rem', textAlign: 'center', marginTop: '0.75rem' }}>
+      <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.78rem', textAlign: 'center', marginTop: '0.75rem' }}>
         {signedIn && entitlementLine(entitlement) ? `${entitlementLine(entitlement)} · ` : ''}
         Takes about 5 minutes · PDF delivered by email{signedIn && accountEmail ? ` to ${accountEmail}` : ''}
       </p>

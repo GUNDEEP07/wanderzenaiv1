@@ -77,7 +77,7 @@ const s = {
   swipeHint: {
     textAlign: 'center',
     fontSize: '10px',
-    color: 'rgba(255,255,255,0.3)',
+    color: 'rgba(255,255,255,0.55)',
     marginBottom: '16px',
   },
   loading: {
@@ -88,7 +88,7 @@ const s = {
   empty: {
     textAlign: 'center',
     padding: '20px',
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.6)',
     fontSize: '14px',
   },
 };

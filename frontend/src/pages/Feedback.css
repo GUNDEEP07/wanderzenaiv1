@@ -1,7 +1,7 @@
 /* Feedback page styling */
 
 textarea::placeholder {
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(255,255,255,0.55);
 }
 
 textarea:focus {

@@ -162,7 +162,7 @@ export function TravelChat() {
           </div>
           <button
             onClick={() => { setHistory([]); setPendingTrip(null); }}
-            style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'rgba(255,255,255,0.25)', cursor: 'pointer', fontSize: 11, fontFamily: 'inherit' }}
+            style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'rgba(255,255,255,0.55)', cursor: 'pointer', fontSize: 11, fontFamily: 'inherit' }}
             title="Clear chat"
           >
             Clear
@@ -177,7 +177,7 @@ export function TravelChat() {
               <div style={{ textAlign: 'center', marginBottom: 18 }}>
                 <div style={{ fontSize: 32, marginBottom: 8 }}>🌍</div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 4 }}>Your personal travel advisor</div>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>Ask me anything — itineraries, tips,<br />hidden gems, best times to visit</div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>Ask me anything — itineraries, tips,<br />hidden gems, best times to visit</div>
               </div>
               <div
                 className="travel-chat-suggestions"
@@ -265,7 +265,7 @@ export function TravelChat() {
             </button>
             <button
               onClick={() => setPendingTrip(null)}
-              style={{ width: '100%', background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', fontFamily: 'inherit', fontSize: 12, cursor: 'pointer', paddingBottom: 4 }}
+              style={{ width: '100%', background: 'none', border: 'none', color: 'rgba(255,255,255,0.55)', fontFamily: 'inherit', fontSize: 12, cursor: 'pointer', paddingBottom: 4 }}
             >
               No, let's keep chatting
             </button>
@@ -302,7 +302,7 @@ export function TravelChat() {
               ↑
             </button>
           </form>
-          <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.2)', textAlign: 'center', marginTop: 8 }}>
+          <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.55)', textAlign: 'center', marginTop: 8 }}>
             Powered by Claude · Personalised to your travel history
           </div>
         </div>

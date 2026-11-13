@@ -171,7 +171,7 @@
 
 .venue-chip--teal   { background:rgba(0,212,170,0.07); border-color:rgba(0,212,170,0.18); color:#00d4aa; }
 .venue-chip--yellow { background:rgba(255,217,61,0.07); border-color:rgba(255,217,61,0.18); color:#ffd93d; }
-.venue-chip--white  { background:rgba(255,255,255,0.03); border-color:rgba(255,255,255,0.09); color:rgba(255,255,255,0.4); }
+.venue-chip--white  { background:rgba(255,255,255,0.03); border-color:rgba(255,255,255,0.09); color: rgba(255,255,255,0.6); }
 
 /* ─── AI picks label ────────────────────────────────────────────────── */
 
@@ -192,7 +192,7 @@
   font-weight: 800;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: rgba(255,255,255,0.4);
+  color: rgba(255,255,255,0.6);
   white-space: nowrap;
 }
 
@@ -274,7 +274,7 @@
 
 .item-card__sub {
   font-size: 10px;
-  color: rgba(255,255,255,0.3);
+  color: rgba(255,255,255,0.55);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -297,7 +297,7 @@
   align-items: center;
   justify-content: center;
   font-size: 15px;
-  color: rgba(255,255,255,0.4);
+  color: rgba(255,255,255,0.6);
   cursor: pointer;
   flex-shrink: 0;
   transition: all 0.18s;
@@ -326,7 +326,7 @@
   align-items: center;
   justify-content: center;
   font-size: 8px;
-  color: rgba(255,255,255,0.25);
+  color: rgba(255,255,255,0.55);
   transition: transform 0.25s, border-color 0.2s, background 0.2s;
   cursor: pointer;
   flex-shrink: 0;
@@ -418,7 +418,7 @@
   font-weight: 800;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: rgba(255,255,255,0.2);
+  color: rgba(255,255,255,0.55);
   margin-bottom: 7px;
 }
 
@@ -617,7 +617,7 @@
 
 .venue-footer__skip {
   font-size: 12px;
-  color: rgba(255,255,255,0.25);
+  color: rgba(255,255,255,0.55);
   background: none;
   border: none;
   cursor: pointer;
@@ -657,7 +657,7 @@
   justify-content: center;
   height: 100%;
   gap: 12px;
-  color: rgba(255,255,255,0.4);
+  color: rgba(255,255,255,0.6);
   font-size: 13px;
 }
 
@@ -721,7 +721,7 @@
   box-sizing: border-box;
 }
 .insights-strip--error { background: rgba(255,107,107,0.06); border-color: rgba(255,107,107,0.2); }
-.insights-strip__error-text { font-size: 12px; color: rgba(255,255,255,0.4); }
+.insights-strip__error-text { font-size: 12px; color: rgba(255,255,255,0.6); }
 .insights-strip__header { font-size: 11px; font-weight: 700; color: #00d4aa; margin-bottom: 7px; }
 .insights-strip__badges { display: flex; gap: 5px; flex-wrap: wrap; }
 .insights-badge { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; padding: 3px 8px; font-size: 10px; color: rgba(255,255,255,0.6); }

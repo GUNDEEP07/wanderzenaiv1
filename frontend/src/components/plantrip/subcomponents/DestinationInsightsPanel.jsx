@@ -194,7 +194,7 @@ export function DestinationInsightsPanel({
                           {thing.verified ? (
                             <span style={{ color: '#00d4aa', fontWeight: 700 }}>✓ Real place · Foursquare</span>
                           ) : (
-                            <span style={{ color: 'rgba(255,255,255,0.45)' }}>AI suggestion — check before you go</span>
+                            <span style={{ color: 'rgba(255,255,255,0.6)' }}>AI suggestion — check before you go</span>
                           )}
                           {thing.mapsUrl && (
                             <a href={thing.mapsUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa' }}>

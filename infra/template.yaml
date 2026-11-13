@@ -401,7 +401,8 @@ Resources:
       CodeUri: ../backend/functions/recommendations
       Handler: index.handler
       Timeout: 25
-      MemorySize: 256
+      # 512 MB: answers the destination search box and landing stats; faster cold starts.
+      MemorySize: 512
       Description: Provides destination autocomplete and venue discovery via Foursquare API
       Environment:
         Variables:
@@ -492,7 +493,8 @@ Resources:
       CodeUri: ../backend/functions/profile
       Handler: handler.handler
       Timeout: 15
-      MemorySize: 256
+      # 512 MB: Lambda CPU scales with memory; at 256 MB a cold start took ~3 s (Nov 2026).
+      MemorySize: 512
       Description: GET and PUT user profile + past trips
       Policies:
         - S3ReadPolicy:

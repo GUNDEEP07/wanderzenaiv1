@@ -14,11 +14,11 @@ const LANGUAGES  = ['English', 'Hindi', 'Spanish', 'French', 'German', 'Japanese
 const s = {
   page: { minHeight: '100vh', background: '#06090f', fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#fff' },
   nav: { padding: '14px 36px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(6,9,15,0.92)', backdropFilter: 'blur(16px)', position: 'sticky', top: 0, zIndex: 10 },
-  backBtn: { background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 },
+  backBtn: { background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 },
   navTitle: { fontSize: 15, fontWeight: 700 },
   inner: { maxWidth: 720, margin: '0 auto', padding: '36px 24px 60px' },
   pageTitle: { fontFamily: "'Fraunces', serif", fontSize: 32, fontWeight: 900, marginBottom: 6 },
-  pageSub: { fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 32, fontStyle: 'italic' },
+  pageSub: { fontSize: 13, color: 'rgba(255,255,255,0.6)', marginBottom: 32, fontStyle: 'italic' },
   tabs: { display: 'flex', gap: 4, marginBottom: 32, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: 4 },
   tab: (active) => ({
     flex: 1, padding: '9px 12px', border: 'none', borderRadius: 9, cursor: 'pointer',
@@ -30,7 +30,7 @@ const s = {
   }),
   section: { background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '24px 28px', marginBottom: 16 },
   sectionTitle: { fontSize: 13, fontWeight: 800, color: '#fff', marginBottom: 18, letterSpacing: '0.02em' },
-  label: { display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginBottom: 7 },
+  label: { display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)', marginBottom: 7 },
   input: { width: '100%', padding: '11px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#fff', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: 14 },
   select: { width: '100%', padding: '11px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#fff', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 14, outline: 'none', appearance: 'none', cursor: 'pointer', boxSizing: 'border-box', marginBottom: 14 },
   genderRow: { display: 'flex', gap: 8, marginBottom: 14 },
@@ -163,14 +163,14 @@ export default function Settings() {
 
   return (
     <div style={s.page}>
-      <style>{`        input::placeholder { color: rgba(255,255,255,0.2); }
+      <style>{`        input::placeholder { color: rgba(255,255,255,0.55); }
         input:focus, select:focus { border-color: rgba(0,212,170,0.4) !important; }
         select option { background: #111827; color: #fff; }
       `}</style>
 
       <nav style={s.nav}>
         <button style={s.backBtn} onClick={() => navigate('/dashboard')}>&larr; Dashboard</button>
-        <span style={{ color: 'rgba(255,255,255,0.2)' }}>·</span>
+        <span style={{ color: 'rgba(255,255,255,0.55)' }}>·</span>
         <span style={s.navTitle}>Settings</span>
       </nav>
 
@@ -200,7 +200,7 @@ export default function Settings() {
                   <input style={s.input} type="number" min="16" max="99" placeholder="e.g. 28" value={age} onChange={e => setAge(e.target.value)} />
                 </div>
                 <div>
-                  <label style={s.label}>WhatsApp <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'rgba(255,255,255,0.2)' }}>(optional)</span></label>
+                  <label style={s.label}>WhatsApp <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'rgba(255,255,255,0.55)' }}>(optional)</span></label>
                   <input style={s.input} type="text" placeholder="+61 4xx xxx xxx" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} />
                 </div>
               </div>
@@ -243,7 +243,7 @@ export default function Settings() {
                 <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>{label}</div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{sub}</div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>{sub}</div>
                   </div>
                   <label style={{ position: 'relative', display: 'inline-block', width: 40, height: 22, flexShrink: 0 }}>
                     <input type="checkbox" defaultChecked={defaultChecked} style={{ opacity: 0, width: 0, height: 0 }} onChange={() => {}} />
@@ -268,7 +268,7 @@ export default function Settings() {
                   <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>
                     {plan === 'subscriber' ? 'Wanderer Plan' : plan === 'paid_once' ? 'Single Trip' : 'Free Plan'}
                   </div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
                     {plan === 'subscriber' ? '5 itineraries a month · priority generation'
                      : plan === 'paid_once' ? 'Extra itinerary purchased'
                      : '1 itinerary per month · PDF download included'}
@@ -304,7 +304,7 @@ export default function Settings() {
               <div style={s.planCard}>
                 <div>
                   <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>Single Trip &mdash; $7</div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>One additional itinerary · no subscription</div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>One additional itinerary · no subscription</div>
                 </div>
                 <a href={withCheckoutIdentity(import.meta.env.VITE_STRIPE_SINGLE_PLAN_LINK, currentUser)} target="_blank" rel="noreferrer" onClick={() => analytics.upgradeClicked('single', 'settings')}>
                   <button style={s.upgradeBtn}>Buy now</button>
@@ -313,7 +313,7 @@ export default function Settings() {
               <div style={s.planCard}>
                 <div>
                   <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>Wanderer &mdash; $9/mo</div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>5 itineraries a month · priority generation</div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>5 itineraries a month · priority generation</div>
                 </div>
                 <a href={withCheckoutIdentity(import.meta.env.VITE_STRIPE_WANDERER_LINK, currentUser)} target="_blank" rel="noreferrer" onClick={() => analytics.upgradeClicked('wanderer', 'settings')}>
                   <button style={s.upgradeBtn}>Upgrade</button>
@@ -358,16 +358,16 @@ export default function Settings() {
                     </button>
                   </div>
                   <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
                       Your code: <strong style={{ color: '#00d4aa' }}>{referralCode}</strong>
                     </div>
-                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
                       Friends referred: <strong style={{ color: '#fff' }}>{referralCount}</strong>
                     </div>
                   </div>
                 </>
               ) : (
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', fontStyle: 'italic' }}>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', fontStyle: 'italic' }}>
                   Your referral code is being generated — check back in a moment.
                 </div>
               )}
@@ -405,13 +405,13 @@ export default function Settings() {
 
             <div style={s.section}>
               <div style={s.sectionTitle}>Sign out</div>
-              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 14 }}>Sign out of your account on this device.</div>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', marginBottom: 14 }}>Sign out of your account on this device.</div>
               <button style={s.dangerBtn} onClick={async () => { await signOut(); navigate('/login'); }}>Sign out</button>
             </div>
 
             <div style={{ ...s.section, borderColor: 'rgba(255,107,107,0.15)' }}>
               <div style={{ ...s.sectionTitle, color: '#ff6b6b' }}>Danger zone</div>
-              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 14 }}>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', marginBottom: 14 }}>
                 Permanently delete your account and all associated data. This cannot be undone.
               </div>
               <button style={s.dangerBtn} onClick={handleDeleteAccount}>Delete my account</button>

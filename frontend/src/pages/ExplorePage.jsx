@@ -89,7 +89,7 @@ const tealBorder = 'rgba(0,212,170,0.25)';
 const border = 'rgba(255,255,255,0.08)';
 const border2 = 'rgba(255,255,255,0.12)';
 const w60 = 'rgba(255,255,255,0.6)';
-const w40 = 'rgba(255,255,255,0.4)';
+const w40 = 'rgba(255,255,255,0.6)'; // secondary text (raised from 0.4 for contrast, Nov 2026)
 const w08 = 'rgba(255,255,255,0.06)';
 
 function ThingPhoto({ name, keyword, style }) {
@@ -114,7 +114,7 @@ function PersonalRecCard({ rec, onClick }) {
         <div style={{ position: 'absolute', bottom: 8, left: 12, fontSize: 14, fontWeight: 700, color: '#fff' }}>{rec.destination?.split(',')[0]}</div>
       </div>
       <div style={{ padding: '10px 12px' }}>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5, marginBottom: 8 }}>{rec.reason}</div>
+        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5, marginBottom: 8 }}>{rec.reason}</div>
         <div style={{ fontSize: 10, fontWeight: 700, color: teal }}>Plan this →</div>
       </div>
     </div>
@@ -348,7 +348,7 @@ export default function ExplorePage() {
           </div>
 
           {/* Continent tabs */}
-          <div className="explore-tabs" style={{
+          <div className="explore-tabs" tabIndex={0} aria-label="Explore categories" style={{
             display: 'flex', gap: 8, marginBottom: '2rem',
             overflowX: 'auto', WebkitOverflowScrolling: 'touch',
             msOverflowStyle: 'none', scrollbarWidth: 'none',
@@ -453,7 +453,7 @@ export default function ExplorePage() {
               {/* AI experience cards — selectable */}
               {countryInsights?.thingsToDo?.length > 0 && (
                 <div style={{ marginBottom: 18 }}>
-                  <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: 10 }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 10 }}>
                     Select experiences — tap to add to your trip
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -489,7 +489,7 @@ export default function ExplorePage() {
 
               {/* Budget teaser */}
               {countryInsights?.budgetEstimateUSD && (
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginBottom: 12, padding: '8px 12px', background: 'rgba(255,255,255,0.02)', border: `1px solid ${border}`, borderRadius: 8 }}>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', marginBottom: 12, padding: '8px 12px', background: 'rgba(255,255,255,0.02)', border: `1px solid ${border}`, borderRadius: 8 }}>
                   💰 Est. <strong style={{ color: 'rgba(255,255,255,0.6)' }}>${countryInsights.budgetEstimateUSD.flightsLow}–${countryInsights.budgetEstimateUSD.flightsHigh}</strong> flights · <strong style={{ color: 'rgba(255,255,255,0.6)' }}>${countryInsights.budgetEstimateUSD.accommodationPerNightLow}–${countryInsights.budgetEstimateUSD.accommodationPerNightHigh}/night</strong> stays
                 </div>
               )}
@@ -503,7 +503,7 @@ export default function ExplorePage() {
 
               {/* Region pills — selectable */}
               <div style={{ marginBottom: selectedPlaces.size > 0 ? 14 : 0 }}>
-                <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: 8 }}>
+                <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 8 }}>
                   Or pick a region
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -526,7 +526,7 @@ export default function ExplorePage() {
                   <div style={{ fontSize: 13, color: '#fff', minWidth: 0 }}>
                     <span style={{ fontWeight: 800, color: teal }}>{selectedPlaces.size}</span>
                     <span style={{ color: 'rgba(255,255,255,0.5)', marginLeft: 6 }}>{selectedPlaces.size === 1 ? 'stop' : 'stops'} selected</span>
-                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginLeft: 8, wordBreak: 'break-word' }}>{[...selectedPlaces].join(' · ')}</span>
+                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', marginLeft: 8, wordBreak: 'break-word' }}>{[...selectedPlaces].join(' · ')}</span>
                   </div>
                   <button type="button"
                     onClick={() => {
@@ -559,12 +559,12 @@ export default function ExplorePage() {
 
       {/* Footer */}
       <div style={{ borderTop: `1px solid ${border}`, padding: '2rem 2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-        <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.25)' }}>© 2025 WanderZenAI · Built for slow travellers</div>
+        <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.55)' }}>© 2025 WanderZenAI · Built for slow travellers</div>
         <div style={{ display: 'flex', gap: '1.5rem' }}>
-          <a href="/" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.35)', textDecoration: 'none' }}>Home</a>
-          <a href="/pricing" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.35)', textDecoration: 'none' }}>Pricing</a>
-          <a href="/agency" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.35)', textDecoration: 'none' }}>For agencies</a>
-          <a href="mailto:travel@wanderzenai.com" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.35)', textDecoration: 'none' }}>Contact</a>
+          <a href="/" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.55)', textDecoration: 'none' }}>Home</a>
+          <a href="/pricing" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.55)', textDecoration: 'none' }}>Pricing</a>
+          <a href="/agency" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.55)', textDecoration: 'none' }}>For agencies</a>
+          <a href="mailto:travel@wanderzenai.com" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.55)', textDecoration: 'none' }}>Contact</a>
         </div>
       </div>
     </div>

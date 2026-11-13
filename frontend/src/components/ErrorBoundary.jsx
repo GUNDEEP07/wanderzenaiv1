@@ -75,7 +75,7 @@ export class ErrorBoundary extends Component {
           <div>
             <div style={{ fontSize: 48, marginBottom: 16 }}>✦</div>
             <div style={{ fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 900, marginBottom: 10 }}>Something went wrong</div>
-            <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.4)', marginBottom: 32 }}>We've hit an unexpected bump. Try refreshing the page.</div>
+            <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', marginBottom: 32 }}>We've hit an unexpected bump. Try refreshing the page.</div>
             <button
               onClick={() => { this.setState({ hasError: false, error: null }); window.location.href = '/'; }}
               style={{ padding: '12px 28px', background: 'linear-gradient(135deg,#00d4aa,#00a87e)', border: 'none', borderRadius: 12, color: '#06090f', fontFamily: 'inherit', fontSize: 14, fontWeight: 800, cursor: 'pointer' }}

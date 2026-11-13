@@ -28,7 +28,7 @@
 }
 
 .destination-input::placeholder {
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(255,255,255,0.55);
 }
 
 .destination-input:focus {
@@ -38,7 +38,7 @@
 
 .destination-input:disabled {
   background-color: rgba(255, 255, 255, 0.02);
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255,255,255,0.6);
   opacity: 0.6;
 }
 
@@ -84,14 +84,14 @@
 
 .suggestion-country {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255,255,255,0.6);
   margin-top: 4px;
 }
 
 .loading-spinner {
   padding: 12px 16px;
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255,255,255,0.6);
   text-align: center;
 }
 

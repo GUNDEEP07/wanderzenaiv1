@@ -18,7 +18,7 @@ function ActivityCard({ activity, period, emoji }) {
         <span style={{ fontSize: 20 }}>{emoji}</span>
         <div>
           <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#00d4aa' }}>{period}</div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{activity.time}</div>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>{activity.time}</div>
         </div>
         {!activity.isFree && activity.cost > 0 && (
           <div style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)' }}>
@@ -32,7 +32,7 @@ function ActivityCard({ activity, period, emoji }) {
       <div style={{ fontSize: 14, fontWeight: 600, color: '#fff', marginBottom: 6, lineHeight: 1.4 }}>{activity.venueName || activity.location}</div>
       <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.55, marginBottom: 8 }}>{activity.activity}</div>
       {activity.why && (
-        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', fontStyle: 'italic', lineHeight: 1.45, borderLeft: '2px solid rgba(0,212,170,0.3)', paddingLeft: 10, marginBottom: 8 }}>
+        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontStyle: 'italic', lineHeight: 1.45, borderLeft: '2px solid rgba(0,212,170,0.3)', paddingLeft: 10, marginBottom: 8 }}>
           {activity.why}
         </div>
       )}
@@ -150,7 +150,7 @@ export default function ItineraryView() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: '#06090f', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.4)', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+      <div style={{ minHeight: '100vh', background: '#06090f', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.6)', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
         Loading itinerary…
       </div>
     );
@@ -161,7 +161,7 @@ export default function ItineraryView() {
       <div style={{ minHeight: '100vh', background: '#06090f', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#fff', textAlign: 'center', padding: 24 }}>
         <div style={{ fontSize: 32, marginBottom: 12 }}>✦</div>
         <div style={{ fontFamily: "'Fraunces', serif", fontSize: 24, fontWeight: 900, marginBottom: 8 }}>Itinerary not found</div>
-        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 24 }}>This itinerary may still be generating or doesn't exist.</div>
+        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', marginBottom: 24 }}>This itinerary may still be generating or doesn't exist.</div>
         <button onClick={() => navigate('/dashboard')} style={{ padding: '12px 24px', background: 'linear-gradient(135deg,#00d4aa,#00a87e)', border: 'none', borderRadius: 12, color: '#06090f', fontFamily: 'inherit', fontSize: 14, fontWeight: 800, cursor: 'pointer' }}>
           Back to Dashboard
         </button>
@@ -179,18 +179,19 @@ export default function ItineraryView() {
       `}</style>
 
       {/* Nav */}
-      <nav style={{ padding: '14px 28px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10, background: 'rgba(6,9,15,0.95)', backdropFilter: 'blur(16px)' }}>
+      {/* Wraps on phones: the share buttons drop to a second line instead of overflowing. */}
+      <nav style={{ padding: '12px clamp(16px, 4vw, 28px)', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', rowGap: 8, columnGap: 12, position: 'sticky', top: 0, zIndex: 10, background: 'rgba(6,9,15,0.95)', backdropFilter: 'blur(16px)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button onClick={() => navigate('/dashboard')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}>← Dashboard</button>
+          <button onClick={() => navigate('/dashboard')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}>← Dashboard</button>
           <span style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
           <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>{data.destination}</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>
             {data.days} days · {new Date(data.createdAt).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}
           </span>
           {/* Share buttons */}
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center', position: 'relative' }}>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', position: 'relative', flexWrap: 'wrap' }}>
             <button onClick={() => handleShare('copy')} style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
               🔗 Copy link
             </button>
@@ -255,7 +256,7 @@ export default function ItineraryView() {
           </div>
         )}
         {adjust && adjust.remaining > 0 && !adjust.pending && !adjustNotice && (
-          <div style={{ marginBottom: 24, fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
+          <div style={{ marginBottom: 24, fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
             Not quite right? Adjust any day below — {adjust.remaining} free change{adjust.remaining === 1 ? '' : 's'} left on this trip.
           </div>
         )}
@@ -277,7 +278,7 @@ export default function ItineraryView() {
               )}
               {day.dailyCost > 0 && (
                 <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginBottom: 2 }}>Est. daily cost</div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', marginBottom: 2 }}>Est. daily cost</div>
                   <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>${day.dailyCost}</div>
                 </div>
               )}
@@ -294,8 +295,8 @@ export default function ItineraryView() {
                 <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#fb923c', marginBottom: 8 }}>🍜 Local Eat</div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 4 }}>{day.localEats.name}</div>
                 <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', marginBottom: 6, fontStyle: 'italic' }}>"{day.localEats.dish}"</div>
-                {day.localEats.vibe && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>{day.localEats.vibe}</div>}
-                {day.localEats.cost > 0 && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 6 }}>~${day.localEats.cost}</div>}
+                {day.localEats.vibe && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>{day.localEats.vibe}</div>}
+                {day.localEats.cost > 0 && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', marginTop: 6 }}>~${day.localEats.cost}</div>}
               </div>
             )}
 
@@ -316,7 +317,7 @@ export default function ItineraryView() {
 
         {/* Footer CTA */}
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 32, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>Made with WanderZenAI · slow travel, no tourist traps</div>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>Made with WanderZenAI · slow travel, no tourist traps</div>
           <button onClick={() => navigate('/plan')} style={{ padding: '12px 24px', background: 'linear-gradient(135deg,#00d4aa,#00a87e)', border: 'none', borderRadius: 12, color: '#06090f', fontFamily: 'inherit', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>
             Plan another trip →
           </button>

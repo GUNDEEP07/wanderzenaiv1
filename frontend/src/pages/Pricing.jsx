@@ -29,10 +29,10 @@ const s = {
     background: featured ? 'linear-gradient(90deg, transparent, #00d4aa, transparent)' : 'transparent',
   }),
   badge: { position: 'absolute', top: -1, right: 24, background: '#00d4aa', color: '#0a0f1e', fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '4px 14px', borderRadius: '0 0 8px 8px' },
-  planName: { fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginBottom: '1rem' },
+  planName: { fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)', marginBottom: '1rem' },
   price: { fontFamily: "'Fraunces', serif", fontSize: '3.5rem', fontWeight: 700, color: '#fff', lineHeight: 1, letterSpacing: '-0.03em', marginBottom: '0.25rem' },
-  priceSub: { fontSize: '1rem', fontWeight: 400, color: 'rgba(255,255,255,0.4)' },
-  period: { fontSize: '0.875rem', color: 'rgba(255,255,255,0.4)', marginBottom: '2rem', marginTop: '0.25rem' },
+  priceSub: { fontSize: '1rem', fontWeight: 400, color: 'rgba(255,255,255,0.6)' },
+  period: { fontSize: '0.875rem', color: 'rgba(255,255,255,0.6)', marginBottom: '2rem', marginTop: '0.25rem' },
   features: { listStyle: 'none', marginBottom: '2rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' },
   featureItem: { fontSize: '0.95rem', color: 'rgba(255,255,255,0.65)', display: 'flex', alignItems: 'flex-start', gap: 10 },
   check: { color: '#00d4aa', flexShrink: 0, fontWeight: 700, marginTop: 1 },
@@ -44,7 +44,7 @@ const s = {
   faqItem: { background: '#111827', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '1.5rem', cursor: 'pointer', transition: 'border-color 0.2s' },
   faqQ: { fontSize: '1rem', fontWeight: 600, color: '#fff', marginBottom: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
   faqA: { fontSize: '0.9rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.7 },
-  footer: { textAlign: 'center', fontSize: '0.875rem', color: 'rgba(255,255,255,0.3)' },
+  footer: { textAlign: 'center', fontSize: '0.875rem', color: 'rgba(255,255,255,0.55)' },
   footerLink: { color: '#00d4aa', textDecoration: 'none' },
 };
 
@@ -250,8 +250,8 @@ export default function Pricing() {
         <div style={s.footer}>
           <p>Questions? Email <a href="mailto:travel@wanderzenai.com" style={s.footerLink}>travel@wanderzenai.com</a></p>
           <p style={{ marginTop: '0.5rem' }}>
-            <a href="/privacy" style={{ ...s.footerLink, color: 'rgba(255,255,255,0.3)', marginRight: '1.5rem' }}>Privacy</a>
-            <a href="/terms" style={{ ...s.footerLink, color: 'rgba(255,255,255,0.3)' }}>Terms</a>
+            <a href="/privacy" style={{ ...s.footerLink, color: 'rgba(255,255,255,0.55)', marginRight: '1.5rem' }}>Privacy</a>
+            <a href="/terms" style={{ ...s.footerLink, color: 'rgba(255,255,255,0.55)' }}>Terms</a>
           </p>
         </div>
       </div>

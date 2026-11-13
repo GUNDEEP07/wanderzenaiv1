@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 const s = {
   page: { minHeight: '100vh', background: '#06090f', fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#fff' },
   nav: { padding: '14px 36px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: 12 },
-  back: { background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 },
+  back: { background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 },
   inner: { maxWidth: 760, margin: '0 auto', padding: '48px 24px 80px' },
   h1: { fontFamily: "'Fraunces', serif", fontSize: 40, fontWeight: 900, marginBottom: 8 },
-  updated: { fontSize: 12, color: 'rgba(255,255,255,0.35)', marginBottom: 40 },
+  updated: { fontSize: 12, color: 'rgba(255,255,255,0.55)', marginBottom: 40 },
   h2: { fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 700, color: '#fff', marginTop: 36, marginBottom: 12 },
   p: { fontSize: 14, color: 'rgba(255,255,255,0.7)', lineHeight: 1.75, marginBottom: 14 },
   li: { fontSize: 14, color: 'rgba(255,255,255,0.7)', lineHeight: 1.75, marginBottom: 6, marginLeft: 20 },
@@ -19,7 +19,7 @@ export default function TermsOfService() {
       <style>{``}</style>
       <nav style={s.nav}>
         <button style={s.back} onClick={() => navigate(-1)}>← Back</button>
-        <span style={{ color: 'rgba(255,255,255,0.2)' }}>·</span>
+        <span style={{ color: 'rgba(255,255,255,0.55)' }}>·</span>
         <span style={{ fontSize: 14, fontWeight: 700 }}>Terms of Service</span>
       </nav>
       <div style={s.inner}>

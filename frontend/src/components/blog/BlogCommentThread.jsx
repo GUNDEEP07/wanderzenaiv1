@@ -206,7 +206,7 @@ export function BlogCommentThread({
                       <span style={{ fontSize: '13px', fontWeight: '600', color: '#00d4aa' }}>
                         {comment.author_name || 'A WanderZen traveller'}
                       </span>
-                      <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', marginLeft: '8px' }}>
+                      <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', marginLeft: '8px' }}>
                         {formatDate(comment.created_at)}
                         {comment.updated_at && comment.updated_at !== comment.created_at && ' (edited)'}
                       </span>

@@ -137,9 +137,9 @@ const s = {
   summaryBox: { background: 'rgba(0,212,170,0.06)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 12, padding: '1.25rem', marginBottom: '1.75rem' },
   summaryRow: { display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', padding: '0.35rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)' },
   navBtns: { display: 'flex', alignItems: 'center', gap: '1rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.08)' },
-  backBtnForm: { background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '0.9rem', color: 'rgba(255,255,255,0.4)', transition: 'color 0.2s' },
+  backBtnForm: { background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '0.9rem', color: 'rgba(255,255,255,0.6)', transition: 'color 0.2s' },
   nextBtn: { background: '#00d4aa', color: '#0a0f1e', border: 'none', padding: '0.875rem 2rem', borderRadius: 12, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '0.95rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s', marginLeft: 'auto' },
-  footerNote: { textAlign: 'center', fontSize: '0.8rem', color: 'rgba(255,255,255,0.25)', fontStyle: 'italic' },
+  footerNote: { textAlign: 'center', fontSize: '0.8rem', color: 'rgba(255,255,255,0.55)', fontStyle: 'italic' },
   submitError: { marginTop: '1rem', padding: '0.75rem 1rem', background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.3)', borderRadius: 10, fontSize: '0.875rem', color: '#ff6b6b' },
   select: { width: '100%', padding: '0.875rem 1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 10, color: '#fff', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '1rem', outline: 'none', cursor: 'pointer', transition: 'all 0.2s ease', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' },
 };
@@ -507,7 +507,7 @@ export default function PlanTrip() {
   );
 
   const sharedStyles = `
-    input::placeholder, textarea::placeholder { color: rgba(255,255,255,0.4); }
+    input::placeholder, textarea::placeholder { color: rgba(255,255,255,0.6); }
     input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.4); }
     select option { background: #111827; color: #fff; }
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -523,7 +523,7 @@ export default function PlanTrip() {
             <div style={{ width: 24, height: 24, borderRadius: 6, background: 'linear-gradient(135deg,#00d4aa,#00916a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: '#0a0f1e' }}>W</div>
             <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em' }}>WanderZenAI</span>
           </a>
-          <button type="button" onClick={() => { sessionStorage.removeItem('wz_plan_step_v2'); sessionStorage.removeItem('wz_plan_form_v2'); navigate('/'); }} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontFamily: 'inherit', fontSize: 12, cursor: 'pointer' }}>✕ Exit</button>
+          <button type="button" onClick={() => { sessionStorage.removeItem('wz_plan_step_v2'); sessionStorage.removeItem('wz_plan_form_v2'); navigate('/'); }} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', fontFamily: 'inherit', fontSize: 12, cursor: 'pointer' }}>✕ Exit</button>
         </nav>
         <div style={{ padding: '12px 24px 0' }}>
           {progressBar}
@@ -564,7 +564,7 @@ export default function PlanTrip() {
           <div style={{ width: 24, height: 24, borderRadius: 6, background: 'linear-gradient(135deg,#00d4aa,#00916a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: '#0a0f1e' }}>W</div>
           <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em' }}>WanderZenAI</span>
         </a>
-        <button type="button" onClick={() => { sessionStorage.removeItem('wz_plan_step_v2'); sessionStorage.removeItem('wz_plan_form_v2'); navigate('/'); }} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontFamily: 'inherit', fontSize: 12, cursor: 'pointer' }}>✕ Exit</button>
+        <button type="button" onClick={() => { sessionStorage.removeItem('wz_plan_step_v2'); sessionStorage.removeItem('wz_plan_form_v2'); navigate('/'); }} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', fontFamily: 'inherit', fontSize: 12, cursor: 'pointer' }}>✕ Exit</button>
       </nav>
 
       <div style={s.inner}>
@@ -593,7 +593,7 @@ export default function PlanTrip() {
                   {errors.destination && <div style={s.error}>{errors.destination}</div>}
                   {personalRecs.length > 0 && (
                     <div style={{ marginTop: 12 }}>
-                      <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)', marginBottom: 8 }}>Based on your travels</div>
+                      <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 8 }}>Based on your travels</div>
                       <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
                         {personalRecs.map((rec, i) => {
                           const cityName = rec.destination.split(',')[0].trim();
@@ -644,7 +644,7 @@ export default function PlanTrip() {
                   onChange={e => set('budget', e.target.value)}
                 />
                 {errors.budget && <div style={s.error}>{errors.budget}</div>}
-                <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', marginTop: '0.4rem', fontStyle: 'italic' }}>
+                <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.55)', marginTop: '0.4rem', fontStyle: 'italic' }}>
                   For flights + accommodation + activities
                 </div>
               </div>
@@ -652,7 +652,7 @@ export default function PlanTrip() {
               {/* Currency */}
               <div style={s.fieldWrap}>
                 <label style={s.label}>Currency *</label>
-                <select style={s.select} value={form.currency} onChange={e => setCurrency(e.target.value)}>
+                <select aria-label="Currency" style={s.select} value={form.currency} onChange={e => setCurrency(e.target.value)}>
                   {CURRENCIES.map(c => (
                     <option key={c.code} value={c.code}>{c.label}</option>
                   ))}
@@ -691,7 +691,7 @@ export default function PlanTrip() {
                 />
                 {errors.interests && <div style={s.error}>{errors.interests}</div>}
                 {!errors.interests && form.interests.length > 0 && form.interests.length < 5 && (
-                  <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginTop: '0.4rem', fontStyle: 'italic' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', marginTop: '0.4rem', fontStyle: 'italic' }}>
                     Keep going! Share more about what you're looking for in this trip.
                   </div>
                 )}
@@ -714,7 +714,7 @@ export default function PlanTrip() {
                       onClick={() => set('travelPace', p.val)}
                     >
                       <div style={{ fontWeight: 700, marginBottom: 4 }}>{p.label}</div>
-                      <div style={{ fontSize: '0.75rem', opacity: 0.6, fontWeight: 400 }}>{p.sub}</div>
+                      <div style={{ fontSize: '0.75rem', opacity: 0.85, fontWeight: 400 }}>{p.sub}</div>
                     </button>
                   ))}
                 </div>
@@ -747,13 +747,13 @@ export default function PlanTrip() {
               {/* Language */}
               <div style={s.fieldWrap}>
                 <label style={s.label}>Language for itinerary generation & delivery *</label>
-                <select style={s.select} value={form.language} onChange={e => set('language', e.target.value)}>
+                <select aria-label="Itinerary language" style={s.select} value={form.language} onChange={e => set('language', e.target.value)}>
                   {LANGUAGES.map(l => (
                     <option key={l.code} value={l.code}>{l.label}</option>
                   ))}
                 </select>
                 {errors.language && <div style={s.error}>{errors.language}</div>}
-                <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', marginTop: '0.4rem', fontStyle: 'italic' }}>
+                <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.55)', marginTop: '0.4rem', fontStyle: 'italic' }}>
                   The language in which your itinerary will be delivered
                 </div>
               </div>

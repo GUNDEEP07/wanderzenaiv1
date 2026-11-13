@@ -17,9 +17,9 @@ const s = {
   card: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(0,212,170,0.25)', borderRadius: 16, padding: '18px 22px', marginBottom: 24 },
   eyebrow: { fontSize: 10, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#00d4aa', marginBottom: 4 },
   title: { fontFamily: "'Fraunces', serif", fontSize: 20, fontWeight: 700, color: '#fff' },
-  meta: { fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 4 },
+  meta: { fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 4 },
   primary: { padding: '12px 22px', background: 'linear-gradient(135deg,#00d4aa,#00a87e)', border: 'none', borderRadius: 12, color: '#06090f', fontFamily: 'inherit', fontSize: 14, fontWeight: 800, cursor: 'pointer' },
-  ghost: { padding: '12px 16px', background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontFamily: 'inherit', fontSize: 12, cursor: 'pointer' },
+  ghost: { padding: '12px 16px', background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', fontFamily: 'inherit', fontSize: 12, cursor: 'pointer' },
 };
 
 /**

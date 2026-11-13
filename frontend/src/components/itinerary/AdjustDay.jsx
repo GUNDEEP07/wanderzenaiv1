@@ -19,7 +19,7 @@ export const SUGGESTIONS = [
 const s = {
   bar: { display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 14 },
   open: { padding: '8px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, color: 'rgba(255,255,255,0.75)', fontFamily: 'inherit', fontSize: 12, fontWeight: 700, cursor: 'pointer' },
-  hint: { fontSize: 11, color: 'rgba(255,255,255,0.35)' },
+  hint: { fontSize: 11, color: 'rgba(255,255,255,0.55)' },
   panel: { marginTop: 14, background: 'rgba(0,212,170,0.04)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 14, padding: '16px 18px' },
   label: { fontSize: 12, fontWeight: 700, color: '#fff', marginBottom: 10 },
   chips: { display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
@@ -27,7 +27,7 @@ const s = {
   textarea: { width: '100%', minHeight: 70, padding: '10px 12px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(0,0,0,0.25)', color: '#fff', fontFamily: 'inherit', fontSize: 13, lineHeight: 1.5, resize: 'vertical', boxSizing: 'border-box' },
   row: { display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, flexWrap: 'wrap' },
   primary: (disabled) => ({ padding: '10px 18px', background: disabled ? 'rgba(0,212,170,0.35)' : 'linear-gradient(135deg,#00d4aa,#00a87e)', border: 'none', borderRadius: 10, color: '#06090f', fontFamily: 'inherit', fontSize: 13, fontWeight: 800, cursor: disabled ? 'not-allowed' : 'pointer' }),
-  ghost: { padding: '10px 12px', background: 'none', border: 'none', color: 'rgba(255,255,255,0.45)', fontFamily: 'inherit', fontSize: 12, cursor: 'pointer' },
+  ghost: { padding: '10px 12px', background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', fontFamily: 'inherit', fontSize: 12, cursor: 'pointer' },
   error: { fontSize: 12, color: '#ff8a8a', marginTop: 8 },
   working: { marginTop: 14, display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderRadius: 12, background: 'rgba(0,212,170,0.06)', border: '1px solid rgba(0,212,170,0.2)', fontSize: 13, color: 'rgba(255,255,255,0.8)' },
   dot: { width: 8, height: 8, borderRadius: '50%', background: '#00d4aa', animation: 'wzPulse 1.2s ease-in-out infinite' },

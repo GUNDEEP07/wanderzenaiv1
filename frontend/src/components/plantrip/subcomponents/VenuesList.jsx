@@ -39,7 +39,7 @@ export function VenuesList({ activity, venues, selectedVenues, onVenueToggle, on
         <div style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.7)', marginBottom: 6 }}>
           {message}
         </div>
-        <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', lineHeight: 1.4 }}>
+        <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', lineHeight: 1.4 }}>
           We couldn't find venues for this activity in this area.<br />
           Try searching with more specific keywords or select a different activity.
         </div>
@@ -127,7 +127,7 @@ export function VenuesList({ activity, venues, selectedVenues, onVenueToggle, on
                           </div>
                         )}
                         {venue.openingHours && (
-                          <div style={{ display: 'flex', gap: 5, fontSize: 10, color: 'rgba(255,255,255,0.45)', marginBottom: 8 }}>
+                          <div style={{ display: 'flex', gap: 5, fontSize: 10, color: 'rgba(255,255,255,0.6)', marginBottom: 8 }}>
                             <span style={{ color: '#00d4aa' }}>🕐</span>
                             <span>{venue.openingHours}</span>
                           </div>
@@ -158,7 +158,7 @@ export function VenuesList({ activity, venues, selectedVenues, onVenueToggle, on
         })}
       </div>
       {venues.some(v => v.source === 'ai') && (
-        <div style={{ marginTop: 8, fontSize: 10, color: 'rgba(255,255,255,0.3)', textAlign: 'center', fontStyle: 'italic' }}>
+        <div style={{ marginTop: 8, fontSize: 10, color: 'rgba(255,255,255,0.55)', textAlign: 'center', fontStyle: 'italic' }}>
           ✦ AI suggested · verify hours and availability before visiting
         </div>
       )}

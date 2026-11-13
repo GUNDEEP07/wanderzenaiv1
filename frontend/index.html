@@ -71,7 +71,8 @@
     </script>
   </head>
   <body>
-    <div id="root"></div>
+    <!-- Painted instantly while the app loads; React replaces it. Keeps the first view from being blank. -->
+    <div id="root"><div style="min-height:100vh;background:#0a0f1e;display:flex;align-items:center;justify-content:center"><div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#00d4aa,#00916a);display:flex;align-items:center;justify-content:center;font:800 18px system-ui,sans-serif;color:#06090f;animation:wzboot 1.4s ease-in-out infinite">W</div></div><style>@keyframes wzboot{0%,100%{opacity:.45}50%{opacity:1}}body{margin:0;background:#0a0f1e}</style></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

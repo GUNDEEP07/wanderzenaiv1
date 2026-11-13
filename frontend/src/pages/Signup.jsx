@@ -11,16 +11,16 @@ const s = {
   box: { width: '100%', maxWidth: 400, padding: '0 24px' },
   logo: { width: 40, height: 40, background: 'linear-gradient(135deg,#00d4aa,#00916a)', borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 800, color: '#06090f', margin: '0 auto 16px' },
   headline: { fontFamily: "'Fraunces', serif", fontSize: 32, fontWeight: 900, color: '#fff', textAlign: 'center', lineHeight: 1.1, marginBottom: 6 },
-  sub: { fontSize: 13, color: 'rgba(255,255,255,0.4)', textAlign: 'center', fontStyle: 'italic', marginBottom: 28 },
+  sub: { fontSize: 13, color: 'rgba(255,255,255,0.6)', textAlign: 'center', fontStyle: 'italic', marginBottom: 28 },
   googleBtn: { width: '100%', padding: 12, background: '#fff', border: 'none', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#111', fontFamily: 'inherit', marginBottom: 20, boxSizing: 'border-box' },
   divider: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 },
   divLine: { flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' },
-  divText: { fontSize: 11, color: 'rgba(255,255,255,0.3)' },
+  divText: { fontSize: 11, color: 'rgba(255,255,255,0.55)' },
   fieldWrap: { marginBottom: 12 },
-  label: { display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginBottom: 6 },
+  label: { display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)', marginBottom: 6 },
   input: { width: '100%', padding: '12px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#fff', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 14, outline: 'none', boxSizing: 'border-box' },
   btn: { width: '100%', padding: 13, background: 'linear-gradient(135deg,#00d4aa,#00a87e)', border: 'none', borderRadius: 12, color: '#06090f', fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 14, fontWeight: 800, cursor: 'pointer', marginTop: 8, marginBottom: 16, boxShadow: '0 4px 18px rgba(0,212,170,0.25)', boxSizing: 'border-box' },
-  footer: { textAlign: 'center', fontSize: 13, color: 'rgba(255,255,255,0.35)' },
+  footer: { textAlign: 'center', fontSize: 13, color: 'rgba(255,255,255,0.55)' },
   link: { color: '#00d4aa', textDecoration: 'none', fontWeight: 600 },
   error: { background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.3)', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#ff6b6b', marginBottom: 12 },
   demo: { background: 'rgba(0,212,170,0.06)', border: '1px solid rgba(0,212,170,0.15)', borderRadius: 8, padding: '8px 12px', fontSize: 11, color: 'rgba(0,212,170,0.7)', marginBottom: 16, textAlign: 'center' },
@@ -110,12 +110,12 @@ export default function Signup() {
   return (
     <div style={s.page}>
       <style>{`
-        input::placeholder { color: rgba(255,255,255,0.2); }
+        input::placeholder { color: rgba(255,255,255,0.55); }
         input:focus { border-color: rgba(0,212,170,0.4) !important; }
       `}</style>
       <div style={s.box}>
         <div style={s.logo}>W</div>
-        <div style={s.headline}>Create your<br /><em style={{ fontWeight: 300, color: 'rgba(255,255,255,0.45)' }}>free account</em></div>
+        <div style={s.headline}>Create your<br /><em style={{ fontWeight: 300, color: 'rgba(255,255,255,0.6)' }}>free account</em></div>
         <div style={s.sub}>Save trips, get personalised recommendations</div>
 
         {isDemo && <div style={s.demo}>✦ Demo mode — any credentials work</div>}
@@ -139,7 +139,7 @@ export default function Signup() {
             <input style={s.input} type="email" placeholder="you@email.com" value={email} onChange={e => setEmail(e.target.value)} required />
           </div>
           <div style={s.fieldWrap}>
-            <label style={s.label}>Password * <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'rgba(255,255,255,0.2)' }}>(min 6 chars)</span></label>
+            <label style={s.label}>Password * <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'rgba(255,255,255,0.55)' }}>(min 6 chars)</span></label>
             <input style={s.input} type="password" placeholder="Create a password" value={password} onChange={e => setPassword(e.target.value)} required />
           </div>
           <div style={s.fieldWrap}>
@@ -154,10 +154,10 @@ export default function Signup() {
         <div style={s.footer}>
           Already have an account? <Link to={nextQ ? `/login?${nextQ}` : '/login'} style={s.link}>Sign in</Link>
         </div>
-        <div style={{ textAlign: 'center', marginTop: 24, fontSize: 11, color: 'rgba(255,255,255,0.2)' }}>
-          <Link to="/privacy" style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'none' }}>Privacy Policy</Link>
+        <div style={{ textAlign: 'center', marginTop: 24, fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>
+          <Link to="/privacy" style={{ color: 'rgba(255,255,255,0.55)', textDecoration: 'none' }}>Privacy Policy</Link>
           {' · '}
-          <Link to="/terms" style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'none' }}>Terms</Link>
+          <Link to="/terms" style={{ color: 'rgba(255,255,255,0.55)', textDecoration: 'none' }}>Terms</Link>
         </div>
       </div>
     </div>

@@ -64,9 +64,10 @@ body {
 }
 .nav-logo-text { font-size: 1.1rem; font-weight: 700; color: var(--white); letter-spacing: -0.02em; }
 .nav-logo-text span { color: var(--teal); }
-.nav-link { font-size: 0.875rem; color: var(--white-60); text-decoration: none; font-weight: 500; transition: color 0.2s; }
+.nav-link { font-size: 0.875rem; color: var(--white-60); text-decoration: none; font-weight: 500; transition: color 0.2s; white-space: nowrap; }
 .nav-link:hover { color: var(--white); }
 .nav-cta {
+  white-space: nowrap; /* one line on phones */
   background: var(--teal); color: var(--navy);
   border: none; padding: 0.5rem 1.25rem;
   border-radius: 8px; font-family: 'Plus Jakarta Sans', sans-serif;
@@ -537,7 +538,7 @@ body {
 }
 .footer-links a:hover { color: var(--teal); }
 
-.footer-copy { font-size: 0.8rem; color: var(--white-30); }
+.footer-copy { font-size: 0.8rem; color: rgba(255,255,255,0.6); }
 
 /* Purple aurora glow */
 .hero-glow-3 {
