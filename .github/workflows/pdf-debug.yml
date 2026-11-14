@@ -1,11 +1,11 @@
-name: PDF debug (temporary, read-only)
+name: PDF debug (temporary)
 on:
   push:
     branches: ['smoke/pdf-debug']
 permissions:
   contents: read
 jobs:
-  logs:
+  rebuild:
     runs-on: ubuntu-latest
     steps:
       - uses: aws-actions/configure-aws-credentials@v4
@@ -13,17 +13,22 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-southeast-2
-      - name: Runtimes
+      # One-off: rebuild the PDF + send the "updated" email for the Vietnam day-2 change
+      # (Nov 14), which failed before the ERR_REQUIRE_ESM fix (#35).
+      - name: Rebuild Vietnam day-2 PDF
         run: |
-          for f in itinerary-gen pdf-builder email-sender; do
-            aws lambda get-function-configuration --function-name wanderzenai-$f-prod --query '[FunctionName,Runtime,MemorySize,Timeout,LastUpdateStatus,EphemeralStorage.Size]' --output text
-          done
-      - name: Last hour of logs (emails masked)
+          aws lambda invoke --function-name wanderzenai-pdf-builder-prod \
+            --cli-binary-format raw-in-base64-out \
+            --payload '{"submissionId":"wz_mw6d79lh_9lVr5-9EZHzCTs82","update":{"dayNumber":2}}' \
+            --cli-read-timeout 150 out.json --query 'StatusCode'
+          cat out.json | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}/<email>/g'; echo
+          sleep 25
+      - name: Logs (emails masked)
         run: |
-          START=$(( ($(date +%s) - 3600) * 1000 ))
-          for f in itinerary-gen pdf-builder email-sender; do
+          START=$(( ($(date +%s) - 600) * 1000 ))
+          for f in pdf-builder email-sender; do
             echo "===== $f"
             aws logs filter-log-events --log-group-name /aws/lambda/wanderzenai-$f-prod --start-time $START \
               --query 'events[].message' --output text 2>&1 \
-              | tr '\t' '\n' | grep -vE '^\s*$|^START|^END' | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}/<email>/g' | cut -c1-400 | tail -40
+              | tr '\t' '\n' | grep -vE '^\s*$|^START|^END' | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}/<email>/g' | cut -c1-300 | tail -25
           done
