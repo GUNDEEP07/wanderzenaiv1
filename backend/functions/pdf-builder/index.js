@@ -57,9 +57,53 @@ const mapsUrl = (name, area, country) => {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 };
 
-const formatMoney = (v) => {
-  const n = Number(String(v ?? '').replace(/[^0-9.]/g, ''));
-  return Number.isFinite(n) && n > 0 ? n.toLocaleString('en-US') : null;
+
+// ─── Budget ───────────────────────────────────────────────────────────────────
+
+/** First number in a cost value ("15", 15, "A$15–20" → 15); 0 when there is none. */
+const toAmount = (v) => {
+  if (typeof v === 'number') return Number.isFinite(v) && v > 0 ? v : 0;
+  const m = /\d+(?:[.,]\d+)?/.exec(String(v ?? '').replace(/,(?=\d{3}\b)/g, ''));
+  return m ? Number(m[0].replace(',', '.')) : 0;
+};
+const formatAmount = (v) => Math.round(toAmount(v)).toLocaleString('en-US');
+
+/**
+ * Per-day cost table from the numbers the generator already returns: each activity's cost,
+ * the local-eats cost and the day total. "Other" is what the day total has beyond those
+ * (getting around, small extras). Stays aren't itemised per day, so the gap to the trip
+ * estimate is shown as a note rather than invented.
+ */
+const budgetTable = (itinerary, sym) => {
+  const days = itinerary.days || [];
+  if (!days.length) return '';
+  const rows = days.map(d => {
+    const acts = ['morningActivity', 'afternoonActivity', 'eveningActivity']
+      .reduce((sum, k) => sum + (d[k] && !d[k].isFree ? toAmount(d[k].cost) : 0), 0);
+    const food = toAmount(d.localEats?.cost);
+    const stated = toAmount(d.dailyCost);
+    const total = Math.max(stated, acts + food);
+    return { n: d.dayNumber, base: d.base, acts, food, other: total - acts - food, total };
+  });
+  const sum = (k) => rows.reduce((a, r) => a + r[k], 0);
+  if (!sum('total')) return '';
+  const money = (v) => (v ? `${sym}${Math.round(v).toLocaleString('en-US')}` : '—');
+  const tripEstimate = toAmount(itinerary.totalEstimatedCost);
+  const gap = tripEstimate - sum('total');
+  return `
+  <div class="budget">
+    <div class="section-heading">Budget by day</div>
+    <table>
+      <thead><tr><th>Day</th><th>Activities</th><th>Food</th><th>Other</th><th>Day total</th></tr></thead>
+      <tbody>
+        ${rows.map(r => `<tr><td>Day ${escapeHtml(r.n)}${r.base ? ` <span class="base">· ${escapeHtml(r.base)}</span>` : ''}</td><td>${money(r.acts)}</td><td>${money(r.food)}</td><td>${money(r.other)}</td><td>${money(r.total)}</td></tr>`).join('')}
+        <tr class="total"><td>All days</td><td>${money(sum('acts'))}</td><td>${money(sum('food'))}</td><td>${money(sum('other'))}</td><td>${money(sum('total'))}</td></tr>
+      </tbody>
+    </table>
+    <div class="budget-note">${gap > 0.5
+      ? `Your trip estimate of ${money(tripEstimate)} also covers about ${money(gap)} not in the daily totals, mostly stays and transfers between towns.`
+      : '"Other" is what each day\'s total includes beyond the listed activities and food, such as local transport and small extras.'} Prices are estimates; check before you book.</div>
+  </div>`;
 };
 
 // ─── Social media links ───────────────────────────────────────────────────────
@@ -146,15 +190,15 @@ a { color:var(--teal); text-decoration:none; }
 
 .page { width:210mm; min-height:297mm; padding:14mm 16mm; background:var(--navy); }
 
-.header { display:flex; align-items:flex-start; justify-content:space-between; gap:8mm; padding-bottom:4mm; }
+.header { display:flex; align-items:center; justify-content:space-between; gap:8mm; padding-bottom:5mm; margin-bottom:6mm; border-bottom:1px solid var(--border); }
 .logo-area { display:flex; align-items:center; gap:8px; }
 .logo-mark { width:32px; height:32px; border-radius:8px; background:var(--teal); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; color:var(--navy); flex-shrink:0; }
 .logo-text { font-size:16px; font-weight:700; color:var(--white); letter-spacing:-0.02em; }
 .logo-text span { color:var(--teal); }
 .logo-sub { font-size:8px; color:var(--w60); letter-spacing:0.12em; text-transform:uppercase; margin-top:1px; white-space:nowrap; }
 .logo-area { flex-shrink:0; }
-.header-right { flex:1; min-width:0; text-align:right; }
-.trip-title { font-family:'Fraunces',serif; font-size:20px; font-weight:700; color:var(--white); line-height:1.2; letter-spacing:-0.02em; }
+.header-right { font-size:8px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:var(--teal); white-space:nowrap; }
+.trip-title { font-family:'Fraunces',serif; font-size:24px; font-weight:700; color:var(--white); line-height:1.2; letter-spacing:-0.02em; margin-bottom:3mm; }
 .trip-summary { font-size:10.5px; color:rgba(255,255,255,0.75); line-height:1.65; padding-bottom:5mm; border-bottom:1px solid var(--border); margin-bottom:6mm; }
 
 .hero { width:100%; height:52mm; border-radius:10px; overflow:hidden; margin-bottom:6mm; position:relative; }
@@ -188,12 +232,15 @@ a { color:var(--teal); text-decoration:none; }
 .day-budget { font-size:9px; color:var(--w60); margin-top:2px; }
 .day-body { padding:4mm 5mm; }
 
-.activity { padding-bottom:3.5mm; margin-bottom:3.5mm; border-bottom:1px solid var(--border); }
+.activity { display:flex; gap:4mm; padding-bottom:3.5mm; margin-bottom:3.5mm; border-bottom:1px solid var(--border); }
+.activity-when { width:16mm; flex-shrink:0; padding-top:1px; }
+.activity-main { flex:1; min-width:0; }
 .activity:last-of-type { border-bottom:none; margin-bottom:0; padding-bottom:0; }
-.activity-header { display:flex; align-items:center; gap:3mm; margin-bottom:1.5mm; }
-.activity-time { font-size:8px; font-weight:700; color:var(--teal); letter-spacing:0.05em; min-width:18mm; }
+.activity-header { display:flex; align-items:flex-start; gap:3mm; margin-bottom:1mm; }
+.activity-header .activity-name { flex:1; min-width:0; margin-bottom:0; }
+.activity-time { font-size:11px; font-weight:700; color:var(--teal); letter-spacing:0.02em; line-height:1.3; }
 .activity-period { font-size:7.5px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:var(--w60); }
-.activity-cost { margin-left:auto; font-size:8px; font-weight:700; color:var(--navy); background:var(--teal); padding:1.5px 6px; border-radius:4px; }
+.activity-cost { flex-shrink:0; white-space:nowrap; font-size:8px; font-weight:700; color:var(--navy); background:var(--teal); padding:1.5px 6px; border-radius:4px; }
 .activity-cost.free { background:rgba(0,212,170,0.15); color:var(--teal); }
 .activity-name { font-size:11px; font-weight:700; color:var(--white); margin-bottom:1mm; letter-spacing:-0.01em; line-height:1.3; }
 .activity-location { display:flex; align-items:center; flex-wrap:wrap; gap:2mm 3mm; font-size:9.5px; color:var(--teal); font-weight:600; margin-bottom:1.5mm; line-height:1.4; }
@@ -203,7 +250,7 @@ a { color:var(--teal); text-decoration:none; }
 .insider-tip strong { font-style:normal; font-weight:700; }
 
 .local-eats { background:rgba(255,107,107,0.06); border:1px solid rgba(255,107,107,0.15); border-radius:8px; padding:3mm 4mm; margin-top:3mm; display:flex; gap:3mm; align-items:flex-start; }
-.eats-icon { width:24px; height:24px; border-radius:6px; background:rgba(255,107,107,0.15); display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; }
+.eats-icon { width:24px; height:24px; border-radius:6px; background:rgba(255,107,107,0.15); display:flex; align-items:center; justify-content:center; font-size:7px; font-weight:800; letter-spacing:0.08em; color:var(--coral); flex-shrink:0; }
 .eats-name { font-size:10px; font-weight:700; color:var(--white); margin-bottom:1px; }
 .eats-dish { font-size:9.5px; color:rgba(255,107,107,0.8); margin-bottom:1px; }
 .eats-vibe { font-size:9px; color:rgba(255,255,255,0.7); font-style:italic; }
@@ -223,6 +270,14 @@ a { color:var(--teal); text-decoration:none; }
 .avoid-item { display:flex; gap:3mm; margin-bottom:2mm; font-size:10px; line-height:1.6; color:rgba(255,160,160,0.9); }
 .avoid-x { width:7px; height:2px; background:var(--coral); flex-shrink:0; margin-top:8px; }
 
+.budget { background:var(--navy-2); border:1px solid var(--border); border-radius:10px; padding:4mm 5mm; margin-top:5mm; break-inside:avoid; }
+.budget table { width:100%; border-collapse:collapse; font-size:9.5px; }
+.budget th { font-size:7px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--w60); text-align:right; padding:0 0 2mm; }
+.budget th:first-child, .budget td:first-child { text-align:left; }
+.budget td { text-align:right; padding:1.6mm 0; border-top:1px solid var(--border); color:rgba(255,255,255,0.8); font-variant-numeric:tabular-nums; }
+.budget .base { color:var(--w60); font-size:8.5px; }
+.budget tr.total td { font-weight:700; color:var(--white); border-top:1px solid var(--teal-br); }
+.budget-note { font-size:8.5px; color:var(--w60); margin-top:2.5mm; line-height:1.5; }
 .pdf-footer { margin-top:6mm; padding-top:4mm; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
 .footer-left { display:flex; align-items:center; gap:6px; }
 .footer-logo-mark { width:20px; height:20px; border-radius:5px; background:var(--teal); display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:800; color:var(--navy); }
@@ -244,10 +299,9 @@ a { color:var(--teal); text-decoration:none; }
         <div class="logo-sub">Slow travel · Off the beaten path</div>
       </div>
     </div>
-    <div class="header-right">
-      <div class="trip-title">${escapeHtml(itinerary.title || submission.destination + ' Travel Plan')}</div>
-          </div>
+    <div class="header-right">Your slow travel plan</div>
   </div>
+  <h1 class="trip-title">${escapeHtml(itinerary.title || submission.destination + ' Travel Plan')}</h1>
   <p class="trip-summary">${plainText(itinerary.summary || 'A personalised slow travel itinerary crafted just for you.')}</p>
 
   <!-- Hero image -->
@@ -277,7 +331,7 @@ a { color:var(--teal); text-decoration:none; }
     </div>
     <div class="meta-item">
       <div class="meta-label">Est. total</div>
-      <div class="meta-value">${formatMoney(itinerary.totalEstimatedCost) ? currencySymbol + formatMoney(itinerary.totalEstimatedCost) : '—'}</div>
+      <div class="meta-value">${toAmount(itinerary.totalEstimatedCost) ? currencySymbol + formatAmount(itinerary.totalEstimatedCost) : '—'}</div>
     </div>
     ${submission.language && submission.language !== 'English' ? `
     <div class="meta-item">
@@ -332,7 +386,7 @@ a { color:var(--teal); text-decoration:none; }
       <div class="day-num">${String(day.dayNumber).padStart(2, '0')}</div>
       <div class="day-info">
         <div class="day-theme">${escapeHtml(day.theme || 'Day ' + day.dayNumber)}</div>
-        <div class="day-budget">${day.base ? `${day.travelDay ? 'Travel day → ' : ''}${escapeHtml(day.base)} · ` : ''}Daily budget: ${currencySymbol}${day.dailyCost || 0}</div>
+        <div class="day-budget">${day.base ? `${day.travelDay ? 'Travel day → ' : ''}${escapeHtml(day.base)} · ` : ''}Daily budget: ${toAmount(day.dailyCost) ? currencySymbol + formatAmount(day.dailyCost) : '—'}</div>
       </div>
     </div>
     <div class="day-body">
@@ -345,27 +399,31 @@ a { color:var(--teal); text-decoration:none; }
         const actMapUrl = act.venue?.mapsUrl && /^https:\/\//i.test(act.venue.mapsUrl) ? act.venue.mapsUrl : mapsUrl(place, day.base, submission.destination);
         return `
         <div class="activity">
-          <div class="activity-header">
-            <span class="activity-time">${escapeHtml(act.time || '')}</span>
-            <span class="activity-period">${periodLabel}</span>
-            <span class="activity-cost ${act.isFree ? 'free' : ''}">${act.isFree ? 'Free' : currencySymbol + (act.cost || 0)}</span>
+          <div class="activity-when">
+            <div class="activity-time">${escapeHtml(act.time || '')}</div>
+            <div class="activity-period">${periodLabel}</div>
           </div>
-          <div class="activity-name">${escapeHtml(act.activity || '')}</div>
+          <div class="activity-main">
+          <div class="activity-header">
+            <div class="activity-name">${escapeHtml(act.activity || '')}</div>
+            <span class="activity-cost ${act.isFree || !toAmount(act.cost) ? 'free' : ''}">${act.isFree || !toAmount(act.cost) ? 'Free' : currencySymbol + formatAmount(act.cost)}</span>
+          </div>
           <div class="activity-location">
             ${act.location ? `<span>${escapeHtml(act.location)}</span>` : ''}
             <a href="${escapeHtml(actMapUrl)}" class="activity-map">View on map</a>
           </div>
           <div class="activity-why">${sanitize(act.why || '')}</div>
           ${act.insiderTip ? `<div class="insider-tip"><strong>Insider tip:</strong> ${sanitize(act.insiderTip)}</div>` : ''}
+          </div>
         </div>`;
       }).join('')}
 
       ${day.localEats ? `
       <div class="local-eats">
-        <div class="eats-icon">🍜</div>
+        <div class="eats-icon">EAT</div>
         <div style="flex:1">
           <div class="eats-name">${escapeHtml(day.localEats.name || '')}</div>
-          <div class="eats-dish">Order: ${escapeHtml(day.localEats.dish || '')} · ${currencySymbol}${day.localEats.cost || 0}</div>
+          <div class="eats-dish">Order: ${escapeHtml(day.localEats.dish || '')}${toAmount(day.localEats.cost) ? ` · ${currencySymbol}${formatAmount(day.localEats.cost)}` : ''}</div>
           <div class="eats-vibe">${escapeHtml(day.localEats.vibe || '')}</div>
           ${day.localEats.venue ? venueCard(day.localEats.venue) : ''}
         </div>
@@ -379,6 +437,8 @@ a { color:var(--teal); text-decoration:none; }
 
     </div>
   </div>`).join('')}
+
+  ${budgetTable(itinerary, currencySymbol)}
 
   <!-- Tips + Avoid -->
   <div class="tips-grid">
@@ -570,4 +630,4 @@ exports.handler = async (event) => {
 };
 
 // Exported for unit tests.
-exports._internal = { buildHTML, launchBrowser, PDF_PAGE_OPTIONS };
+exports._internal = { buildHTML, launchBrowser, PDF_PAGE_OPTIONS, budgetTable, toAmount };
