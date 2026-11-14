@@ -291,3 +291,28 @@ export async function startDayAdjustment(submissionId, dayNumber, note) {
   if (res.status === 429) throw new Error("You've changed a lot of days in a short time — please try again in a little while.");
   throw new Error(body?.message || body?.errors?.[0] || 'Could not start the change — please try again.');
 }
+
+/**
+ * A fresh download link for the trip's PDF (owner only, valid ~15 min).
+ * GET /itinerary/{id}/pdf → { url, fileName }. Throws with a message the page can show;
+ * err.code is 'SIGN_IN' when the viewer isn't signed in as the owner.
+ */
+export async function fetchPdfLink(submissionId) {
+  const headers = await authHeaders();
+  if (!headers.Authorization) {
+    const err = new Error('Sign in with the email this trip was sent to, to download the PDF.');
+    err.code = 'SIGN_IN';
+    throw err;
+  }
+  const res = await fetch(`${API_URL}/itinerary/${encodeURIComponent(submissionId)}/pdf`, { headers, cache: 'no-store' });
+  let body = null;
+  try { body = await res.json(); } catch { /* empty */ }
+  if (res.ok && body?.success && body.data?.url) return body.data;
+  if (res.status === 401 || res.status === 403) {
+    const err = new Error('Sign in with the email this trip was sent to, to download the PDF.');
+    err.code = 'SIGN_IN';
+    throw err;
+  }
+  if (res.status === 404) throw new Error(body?.message || 'The PDF for this trip is not available.');
+  throw new Error('Could not prepare the download — please try again.');
+}

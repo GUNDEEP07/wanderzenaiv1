@@ -6,6 +6,8 @@ import { PhotoCredit } from '../components/PhotoCredit';
 import { TravelChat } from '../components/TravelChat';
 import ContinuePlan from '../components/dashboard/ContinuePlan';
 import { timeAgo, extractCountry, lastPlanHeadline } from '../utils/tripStats';
+import { fetchPdfLink } from '../api/itinerary';
+import { openUrl } from '../utils/openUrl';
 import './Dashboard.css';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -604,7 +606,7 @@ export default function Dashboard() {
                         View itinerary →
                       </button>
                     )}
-                    {(trip.pdfUrl || trip.hasItinerary) && (
+                    {(trip.hasPdf || trip.hasItinerary) && (
                       <div data-trip-menu style={{ position: 'relative', marginLeft: 'auto' }}>
                         <button
                           type="button"
@@ -615,16 +617,25 @@ export default function Dashboard() {
                         </button>
                         {openMenuId === trip.id && (
                           <div style={{ position: 'absolute', bottom: 36, right: 0, background: '#1a2540', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: '4px 0', minWidth: 140, zIndex: 20, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
-                            {trip.pdfUrl && (
-                              <a
-                                href={trip.pdfUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                onClick={e => e.stopPropagation()}
-                                style={{ display: 'block', padding: '9px 14px', fontSize: 12, color: 'rgba(255,255,255,0.75)', textDecoration: 'none', fontFamily: 'inherit' }}
+                            {trip.hasPdf && (
+                              <button
+                                type="button"
+                                onClick={async e => {
+                                  e.stopPropagation();
+                                  const btn = e.currentTarget;
+                                  btn.textContent = 'Preparing…';
+                                  try {
+                                    const { url } = await fetchPdfLink(trip.id);
+                                    openUrl(url);
+                                    btn.textContent = '📥 Download PDF';
+                                  } catch (err) {
+                                    btn.textContent = err.message || 'Download failed';
+                                  }
+                                }}
+                                style={{ display: 'block', width: '100%', padding: '9px 14px', background: 'none', border: 'none', fontSize: 12, color: 'rgba(255,255,255,0.75)', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
                               >
                                 📥 Download PDF
-                              </a>
+                              </button>
                             )}
                             {trip.hasItinerary && (
                               <button

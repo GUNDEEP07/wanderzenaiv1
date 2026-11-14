@@ -10,7 +10,7 @@ const s3 = new S3Client({ region: 'ap-southeast-2' });
 
 const escapeHtml = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-const buildEmailHTML = ({ itineraryTitle, destination, days, downloadUrl, isPaid, update = null }) => `
+const buildEmailHTML = ({ itineraryTitle, destination, days, downloadUrl, tripUrl = null, isPaid, update = null }) => `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -92,8 +92,12 @@ const buildEmailHTML = ({ itineraryTitle, destination, days, downloadUrl, isPaid
     </div>
 
     <div class="download-section">
+      ${tripUrl ? `
+      <a href="${escapeHtml(tripUrl)}" class="download-btn">Open your trip →</a>
+      <div class="download-note">Day by day on your phone, add it to your calendar, and download the PDF any time.<br>Sign in with this email address to download.</div>
+      <div class="download-note" style="margin-top:10px;font-style:normal">Or <a href="${escapeHtml(downloadUrl)}" style="color:#4a7c59">download the PDF now</a> (this direct link only works for a few hours).</div>` : `
       <a href="${escapeHtml(downloadUrl)}" class="download-btn">Download Your Itinerary →</a>
-      <div class="download-note">Link expires in 7 days · PDF format · Print-friendly</div>
+      <div class="download-note">PDF format · Print-friendly · This link only works for a few hours</div>`}
     </div>
 
     <hr class="divider">
@@ -151,15 +155,20 @@ exports.handler = async (event) => {
   const db = getDB();
 
   try {
-    // ─── Generate signed URL (7-day expiry) ─────────────────────────────────
+    // ─── Links ───────────────────────────────────────────────────────────────
+    // The signed URL dies with the Lambda's temporary credentials (often within hours), so
+    // the main button opens the trip page, which signs a fresh link on every download.
     const signedUrl = await getSignedUrl(
       s3,
       new GetObjectCommand({ Bucket: process.env.PDF_BUCKET, Key: s3Key }),
-      { expiresIn: 7 * 24 * 60 * 60 } // 7 days
+      { expiresIn: 24 * 60 * 60 }
     );
+    const tripUrl = process.env.FRONTEND_URL && submissionId
+      ? `${process.env.FRONTEND_URL}/itinerary/${encodeURIComponent(submissionId)}?download=1`
+      : null;
 
     // ─── Send email via SES ──────────────────────────────────────────────────
-    const htmlBody = buildEmailHTML({ itineraryTitle, destination, days, downloadUrl: signedUrl, isPaid, update });
+    const htmlBody = buildEmailHTML({ itineraryTitle, destination, days, downloadUrl: signedUrl, tripUrl, isPaid, update });
 
     await ses.send(new SendEmailCommand({
       Source: `WanderZenAI <${process.env.FROM_EMAIL}>`,
@@ -207,3 +216,6 @@ exports.handler = async (event) => {
     ).catch(() => {});
   }
 };
+
+// Exported for unit tests.
+exports._internal = { buildEmailHTML };

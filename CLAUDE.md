@@ -83,6 +83,17 @@ AI-powered slow-travel itinerary SaaS. Live at wanderzenai.com. Solo-maintained.
   pdf-builder/email-sender run with `update: { dayNumber }`, which never change the trip status.
   The page polls `GET /itinerary/{id}/adjustments`. Notes stay in the table, never in the
   shareable itinerary (008).
+- Trip page "On the road" (Nov 2026): `pages/ItineraryView.jsx` shows one day at a time and opens on
+  today (needs `submissions.travel_date`), with Up next, directions (`utils/tripPlan.js`), local names
+  (`localName`, generator schema), mark-as-done and a saved copy for offline (`utils/tripCache.js` +
+  network-first `public/sw.js`, deployed no-cache). GET /itinerary?id= is public but returns
+  `travelDate`/`hasPdf` to the owner only (optionalUser). Calendar export is built in the browser
+  (`utils/ics.js`).
+- PDF downloads: GET /itinerary/{id}/pdf (form-handler `pdf-link.js`, owner only, 15-min signed URL;
+  the S3 key holds the owner's email, so never sign it for share-link viewers). The email's main
+  button opens `/itinerary/{id}?download=1`; its direct S3 link only lasts hours (Lambda creds).
+- PDF text: `pdf-builder/rich-text.js` renders Claude text (balanced-paren map links → "map" pills,
+  everything else escaped); "Budget by day" table from per-day costs.
 - Profile name: GET /profile fills an empty `users.name` from the verified token's `name` claim
   (never overwrites one set in Settings).
 - Photos: Unsplash only through the backend `GET /photos/search` (key stays server-side, cached);

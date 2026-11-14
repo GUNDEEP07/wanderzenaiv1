@@ -1,7 +1,5 @@
 'use strict';
-const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
-const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
-const { log, getDB, requireUser, AuthError, authErrorBody } = require('/opt/nodejs/index');
+const { log, getDB, requireUser, optionalUser, AuthError, authErrorBody } = require('/opt/nodejs/index');
 const Stripe = require('stripe');
 
 const stripe = process.env.STRIPE_SECRET_KEY ? Stripe(process.env.STRIPE_SECRET_KEY) : null;
@@ -12,24 +10,13 @@ const CORS = {
   'Content-Type': 'application/json',
 };
 
-const s3 = new S3Client({ region: process.env.AWS_REGION || 'ap-southeast-2' });
-const PDF_BUCKET = process.env.PDF_BUCKET;
 
 const json = (statusCode, body) => ({ statusCode, headers: CORS, body: JSON.stringify(body) });
 
-async function getPdfUrl(submissionId) {
-  if (!PDF_BUCKET || !submissionId) return null;
-  try {
-    const cmd = new GetObjectCommand({ Bucket: PDF_BUCKET, Key: `${submissionId}.pdf` });
-    return await getSignedUrl(s3, cmd, { expiresIn: 86400 });
-  } catch {
-    return null;
-  }
-}
-
 // ─── GET /itinerary?id= — public by design ───────────────────────────────────
 // Share links must work without sign-in. The submission ID is the share secret, so new IDs
-// are generated with a CSPRNG (shared layer generateId). No caller identity is read here.
+// are generated with a CSPRNG (shared layer generateId). A signed-in owner also gets the
+// travel date (for "today" and calendar export) — never shown to share-link viewers.
 async function getItinerary(event, db) {
   const submissionId = event.queryStringParameters?.id;
   if (!submissionId || submissionId.length > 64) {
@@ -38,7 +25,7 @@ async function getItinerary(event, db) {
 
   try {
     const submissionResult = await db.query(
-      'SELECT destination, days, status, created_at FROM submissions WHERE id = $1',
+      'SELECT email, destination, days, status, currency, traveler_type, travel_date, created_at FROM submissions WHERE id = $1',
       [submissionId]
     );
     if (submissionResult.rows.length === 0) return json(404, { error: 'Not found' });
@@ -50,18 +37,32 @@ async function getItinerary(event, db) {
     if (itinResult.rows.length === 0) return json(404, { error: 'Itinerary not generated yet' });
 
     const submission = submissionResult.rows[0];
+    const viewer = await optionalUser(event).catch(() => null);
+    const isOwner = !!viewer?.email && viewer.email.toLowerCase() === String(submission.email).toLowerCase();
     return json(200, {
       submissionId,
       destination: submission.destination,
       days: submission.days,
       status: submission.status,
+      currency: submission.currency || null,
+      travelerType: submission.traveler_type || null,
       createdAt: submission.created_at,
+      isOwner,
+      hasPdf: isOwner && submission.status === 'email_sent',
+      travelDate: isOwner && submission.travel_date ? toIsoDate(submission.travel_date) : null,
       itinerary: itinResult.rows[0].itinerary_data,
     });
   } catch (err) {
     log.error('Get itinerary failed', { error: err.message });
     return json(500, { error: 'Failed to load itinerary' });
   }
+}
+
+/** pg returns DATE as a local-midnight Date; keep the calendar day, not a shifted UTC one. */
+function toIsoDate(d) {
+  if (typeof d === 'string') return d.slice(0, 10);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
 function generateReferralCode() {
@@ -183,7 +184,9 @@ async function handleGetProfile(db, user) {
         status:       row.status,
         createdAt:    row.created_at,
         hasItinerary: !!row.itinerary_id,
-        pdfUrl:       row.status === 'email_sent' ? await getPdfUrl(row.id) : null,
+        // The PDF link is made per click (GET /itinerary/{id}/pdf); the old pre-signed URL here
+        // used the wrong S3 key and never worked.
+        hasPdf:       row.status === 'email_sent' && !!row.itinerary_id,
       }))
     );
 
@@ -367,4 +370,4 @@ exports.handler = async (event) => {
 };
 
 // Exported for unit tests.
-exports._internal = { validateProfileInput, safeReturnUrl, validateDraft };
+exports._internal = { validateProfileInput, safeReturnUrl, validateDraft, toIsoDate };

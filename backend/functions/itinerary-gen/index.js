@@ -60,13 +60,15 @@ CRITICAL OUTPUT RULES:
 const DAY_SCHEMA = `{
   "dayNumber": number,
   "theme": "string",
-  "morningActivity": {"time":"string","activity":"string","location":"string","venueName":"string or null","why":"string","cost":number,"isFree":boolean,"insiderTip":"string"},
-  "afternoonActivity": {"time":"string","activity":"string","location":"string","venueName":"string or null","why":"string","cost":number,"isFree":boolean,"insiderTip":"string"},
-  "eveningActivity": {"time":"string","activity":"string","location":"string","venueName":"string or null","why":"string","cost":number,"isFree":boolean,"insiderTip":"string"},
+  "morningActivity": {"time":"string","activity":"string","location":"string","localName":"string or null","venueName":"string or null","why":"string","cost":number,"isFree":boolean,"insiderTip":"string"},
+  "afternoonActivity": {"time":"string","activity":"string","location":"string","localName":"string or null","venueName":"string or null","why":"string","cost":number,"isFree":boolean,"insiderTip":"string"},
+  "eveningActivity": {"time":"string","activity":"string","location":"string","localName":"string or null","venueName":"string or null","why":"string","cost":number,"isFree":boolean,"insiderTip":"string"},
   "hiddenGem": "string",
   "dailyCost": number,
   "localEats": {"name":"string","dish":"string","cost":number,"venueName":"string or null","vibe":"string"}
 }`;
+// localName: the place's name in the local language and script (e.g. "Rừng Dừa Bảy Mẫu"), so a
+// traveller can show it to a driver; null when it is the same as "location".
 
 // ─── META SCHEMA (cover + tips, one call) ────────────────────────────────────
 const META_SCHEMA = `{
@@ -237,6 +239,8 @@ Rules:
 - One completely free hidden gem per day
 - Specific place names, not generic descriptions
 - Costs in ${currency} (${currencySymbol})
+- localName: the place's name in the local language and script when it differs from "location" (so it can be shown to a driver); otherwise null
+- No URLs or markdown links in any field
 ${fsTips ? `\n\nReal verified venues — when you reference any of these venues, set venueName to the EXACT name from this list:\n${fsTips}\n\nFor EVERY activity that references a verified venue above, set venueName to the exact venue name (e.g. "venueName":"Kiyomizu-dera Temple (清水寺)"). If the activity doesn't reference one of these venues, set venueName to null.` : ''}${formatRouteForDays(picksPlan?.route, dayNumbers)}${formatPrefsForItinerary(picksPlan?.prefs)}${venuesContext}${extraRules}
 
 Return ONLY a JSON object with a "days" array containing ${dayNumbers.length} day object(s):
