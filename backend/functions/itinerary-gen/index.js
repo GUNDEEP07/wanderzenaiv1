@@ -188,7 +188,7 @@ ${fsTips ? `
 Real verified venues in ${destination} — reference these specifically by name and include their map links:
 ${fsTips}
 
-For each venue mentioned: include the venue name exactly as given, and add the Google Maps link as [View on map](url) after the activity description.` : ''}${venuesContext}${formatRouteOverview(picksPlan?.route)}${formatPrefsForItinerary(picksPlan?.prefs)}
+For each venue mentioned: include the venue name exactly as given (put it in "location"). Do NOT write URLs or markdown links anywhere in the text; the app adds map links itself.` : ''}${venuesContext}${formatRouteOverview(picksPlan?.route)}${formatPrefsForItinerary(picksPlan?.prefs)}
 
 Return ONLY this JSON (no extra text):
 ${picksPlan?.route ? META_SCHEMA_WITH_STAYS : META_SCHEMA}`;

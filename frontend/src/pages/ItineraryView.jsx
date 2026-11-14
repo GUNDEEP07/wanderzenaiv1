@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { analytics } from '../utils/analytics';
 import { fetchAdjustments, startDayAdjustment } from '../api/itinerary';
+import { plainText } from '../utils/plainText';
 import AdjustDay from '../components/itinerary/AdjustDay';
 
 /** How often the page checks on a day being rewritten. */
@@ -33,13 +34,13 @@ function ActivityCard({ activity, period, emoji }) {
       <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.55, marginBottom: 8 }}>{activity.activity}</div>
       {activity.why && (
         <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontStyle: 'italic', lineHeight: 1.45, borderLeft: '2px solid rgba(0,212,170,0.3)', paddingLeft: 10, marginBottom: 8 }}>
-          {activity.why}
+          {plainText(activity.why)}
         </div>
       )}
       {activity.insiderTip && (
         <div style={{ background: 'rgba(0,212,170,0.06)', border: '1px solid rgba(0,212,170,0.15)', borderRadius: 8, padding: '8px 12px', fontSize: 11, color: 'rgba(255,255,255,0.7)', display: 'flex', gap: 6, alignItems: 'flex-start' }}>
           <span>💡</span>
-          <span>{activity.insiderTip}</span>
+          <span>{plainText(activity.insiderTip)}</span>
         </div>
       )}
       {activity.venue?.mapsUrl && (
@@ -226,7 +227,7 @@ export default function ItineraryView() {
         </h1>
         {itin?.summary && (
           <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.55)', lineHeight: 1.7, maxWidth: 680, marginBottom: 24, fontStyle: 'italic' }}>
-            {itin.summary}
+            {plainText(itin.summary)}
           </p>
         )}
         {/* Stats */}
@@ -306,7 +307,7 @@ export default function ItineraryView() {
                 <span style={{ fontSize: 18, flexShrink: 0 }}>💎</span>
                 <div>
                   <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#a78bfa', marginBottom: 4 }}>Hidden Gem</div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>{day.hiddenGem}</div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>{plainText(day.hiddenGem)}</div>
                 </div>
               </div>
             )}
