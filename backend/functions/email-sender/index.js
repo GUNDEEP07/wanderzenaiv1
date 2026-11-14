@@ -8,6 +8,8 @@ const { getDB, log } = require('/opt/nodejs/index');
 const ses = new SESClient({ region: 'ap-southeast-2' });
 const s3 = new S3Client({ region: 'ap-southeast-2' });
 
+const escapeHtml = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
 const buildEmailHTML = ({ itineraryTitle, destination, days, downloadUrl, isPaid, update = null }) => `
 <!DOCTYPE html>
 <html lang="en">
@@ -49,8 +51,10 @@ const buildEmailHTML = ({ itineraryTitle, destination, days, downloadUrl, isPaid
   .divider { border: none; border-top: 1px solid #e0d8cc; margin: 32px 0; }
   .what-inside { margin-bottom: 32px; }
   .section-title { font-size: 14px; font-weight: bold; color: #1a2e20; margin-bottom: 14px; letter-spacing: 0.05em; }
-  .feature-item { display: flex; gap: 14px; margin-bottom: 12px; font-size: 13px; color: #5a5040; line-height: 1.6; }
-  .feature-dot { color: #4a7c59; font-weight: bold; flex-shrink: 0; margin-top: 2px; }
+  /* Tables, not flexbox: Gmail and Outlook drop display:flex, which misaligned the list. */
+  .feature-dot { width: 22px; color: #4a7c59; font-weight: bold; font-size: 13px; line-height: 1.6; padding: 0 0 10px; }
+  .feature-text { font-size: 13px; color: #5a5040; line-height: 1.6; padding: 0 0 10px; }
+  @media (max-width: 620px) { .wrapper { margin: 0 auto !important; } .body { padding: 28px 22px !important; } .header, .footer { padding-left: 22px !important; padding-right: 22px !important; } .download-btn { padding: 16px 28px !important; } }
   .upgrade-box {
     background: #e8f0ea;
     border-left: 3px solid #4a7c59;
@@ -77,18 +81,18 @@ const buildEmailHTML = ({ itineraryTitle, destination, days, downloadUrl, isPaid
 
   <div class="body">
     <div class="greeting">${update ? 'Your itinerary is updated ✦' : 'Your itinerary is ready ✦'}</div>
-    <div class="destination-pill">${destination} · ${days} days</div>
+    <div class="destination-pill">${escapeHtml(destination)} · ${escapeHtml(days)} days</div>
 
     <div class="intro">
       ${update
         ? `Day ${update.dayNumber} has been rewritten the way you asked. The rest of your trip is unchanged — here is the full guide with the new day in it.`
         : `We've crafted a slow travel itinerary tailored to how you actually want to travel —
       hidden cafes, local guesthouses, morning markets, and scenic walks away from the crowds.
-      No tourist traps. Just the real ${destination}.`}
+      No tourist traps. Just the real ${escapeHtml(destination)}.`}
     </div>
 
     <div class="download-section">
-      <a href="${downloadUrl}" class="download-btn">Download Your Itinerary →</a>
+      <a href="${escapeHtml(downloadUrl)}" class="download-btn">Download Your Itinerary →</a>
       <div class="download-note">Link expires in 7 days · PDF format · Print-friendly</div>
     </div>
 
@@ -96,13 +100,15 @@ const buildEmailHTML = ({ itineraryTitle, destination, days, downloadUrl, isPaid
 
     <div class="what-inside">
       <div class="section-title">What's inside your plan</div>
-      <div class="feature-item"><span class="feature-dot">→</span><span>Day-by-day schedule with morning, afternoon and evening activities</span></div>
-      <div class="feature-item"><span class="feature-dot">→</span><span>One hidden gem per day — places most tourists never find</span></div>
-      <div class="feature-item"><span class="feature-dot">→</span><span>Local food recommendations with specific dishes to order</span></div>
-      <div class="feature-item"><span class="feature-dot">→</span><span>Insider tips on best times to visit each spot</span></div>
-      <div class="feature-item"><span class="feature-dot">→</span><span>Where to stay — neighbourhoods over city-centre hotels</span></div>
-      <div class="feature-item"><span class="feature-dot">→</span><span>Tourist traps to skip — honest and specific</span></div>
-      <div class="feature-item"><span class="feature-dot">→</span><span>Daily cost breakdown in your currency</span></div>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+        <tr><td class="feature-dot" valign="top">→</td><td class="feature-text">Day-by-day schedule with morning, afternoon and evening activities</td></tr>
+        <tr><td class="feature-dot" valign="top">→</td><td class="feature-text">One hidden gem per day — places most tourists never find</td></tr>
+        <tr><td class="feature-dot" valign="top">→</td><td class="feature-text">Local food recommendations with specific dishes to order</td></tr>
+        <tr><td class="feature-dot" valign="top">→</td><td class="feature-text">Insider tips on best times to visit each spot</td></tr>
+        <tr><td class="feature-dot" valign="top">→</td><td class="feature-text">Where to stay — neighbourhoods over city-centre hotels</td></tr>
+        <tr><td class="feature-dot" valign="top">→</td><td class="feature-text">Tourist traps to skip — honest and specific</td></tr>
+        <tr><td class="feature-dot" valign="top">→</td><td class="feature-text">Budget by day — activities, food and other costs in your currency</td></tr>
+      </table>
     </div>
 
     ${!isPaid ? `
