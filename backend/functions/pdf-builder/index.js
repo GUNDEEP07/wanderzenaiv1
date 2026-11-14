@@ -1,13 +1,19 @@
 'use strict';
 
-// Both are ES modules since @sparticuz/chromium 133 / puppeteer-core 24; Node 24 loads them
-// with require() and hands back the module namespace, so take the default export.
-const chromiumModule = require('@sparticuz/chromium');
-const puppeteerModule = require('puppeteer-core');
-const chromium = chromiumModule.default || chromiumModule;
-const puppeteer = puppeteerModule.default || puppeteerModule;
-// PDFs need no GPU; skip unpacking SwiftShader (smaller /tmp, faster cold start).
-chromium.setGraphicsMode = false;
+// @sparticuz/chromium (≥133) and puppeteer-core (≥24) are ES modules. Load them with dynamic
+// import(): Lambda's nodejs24.x runtime does NOT allow require() of ES modules (it crashed at
+// start-up with ERR_REQUIRE_ESM on Nov 14 2026 even though plain Node 24 allows it).
+let browserLibs = null;
+async function loadBrowserLibs() {
+  if (!browserLibs) {
+    const [chromiumModule, puppeteerModule] = await Promise.all([import('@sparticuz/chromium'), import('puppeteer-core')]);
+    const chromium = chromiumModule.default;
+    // PDFs need no GPU; skip unpacking SwiftShader (smaller /tmp, faster cold start).
+    chromium.setGraphicsMode = false;
+    browserLibs = { chromium, puppeteer: puppeteerModule.default };
+  }
+  return browserLibs;
+}
 
 /** A4-ish viewport; page.pdf() sets the paper size itself. */
 const PDF_VIEWPORT = { width: 1240, height: 1754, deviceScaleFactor: 1, isMobile: false, hasTouch: false, isLandscape: false };
@@ -17,6 +23,7 @@ const PDF_VIEWPORT = { width: 1240, height: 1754, deviceScaleFactor: 1, isMobile
  * (headless "shell"). Exported for the Node 24 render test.
  */
 async function launchBrowser() {
+  const { chromium, puppeteer } = await loadBrowserLibs();
   return puppeteer.launch({
     args: await puppeteer.defaultArgs({ args: chromium.args, headless: 'shell' }),
     defaultViewport: PDF_VIEWPORT,
@@ -411,14 +418,38 @@ body {
 
 // ─── Lambda handler ───────────────────────────────────────────────────────────
 
+/**
+ * Rebuild of a delivered trip from its id alone (operator re-run after a failed rebuild):
+ * the trip fields the PDF and email need come from the database. Only used with `update`.
+ */
+async function loadTripForRebuild(db, submissionId) {
+  const { rows } = await db.query(
+    `SELECT s.destination, s.days, s.budget, s.language, s.traveler_type, s.email, s.plan, i.id AS itinerary_id
+     FROM submissions s JOIN itineraries i ON i.submission_id = s.id
+     WHERE s.id = $1 ORDER BY i.created_at DESC LIMIT 1`,
+    [submissionId]
+  );
+  const r = rows[0];
+  if (!r) throw new Error('Trip not found for rebuild');
+  return {
+    itineraryId: r.itinerary_id,
+    email: r.email,
+    isPaid: r.plan === 'paid',
+    submission: { destination: r.destination, days: r.days, budget: r.budget, language: r.language || 'English', travelerType: r.traveler_type },
+  };
+}
+
 exports.handler = async (event) => {
-  const { itineraryId, submissionId, email, isPaid, submission } = event;
   // `update` = a rebuild after "Adjust this day": the trip is already delivered, so its
   // status is never changed here (a failed rebuild must not mark a finished trip failed).
   const update = event.update && Number.isInteger(event.update.dayNumber) ? { dayNumber: event.update.dayNumber } : null;
+  const db = getDB();
+  const job = update && !event.submission && event.submissionId
+    ? { submissionId: event.submissionId, ...(await loadTripForRebuild(db, event.submissionId)) }
+    : event;
+  const { itineraryId, submissionId, email, isPaid, submission } = job;
   log.info('PDF build started', { itineraryId, update });
 
-  const db = getDB();
   let browser;
 
   try {
