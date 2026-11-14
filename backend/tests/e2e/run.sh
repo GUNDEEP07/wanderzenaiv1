@@ -28,6 +28,8 @@ done
 
 export NODE_PATH="/opt/nodejs/node_modules:$ROOT/backend/functions/blog-handler/node_modules:$ROOT/backend/functions/profile/node_modules:$ROOT/backend/functions/pdf-builder/node_modules${NODE_PATH:+:$NODE_PATH}"
 export PDF_BUCKET=e2e-test-bucket
+# As on Lambda's nodejs24.x runtime: require() of ES modules is off there (Nov 14 2026 outage).
+export NODE_OPTIONS="--no-experimental-require-module${NODE_OPTIONS:+ $NODE_OPTIONS}"
 
 failed=()
 for suite in "$ROOT"/backend/tests/e2e/*.e2e.js; do
