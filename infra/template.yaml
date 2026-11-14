@@ -249,7 +249,16 @@ Resources:
             RestApiId: !Ref WanderZenApi
             Method: POST
             Path: /itinerary/{id}/days/{day}/adjust
+        PdfLink:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Method: GET
+            Path: /itinerary/{id}/pdf
       Policies:
+        # GET /itinerary/{id}/pdf signs a short-lived link to the owner's PDF.
+        - S3ReadPolicy:
+            BucketName: !Ref PDFBucket
         - Version: '2012-10-17'
           Statement:
             - Effect: Allow
