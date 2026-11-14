@@ -15,6 +15,9 @@ async function loadBrowserLibs() {
   return browserLibs;
 }
 
+/** Edge-to-edge pages: plain PDF margins print white, which breaks the dark design. */
+const PDF_PAGE_OPTIONS = { margin: { top: '0', right: '0', bottom: '0', left: '0' } };
+
 /** A4-ish viewport; page.pdf() sets the paper size itself. */
 const PDF_VIEWPORT = { width: 1240, height: 1754, deviceScaleFactor: 1, isMobile: false, hasTouch: false, isLandscape: false };
 
@@ -40,39 +43,23 @@ const lambda = new LambdaClient({ region: process.env.AWS_REGION || 'ap-southeas
 
 // ─── Text helpers ─────────────────────────────────────────────────────────────
 
-const escapeHtml = (str) =>
-  String(str || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+const { richText, plainText, escapeHtml } = require('./rich-text');
 
-// Convert [text](url) markdown → proper HTML anchor tags
-// Also strips leftover broken URL fragments that Claude sometimes emits
-const sanitize = (text) => {
-  if (!text) return '';
-  let result = String(text);
-  // Replace well-formed markdown links
-  result = result.replace(
-    /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,
-    (_, label, url) => {
-      let display = label;
-      try { display = decodeURIComponent(label); } catch (_) {}
-      return `<a href="${url.replace(/"/g, '%22')}" style="color:var(--teal);text-decoration:none;font-weight:600">${escapeHtml(display)}</a>`;
-    }
-  );
-  // Strip any leftover percent-encoded fragments or broken URL pieces (Claude sometimes leaves these)
-  result = result.replace(/\s*\)\s*%[0-9A-Fa-f%\s)]*$/gm, ''); // end of line fragments with )%...
-  result = result.replace(/\s+%[0-9A-Fa-f]{2}[\s%A-Fa-f0-9]*/g, ''); // isolated encoded sequences with spaces
-  result = result.replace(/\bmap%[0-9A-Fa-f][0-9A-Fa-f%]*/gi, ''); // leftover map%XX...
-  return result;
+// Claude text (activity notes, tips, hidden gems) → safe HTML; markdown map links become a small pin.
+const sanitize = (text) => richText(text);
+
+// Google Maps search URL for a place: its name first, then the area/country to disambiguate.
+// (The old version dropped the name whenever an area was given, so every activity pointed at the country.)
+const mapsUrl = (name, area, country) => {
+  const parts = [name, area, country].map(p => String(p || '').trim()).filter(Boolean);
+  const seen = new Set();
+  const query = parts.filter(p => { const k = p.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; }).join(', ') || 'map';
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 };
 
-// Build Google Maps search URL from venue name + location
-// Only use area + country to avoid special char issues with venue names
-const mapsUrl = (name, area, country) => {
-  const query = [area || '', country || ''].filter(Boolean).join(', ') || name || 'map';
-  return `https://maps.google.com/?q=${encodeURIComponent(query)}`;
+const formatMoney = (v) => {
+  const n = Number(String(v ?? '').replace(/[^0-9.]/g, ''));
+  return Number.isFinite(n) && n > 0 ? n.toLocaleString('en-US') : null;
 };
 
 // ─── Social media links ───────────────────────────────────────────────────────
@@ -110,10 +97,10 @@ const venueCard = (venue) => {
       </div>
       ${venue.address ? `<div style="font-size:8px;color:rgba(255,255,255,0.4);margin-bottom:3px">${escapeHtml(venue.address)}</div>` : ''}
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <a href="${mapLink}" style="color:var(--teal);text-decoration:none;font-size:8px;font-weight:600">📍 Google Maps</a>
-        ${fsqLink ? `<a href="${fsqLink}" style="color:var(--teal);text-decoration:none;font-size:8px;font-weight:600">🔍 Foursquare</a>` : ''}
+        <a href="${escapeHtml(mapLink)}" style="color:var(--teal);text-decoration:none;font-size:8px;font-weight:600">📍 Google Maps</a>
+        ${fsqLink ? `<a href="${escapeHtml(fsqLink)}" style="color:var(--teal);text-decoration:none;font-size:8px;font-weight:600">🔍 Foursquare</a>` : ''}
         ${venue.tel ? `<span style="color:rgba(255,255,255,0.4);font-size:8px">📞 ${escapeHtml(venue.tel)}</span>` : ''}
-        ${venue.website ? `<a href="${venue.website}" style="color:var(--teal);text-decoration:none;font-size:8px;font-weight:600">🌐 Website</a>` : ''}
+        ${venue.website && /^https?:\/\//i.test(venue.website) ? `<a href="${escapeHtml(venue.website)}" style="color:var(--teal);text-decoration:none;font-size:8px;font-weight:600">🌐 Website</a>` : ''}
       </div>
       ${socialLinks(venue.social || venue.social_media)}
     </div>
@@ -151,20 +138,24 @@ const buildHTML = (itinerary, submission, currencySymbol, heroImageUrl = null) =
 body {
   font-family: 'Plus Jakarta Sans','Noto Sans','Noto Sans JP','Noto Sans Devanagari','Noto Sans Arabic',sans-serif;
   background:var(--navy); color:var(--white); font-size:11px; line-height:1.7;
-  -webkit-font-smoothing:antialiased;
+  -webkit-font-smoothing:antialiased; overflow-wrap:anywhere;
 }
+a { color:var(--teal); text-decoration:none; }
+.map-pin { display:inline-block; white-space:nowrap; font-size:8px; font-weight:700; font-style:normal; color:var(--teal); padding:0 5px; border:1px solid rgba(0,212,170,0.35); border-radius:4px; line-height:1.5; vertical-align:1px; }
+.text-link { color:var(--teal); font-weight:600; }
 
 .page { width:210mm; min-height:297mm; padding:14mm 16mm; background:var(--navy); }
 
-.header { display:flex; align-items:flex-start; justify-content:space-between; padding-bottom:6mm; border-bottom:1px solid var(--border); margin-bottom:6mm; }
+.header { display:flex; align-items:flex-start; justify-content:space-between; gap:8mm; padding-bottom:4mm; }
 .logo-area { display:flex; align-items:center; gap:8px; }
 .logo-mark { width:32px; height:32px; border-radius:8px; background:var(--teal); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; color:var(--navy); flex-shrink:0; }
 .logo-text { font-size:16px; font-weight:700; color:var(--white); letter-spacing:-0.02em; }
 .logo-text span { color:var(--teal); }
-.logo-sub { font-size:8px; color:var(--w30); letter-spacing:0.15em; text-transform:uppercase; margin-top:1px; }
-.header-right { text-align:right; }
-.trip-title { font-family:'Fraunces',serif; font-size:18px; font-weight:700; color:var(--white); line-height:1.2; letter-spacing:-0.02em; max-width:120mm; text-align:right; }
-.trip-summary { font-size:9px; color:var(--w60); margin-top:3px; max-width:120mm; text-align:right; line-height:1.6; font-style:italic; }
+.logo-sub { font-size:8px; color:var(--w60); letter-spacing:0.12em; text-transform:uppercase; margin-top:1px; white-space:nowrap; }
+.logo-area { flex-shrink:0; }
+.header-right { flex:1; min-width:0; text-align:right; }
+.trip-title { font-family:'Fraunces',serif; font-size:20px; font-weight:700; color:var(--white); line-height:1.2; letter-spacing:-0.02em; }
+.trip-summary { font-size:10.5px; color:rgba(255,255,255,0.75); line-height:1.65; padding-bottom:5mm; border-bottom:1px solid var(--border); margin-bottom:6mm; }
 
 .hero { width:100%; height:52mm; border-radius:10px; overflow:hidden; margin-bottom:6mm; position:relative; }
 .hero img { width:100%; height:100%; object-fit:cover; display:block; }
@@ -181,59 +172,64 @@ body {
 .accom-dot { width:6px; height:6px; border-radius:50%; background:var(--teal); }
 .accom-title { font-size:7px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:var(--teal); }
 .accom-rec { font-size:10px; font-weight:700; color:var(--white); margin-bottom:1.5mm; }
-.accom-why { font-size:9px; color:var(--w60); font-style:italic; line-height:1.6; }
+.accom-why { font-size:9.5px; color:rgba(255,255,255,0.7); font-style:italic; line-height:1.6; }
 .search-label { font-size:7px; color:var(--w30); letter-spacing:0.1em; text-transform:uppercase; margin-top:3mm; margin-bottom:2mm; font-weight:600; }
 .search-pills { display:flex; flex-wrap:wrap; gap:4px; }
 .search-pill { font-size:8px; padding:2px 8px; border:1px solid var(--teal-br); border-radius:100px; color:var(--teal); background:rgba(0,212,170,0.05); font-weight:600; }
 
-.day-card { background:var(--navy-2); border:1px solid var(--border); border-radius:10px; margin-bottom:4mm; overflow:hidden; page-break-inside:avoid; }
+.day-card { background:var(--navy-2); border:1px solid var(--border); border-radius:10px; margin-bottom:4mm; }
+/* Keep each block whole, but let a day run across pages instead of leaving half a page empty. */
+.day-header { break-after:avoid; border-radius:10px 10px 0 0; }
+.activity, .local-eats, .hidden-gem, .tip-item, .avoid-item, .accom-box { break-inside:avoid; }
 .day-header { background:var(--navy-3); padding:3.5mm 5mm; display:flex; align-items:center; gap:4mm; border-bottom:1px solid var(--border); }
 .day-num { font-family:'Fraunces',serif; font-size:26px; font-weight:700; color:var(--teal); line-height:1; letter-spacing:-0.03em; flex-shrink:0; }
 .day-info { flex:1; }
 .day-theme { font-size:12px; font-weight:700; color:var(--white); letter-spacing:-0.01em; line-height:1.2; }
-.day-budget { font-size:8px; color:var(--w30); margin-top:2px; }
+.day-budget { font-size:9px; color:var(--w60); margin-top:2px; }
 .day-body { padding:4mm 5mm; }
 
 .activity { padding-bottom:3.5mm; margin-bottom:3.5mm; border-bottom:1px solid var(--border); }
 .activity:last-of-type { border-bottom:none; margin-bottom:0; padding-bottom:0; }
 .activity-header { display:flex; align-items:center; gap:3mm; margin-bottom:1.5mm; }
 .activity-time { font-size:8px; font-weight:700; color:var(--teal); letter-spacing:0.05em; min-width:18mm; }
-.activity-period { font-size:7px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:var(--w30); }
+.activity-period { font-size:7.5px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:var(--w60); }
 .activity-cost { margin-left:auto; font-size:8px; font-weight:700; color:var(--navy); background:var(--teal); padding:1.5px 6px; border-radius:4px; }
 .activity-cost.free { background:rgba(0,212,170,0.15); color:var(--teal); }
 .activity-name { font-size:11px; font-weight:700; color:var(--white); margin-bottom:1mm; letter-spacing:-0.01em; line-height:1.3; }
-.activity-location { font-size:9px; color:var(--teal); font-weight:600; margin-bottom:1.5mm; }
-.activity-map { display:inline-block; font-size:8px; color:var(--teal); text-decoration:none; font-weight:600; margin-bottom:1.5mm; padding:1px 6px; border:1px solid rgba(0,212,170,0.3); border-radius:4px; }
-.activity-why { font-size:9.5px; color:var(--w60); line-height:1.6; margin-bottom:1.5mm; }
-.insider-tip { background:rgba(255,217,61,0.06); border-left:2px solid var(--gold); padding:2mm 3mm; font-size:8.5px; color:rgba(255,217,61,0.8); font-style:italic; line-height:1.5; border-radius:0 4px 4px 0; }
+.activity-location { display:flex; align-items:center; flex-wrap:wrap; gap:2mm 3mm; font-size:9.5px; color:var(--teal); font-weight:600; margin-bottom:1.5mm; line-height:1.4; }
+.activity-map { display:inline-block; white-space:nowrap; font-size:8px; color:var(--teal); text-decoration:none; font-weight:700; padding:1px 6px; border:1px solid rgba(0,212,170,0.35); border-radius:4px; }
+.activity-why { font-size:10px; color:rgba(255,255,255,0.75); line-height:1.6; margin-bottom:1.5mm; }
+.insider-tip { background:rgba(255,217,61,0.06); border-left:2px solid var(--gold); padding:2mm 3mm; font-size:9.5px; color:rgba(255,217,61,0.9); line-height:1.55; border-radius:0 4px 4px 0; }
+.insider-tip strong { font-style:normal; font-weight:700; }
 
 .local-eats { background:rgba(255,107,107,0.06); border:1px solid rgba(255,107,107,0.15); border-radius:8px; padding:3mm 4mm; margin-top:3mm; display:flex; gap:3mm; align-items:flex-start; }
 .eats-icon { width:24px; height:24px; border-radius:6px; background:rgba(255,107,107,0.15); display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; }
 .eats-name { font-size:10px; font-weight:700; color:var(--white); margin-bottom:1px; }
-.eats-dish { font-size:8.5px; color:rgba(255,107,107,0.8); margin-bottom:1px; }
-.eats-vibe { font-size:8px; color:var(--w60); font-style:italic; }
+.eats-dish { font-size:9.5px; color:rgba(255,107,107,0.8); margin-bottom:1px; }
+.eats-vibe { font-size:9px; color:rgba(255,255,255,0.7); font-style:italic; }
 
 .hidden-gem { background:linear-gradient(135deg,rgba(0,212,170,0.1),rgba(0,212,170,0.04)); border:1px solid var(--teal-br); border-radius:8px; padding:3mm 4mm; margin-top:3mm; }
 .gem-label { font-size:7px; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; color:var(--teal); margin-bottom:1.5mm; display:flex; align-items:center; gap:5px; }
 .gem-label::before { content:''; display:inline-block; width:12px; height:1px; background:var(--teal); }
-.gem-text { font-size:9.5px; color:var(--w90); line-height:1.6; font-style:italic; }
+.gem-text { font-size:10px; color:var(--w90); line-height:1.6; font-style:italic; }
 
 .tips-grid { display:grid; grid-template-columns:1fr 1fr; gap:4mm; margin-top:5mm; align-items:start; }
 .tips-section { background:var(--navy-2); border:1px solid var(--border); border-radius:10px; padding:4mm 5mm; break-inside:avoid; }
 .section-heading { font-size:7px; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; color:var(--teal); margin-bottom:3mm; display:flex; align-items:center; gap:8px; }
 .section-heading::after { content:''; flex:1; height:1px; background:var(--border); }
-.tip-item { display:flex; gap:3mm; margin-bottom:2mm; font-size:9.5px; line-height:1.6; color:var(--w60); }
-.tip-arrow { color:var(--teal); flex-shrink:0; font-weight:700; }
-.avoid-item { display:flex; gap:3mm; margin-bottom:2mm; font-size:9.5px; line-height:1.6; color:rgba(255,107,107,0.7); }
-.avoid-x { color:var(--coral); flex-shrink:0; font-weight:700; }
+.tip-item span:last-child, .avoid-item span:last-child { flex:1; min-width:0; }
+.tip-item { display:flex; gap:3mm; margin-bottom:2mm; font-size:10px; line-height:1.6; color:rgba(255,255,255,0.75); }
+.tip-arrow { width:5px; height:5px; border-radius:50%; background:var(--teal); flex-shrink:0; margin-top:6px; }
+.avoid-item { display:flex; gap:3mm; margin-bottom:2mm; font-size:10px; line-height:1.6; color:rgba(255,160,160,0.9); }
+.avoid-x { width:7px; height:2px; background:var(--coral); flex-shrink:0; margin-top:8px; }
 
 .pdf-footer { margin-top:6mm; padding-top:4mm; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
 .footer-left { display:flex; align-items:center; gap:6px; }
 .footer-logo-mark { width:20px; height:20px; border-radius:5px; background:var(--teal); display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:800; color:var(--navy); }
 .footer-brand { font-size:10px; font-weight:700; color:var(--w60); }
 .footer-brand span { color:var(--teal); }
-.footer-url { font-size:8px; color:var(--w30); margin-top:1px; }
-.footer-note { font-size:7.5px; color:var(--w30); font-style:italic; max-width:90mm; text-align:right; line-height:1.5; }
+.footer-url { font-size:8px; color:var(--w60); margin-top:1px; }
+.footer-note { font-size:7.5px; color:var(--w60); font-style:italic; max-width:90mm; text-align:right; line-height:1.5; }
 </style>
 </head>
 <body>
@@ -250,9 +246,9 @@ body {
     </div>
     <div class="header-right">
       <div class="trip-title">${escapeHtml(itinerary.title || submission.destination + ' Travel Plan')}</div>
-      <div class="trip-summary">${sanitize(itinerary.summary || 'A personalised slow travel itinerary crafted just for you.')}</div>
-    </div>
+          </div>
   </div>
+  <p class="trip-summary">${plainText(itinerary.summary || 'A personalised slow travel itinerary crafted just for you.')}</p>
 
   <!-- Hero image -->
   ${heroImageUrl ? `
@@ -281,7 +277,7 @@ body {
     </div>
     <div class="meta-item">
       <div class="meta-label">Est. total</div>
-      <div class="meta-value">${currencySymbol}${itinerary.totalEstimatedCost || '—'}</div>
+      <div class="meta-value">${formatMoney(itinerary.totalEstimatedCost) ? currencySymbol + formatMoney(itinerary.totalEstimatedCost) : '—'}</div>
     </div>
     ${submission.language && submission.language !== 'English' ? `
     <div class="meta-item">
@@ -345,7 +341,8 @@ body {
         const act = day[period];
         if (!act) return '';
         const periodLabel = period.replace('Activity', '').toUpperCase();
-        const actMapUrl = mapsUrl(act.location || act.activity, submission.destination, '');
+        const place = act.venue?.name || act.location || act.activity;
+        const actMapUrl = act.venue?.mapsUrl && /^https:\/\//i.test(act.venue.mapsUrl) ? act.venue.mapsUrl : mapsUrl(place, day.base, submission.destination);
         return `
         <div class="activity">
           <div class="activity-header">
@@ -354,10 +351,12 @@ body {
             <span class="activity-cost ${act.isFree ? 'free' : ''}">${act.isFree ? 'Free' : currencySymbol + (act.cost || 0)}</span>
           </div>
           <div class="activity-name">${escapeHtml(act.activity || '')}</div>
-          <div class="activity-location">${escapeHtml(act.location || '')}</div>
-          <a href="${actMapUrl}" class="activity-map">📍 View on map</a>
+          <div class="activity-location">
+            ${act.location ? `<span>${escapeHtml(act.location)}</span>` : ''}
+            <a href="${escapeHtml(actMapUrl)}" class="activity-map">View on map</a>
+          </div>
           <div class="activity-why">${sanitize(act.why || '')}</div>
-          ${act.insiderTip ? `<div class="insider-tip">Insider tip: ${sanitize(act.insiderTip)}</div>` : ''}
+          ${act.insiderTip ? `<div class="insider-tip"><strong>Insider tip:</strong> ${sanitize(act.insiderTip)}</div>` : ''}
         </div>`;
       }).join('')}
 
@@ -387,14 +386,14 @@ body {
     <div class="tips-section">
       <div class="section-heading">Slow travel tips</div>
       ${itinerary.practicalTips.map(tip => `
-      <div class="tip-item"><span class="tip-arrow">→</span><span>${sanitize(tip)}</span></div>`).join('')}
+      <div class="tip-item"><span class="tip-arrow"></span><span>${sanitize(tip)}</span></div>`).join('')}
     </div>` : ''}
 
     ${itinerary.avoidList?.length ? `
     <div class="tips-section">
       <div class="section-heading" style="color:rgba(255,107,107,0.7)">Skip these tourist traps</div>
       ${itinerary.avoidList.map(item => `
-      <div class="avoid-item"><span class="avoid-x">✕</span><span>${sanitize(item)}</span></div>`).join('')}
+      <div class="avoid-item"><span class="avoid-x"></span><span>${sanitize(item)}</span></div>`).join('')}
     </div>` : ''}
   </div>
 
@@ -513,7 +512,7 @@ exports.handler = async (event) => {
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
-      margin: { top: '0', right: '0', bottom: '0', left: '0' },
+      ...PDF_PAGE_OPTIONS,
     });
 
     await browser.close();
@@ -571,4 +570,4 @@ exports.handler = async (event) => {
 };
 
 // Exported for unit tests.
-exports._internal = { buildHTML, launchBrowser };
+exports._internal = { buildHTML, launchBrowser, PDF_PAGE_OPTIONS };
