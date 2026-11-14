@@ -1,0 +1,29 @@
+name: Trip page live check (temporary)
+on:
+  push:
+    branches: ['smoke/trip-page']
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Live API + site checks (read-only, no secrets)
+        run: |
+          API=https://y44o2x9cu1.execute-api.ap-southeast-2.amazonaws.com/prod
+          ID=wz_mw6d79lh_9lVr5-9EZHzCTs82
+          fail=0; chk(){ if [ "$2" = "$3" ]; then echo "PASS $1 ($2)"; else echo "FAIL $1: got $2 want $3"; fail=1; fi; }
+          chk "PDF link, signed out → 401" "$(curl -s -o /dev/null -w '%{http_code}' $API/itinerary/$ID/pdf)" 401
+          chk "PDF link, bad token → 401" "$(curl -s -o /dev/null -w '%{http_code}' -H 'Authorization: Bearer a.b.c' $API/itinerary/$ID/pdf)" 401
+          curl -s "$API/itinerary?id=$ID" > t.json
+          echo "Vietnam trip (public view): $(jq -c '{isOwner,hasPdf,travelDate,currency,days,destination,n:(.itinerary.days|length),localNames:[.itinerary.days[].morningActivity.localName]}' t.json)"
+          chk "public view hides travel date" "$(jq -r '.travelDate' t.json)" null
+          chk "public view: not owner" "$(jq -r '.isOwner' t.json)" false
+          chk "currency returned" "$(jq -r '.currency' t.json)" AUD
+          chk "sw.js served" "$(curl -s -o /dev/null -w '%{http_code}' https://www.wanderzenai.com/sw.js)" 200
+          echo "sw.js $(curl -sI https://www.wanderzenai.com/sw.js | grep -iE '^(cache-control|content-type)' | tr -d '\r' | tr '\n' ' ')"
+          chk "trip page route" "$(curl -s -o /dev/null -w '%{http_code}' https://www.wanderzenai.com/itinerary/$ID)" 200
+          JS=$(curl -s https://www.wanderzenai.com/ | grep -oE '/assets/index-[^"]+\.js' | head -1)
+          curl -s "https://www.wanderzenai.com$JS" > main.js
+          chk "app registers the service worker" "$(grep -c 'sw.js' main.js | awk '{print ($1>0)?"yes":"no"}')" yes
+          exit $fail
