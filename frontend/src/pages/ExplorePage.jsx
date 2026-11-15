@@ -132,12 +132,13 @@ function TrendingCard({ t, onClick }) {
     >
       <img src={src} alt={t.dest} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} loading="lazy" onError={e => { e.target.src = getFallbackPhoto('card'); }} />
       <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(10,15,30,0.95) 0%, rgba(10,15,30,0.2) 60%, transparent 100%)' }} />
-      <PhotoCredit credit={credit} />
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px 14px' }}>
+      {/* Credit bottom-right: top-right is the "Plan this" badge (they used to overlap). */}
+      <PhotoCredit credit={credit} corner="bottom-right" />
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px 14px 26px' }}>
         <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff', marginBottom: 3 }}>{t.dest}</div>
         <div style={{ fontSize: '0.7rem', color: teal, fontWeight: 600 }}>{t.trend}</div>
       </div>
-      <div style={{ position: 'absolute', top: 10, right: 10, background: tealGlow, border: `1px solid ${tealBorder}`, borderRadius: 6, padding: '3px 8px', fontSize: '0.65rem', fontWeight: 700, color: teal }}>
+      <div style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(10,15,30,0.82)', border: `1px solid ${tealBorder}`, borderRadius: 6, padding: '3px 8px', fontSize: '0.7rem', fontWeight: 700, color: teal }}>
         Plan this
       </div>
     </div>
@@ -390,7 +391,7 @@ export default function ExplorePage() {
                   <CountryPhoto name={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                   <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(20,29,51,1) 0%, rgba(20,29,51,0.1) 60%, transparent 100%)' }} />
                   <div style={{ position: 'absolute', top: 10, left: 12 }}>
-                    <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: 'rgba(0,212,170,0.15)', color: teal, border: `1px solid ${tealBorder}`, letterSpacing: '0.08em' }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: 'rgba(10,15,30,0.82)', color: teal, border: `1px solid ${tealBorder}`, letterSpacing: '0.06em' }}>
                       {c.tag}
                     </span>
                   </div>

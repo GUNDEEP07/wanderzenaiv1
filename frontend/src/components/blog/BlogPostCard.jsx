@@ -1,4 +1,5 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { CreditedPhoto } from '../PhotoCredit';
 
 /**
  * BlogPostCard - Displays a blog post in card format
@@ -52,7 +53,17 @@ export function BlogPostCard({ post, currentUserId, onEdit, onDelete }) {
         e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0,212,170,0.05), rgba(0,168,126,0.05))';
       }}
     >
-      {/* Thumbnail */}
+      {/* Photo: the story's own cover, else a matching Unsplash photo (credited). Before Nov 2026
+          stories without uploaded photos showed no image at all. */}
+      {!post.thumbnail_url && (
+        <CreditedPhoto
+          keyword={[post.location, post.country].filter(Boolean).join(' ') || post.title}
+          size="card"
+          alt=""
+          corner="bottom-right"
+          style={{ width: '100%', height: 180, marginBottom: 12, borderRadius: 8, background: 'rgba(0,0,0,0.2)' }}
+        />
+      )}
       {post.thumbnail_url && (
         <div
           style={{
@@ -181,7 +192,7 @@ export function BlogPostCard({ post, currentUserId, onEdit, onDelete }) {
           textDecoration: 'none',
         }}
       >
-        {post.title}
+        <Link to={`/blog/${post.id}`} style={{ color: 'inherit', textDecoration: 'none' }}>{post.title}</Link>
       </h3>
 
       {/* Description */}
