@@ -15,10 +15,11 @@ jobs:
           aws-region: ap-southeast-2
       - name: Probe (read-only)
         run: |
+          set +e
           mkdir out
           {
           for u in https://wanderzenai.com/ https://www.wanderzenai.com/ https://www.wanderzenai.com/og-image.png https://www.wanderzenai.com/favicon.png https://www.wanderzenai.com/no-such-page https://www.wanderzenai.com/blog https://www.wanderzenai.com/sitemap.xml https://www.wanderzenai.com/robots.txt; do
-            echo "== $u"; curl -s -o /dev/null -w "%{http_code} %{content_type} -> %{redirect_url}\n" "$u"; done
+            echo "== $u"; curl -s -o /dev/null -w "%{http_code} %{content_type} -> %{redirect_url}\n" "$u" || echo "curl exit $?"; done
           echo "== distributions"
           aws cloudfront list-distributions --query "DistributionList.Items[].{Id:Id,Aliases:Aliases.Items,Origin:Origins.Items[0].DomainName,Domain:DomainName}" --output json
           echo "== E329 config"
@@ -31,6 +32,7 @@ jobs:
           } > out/probe.txt 2>&1
       - if: always()
         run: |
+          set +e
           cd out && git init -q -b smoke/plan-audit-results && git add -A
           git -c user.name=audit -c user.email=audit@users.noreply.github.com commit -qm probe
           git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" smoke/plan-audit-results
