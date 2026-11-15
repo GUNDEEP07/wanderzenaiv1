@@ -4,6 +4,7 @@ const { SESClient, SendEmailCommand } = require('@aws-sdk/client-ses');
 const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const { getDB, log } = require('/opt/nodejs/index');
+const { countMetric } = require('/opt/nodejs/metrics');
 
 const ses = new SESClient({ region: 'ap-southeast-2' });
 const s3 = new S3Client({ region: 'ap-southeast-2' });
@@ -208,6 +209,7 @@ exports.handler = async (event) => {
 
   } catch (err) {
     log.error('Email send failed', { itineraryId, update, error: err.message });
+    countMetric('EmailFailed', { itineraryId, submissionId, update: !!update });
     if (update) return; // the trip was already delivered; don't mark it failed
 
     await db.query(

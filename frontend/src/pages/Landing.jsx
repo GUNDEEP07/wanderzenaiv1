@@ -103,7 +103,7 @@ export default function Landing() {
           <a href="#sample" className="nav-link">Sample plan</a>
           <a href="/pricing" className="nav-link">Pricing</a>
           <a href="/contact" className="nav-link">Contact</a>
-          <a href="/agency" className="nav-link">For agencies</a>
+          <a href="/contact?type=partnership" className="nav-link">For agencies</a>
           {currentUser ? (
             <a href="/dashboard" className="nav-link">Dashboard</a>
           ) : (
@@ -506,7 +506,7 @@ export default function Landing() {
             <a href="/guides">Guides</a>
             <a href="/blog">Stories</a>
             <a href="/pricing">Pricing</a>
-            <a href="/agency">For agencies</a>
+            <a href="/contact?type=partnership">For agencies</a>
             <a href="/privacy">Privacy</a>
             <a href="/terms">Terms</a>
             <a href="/contact">Contact</a>

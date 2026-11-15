@@ -62,7 +62,9 @@ export default function App() {
               <Route path="/confirmation" element={page({ title: 'Your trip is on its way', ...PRIVATE }, <Confirmation />)} />
               <Route path="/pricing"      element={page({ title: 'Pricing', description: 'Start free, then pay per trip or join Wanderer for five AI slow travel itineraries a month. Simple, honest pricing with no lock-in.', path: '/pricing' }, <Pricing />)} />
               <Route path="/dashboard"    element={page({ title: 'Your trips', ...PRIVATE }, <ProtectedRoute><Dashboard /></ProtectedRoute>)} />
-              <Route path="/agency"       element={page({ title: 'Agency', ...PRIVATE }, <AgencyDashboard />)} />
+              {/* The agency dashboard is still a demo with sample data (backlog P2-11): agency accounts
+                  and the team only. Public "For agencies" links go to the partnership form. */}
+              <Route path="/agency"       element={page({ title: 'Agency', ...PRIVATE }, <RoleGate requiredRoles={['agency','admin','superadmin']}><AgencyDashboard /></RoleGate>)} />
               <Route path="/admin"        element={page({ title: 'Admin', ...PRIVATE }, <RoleGate requiredRoles={['admin','superadmin','support']}><AdminDashboard /></RoleGate>)} />
               <Route path="/admin/blog"   element={page({ title: 'Blog admin', ...PRIVATE }, <RoleGate requiredRoles={['admin','superadmin']}><AdminBlogPanel /></RoleGate>)} />
               <Route path="/blog"         element={<BlogListPage />} />

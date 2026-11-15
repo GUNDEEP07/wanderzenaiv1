@@ -37,6 +37,7 @@ async function launchBrowser() {
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const { LambdaClient, InvokeCommand } = require('@aws-sdk/client-lambda');
 const { getDB, getCurrencySymbol, log } = require('/opt/nodejs/index');
+const { countMetric } = require('/opt/nodejs/metrics');
 
 const s3 = new S3Client({ region: process.env.AWS_REGION || 'ap-southeast-2' });
 const lambda = new LambdaClient({ region: process.env.AWS_REGION || 'ap-southeast-2' });
@@ -620,6 +621,7 @@ exports.handler = async (event) => {
 
   } catch (err) {
     log.error('PDF build failed', { itineraryId, update, error: err.message });
+    countMetric('PdfFailed', { itineraryId, submissionId, update: !!update });
     if (browser) await browser.close().catch(() => {});
     if (update) return; // the trip and its previous PDF stay as they were
     await db.query(
