@@ -39,10 +39,16 @@ async function walk(width, height, label) {
     await page.evaluate(() => { sessionStorage.clear(); });
     await page.goto(`${BASE}/plan`, { waitUntil: 'networkidle', timeout: 60000 });
     await shot('step1-empty');
+    await click('button:has-text("Accept")').catch(() => {});
     await click('button:has-text("Vietnam")');
     await page.waitForTimeout(500);
+    await page.locator('input[placeholder="e.g., 2500"]').fill('3000');
+    await click('button:has-text("Food tours")');
+    await click('button:has-text("Markets")');
+    await click('button:has-text("Couple")');
     await shot('step1-filled');
     await click('button:has-text("Continue")');
+    await page.waitForSelector('input[type="date"]', { timeout: 10000 }).catch(async () => { await shot('step1-blocked'); });
     await shot('step2-dates-empty');
     const dates = page.locator('input[type="date"]');
     await dates.nth(0).fill(iso(start));
