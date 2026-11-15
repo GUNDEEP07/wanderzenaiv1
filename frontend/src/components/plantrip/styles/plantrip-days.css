@@ -1,0 +1,60 @@
+/* Step 3 — Plan your days. Phone: stops, days, finder stacked. Desktop: three columns. */
+.pd-grid { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 1024px) {
+  .pd-grid { grid-template-columns: 220px minmax(0, 1fr) 400px; align-items: start; }
+  .pd-stops { flex-direction: column; }
+  .pd-finder { position: sticky; top: 16px; max-height: calc(100vh - 140px); overflow-y: auto; }
+}
+
+.pd-stops { display: flex; gap: 8px; }
+.pd-stop { flex: 1; min-height: 64px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.15); background: transparent; color: #fff; font-family: inherit; text-align: left; padding: 10px 12px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
+.pd-stop--on { border-color: #00d4aa; background: rgba(0,212,170,0.12); }
+.pd-stop__name { font-size: 15px; font-weight: 800; }
+.pd-stop__days { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.72); }
+.pd-stop--on .pd-stop__days { color: #00d4aa; }
+.pd-stop__count { font-size: 12px; color: rgba(255,255,255,0.65); }
+
+.pd-days { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 160px), 1fr)); align-content: start; }
+.pd-day { background: #111827; border: 1px dashed rgba(255,255,255,0.2); border-radius: 14px; padding: 4px 10px 10px; min-height: 120px; }
+.pd-day--on { border: 1px solid #00d4aa; }
+.pd-day__head { width: 100%; min-height: 44px; display: flex; justify-content: space-between; align-items: center; gap: 6px; background: none; border: none; color: #fff; font-family: inherit; font-size: 14px; cursor: pointer; padding: 0 2px; text-align: left; }
+.pd-day__head span { font-size: 12px; color: rgba(255,255,255,0.68); }
+.pd-day__head--static { cursor: default; }
+.pd-day__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.pd-day__empty { font-size: 13px; color: rgba(255,255,255,0.6); padding: 10px 2px; }
+.pd-pick { display: flex; align-items: center; justify-content: space-between; gap: 6px; background: #0a0f1e; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 6px 4px 6px 10px; font-size: 14px; }
+.pd-pick b { font-weight: 700; }
+.pd-pick__cat { display: block; font-size: 12px; color: rgba(255,255,255,0.62); }
+.pd-x { flex: none; width: 36px; height: 36px; border-radius: 18px; border: none; background: none; color: rgba(255,255,255,0.7); font-size: 20px; cursor: pointer; }
+.pd-x:hover { background: rgba(255,255,255,0.06); }
+
+.pd-finder { background: #111827; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.pd-finder__title { margin: 0; font-size: 17px; }
+.pd-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: #0a0f1e; border-radius: 12px; padding: 4px; }
+.pd-mode { min-height: 40px; border-radius: 9px; border: none; background: transparent; color: rgba(255,255,255,0.8); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.pd-mode--on { background: #1f2937; color: #fff; font-weight: 800; }
+.pd-search { display: flex; align-items: center; gap: 8px; min-height: 46px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.15); background: #0a0f1e; padding: 0 4px 0 12px; }
+.pd-search input { flex: 1; min-width: 0; min-height: 42px; border: none; background: transparent; color: #fff; font: 15px inherit; font-family: inherit; outline: none; }
+.pd-search button { min-height: 38px; padding: 0 12px; border-radius: 9px; border: none; background: #00d4aa; color: #06090f; font-family: inherit; font-weight: 800; font-size: 14px; cursor: pointer; }
+.pd-search button:disabled { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.5); cursor: default; }
+.pd-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pd-chip { min-height: 38px; padding: 0 12px; border-radius: 19px; border: 1px solid rgba(255,255,255,0.15); background: transparent; color: rgba(255,255,255,0.88); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.pd-chip--on { border-color: #00d4aa; background: rgba(0,212,170,0.12); color: #00d4aa; font-weight: 800; }
+.pd-note { font-size: 13px; color: rgba(255,255,255,0.68); line-height: 1.45; }
+.pd-error { font-size: 13px; color: #ff9b9b; }
+.pd-results { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.pd-result { background: #0a0f1e; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 10px 12px; }
+.pd-result__top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 15px; }
+.pd-tag { flex: none; font-size: 12px; font-weight: 700; color: #00d4aa; white-space: nowrap; }
+.pd-tag--ai { color: rgba(255,255,255,0.68); }
+.pd-result__desc { font-size: 13px; color: rgba(255,255,255,0.74); line-height: 1.45; margin-top: 3px; }
+.pd-result__actions { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.pd-result__actions a { font-size: 13px; color: #5eead4; min-height: 36px; display: inline-flex; align-items: center; }
+.pd-add { min-height: 38px; padding: 0 12px; border-radius: 10px; border: 1px solid #00d4aa; background: transparent; color: #00d4aa; font-family: inherit; font-weight: 800; font-size: 13px; cursor: pointer; }
+.pd-add--done { background: rgba(0,212,170,0.14); }
+.pd-own { border-top: 1px solid rgba(255,255,255,0.08); padding-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.pd-own label { font-size: 13px; color: rgba(255,255,255,0.75); }
+.pd-own__row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px; }
+.pd-own__row input, .pd-own__row select { min-height: 44px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.15); background: #0a0f1e; color: #fff; padding: 0 10px; font-family: inherit; font-size: 14px; min-width: 0; }
+.pd-own__row button { min-height: 44px; padding: 0 14px; border-radius: 10px; border: none; background: #00d4aa; color: #06090f; font-family: inherit; font-weight: 800; font-size: 14px; cursor: pointer; }
+.pd-own__row button:disabled { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.5); cursor: default; }

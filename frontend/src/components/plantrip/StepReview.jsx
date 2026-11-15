@@ -1,24 +1,15 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { fetchPreview } from '../../api/itinerary';
-
-const TRAVEL_STYLES = ['Nature', 'Relaxation', 'Cultural', 'Foodie', 'Wellness', 'Adventure', 'Luxury'];
-const START_TIME_OPTIONS = [
-  { label: '🌅 Early — 7am', value: '07:00' },
-  { label: '☕ Morning — 9am', value: '09:00' },
-  { label: '🌞 Late — 11am', value: '11:00' },
-];
-const PACE_OPTIONS = ['relaxed', 'balanced', 'packed'];
-
-const panel = { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: '1.25rem' };
-const sectionLabel = { fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#00d4aa', marginBottom: '1rem' };
-const fieldLabel = { fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', marginBottom: 6 };
-const chipBase = (active) => ({ fontSize: '0.72rem', padding: '4px 10px', borderRadius: 20, border: active ? '1px solid #00d4aa' : '1px solid rgba(255,255,255,0.2)', background: active ? 'rgba(0,212,170,0.15)' : 'transparent', color: active ? '#00d4aa' : 'rgba(255,255,255,0.5)', cursor: 'pointer', transition: 'all 0.15s', fontFamily: 'inherit' });
-const segBtn = (active) => ({ flex: 1, fontSize: '0.72rem', padding: '6px 4px', borderRadius: 8, border: active ? '1px solid #00d4aa' : '1px solid rgba(255,255,255,0.2)', background: active ? 'rgba(0,212,170,0.15)' : 'transparent', color: active ? '#00d4aa' : 'rgba(255,255,255,0.5)', cursor: 'pointer', textTransform: 'capitalize', fontFamily: 'inherit' });
+import { tripDatesText } from '../../utils/tripDates';
 
 /**
- * The line under "Generate" saying what this itinerary uses (Nov 2026 — no surprise paywall
- * after six steps). `e` comes from GET /entitlement; null → nothing shown.
+ * Step 5 — Check your trip (Nov 2026 redesign). A summary of every step with an Edit link,
+ * the day-outline preview and one optional note. It asks nothing new; the action (generate,
+ * sign up, see plans) is the planner footer's button — see reviewAction().
+ * Preview state stays in separate useState vars (CLAUDE.md).
  */
+
+/** The line under the action saying what this itinerary uses. `e` from GET /entitlement. */
 export function entitlementLine(e) {
   if (!e || !e.allowed) return null;
   const n = Number(e.remaining) || 0;
@@ -36,17 +27,50 @@ export function limitMessage(e) {
     : "You've used this month's free itinerary. A single plan or Wanderer gets you this one now.";
 }
 
-const gatePanel = {
-  background: 'linear-gradient(135deg, rgba(0,212,170,0.1), rgba(0,212,170,0.03))',
-  border: '1px solid rgba(0,212,170,0.25)', borderRadius: 14, padding: '1.25rem 1.5rem', marginBottom: '0.75rem',
-};
-const primaryBtn = { flex: 1, padding: '14px 24px', background: '#00d4aa', border: 'none', borderRadius: 10, color: '#0a1628', fontWeight: 700, fontSize: '1rem', cursor: 'pointer', fontFamily: 'inherit' };
-const ghostBtn = { padding: '14px 24px', background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 10, color: 'rgba(255,255,255,0.75)', fontSize: '0.95rem', cursor: 'pointer', fontFamily: 'inherit' };
+/** The footer button for this step: { label, kind: 'submit' | 'signup' | 'plans' }. */
+export function reviewAction({ signedIn, entitlement, submitting }) {
+  if (!signedIn) return { label: 'Create free account', kind: 'signup' };
+  if (limitMessage(entitlement)) return { label: 'See plans', kind: 'plans' };
+  return { label: submitting ? 'Creating…' : 'Create my itinerary', kind: 'submit' };
+}
 
-export default function StepReview({
-  form, set, onBack, onSubmit, submitting, submitError, accountEmail,
-  signedIn = true, entitlement = null, onSignUp, onSignIn, onSeePlans,
-}) {
+const PACE = { relaxed: 'Relaxed', balanced: 'Balanced', packed: 'Full days' };
+
+const s = {
+  card: { background: '#111827', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '12px 16px 14px', marginBottom: 10 },
+  head: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
+  h2: { margin: 0, fontSize: 15, fontWeight: 800 },
+  edit: { minHeight: 44, padding: '0 6px', border: 'none', background: 'none', color: '#00d4aa', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: 'pointer' },
+  text: { margin: 0, fontSize: 14, lineHeight: 1.6, color: 'rgba(255,255,255,0.86)' },
+  muted: { color: 'rgba(255,255,255,0.65)' },
+  dayRow: { display: 'grid', gridTemplateColumns: '72px 1fr', gap: 8, fontSize: 14, lineHeight: 1.5, padding: '3px 0' },
+  outline: { background: '#0f1726', border: '1px solid rgba(0,212,170,0.35)', borderRadius: 16, padding: '12px 16px 14px', marginBottom: 10 },
+  label: { display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: 'rgba(255,255,255,0.78)', marginTop: 12 },
+  textarea: { borderRadius: 12, border: '1px solid rgba(255,255,255,0.15)', background: '#0a0f1e', color: '#fff', padding: '10px 12px', fontFamily: 'inherit', fontSize: 14, lineHeight: 1.5, resize: 'vertical' },
+  gate: { background: 'linear-gradient(135deg, rgba(0,212,170,0.1), rgba(0,212,170,0.03))', border: '1px solid rgba(0,212,170,0.25)', borderRadius: 14, padding: '14px 16px', marginBottom: 10 },
+  warn: { background: 'rgba(255,190,90,0.06)', border: '1px solid rgba(255,190,90,0.35)', borderRadius: 14, padding: '14px 16px', marginBottom: 10, fontSize: 14, lineHeight: 1.5 },
+  link: { border: 'none', background: 'none', color: '#00d4aa', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: 'pointer', padding: 0, minHeight: 36 },
+  foot: { fontSize: 13, color: 'rgba(255,255,255,0.68)', textAlign: 'center', margin: '8px 0 0' },
+  error: { color: '#ff8a8a', fontSize: 14, margin: '0 0 10px' },
+};
+
+const Section = ({ title, onEdit, editLabel, children }) => (
+  <section style={s.card} aria-label={title}>
+    <div style={s.head}>
+      <h2 style={s.h2}>{title}</h2>
+      {onEdit && <button type="button" style={s.edit} onClick={onEdit} aria-label={editLabel || `Edit ${title.toLowerCase()}`}>Edit</button>}
+    </div>
+    {children}
+  </section>
+);
+
+/** Days of each route stop: [{ name, fromDay, toDay, transferIn }] */
+const stopsOf = (route) => {
+  let day = 1;
+  return (route?.bases || []).map(b => { const from = day; day += b.days || 0; return { name: b.name, fromDay: from, toDay: day - 1, transferIn: b.transferIn }; });
+};
+
+export default function StepReview({ form, set, onEditStep, submitError, accountEmail, signedIn = true, entitlement = null, onSignIn }) {
   const [preview, setPreview] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
 
@@ -55,8 +79,7 @@ export default function StepReview({
     setPreview(null);
     try {
       const json = await fetchPreview(formData);
-      const days = json.days || (json.data && json.data.days) || null;
-      setPreview(days);
+      setPreview(json.days || json.data?.days || null);
     } catch (e) {
       console.error('Preview failed', e);
     } finally {
@@ -64,239 +87,91 @@ export default function StepReview({
     }
   }, []);
 
-  useEffect(() => { loadPreview(form); }, []);
+  useEffect(() => { loadPreview(form); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleStyleToggle = (style) => {
-    const updated = form.travelStyle.includes(style) ? form.travelStyle.filter(s => s !== style) : [...form.travelStyle, style];
-    set('travelStyle', updated);
-    loadPreview({ ...form, travelStyle: updated });
-  };
+  const prefs = form.tripPrefs || {};
+  const kids = (prefs.kids || []).length;
+  const people = `${prefs.adults || 2} adult${(prefs.adults || 2) > 1 ? 's' : ''}${kids ? `, ${kids} child${kids > 1 ? 'ren' : ''}` : ''}`;
+  const when = form.travelDate && form.travelDateEnd && !form.datesFlexible ? tripDatesText(form.travelDate, form.travelDateEnd) : `${form.days} days · dates not fixed`;
+  const budget = Number(form.budget) ? `${form.currency} ${Number(form.budget).toLocaleString('en-US')} ${form.budgetScope === 'activities-only' ? 'for activities' : 'whole trip'}` : null;
+  const stops = stopsOf(form.route);
+  const picks = Array.isArray(form.selected_venues?.picks) ? form.selected_venues.picks : [];
+  const dayLabel = (st) => (st.toDay > st.fromDay ? `Days ${st.fromDay}–${st.toDay}` : `Day ${st.fromDay}`);
 
   return (
     <div>
-      <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#00d4aa', marginBottom: '0.5rem' }}>Step 6 of 6 — Almost there</div>
-      <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: '2rem', color: '#fff', marginBottom: '0.5rem', lineHeight: 1.2 }}>Review your trip</h2>
-      <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.95rem', marginBottom: '1.25rem', fontStyle: 'italic' }}>Tweak anything before we generate your full itinerary.</p>
+      <Section title="Trip" onEdit={() => onEditStep(0)} editLabel="Edit trip basics">
+        <p style={s.text}>
+          {form.destinations?.[0]?.name || '—'} · {when}<br />
+          {people} · {PACE[form.travelPace] || 'Balanced'} pace{budget ? ` · ${budget}` : ''}
+          {form.interests ? <><br /><span style={s.muted}>Enjoys: {form.interests}</span></> : null}
+        </p>
+      </Section>
 
-      {/* ── Trip summary banner ── */}
-      <div style={{
-        background: 'linear-gradient(135deg, rgba(0,212,170,0.1), rgba(0,212,170,0.04))',
-        border: '1px solid rgba(0,212,170,0.2)', borderRadius: 14,
-        padding: '1.25rem 1.5rem', marginBottom: '1.5rem',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        flexWrap: 'wrap', gap: 12,
-      }}>
-        <div>
-          <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#00d4aa', marginBottom: 4 }}>
-            Your trip
-          </div>
-          <div style={{ fontFamily: "'Fraunces', serif", fontSize: '1.6rem', fontWeight: 700, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-            {form.destinations?.[0]?.name || 'Unknown'}{form.destinations?.length > 1 ? ` +${form.destinations.length - 1}` : ''}
-          </div>
-          {form.travelDate ? (
-            <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', marginTop: 4 }}>
-              From {new Date(form.travelDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} · {form.days} days
-            </div>
-          ) : (
-            <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', marginTop: 4 }}>{form.days} days</div>
-          )}
-        </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {form.travelerType && (
-            <span style={{ padding: '5px 12px', borderRadius: 20, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)' }}>
-              {form.travelerType}
-            </span>
-          )}
-          <span style={{ padding: '5px 12px', borderRadius: 20, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)', textTransform: 'capitalize' }}>
-            {form.travelPace} pace
-          </span>
-          <span style={{ padding: '5px 12px', borderRadius: 20, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)' }}>
-            {form.language || 'English'}
-          </span>
-        </div>
-      </div>
+      {stops.length > 0 && (
+        <Section title="Route" onEdit={() => onEditStep(1)}>
+          <p style={s.text}>
+            {stops.map((st, i) => (
+              <span key={`${st.name}-${i}`}>{i > 0 ? ' → ' : ''}{st.name} <span style={s.muted}>({dayLabel(st).toLowerCase()})</span></span>
+            ))}
+          </p>
+        </Section>
+      )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
-        <div style={panel}>
-          <div style={sectionLabel}>Your preferences</div>
-          <div style={{ marginBottom: '1rem' }}><div style={fieldLabel}>Destination & duration</div><div style={{ color: '#fff', fontWeight: 600 }}>{form.destinations && form.destinations.length > 0 ? form.destinations[0].name : 'Unknown'} — {form.days} days</div></div>
-          <div style={{ marginBottom: '1rem' }}><div style={fieldLabel}>Budget</div><div style={{ color: '#fff', fontWeight: 600 }}>{form.currency} {(+form.budget).toLocaleString()}</div></div>
-          {form.travelerType && (
-            <div style={{ marginBottom: '1rem' }}>
-              <div style={fieldLabel}>Travelling as</div>
-              <div style={{ color: '#fff', fontWeight: 600 }}>{form.travelerType}</div>
-            </div>
-          )}
-          {form.travelDate && (
-            <div style={{ marginBottom: '1rem' }}>
-              <div style={fieldLabel}>Start date</div>
-              <div style={{ color: '#fff', fontWeight: 600 }}>
-                {new Date(form.travelDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
-              </div>
-            </div>
-          )}
-          <div style={{ marginBottom: '1rem' }}>
-            <div style={fieldLabel}>Itinerary language</div>
-            <div style={{ color: '#fff', fontWeight: 600 }}>{form.language || 'English'}</div>
-          </div>
-          <div style={{ marginBottom: '1rem' }}>
-            <div style={fieldLabel}>Accommodation suggestions</div>
-            <div style={{ color: form.wantsHotelRecs ? '#00d4aa' : 'rgba(255,255,255,0.4)', fontWeight: 600, fontSize: '0.85rem' }}>
-              {form.wantsHotelRecs ? '✓ Included' : 'Not included'}
-            </div>
-          </div>
-          <div style={{ marginBottom: '1rem' }}>
-            <div style={fieldLabel}>Travel style</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {TRAVEL_STYLES.map(style => (
-                <button key={style} style={chipBase(form.travelStyle.includes(style))} onClick={() => handleStyleToggle(style)}>{style}</button>
-              ))}
-            </div>
-          </div>
-          <div style={{ marginBottom: '1rem' }}>
-            <div style={fieldLabel}>Pace</div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              {PACE_OPTIONS.map(p => (
-                <button key={p} style={segBtn(form.travelPace === p)} onClick={() => { set('travelPace', p); loadPreview({ ...form, travelPace: p }); }}>{p}</button>
-              ))}
-            </div>
-          </div>
-          <div style={{ marginBottom: '1rem' }}>
-            <div style={fieldLabel}>When do you start your day?</div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              {START_TIME_OPTIONS.map(opt => (
-                <button key={opt.value} style={{ ...segBtn((form.startTime || '09:00') === opt.value), fontSize: '0.66rem' }} onClick={() => { set('startTime', opt.value); loadPreview({ ...form, startTime: opt.value }); }}>{opt.label}</button>
-              ))}
-            </div>
-          </div>
+      <Section title="Your days" onEdit={() => onEditStep(2)} editLabel="Edit your days">
+        {picks.length === 0 ? (
+          <p style={{ ...s.text, ...s.muted }}>No places picked — we'll choose every day from your interests.</p>
+        ) : (
           <div>
-            <div style={fieldLabel}>Anything you want included?</div>
-            <textarea value={form.userMustDos || ''} onChange={e => set('userMustDos', e.target.value)} onBlur={() => loadPreview(form)} placeholder="e.g. Already booked dinner at Noma on Day 3" maxLength={300} rows={4} style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, color: '#fff', fontSize: '0.8rem', padding: '10px 12px', resize: 'none', outline: 'none', fontFamily: 'inherit', lineHeight: 1.5 }} />
-            <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.55)', textAlign: 'right', marginTop: 3 }}>{(form.userMustDos || '').length} / 300</div>
+            {Array.from({ length: Number(form.days) || 0 }, (_, i) => i + 1).map(d => {
+              const list = picks.filter(p => p.day === d).map(p => p.name);
+              return list.length ? <div key={d} style={s.dayRow}><b>Day {d}</b><span>{list.join(', ')}</span></div> : null;
+            })}
+            {picks.some(p => !p.day) && <div style={s.dayRow}><b>Any day</b><span>{picks.filter(p => !p.day).map(p => p.name).join(', ')}</span></div>}
+            <div style={{ ...s.dayRow, ...s.muted }}><b>Other days</b><span>We'll choose, based on your interests</span></div>
           </div>
-        </div>
+        )}
+      </Section>
 
-        <div style={{ ...panel, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
-          <div style={sectionLabel}>Day outline preview</div>
-          {previewLoading && (
-            <div>{Array.from({ length: Math.min(+form.days, 7) }).map((_, i) => (
-              <div key={i} style={{ display: 'flex', gap: 10, padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                <div style={{ width: 36, height: 12, background: 'rgba(255,255,255,0.08)', borderRadius: 4, flexShrink: 0, marginTop: 3 }} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ width: '60%', height: 12, background: 'rgba(255,255,255,0.08)', borderRadius: 4, marginBottom: 5 }} />
-                  <div style={{ width: '85%', height: 10, background: 'rgba(255,255,255,0.05)', borderRadius: 4 }} />
-                </div>
-              </div>
-            ))}</div>
-          )}
-          {!previewLoading && preview && (
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-              {preview.map((d, i) => (
-                <li key={i} style={{ display: 'flex', gap: 10, padding: '8px 0', borderBottom: i < preview.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
-                  <span style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.55)', minWidth: 36, paddingTop: 2, flexShrink: 0 }}>Day {d.day}</span>
-                  <div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#fff', marginBottom: 2 }}>{d.theme}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', fontStyle: 'italic' }}>{d.vibe}</div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-          {!previewLoading && !preview && (
-            <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.85rem', fontStyle: 'italic', paddingTop: '0.5rem' }}>Generating your day outline…</div>
-          )}
-        </div>
-      </div>
+      <Section title="Stays" onEdit={() => onEditStep(3)} editLabel="Edit stays and flights">
+        <p style={s.text}>
+          {form.alreadyBooked
+            ? 'Already booked — we plan around them.'
+            : (form.route?.bases || []).filter(b => b.stayType).map(b => `${b.stayType} (${b.name})`).join(' · ') || 'Suggested in your itinerary.'}
+        </p>
+      </Section>
 
-      {/* ── Route (route first) ── */}
-      {form.route?.bases?.length > 0 && (() => {
-        let day = 1;
-        return (
-          <div style={{ ...panel, marginBottom: '1.5rem' }}>
-            <div style={sectionLabel}>Your route</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-              {form.route.bases.map((b, i) => {
-                const from = day; day += b.days;
-                return (
-                  <React.Fragment key={`${b.name}-${i}`}>
-                    {i > 0 && <span style={{ color: 'rgba(255,255,255,0.55)' }}>→</span>}
-                    <span style={{ padding: '5px 12px', borderRadius: 20, background: 'rgba(0,212,170,0.08)', border: '1px solid rgba(0,212,170,0.2)', fontSize: '0.8rem', color: '#fff' }}>
-                      <strong style={{ color: '#00d4aa' }}>{b.days > 1 ? `Days ${from}–${day - 1}` : `Day ${from}`}</strong> · {b.name}
-                    </span>
-                  </React.Fragment>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })()}
+      <section style={s.outline} aria-label="Day outline preview" aria-busy={previewLoading}>
+        <h2 style={{ ...s.h2, marginBottom: 8 }}>Day outline (preview)</h2>
+        {previewLoading && <div style={s.muted} role="status">Sketching your days…</div>}
+        {!previewLoading && preview && (
+          <ol style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {preview.map((d, i) => (
+              <li key={i} style={{ fontSize: 14, lineHeight: 1.45 }}><b>{d.theme}</b>{d.vibe ? <span style={s.muted}> — {d.vibe}</span> : null}</li>
+            ))}
+          </ol>
+        )}
+        {!previewLoading && !preview && <div style={s.muted}>The outline isn't available right now — your itinerary will still be complete.</div>}
+        <label style={s.label}>Anything else we should know? (optional)
+          <textarea rows={2} maxLength={300} style={s.textarea} value={form.userMustDos || ''} onChange={e => set('userMustDos', e.target.value)}
+            onBlur={() => loadPreview(form)} placeholder="e.g. dinner already booked on day 2; staying at Hoi An Riverside" />
+        </label>
+      </section>
 
-      {/* ── Selected experiences ── */}
-      {(() => {
-        // selected_venues v2: { picks: [{ name, day, ... }], interests: [...] } — see VenueSelection.
-        const picks = Array.isArray(form.selected_venues?.picks) ? form.selected_venues.picks : [];
-        const interests = Array.isArray(form.selected_venues?.interests) ? form.selected_venues.interests : [];
-        if (!picks.length && !interests.length) return null;
-        const chip = {
-          padding: '5px 12px', borderRadius: 20,
-          background: 'rgba(0,212,170,0.08)', border: '1px solid rgba(0,212,170,0.2)',
-          fontSize: '0.75rem', color: '#00d4aa', fontWeight: 600,
-        };
-        const sorted = [...picks].sort((a, b) => (a.day || 99) - (b.day || 99));
-        return (
-          <div style={{ ...panel, marginBottom: '1.5rem' }}>
-            <div style={sectionLabel}>Your picks — included in the itinerary</div>
-            {sorted.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: interests.length ? 10 : 0 }}>
-                {sorted.map(p => (
-                  <span key={`${p.name}-${p.day || 'any'}`} style={chip}>
-                    {p.day ? `Day ${p.day} · ` : ''}{p.name}
-                  </span>
-                ))}
-              </div>
-            )}
-            {interests.length > 0 && (
-              <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)' }}>
-                Interests: {interests.join(', ')}
-              </div>
-            )}
-          </div>
-        );
-      })()}
+      {submitError && <p role="alert" style={s.error}>{submitError}</p>}
 
-      {submitError && <p style={{ color: '#ff6b6b', marginBottom: '1rem', fontSize: '0.9rem' }}>{submitError}</p>}
-
-      {/* Guests plan everything first; the account is asked for here (Nov 2026). */}
       {!signedIn && (
-        <div style={gatePanel} data-testid="signin-gate">
-          <div style={{ fontWeight: 700, color: '#fff', marginBottom: 4 }}>Create a free account to get this itinerary</div>
-          <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>
+        <div style={s.gate} data-testid="signin-gate">
+          <div style={{ fontWeight: 800, marginBottom: 4 }}>Create a free account to get this itinerary</div>
+          <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.75)', lineHeight: 1.5 }}>
             Your first itinerary is free, and the full guide is emailed to you. Everything you've planned is kept — you'll come straight back here.
           </div>
+          <button type="button" style={{ ...s.link, marginTop: 6 }} onClick={onSignIn}>I already have an account</button>
         </div>
       )}
-      {signedIn && limitMessage(entitlement) && (
-        <div style={{ ...gatePanel, borderColor: 'rgba(255,190,90,0.35)', background: 'rgba(255,190,90,0.06)' }} role="status">
-          <div style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>{limitMessage(entitlement)}</div>
-        </div>
-      )}
+      {signedIn && limitMessage(entitlement) && <div style={s.warn} role="status">{limitMessage(entitlement)}</div>}
 
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-        <button onClick={onBack} style={{ ...ghostBtn, color: 'rgba(255,255,255,0.6)' }}>← Edit</button>
-        {!signedIn ? (
-          <>
-            <button onClick={onSignUp} style={primaryBtn}>Create free account →</button>
-            <button onClick={onSignIn} style={ghostBtn}>I have an account</button>
-          </>
-        ) : limitMessage(entitlement) ? (
-          <button onClick={onSeePlans} style={primaryBtn}>See plans →</button>
-        ) : (
-          <button onClick={onSubmit} disabled={submitting} style={{ ...primaryBtn, background: submitting ? 'rgba(0,212,170,0.4)' : '#00d4aa', cursor: submitting ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}>
-            {submitting ? 'Generating…' : 'Generate full itinerary →'}
-          </button>
-        )}
-      </div>
-      <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.78rem', textAlign: 'center', marginTop: '0.75rem' }}>
+      <p style={s.foot}>
         {signedIn && entitlementLine(entitlement) ? `${entitlementLine(entitlement)} · ` : ''}
         Takes about 5 minutes · PDF delivered by email{signedIn && accountEmail ? ` to ${accountEmail}` : ''}
       </p>

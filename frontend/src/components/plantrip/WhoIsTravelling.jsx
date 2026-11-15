@@ -59,10 +59,10 @@ const s = {
   textarea: { width: '100%', padding: '0.75rem 1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 10, color: '#fff', fontFamily: 'inherit', fontSize: '0.9rem', resize: 'vertical' },
 };
 
-export function CountryChips({ selectedName, onPick }) {
+export function CountryChips({ selectedName, onPick, hint = true }) {
   return (
     <div>
-      <div style={s.hint}>Pick a country and we'll suggest the best route through it — or search any place below.</div>
+      {hint && <div style={s.hint}>Pick a country and we'll suggest the best route through it — or search any place below.</div>}
       <div style={s.chips}>
         {CURATED_COUNTRIES.map(c => (
           <button
@@ -79,13 +79,21 @@ export function CountryChips({ selectedName, onPick }) {
   );
 }
 
-export function WhoIsTravelling({ value, onChange }) {
+/**
+ * part: 'people' (adults + kids), 'travel' (time between stops, overnight, notes) or 'all'.
+ * The planner shows people in Trip basics and travel under "More options".
+ */
+export function WhoIsTravelling({ value, onChange, part = 'all' }) {
   const v = { ...DEFAULT_TRIP_PREFS, ...(value || {}) };
   const set = (patch) => onChange({ ...v, ...patch });
   const youngest = v.kids.length ? Math.min(...v.kids) : null;
 
+  const showPeople = part !== 'travel';
+  const showTravel = part !== 'people';
+
   return (
     <div>
+      {showPeople && (<>
       <div style={s.row}>
         <span style={s.rowLabel}>Adults</span>
         <button type="button" style={s.stepBtn} aria-label="One adult fewer" onClick={() => set({ adults: Math.max(1, v.adults - 1) })}>−</button>
@@ -115,6 +123,8 @@ export function WhoIsTravelling({ value, onChange }) {
           </button>
         )}
       </div>
+      </>)}
+      {showTravel && (<>
 
       <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', marginBottom: '0.5rem' }}>
         How much travel between stops?
@@ -146,6 +156,7 @@ export function WhoIsTravelling({ value, onChange }) {
         value={v.notes}
         onChange={e => set({ notes: e.target.value })}
       />
+      </>)}
     </div>
   );
 }

@@ -2,9 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchPlanDraft, deletePlanDraft } from '../../api/itinerary';
 import { timeAgo } from '../../utils/tripStats';
-
-/** Same names as PlanTrip's STEPS (index = saved step). */
-const STEP_NAMES = ['Destination', 'Dates', 'Your route', 'Trip overview', 'Experiences', 'Review'];
+import { STEP_NAMES, STEP_STORAGE_KEY, FORM_STORAGE_KEY, resumeStep } from '../../utils/planSteps';
 
 /** "Peru · 10 days" from a saved plan form. */
 export function draftTitle(form) {
@@ -37,12 +35,12 @@ export default function ContinuePlan() {
   }, []);
 
   if (!draft) return null;
-  const step = Math.min(Math.max(Number(draft.step) || 0, 0), STEP_NAMES.length - 1);
+  const step = resumeStep(draft.form, draft.step); // older drafts saved a 6-step index
 
   const resume = () => {
     try {
-      sessionStorage.setItem('wz_plan_form_v2', JSON.stringify(draft.form));
-      sessionStorage.setItem('wz_plan_step_v2', String(step));
+      sessionStorage.setItem(FORM_STORAGE_KEY, JSON.stringify(draft.form));
+      sessionStorage.setItem(STEP_STORAGE_KEY, String(step));
     } catch { /* storage blocked: the planner still opens */ }
     navigate('/plan');
   };
