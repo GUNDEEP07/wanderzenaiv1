@@ -18,41 +18,23 @@ jobs:
           set +e
           mkdir out
           {
-          echo "== secret-bearing env vars per function (names only)"
-          for f in form-handler welcome-email itinerary-gen pdf-builder email-sender stripe-webhook get-itinerary weekly-cache recommendations destination-insights profile admin blog-handler generation-watchdog; do
-            names=$(aws lambda get-function-configuration --function-name wanderzenai-$f-prod --query 'Environment.Variables' --output json | jq -r 'keys[] | select(test("KEY|SECRET|PASSWORD"))' | tr '\n' ' ')
-            echo "$f: $names"
-          done
-          echo "== async invoke configs"
-          for f in itinerary-gen pdf-builder email-sender; do aws lambda get-function-event-invoke-config --function-name wanderzenai-$f-prod --query '{retries:MaximumRetryAttempts,age:MaximumEventAgeInSeconds,onFailure:DestinationConfig.OnFailure.Destination}' --output json; done
-          echo "== watchdog metrics (last 30 min)"
-          for m in Invocations Errors; do aws cloudwatch get-metric-statistics --namespace AWS/Lambda --metric-name $m --dimensions Name=FunctionName,Value=wanderzenai-generation-watchdog-prod --start-time $(date -u -d '-30 min' +%FT%TZ) --end-time $(date -u +%FT%TZ) --period 1800 --statistics Sum --query 'Datapoints[0].Sum' --output text | sed "s/^/$m: /"; done
-          echo "== watchdog log (last 30 min, msgs only)"
-          aws logs filter-log-events --log-group-name /aws/lambda/wanderzenai-generation-watchdog-prod --start-time $(( ($(date +%s) - 1800) * 1000 )) --query 'events[].message' --output text | grep -oE '"msg":"[^"]*"|ERROR[^{]*|Task timed out' | sort | uniq -c | head -20
-          echo "== API smoke"
           API=https://y44o2x9cu1.execute-api.ap-southeast-2.amazonaws.com/prod
-          c() { echo "$1 $2 → $(curl -s -o /tmp/b -w '%{http_code}' -X $1 "$API$2" -H 'Content-Type: application/json' ${3:+-d "$3"}) $(head -c 120 /tmp/b | tr '\n' ' ')"; }
-          c POST /route-plan '{"destination":"Japan","days":5,"tripPrefs":{"adults":2,"kidsAges":[]}}'
-          c GET "/destination-insights?destination=Kyoto"
-          c GET "/recommendations/venues?destination=Hoi%20An&category=Restaurants"
-          c POST /webhook/stripe '{"type":"x"}'
-          c GET /profile
-          c GET /blog
-          c GET /blog/08a02053
-          c GET "/photos/search?q=Hanoi"
-          echo "== test alert: synthetic pdf-builder crash record (alert-only path, no DB writes)"
-          cat > ev.json <<'J'
-          {"version":"1.0","requestContext":{"functionArn":"arn:aws:lambda:ap-southeast-2:595710543932:function:wanderzenai-pdf-builder-prod:$LATEST","condition":"RetriesExhausted","approximateInvokeCount":2},"requestPayload":{"submissionId":"wz_ALERT_TEST_NOT_A_TRIP","itineraryId":"alert-test"},"responsePayload":{"errorType":"AlertTest","errorMessage":"Synthetic record to test the alert pipeline (Nov 15)"}}
-          J
-          aws lambda invoke --function-name wanderzenai-generation-watchdog-prod --cli-binary-format raw-in-base64-out --payload file://ev.json resp.json --query 'StatusCode' --output text; cat resp.json; echo
-          echo "waiting for the metric + alarm..."; 
-          for i in $(seq 1 16); do s=$(aws cloudwatch describe-alarms --alarm-names wanderzenai-prod-chain-crash-or-stuck --query 'MetricAlarms[0].StateValue' --output text); echo "t+$((i*20))s $s"; [ "$s" = ALARM ] && break; sleep 20; done
-          echo "== all alarms"
-          aws cloudwatch describe-alarms --alarm-name-prefix wanderzenai-prod --query 'MetricAlarms[].[AlarmName,StateValue,length(AlarmActions)]' --output text
-          echo "== SNS topic subscriptions"
-          T=$(aws sns list-topics --query "Topics[?contains(TopicArn,'wanderzenai-ops-alerts-prod')].TopicArn" --output text); echo "$T"; aws sns list-subscriptions-by-topic --topic-arn "$T" --query 'length(Subscriptions)'
-          echo "== metric WanderZenAI/AsyncCrash"
-          aws cloudwatch get-metric-statistics --namespace WanderZenAI --metric-name AsyncCrash --dimensions Name=Stage,Value=prod --start-time $(date -u -d '-30 min' +%FT%TZ) --end-time $(date -u +%FT%TZ) --period 300 --statistics Sum --query 'Datapoints[].Sum' --output text
+          c() { echo "$1 $2 → $(curl -s -o /tmp/b -w '%{http_code}' -X $1 "$API$2" -H 'Content-Type: application/json' ${3:+-d "$3"}) $(head -c 160 /tmp/b | tr '\n' ' ')"; }
+          echo "== Claude path on form-handler (/route-plan more:true, guest)"
+          c POST /route-plan '{"destination":"Slovenia","days":6,"more":true,"tripPrefs":{"adults":2,"kidsAges":[]}}'
+          echo "== Claude/Foursquare path on destination-insights"
+          c GET "/destination-insights?destination=Kyoto&startDate=2027-03-01&endDate=2027-03-05"
+          echo "== Unsplash key on recommendations"
+          c GET "/photos/search?query=Hanoi"
+          echo "== Foursquare on recommendations"
+          c GET "/recommendations/venues?destination=Hoi%20An&lat=15.88&lng=108.33&category=Restaurants"
+          echo "== watchdog schedule (last 40 min)"
+          for m in Invocations Errors; do aws cloudwatch get-metric-statistics --namespace AWS/Lambda --metric-name $m --dimensions Name=FunctionName,Value=wanderzenai-generation-watchdog-prod --start-time $(date -u -d '-40 min' +%FT%TZ) --end-time $(date -u +%FT%TZ) --period 2400 --statistics Sum --query 'Datapoints[0].Sum' --output text | sed "s/^/$m: /"; done
+          aws logs filter-log-events --log-group-name /aws/lambda/wanderzenai-generation-watchdog-prod --start-time $(( ($(date +%s) - 2400) * 1000 )) --query 'events[].message' --output text | grep -oE '"msg":"[^"]*"|Task timed out|ERROR|START|REPORT' | sort | uniq -c
+          echo "== lambda errors in the account (last 40 min, per function)"
+          for f in form-handler itinerary-gen pdf-builder email-sender recommendations destination-insights profile stripe-webhook generation-watchdog; do e=$(aws cloudwatch get-metric-statistics --namespace AWS/Lambda --metric-name Errors --dimensions Name=FunctionName,Value=wanderzenai-$f-prod --start-time $(date -u -d '-40 min' +%FT%TZ) --end-time $(date -u +%FT%TZ) --period 2400 --statistics Sum --query 'Datapoints[0].Sum' --output text); echo "$f $e"; done
+          echo "== alarms"
+          aws cloudwatch describe-alarms --alarm-name-prefix wanderzenai-prod --query 'MetricAlarms[].[AlarmName,StateValue]' --output text
           } > out/verify.txt 2>&1
       - if: always()
         run: |
