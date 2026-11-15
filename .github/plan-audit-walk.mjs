@@ -81,3 +81,4 @@ for (const r of out) {
   if (r.postsFound) console.log('      posts:', r.postsFound);
 }
 // rerun after #42 1794715869
+// rerun 2026-11-15T04:23:05Z after #43
