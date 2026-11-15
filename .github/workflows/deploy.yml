@@ -205,7 +205,8 @@ jobs:
 
   deploy-frontend:
     name: Deploy Frontend
-    runs-on: ubuntu-latest
+    # Pinned: Playwright's Chromium (prerender) doesn't support ubuntu-latest (26.04) yet.
+    runs-on: ubuntu-24.04
     needs: deploy-backend
     if: github.ref == 'refs/heads/main'
     # Never at the same time as the scheduled SEO refresh (seo-refresh.yml): both write pages.
