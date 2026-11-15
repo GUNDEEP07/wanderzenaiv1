@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import SiteHeader from '../components/SiteHeader';
 
 const s = {
   page: { minHeight: '100vh', background: '#06090f', fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#fff' },
@@ -13,15 +13,10 @@ const s = {
 };
 
 export default function TermsOfService() {
-  const navigate = useNavigate();
   return (
     <div style={s.page}>
       <style>{``}</style>
-      <nav style={s.nav}>
-        <button style={s.back} onClick={() => navigate(-1)}>← Back</button>
-        <span style={{ color: 'rgba(255,255,255,0.55)' }}>·</span>
-        <span style={{ fontSize: 14, fontWeight: 700 }}>Terms of Service</span>
-      </nav>
+      <SiteHeader />
       <div style={s.inner}>
         <h1 style={s.h1}>Terms of Service</h1>
         <p style={s.updated}>Last updated: 31 May 2026</p>

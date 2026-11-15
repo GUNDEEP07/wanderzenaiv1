@@ -1,0 +1,13 @@
+.site-header { position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(255,255,255,0.08); background: rgba(10,15,30,0.94); backdrop-filter: blur(16px); font-family: 'Plus Jakarta Sans', sans-serif; }
+.site-header--light { background: rgba(250,247,240,0.95); border-bottom-color: #e6dccb; }
+.site-header__inner { max-width: 1200px; margin: 0 auto; height: 56px; padding: 0 clamp(14px, 4vw, 32px); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.site-header__logo { display: flex; align-items: center; gap: 8px; min-height: 44px; text-decoration: none; color: #fff; font-weight: 800; font-size: 15px; letter-spacing: -0.02em; }
+.site-header--light .site-header__logo { color: #1a2e20; }
+.site-header__mark { width: 26px; height: 26px; border-radius: 7px; background: linear-gradient(135deg,#00d4aa,#00916a); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: #0a0f1e; }
+.site-header__links { display: flex; align-items: center; gap: 4px; }
+.site-header__link { min-height: 44px; display: inline-flex; align-items: center; padding: 0 10px; color: rgba(255,255,255,0.8); text-decoration: none; font-size: 14px; font-weight: 600; border-radius: 8px; }
+.site-header__link:hover { color: #fff; background: rgba(255,255,255,0.06); }
+.site-header--light .site-header__link { color: #4a5a4e; }
+.site-header--light .site-header__link:hover { color: #1a2e20; background: rgba(0,0,0,0.04); }
+.site-header__cta { min-height: 40px; display: inline-flex; align-items: center; margin-left: 6px; padding: 0 14px; border-radius: 10px; background: #00d4aa; color: #06090f; text-decoration: none; font-size: 14px; font-weight: 800; white-space: nowrap; }
+@media (max-width: 640px) { .site-header__link--wide { display: none; } }

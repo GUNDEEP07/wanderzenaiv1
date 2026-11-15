@@ -1,9 +1,12 @@
 import { useNavigate } from 'react-router-dom';
+import SiteHeader from '../components/SiteHeader';
 
 export default function NotFound() {
   const navigate = useNavigate();
   return (
-    <div style={{ minHeight: '100vh', background: '#06090f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#fff', textAlign: 'center', padding: 24 }}>
+    <>
+    <SiteHeader />
+    <div style={{ minHeight: 'calc(100vh - 57px)', background: '#06090f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#fff', textAlign: 'center', padding: 24 }}>
       <style>{``}</style>
       <div>
         <div style={{ fontFamily: "'Fraunces', serif", fontSize: 96, fontWeight: 900, color: 'rgba(255,255,255,0.06)', lineHeight: 1, marginBottom: 4 }}>404</div>
@@ -19,5 +22,6 @@ export default function NotFound() {
         </div>
       </div>
     </div>
+    </>
   );
 }

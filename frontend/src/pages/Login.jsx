@@ -86,7 +86,8 @@ export default function Login() {
         input:focus { border-color: rgba(0,212,170,0.4) !important; }
       `}</style>
       <div style={s.box}>
-        <div style={s.logo}>W</div>
+<Link to="/" style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44, fontSize: 14, color: 'rgba(255,255,255,0.75)', textDecoration: 'none', marginBottom: 8 }}>← Back to home</Link>
+        <Link to="/" aria-label="WanderZenAI home" style={{ textDecoration: 'none' }}><div style={s.logo}>W</div></Link>
         <div style={s.headline}>Plan your next<br /><em style={{ fontWeight: 300, color: 'rgba(255,255,255,0.6)' }}>slow journey</em></div>
         <div style={s.sub}>Sign in to access your trips and recommendations</div>
 

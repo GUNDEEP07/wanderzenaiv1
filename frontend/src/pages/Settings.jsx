@@ -169,6 +169,8 @@ export default function Settings() {
       `}</style>
 
       <nav style={s.nav}>
+        <a href="/" style={{ ...s.backBtn, textDecoration: 'none' }}>Home</a>
+        <span style={{ color: 'rgba(255,255,255,0.55)' }}>·</span>
         <button style={s.backBtn} onClick={() => navigate('/dashboard')}>&larr; Dashboard</button>
         <span style={{ color: 'rgba(255,255,255,0.55)' }}>·</span>
         <span style={s.navTitle}>Settings</span>

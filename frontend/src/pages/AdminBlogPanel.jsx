@@ -290,8 +290,10 @@ export default function AdminBlogPanel() {
     <div style={s.page}>
       <nav style={s.nav}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={s.logoMark}>W</div>
-          <span style={{ fontSize: 14, fontWeight: 700 }}>WanderZenAI</span>
+          <a href="/" aria-label="WanderZenAI home" style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'inherit', textDecoration: 'none' }}>
+            <div style={s.logoMark}>W</div>
+            <span style={{ fontSize: 14, fontWeight: 700 }}>WanderZenAI</span>
+          </a>
           <span style={s.badge}>Admin</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>

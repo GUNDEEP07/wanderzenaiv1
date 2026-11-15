@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import './Feedback.css';
+import SiteHeader from '../components/SiteHeader';
 
 const navy = '#0a0f1e';
 const navy2 = '#111827';
@@ -70,7 +71,9 @@ export default function Feedback() {
   };
 
   return (
-    <div style={{ background: navy, minHeight: '100vh', padding: '3rem 2rem', color: '#fff' }}>
+    <div style={{ background: navy, minHeight: '100vh', color: '#fff' }}>
+    <SiteHeader />
+    <div style={{ padding: '3rem clamp(16px, 4vw, 2rem)' }}>
       <div style={{ maxWidth: 700, margin: '0 auto' }}>
         {/* Header */}
         <div style={{ marginBottom: '3rem' }}>
@@ -229,6 +232,7 @@ export default function Feedback() {
           </ul>
         </div>
       </div>
+    </div>
     </div>
   );
 }
