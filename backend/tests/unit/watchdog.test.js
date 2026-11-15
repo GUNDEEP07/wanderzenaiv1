@@ -5,6 +5,17 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('path');
 
+// CI's unit job has no Lambda layer path or layer node_modules: map /opt/nodejs to the
+// layer source and stub the SDK/pg (the watchdog's DB and email are injected below).
+const Module = require('module');
+const LAYER = path.join(__dirname, '../../layers/shared/nodejs');
+const origLoad = Module._load;
+Module._load = function load(request, ...rest) {
+  if (request === 'pg') return { Pool: class {} };
+  if (request.startsWith('@aws-sdk/')) return new Proxy({}, { get: () => class {} });
+  if (request.startsWith('/opt/nodejs/')) request = path.join(LAYER, request.slice('/opt/nodejs/'.length));
+  return origLoad.call(this, request, ...rest);
+};
 const { _internal: w } = require(path.join(__dirname, '../../functions/itinerary-gen/watchdog.js'));
 const { countMetric } = require(path.join(__dirname, '../../layers/shared/nodejs/metrics.js'));
 
