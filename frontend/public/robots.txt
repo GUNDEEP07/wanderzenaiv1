@@ -5,5 +5,11 @@ Disallow: /plan
 Disallow: /onboarding
 Disallow: /settings
 Disallow: /confirmation
+Disallow: /admin
+Disallow: /agency
+Disallow: /itinerary/
+Disallow: /login
+Disallow: /signup
+Disallow: /_shell.html
 
 Sitemap: https://www.wanderzenai.com/sitemap.xml

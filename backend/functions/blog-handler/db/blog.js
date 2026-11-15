@@ -96,6 +96,29 @@ const getPost = async (postId, userId = null, userRole = null) => {
   return result.rows.length > 0 ? result.rows[0] : null;
 };
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const SHORT_ID_RE = /^[0-9a-f]{8}$/i;
+
+/**
+ * resolvePostId — the post id behind an address key: a full UUID (old links) or the 8-hex
+ * id prefix that ends a readable blog address (/blog/some-words-08a02053). Same visibility
+ * rule as getPost. A prefix shared by two visible posts resolves to neither (null).
+ * @returns {Promise<string|null>}
+ */
+const resolvePostId = async (key, userId = null, userRole = null) => {
+  const k = String(key || '').trim().toLowerCase();
+  if (UUID_RE.test(k)) return k;
+  if (!SHORT_ID_RE.test(k)) return null;
+  const result = await pool.query(
+    `SELECT id FROM blog_posts
+     WHERE id::text LIKE $1
+       AND (status = 'published' OR user_id = $2 OR $3 IN ('admin', 'superadmin'))
+     LIMIT 2`,
+    [`${k}%`, userId, userRole]
+  );
+  return result.rows.length === 1 ? result.rows[0].id : null;
+};
+
 /**
  * listPosts — List published posts with filtering & pagination
  * @param {object} filters — Optional filters: { category, country, location, search, page }
@@ -607,6 +630,7 @@ module.exports = {
   // Posts
   createPost,
   getPost,
+  resolvePostId,
   listPosts,
   updatePost,
   deletePost,

@@ -102,6 +102,19 @@ AI-powered slow-travel itinerary SaaS. Live at wanderzenai.com. Solo-maintained.
   everything else escaped); "Budget by day" table from per-day costs.
 - Profile name: GET /profile fills an empty `users.name` from the verified token's `name` claim
   (never overwrites one set in Settings).
+- SEO (Nov 2026): every page sets its head tags with `src/seo/Seo.jsx` (static pages in App.jsx's
+  `page()`, data pages themselves with `ready={!loading}`); app pages are noindex. Deploy prerenders
+  the public pages with Playwright (`frontend/scripts/prerender.mjs` → `<path>/index.html`,
+  `_shell.html`, `404.html`, sitemap, old-blog-id redirects) and uploads with `scripts/upload-site.sh`.
+  The saved copy stays on screen until the app's `<Seo ready>` fires (`src/seo/ready.js`). CloudFront
+  function `FrontendRewriteFunction` (template.yaml, tested by `src/seo/rewrite.test.js`) maps clean
+  URLs to those files, app routes to `_shell.html`; missing → 404.html with a real 404. A NEW public
+  route must be added to `STATIC_ROUTES` in prerender.mjs; a new app route to the function's `APP` list.
+  `seo-refresh.yml` re-prerenders every 2 h when blog posts change. Blog addresses are
+  `/blog/<title-words>-<first 8 of id>` (`utils/blogSlug.js`; the API resolves the 8-hex prefix).
+  The distribution's alias + ACM cert are declared in template.yaml (they were hand-set; never drop them).
+- Guides: `/guides/<country>` pages come from `curated-routes.js` via `scripts/build-guides.mjs`
+  (prebuild; a jest test fails if `src/data/guides*.json` is stale — rerun it after editing routes).
 - Photos: Unsplash only through the backend `GET /photos/search` (key stays server-side, cached);
   every API photo shows its credit via `components/PhotoCredit.jsx` (Unsplash API Guidelines).
 

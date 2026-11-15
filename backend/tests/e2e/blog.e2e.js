@@ -39,6 +39,16 @@ const quiet = () => { console._l = console.log; console.log = () => {}; }; const
   check('GET /blog → no author emails or admin notes anywhere', r.status === 200 && listed && !r.raw.includes('@example.com') && !r.raw.includes('internal:') && listed.author_name === 'Gundeep', r.raw.slice(0, 200));
   r = await call('GET', `/blog/${post}`, null, null, { id: post });
   check('GET /blog/{id} (anonymous) → author_name only', r.status === 200 && r.json.data.author_name === 'Gundeep' && !('author_email' in r.json.data) && !('admin_notes' in r.json.data), r.raw.slice(0, 200));
+  // Readable addresses: /blog/some-words-<first 8 hex of the id>
+  const short = String(post).slice(0, 8);
+  r = await call('GET', `/blog/tea-houses-${short}`, null, null, { id: `tea-houses-${short}` });
+  check('the API takes the id or its 8-hex prefix, not a whole slug (404)', r.status === 404, `${r.status}`);
+  r = await call('GET', `/blog/${short}`, null, null, { id: short });
+  check('GET /blog/{8-hex id prefix} → the published post', r.status === 200 && r.json.data.id === post, `${r.status} ${r.raw.slice(0, 120)}`);
+  r = await call('GET', `/blog/${String(draft).slice(0, 8)}`, null, null, { id: String(draft).slice(0, 8) });
+  check('an id prefix never reveals an unpublished post', r.status === 404, `${r.status}`);
+  r = await call('GET', '/blog/zzzzzzzz', null, null, { id: 'zzzzzzzz' });
+  check('a malformed key → 404 (not a 500)', r.status === 404, `${r.status}`);
   r = await call('GET', `/blog/${draft}`, token('uA' + n, authorEmail), null, { id: draft });
   check('the author sees why their post was rejected (admin_notes), still no email', r.status === 200 && r.json.data.admin_notes === 'Please add photos' && !('author_email' in r.json.data));
   r = await call('GET', `/blog/${post}`, token('uX' + n, adminEmail), null, { id: post });

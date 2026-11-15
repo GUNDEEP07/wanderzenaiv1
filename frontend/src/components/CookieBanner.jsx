@@ -17,7 +17,8 @@ export function CookieBanner() {
   if (!visible) return null;
 
   return (
-    <div style={{
+    // data-prerender-skip: never saved into prerendered pages (it depends on this visitor's choice).
+    <div data-prerender-skip="" style={{
       position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999,
       background: 'rgba(10,14,24,0.97)', backdropFilter: 'blur(16px)',
       borderTop: '1px solid rgba(255,255,255,0.08)',

@@ -1,6 +1,7 @@
 import { useNavigate, Link } from 'react-router-dom';
 import { CreditedPhoto } from '../PhotoCredit';
 import { blogPhotoQuery } from '../../utils/blogPhoto';
+import { blogPath } from '../../utils/blogSlug';
 
 /**
  * BlogPostCard - Displays a blog post in card format
@@ -27,7 +28,7 @@ export function BlogPostCard({ post, currentUserId, onEdit, onDelete }) {
   const handleCardClick = (e) => {
     // Don't navigate if clicking buttons
     if (e.target.closest('button')) return;
-    navigate(`/blog/${post.id}`);
+    navigate(blogPath(post));
   };
 
   return (
@@ -193,7 +194,7 @@ export function BlogPostCard({ post, currentUserId, onEdit, onDelete }) {
           textDecoration: 'none',
         }}
       >
-        <Link to={`/blog/${post.id}`} style={{ color: 'inherit', textDecoration: 'none' }}>{post.title}</Link>
+        <Link to={blogPath(post)} style={{ color: 'inherit', textDecoration: 'none' }}>{post.title}</Link>
       </h3>
 
       {/* Description */}

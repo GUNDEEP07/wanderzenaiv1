@@ -131,6 +131,19 @@ Parameters:
     Description: Comma-separated list of allowed origins for recommendations endpoint
 
 
+  # The live site's domain and its certificate (ACM, us-east-1). Both were set on the
+  # distribution by hand before Nov 2026; they are declared here so a stack update can never
+  # drop them. Leave the certificate empty for a stack without a custom domain.
+  FrontendDomain:
+    Type: String
+    Default: www.wanderzenai.com
+  FrontendCertificateArn:
+    Type: String
+    Default: arn:aws:acm:us-east-1:595710543932:certificate/cbe22f14-66f2-4a37-ad96-01d92fd1a6f5
+
+Conditions:
+  HasFrontendDomain: !Not [!Equals [!Ref FrontendCertificateArn, '']]
+
 Resources:
 
   # ─── API Gateway ───────────────────────────────────────────────────────────
@@ -879,11 +892,57 @@ Resources:
       CloudFrontOriginAccessIdentityConfig:
         Comment: WanderZenAI Frontend OAI
 
+  # Clean addresses (SEO, Nov 2026): public pages are prerendered to <path>/index.html at
+  # build time (frontend/scripts/prerender.mjs); app pages get the plain app shell; anything
+  # else that doesn't exist falls through to 404.html with a real 404 status (below).
+  # Tested by frontend/src/seo/rewrite.test.js, which runs THIS code.
+  FrontendRewriteFunction:
+    Type: AWS::CloudFront::Function
+    Properties:
+      Name: !Sub wanderzenai-frontend-rewrite-${Stage}
+      AutoPublish: true
+      FunctionConfig:
+        Comment: Clean URLs to prerendered pages; app routes to the shell
+        Runtime: cloudfront-js-2.0
+      FunctionCode: |
+        var APP = /^\/(plan|dashboard|settings|onboarding|confirmation|agency|login|signup|admin|itinerary)(\/|$)/;
+        function query(qs) {
+          var parts = [];
+          for (var k in qs) {
+            var v = qs[k];
+            var vals = v.multiValue ? v.multiValue : [v];
+            for (var i = 0; i < vals.length; i++) parts.push(k + (vals[i].value === '' ? '' : '=' + vals[i].value));
+          }
+          return parts.length ? '?' + parts.join('&') : '';
+        }
+        function handler(event) {
+          var req = event.request;
+          var uri = req.uri;
+          if (uri === '/' || uri === '') { req.uri = '/index.html'; return req; }
+          var last = uri.substring(uri.lastIndexOf('/') + 1);
+          if (last.indexOf('.') !== -1) return req;
+          if (uri.charAt(uri.length - 1) === '/') {
+            var to = uri.replace(/\/+$/, '') || '/';
+            return { statusCode: 301, statusDescription: 'Moved Permanently', headers: { location: { value: to + query(req.querystring) }, 'cache-control': { value: 'public, max-age=3600' } } };
+          }
+          if (APP.test(uri)) { req.uri = '/_shell.html'; return req; }
+          req.uri = uri + '/index.html';
+          return req;
+        }
+
   CloudFrontDistribution:
     Type: AWS::CloudFront::Distribution
     Properties:
       DistributionConfig:
         Enabled: true
+        Aliases: !If [HasFrontendDomain, [!Ref FrontendDomain], !Ref AWS::NoValue]
+        ViewerCertificate: !If
+          - HasFrontendDomain
+          - AcmCertificateArn: !Ref FrontendCertificateArn
+            SslSupportMethod: sni-only
+            MinimumProtocolVersion: TLSv1.2_2021
+          - CloudFrontDefaultCertificate: true
+        IPV6Enabled: true
         DefaultRootObject: index.html
         HttpVersion: http2
         PriceClass: PriceClass_All
@@ -897,13 +956,20 @@ Resources:
           ViewerProtocolPolicy: redirect-to-https
           CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6  # CachingOptimized
           Compress: true
+          FunctionAssociations:
+            - EventType: viewer-request
+              FunctionARN: !GetAtt FrontendRewriteFunction.FunctionMetadata.FunctionARN
+        # A missing page is a real 404 (S3 answers 403 for a missing key: no ListBucket). The
+        # 404 page is the app too, so a story published since the last build still opens.
         CustomErrorResponses:
           - ErrorCode: 404
-            ResponseCode: 200
-            ResponsePagePath: /index.html
+            ResponseCode: 404
+            ResponsePagePath: /404.html
+            ErrorCachingMinTTL: 60
           - ErrorCode: 403
-            ResponseCode: 200
-            ResponsePagePath: /index.html
+            ResponseCode: 404
+            ResponsePagePath: /404.html
+            ErrorCachingMinTTL: 60
 
 Outputs:
   ApiUrl:

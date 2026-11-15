@@ -65,7 +65,9 @@ const getPost = async (postId, userId = null, userRole = null) => {
       return errors.badRequest('Post ID is required');
     }
 
-    const post = await blog.getPost(postId, userId, userRole);
+    // The address may carry the full id or the 8-character prefix of a readable slug.
+    const id = await blog.resolvePostId(postId, userId, userRole);
+    const post = id ? await blog.getPost(id, userId, userRole) : null;
 
     if (!post) {
       log.warn('Get post: not found', { postId });
@@ -73,7 +75,7 @@ const getPost = async (postId, userId = null, userRole = null) => {
     }
 
     // Photos never block the story: if they can't be read, the post shows without them.
-    const photos = await photosHandler.photosFor(postId).catch((err) => {
+    const photos = await photosHandler.photosFor(post.id).catch((err) => {
       log.warn('Get post: photos unavailable', { postId, error: err.message });
       return [];
     });

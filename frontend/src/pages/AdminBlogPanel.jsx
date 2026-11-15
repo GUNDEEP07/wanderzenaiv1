@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { fetchPosts, createPost, updatePost, deletePost, fetchPhotos, uploadPhoto, updatePhotoCaption, deletePhoto } from '../api/blog';
 import { resizeImage, ACCEPTED_TYPES } from '../utils/resizeImage';
+import { blogPath } from '../utils/blogSlug';
 
 /**
  * Admin → Blog (Nov 8 2026, Gundeep's decision "2B"): only the WanderZen team writes
@@ -373,7 +374,7 @@ export default function AdminBlogPanel() {
               </div>
             </div>
             <div style={s.actions}>
-              <button type="button" style={s.btn()} onClick={() => navigate(`/blog/${p.id}`)}>View</button>
+              <button type="button" style={s.btn()} onClick={() => navigate(blogPath(p))}>View</button>
               <button type="button" style={s.btn()} onClick={() => startEdit(p)}>Edit</button>
               {confirmDelete === p.id ? (
                 <>
