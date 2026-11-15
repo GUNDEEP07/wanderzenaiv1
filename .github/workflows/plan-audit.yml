@@ -1,7 +1,7 @@
 name: Planner audit (temporary)
 on:
   push:
-    branches: ['smoke/plan-audit']
+    branches: ['smoke/plan-audit-walk']
 permissions:
   contents: write
 jobs:

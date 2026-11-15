@@ -1,0 +1,20 @@
+name: Venue category check (temporary)
+on:
+  push:
+    branches: ['smoke/plan-audit']
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: What /recommendations/venues returns per category (public endpoint, no secrets)
+        run: |
+          API=https://y44o2x9cu1.execute-api.ap-southeast-2.amazonaws.com/prod
+          for place in "Da Nang|16.0544|108.2022" "Hoi An|15.8801|108.338" "Kyoto|35.0116|135.7681"; do
+            IFS='|' read -r name lat lng <<< "$place"
+            for act in food culture nature views nightlife hiking ""; do
+              out=$(curl -s -G "$API/recommendations/venues" --data-urlencode "destination=$name" --data-urlencode "lat=$lat" --data-urlencode "lng=$lng" --data-urlencode "activity=$act" -H 'Origin: https://www.wanderzenai.com')
+              echo "$name [$act] → $(echo "$out" | jq -c '[.categories[]? | {c:.category, n:(.venues|length), s:.source, first:.venues[0].name}]' 2>/dev/null || echo "$out" | head -c 200)"
+            done
+          done
