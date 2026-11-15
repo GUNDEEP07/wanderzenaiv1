@@ -18,17 +18,11 @@ jobs:
           set +e
           mkdir out
           {
-          for u in https://wanderzenai.com/ https://www.wanderzenai.com/ https://www.wanderzenai.com/og-image.png https://www.wanderzenai.com/favicon.png https://www.wanderzenai.com/no-such-page https://www.wanderzenai.com/blog https://www.wanderzenai.com/sitemap.xml https://www.wanderzenai.com/robots.txt; do
-            echo "== $u"; curl -s -o /dev/null -w "%{http_code} %{content_type} -> %{redirect_url}\n" "$u" || echo "curl exit $?"; done
-          echo "== distributions"
-          aws cloudfront list-distributions --query "DistributionList.Items[].{Id:Id,Aliases:Aliases.Items,Origin:Origins.Items[0].DomainName,Domain:DomainName}" --output json
-          echo "== E329 config"
-          aws cloudfront get-distribution-config --id E329HHUPH0JQTP --query "DistributionConfig.{Aliases:Aliases,Origins:Origins.Items[].{D:DomainName,S3:S3OriginConfig,OAC:OriginAccessControlId,Custom:CustomOriginConfig.OriginProtocolPolicy},Default:DefaultCacheBehavior.{Fn:FunctionAssociations,Lambda:LambdaFunctionAssociations,Cache:CachePolicyId},Errors:CustomErrorResponses,Root:DefaultRootObject,Behaviors:CacheBehaviors}" --output json
-          echo "== cloudfront functions"
-          aws cloudfront list-functions --query "FunctionList.Items[].Name" --output json
-          echo "== stack outputs"
-          aws cloudformation describe-stacks --stack-name wanderzenai-prod --query "Stacks[0].Outputs" --output json 2>&1 | head -60
-          echo "== stacks"; aws cloudformation list-stacks --stack-status-filter UPDATE_COMPLETE CREATE_COMPLETE --query "StackSummaries[].StackName" --output json
+          echo "== full config"; aws cloudfront get-distribution-config --id E329HHUPH0JQTP --output json
+          echo "== route53"; aws route53 list-hosted-zones --output json
+          for z in $(aws route53 list-hosted-zones --query "HostedZones[].Id" --output text); do aws route53 list-resource-record-sets --hosted-zone-id $z --query "ResourceRecordSets[?Type!='NS' && Type!='SOA'].{N:Name,T:Type,A:AliasTarget.DNSName,R:ResourceRecords}" --output json; done
+          echo "== acm us-east-1"; aws acm list-certificates --region us-east-1 --query "CertificateSummaryList[].{Arn:CertificateArn,D:DomainName,S:SubjectAlternativeNameSummaries,St:Status}" --output json
+          echo "== dig"; dig +short wanderzenai.com A; dig +short wanderzenai.com NS; dig +short www.wanderzenai.com CNAME
           } > out/probe.txt 2>&1
       - if: always()
         run: |
