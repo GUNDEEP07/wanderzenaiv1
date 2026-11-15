@@ -1,0 +1,89 @@
+name: SEO refresh (prerendered pages)
+
+# Re-saves the prerendered pages when blog stories are published, edited or deleted, so
+# search engines see them within a couple of hours without a full deploy. Checks cheaply
+# first and does nothing when nothing changed. Run it by hand after publishing to go faster.
+on:
+  schedule:
+    - cron: '17 */2 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Re-save every page even if nothing changed
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: ap-southeast-2
+  STACK_NAME: wanderzenai-prod
+  SITE_URL: https://www.wanderzenai.com
+
+concurrency:
+  group: frontend-publish
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: frontend/package.json
+
+      - name: Stack outputs
+        id: stack
+        run: |
+          out() { aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='$1'].OutputValue" --output text; }
+          echo "api=$(out ApiUrl)" >> "$GITHUB_OUTPUT"
+          echo "bucket=$(out FrontendBucketName)" >> "$GITHUB_OUTPUT"
+
+      - name: Anything to do?
+        id: check
+        working-directory: frontend
+        run: |
+          if [ "${{ inputs.force }}" = "true" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          node scripts/needs-refresh.mjs "$SITE_URL" "${{ steps.stack.outputs.api }}"
+
+      - name: Install dependencies
+        if: steps.check.outputs.run == 'true'
+        working-directory: frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Prerender against the live app
+        if: steps.check.outputs.run == 'true'
+        working-directory: frontend
+        env:
+          VITE_API_URL: ${{ steps.stack.outputs.api }}
+        run: |
+          mkdir -p site
+          aws s3 cp "s3://${{ steps.stack.outputs.bucket }}/_shell.html" site/_shell.html
+          node scripts/prerender.mjs --dist site --remote "$SITE_URL"
+
+      - name: Upload pages
+        if: steps.check.outputs.run == 'true'
+        working-directory: frontend
+        run: bash scripts/upload-site.sh "${{ steps.stack.outputs.bucket }}" site pages
+
+      - name: Invalidate CloudFront cache
+        if: steps.check.outputs.run == 'true'
+        run: aws cloudfront create-invalidation --distribution-id E329HHUPH0JQTP --paths "/*"

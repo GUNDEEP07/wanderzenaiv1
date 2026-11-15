@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import Seo from '../seo/Seo';
+import { blogPath, postKeyFromParam } from '../utils/blogSlug';
 import { useAuth } from '../context/AuthContext';
 import { fetchPost, fetchComments, createComment, updateComment, deleteComment } from '../api/blog';
 import { BlogCommentThread } from '../components/blog/BlogCommentThread';
@@ -13,6 +15,9 @@ export const COMMENTS_OPEN = false;
 
 export default function BlogDetailPage() {
   const { postId } = useParams();
+  const key = postKeyFromParam(postId);
+  // A UUID link and its readable address share the first 8 characters: no reload on redirect.
+  const loadKey = key ? key.slice(0, 8) : postId;
   const { currentUser, getIdToken } = useAuth();
   const navigate = useNavigate();
 
@@ -22,18 +27,22 @@ export default function BlogDetailPage() {
   const [error, setError] = useState(null);
 
   const loadPost = async () => {
-    if (!postId) {
-      setError('Post ID not found');
+    if (!key) {
+      setError('Story not found');
+      setLoading(false);
       return;
     }
     try {
       setLoading(true);
       setError(null);
       const token = currentUser ? await getIdToken() : null;
-      const response = await fetchPost(postId, currentUser?.uid, token);
+      const response = await fetchPost(key, currentUser?.uid, token);
       // API returns { success: true, data: {...} }
       const postData = response.data || response;
       setPost(postData);
+      // Old links (/blog/<uuid>) and edited titles land on the current readable address.
+      const want = blogPath(postData);
+      if (postData.id && window.location.pathname !== want) navigate(want + window.location.search, { replace: true });
       // Comments are fetched separately
       if (COMMENTS_OPEN && postData.id) {
         try {
@@ -52,13 +61,13 @@ export default function BlogDetailPage() {
 
   useEffect(() => {
     loadPost();
-  }, [postId, currentUser]);
+  }, [loadKey, currentUser?.uid]);
 
   const handleCommentAdded = async (content) => {
-    if (!currentUser || !postId) return;
+    if (!currentUser || !post?.id) return;
     try {
       const token = await getIdToken();
-      const newComment = await createComment(postId, content, token);
+      const newComment = await createComment(post.id, content, token);
       setComments([newComment, ...comments]); // newest first, like the list
     } catch (err) {
       alert(`Failed to add comment: ${err.message}`);
@@ -99,9 +108,6 @@ export default function BlogDetailPage() {
       borderBottom: '1px solid rgba(255,255,255,0.06)',
       background: 'rgba(6,9,15,0.95)',
       backdropFilter: 'blur(20px)',
-      position: 'sticky',
-      top: 0,
-      zIndex: 10,
     },
     backBtn: {
       background: 'none',
@@ -222,6 +228,31 @@ export default function BlogDetailPage() {
 
   return (
     <div style={s.page}>
+      {post ? (
+        <Seo
+          title={post.title}
+          description={post.description || post.content}
+          path={blogPath(post)}
+          type="article"
+          publishedTime={post.published_at || post.created_at}
+          modifiedTime={post.updated_at || undefined}
+          image={/^https:\/\/images\.unsplash\.com\//.test(post.thumbnail_url || '') ? post.thumbnail_url : undefined}
+          jsonLd={{
+            '@context': 'https://schema.org',
+            '@type': 'BlogPosting',
+            headline: post.title,
+            description: post.description || undefined,
+            datePublished: post.published_at || post.created_at,
+            dateModified: post.updated_at || post.published_at || post.created_at,
+            author: { '@type': 'Person', name: post.author_name || 'WanderZenAI' },
+            publisher: { '@type': 'Organization', name: 'WanderZenAI', url: 'https://www.wanderzenai.com' },
+            mainEntityOfPage: `https://www.wanderzenai.com${blogPath(post)}`,
+            ...(post.country && post.country !== 'Multiple' ? { contentLocation: { '@type': 'Place', name: [post.location, post.country].filter(Boolean).join(', ') } } : {}),
+          }}
+        />
+      ) : (
+        <Seo title={error ? 'Story not found' : 'Travel story'} noindex={!!error} ready={!loading} />
+      )}
       <SiteHeader />
       {/* Header */}
       <div style={s.header}>
@@ -309,7 +340,7 @@ export default function BlogDetailPage() {
                 <h2 style={s.commentTitle}>Comments</h2>
                 <BlogCommentThread
                   comments={comments}
-                  postId={postId}
+                  postId={post.id}
                   currentUserId={currentUser.uid}
                   onCommentAdded={handleCommentAdded}
                   onCommentEdit={handleCommentEdit}

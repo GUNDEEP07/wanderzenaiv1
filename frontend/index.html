@@ -16,8 +16,8 @@
     <!-- Primary SEO -->
     <title>WanderZenAI — AI-Powered Slow Travel Itineraries</title>
     <meta name="description" content="Generate personalised slow travel itineraries with AI. Skip tourist traps — discover hidden cafés, village stays, and morning trails. Free to start." />
-    <meta name="keywords" content="slow travel, travel itinerary, AI travel planner, personalised travel, off the beaten path, travel planning app" />
     <meta name="author" content="WanderZenAI" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
     <link rel="canonical" href="https://www.wanderzenai.com/" />
 
     <!-- Open Graph (Facebook, WhatsApp, LinkedIn) -->
@@ -28,6 +28,7 @@
     <meta property="og:image" content="https://www.wanderzenai.com/og-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="WanderZenAI: slow travel, planned for you" />
     <meta property="og:site_name" content="WanderZenAI" />
     <meta property="og:locale" content="en_US" />
 
@@ -39,8 +40,9 @@
     <meta name="twitter:image" content="https://www.wanderzenai.com/og-image.png" />
 
     <!-- Favicon -->
-    <link rel="icon" type="image/png" href="/favicon.png" />
-    <link rel="apple-touch-icon" href="/favicon.png" />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" type="image/png" href="/favicon.png" sizes="48x48" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -51,7 +53,17 @@
     <meta name="theme-color" content="#0a0f1e" />
     <meta name="color-scheme" content="dark" />
 
-    <!-- Structured data — SaaS product -->
+    <!-- Structured data: the site and the product (pages add their own with <Seo jsonLd>) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "WanderZenAI",
+      "url": "https://www.wanderzenai.com",
+      "logo": "https://www.wanderzenai.com/apple-touch-icon.png",
+      "sameAs": ["https://instagram.com/wanderzenai"]
+    }
+    </script>
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",

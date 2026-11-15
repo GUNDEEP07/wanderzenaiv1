@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './Landing.css';
+import GUIDES from '../data/guides-index.json';
 
 const DESTINATIONS = [
   { name: 'Kyoto backstreets', color: '#00d4aa' },
@@ -96,6 +97,7 @@ export default function Landing() {
             <span className="nav-logo-text">Wander<span>Zen</span>AI</span>
           </a>
           <a href="/explore" className="nav-link">Explore</a>
+          <a href="/guides" className="nav-link">Guides</a>
           <a href="/blog" className="nav-link">Stories</a>
           <a href="#how" className="nav-link">How it works</a>
           <a href="#sample" className="nav-link">Sample plan</a>
@@ -501,6 +503,7 @@ export default function Landing() {
             <span className="nav-logo-text">Wander<span>Zen</span>AI</span>
           </div>
           <div className="footer-links">
+            <a href="/guides">Guides</a>
             <a href="/blog">Stories</a>
             <a href="/pricing">Pricing</a>
             <a href="/agency">For agencies</a>
@@ -509,7 +512,10 @@ export default function Landing() {
             <a href="/contact">Contact</a>
             <a href="https://instagram.com/wanderzenai">Instagram</a>
           </div>
-          <div className="footer-copy">© 2025 WanderZenAI · Built for slow travellers</div>
+          <div className="footer-links" aria-label="Slow travel guides">
+            {GUIDES.map(g => <a key={g.slug} href={`/guides/${g.slug}`}>{g.name}</a>)}
+          </div>
+          <div className="footer-copy">© {new Date().getFullYear()} WanderZenAI · Built for slow travellers</div>
         </div>
       </footer>
     </div>

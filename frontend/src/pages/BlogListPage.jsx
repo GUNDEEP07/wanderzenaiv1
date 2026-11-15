@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { fetchPosts } from '../api/blog';
+import Seo from '../seo/Seo';
 import { BlogPostCard } from '../components/blog/BlogPostCard';
 import { CountryFilter } from '../components/blog/CountryFilter';
 import { CategoryFilter } from '../components/blog/CategoryFilter';
@@ -70,9 +71,6 @@ export default function BlogListPage() {
       borderBottom: '1px solid rgba(255,255,255,0.06)',
       background: 'rgba(6,9,15,0.95)',
       backdropFilter: 'blur(20px)',
-      position: 'sticky',
-      top: 0,
-      zIndex: 10,
     },
     content: {
       padding: '28px 32px',
@@ -193,10 +191,16 @@ export default function BlogListPage() {
 
   return (
     <div style={s.page}>
+      <Seo
+        title="Slow travel stories and tips"
+        description="Slow travel stories from the WanderZen team: quiet routes, village stays, local food and practical tips for travelling with fewer stops and more time."
+        path="/blog"
+        ready={!loading}
+      />
       <SiteHeader />
       {/* Header */}
       <div style={s.header}>
-        <div style={s.title}>Travel Stories</div>
+        <h1 style={{ ...s.title, margin: 0 }}>Travel Stories</h1>
         <div style={s.subtitle}>Discover travel experiences from wanderers around the world</div>
       </div>
 

@@ -6,7 +6,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "jest"
+    "test": "jest",
+    "prebuild": "node scripts/build-guides.mjs"
   },
   "dependencies": {
     "firebase": "^10.14.1",

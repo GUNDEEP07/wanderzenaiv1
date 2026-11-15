@@ -4,7 +4,7 @@ import './SiteHeader.css';
 
 /**
  * The site's top bar for content pages (blog, contact, legal, confirmation, 404…), so no page
- * is a dead end (Nov 2026): the logo always goes home; Blog, Pricing, Dashboard or Sign in,
+ * is a dead end (Nov 2026): the logo always goes home; Guides, Blog, Pricing, Dashboard or Sign in,
  * and "Plan a trip". `variant="light"` for pages on a cream background.
  */
 export default function SiteHeader({ variant = 'dark' }) {
@@ -19,6 +19,7 @@ export default function SiteHeader({ variant = 'dark' }) {
         </Link>
         <div className="site-header__links">
           <Link to="/" className="site-header__link site-header__link--wide">Home</Link>
+          <Link to="/guides" className="site-header__link site-header__link--wide">Guides</Link>
           <Link to="/blog" className="site-header__link site-header__link--wide">Blog</Link>
           <Link to="/pricing" className="site-header__link site-header__link--wide">Pricing</Link>
           {currentUser
