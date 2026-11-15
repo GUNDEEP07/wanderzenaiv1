@@ -53,6 +53,8 @@ async function walk(width, height, label) {
     const dates = page.locator('input[type="date"]');
     await dates.nth(0).fill(iso(start));
     await shot('step2-after-start-date');
+    run.checks = run.checks || {};
+    run.checks.endDateAutoFilled = await dates.nth(1).inputValue();
     await dates.nth(1).fill(iso(end));
     await shot('step2-filled');
     await click('button:has-text("Continue")');
@@ -67,13 +69,28 @@ async function walk(width, height, label) {
     await click('button:has-text("Continue")');
     await page.waitForTimeout(12000);
     await shot('step5-experiences');
+    run.checks.footerVisible = await page.evaluate(() => { const f = document.querySelector('.venue-footer'); if (!f) return 'missing'; const r = f.getBoundingClientRect(); return r.bottom <= window.innerHeight + 1 && r.top >= 0; });
+    run.checks.stopPill = await page.locator('.venue-dest-pill').first().textContent().catch(() => null);
     await click('button:has-text("Food")').catch(() => {});
     await page.waitForTimeout(10000);
     await shot('step5-food');
+    const addBtns = page.locator('button[aria-label^="Add "][aria-label$=" to a day"]');
+    run.checks.addButtons = await addBtns.count();
+    if (run.checks.addButtons > 0) {
+      const label = await addBtns.last().getAttribute('aria-label');
+      run.checks.picked = label;
+      await addBtns.last().click();
+      run.checks.dayOptions = await page.locator('.day-list__num').allTextContents();
+      await page.locator('.day-list__row').last().click();
+      await page.waitForTimeout(500);
+      await shot('step5-picked');
+    }
+    run.checks.footerVisibleAfterScroll = await page.evaluate(() => { const f = document.querySelector('.venue-footer'); const r = f?.getBoundingClientRect(); return !!r && r.bottom <= window.innerHeight + 1; });
     run.links.push(...await page.$$eval('a[href]', as => as.map(a => ({ step: 'step5', text: a.textContent.trim().slice(0, 60), href: a.href }))));
     run.step5Buttons = await page.$$eval('button', bs => bs.filter(b => b.offsetParent).map(b => b.textContent.trim().slice(0, 50)));
     await click('button.venue-footer__continue');
     await page.waitForTimeout(15000);
+    run.checks.savedPicks = await page.evaluate(() => { try { const f = JSON.parse(sessionStorage.getItem('wz_plan_form_v2') || '{}'); return (f.selected_venues?.picks || []).map(p => ({ name: p.name, day: p.day, destination: p.destination })); } catch (e) { return String(e); } });
     await shot('step6-review');
     run.links.push(...await page.$$eval('a[href]', as => as.map(a => ({ step: 'step6', text: a.textContent.trim().slice(0, 60), href: a.href }))));
   } catch (e) {
@@ -102,4 +119,4 @@ await walk(390, 844, 'phone');
 await walk(1280, 900, 'desktop');
 await checkLinks();
 fs.writeFileSync('report.json', JSON.stringify(report, null, 2));
-console.log(JSON.stringify(report.runs.map(r => ({ label: r.label, error: r.error, steps: r.steps.map(s => `${s.name} ox=${s.overflowX} tiny=${s.tinyText} small=${s.smallTargets}`) })), null, 1));
+console.log(JSON.stringify(report.runs.map(r => ({ label: r.label, error: r.error, checks: r.checks, steps: r.steps.map(s => `${s.name} ox=${s.overflowX} tiny=${s.tinyText} small=${s.smallTargets}`) })), null, 1));
