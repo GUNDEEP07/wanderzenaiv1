@@ -5,21 +5,57 @@ on:
 permissions:
   contents: write
 jobs:
-  walk:
+  verify:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: '24' }
-      - name: SEO end-to-end on the live site (no secrets)
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-southeast-2
+      - name: Verify ops release (env var NAMES only, never values)
         run: |
-          mkdir audit && cd audit && cp ../.github/plan-audit-walk.mjs walk.mjs
-          npm init -y >/dev/null && npm i playwright@1.60 >/dev/null 2>&1 && npx playwright install --with-deps chromium >/dev/null 2>&1
-          node walk.mjs
-      - name: Push results to a results branch (fetched by Claude; delete afterwards)
-        if: always()
+          set +e
+          mkdir out
+          {
+          echo "== secret-bearing env vars per function (names only)"
+          for f in form-handler welcome-email itinerary-gen pdf-builder email-sender stripe-webhook get-itinerary weekly-cache recommendations destination-insights profile admin blog-handler generation-watchdog; do
+            names=$(aws lambda get-function-configuration --function-name wanderzenai-$f-prod --query 'Environment.Variables' --output json | jq -r 'keys[] | select(test("KEY|SECRET|PASSWORD"))' | tr '\n' ' ')
+            echo "$f: $names"
+          done
+          echo "== async invoke configs"
+          for f in itinerary-gen pdf-builder email-sender; do aws lambda get-function-event-invoke-config --function-name wanderzenai-$f-prod --query '{retries:MaximumRetryAttempts,age:MaximumEventAgeInSeconds,onFailure:DestinationConfig.OnFailure.Destination}' --output json; done
+          echo "== watchdog metrics (last 30 min)"
+          for m in Invocations Errors; do aws cloudwatch get-metric-statistics --namespace AWS/Lambda --metric-name $m --dimensions Name=FunctionName,Value=wanderzenai-generation-watchdog-prod --start-time $(date -u -d '-30 min' +%FT%TZ) --end-time $(date -u +%FT%TZ) --period 1800 --statistics Sum --query 'Datapoints[0].Sum' --output text | sed "s/^/$m: /"; done
+          echo "== watchdog log (last 30 min, msgs only)"
+          aws logs filter-log-events --log-group-name /aws/lambda/wanderzenai-generation-watchdog-prod --start-time $(( ($(date +%s) - 1800) * 1000 )) --query 'events[].message' --output text | grep -oE '"msg":"[^"]*"|ERROR[^{]*|Task timed out' | sort | uniq -c | head -20
+          echo "== API smoke"
+          API=https://y44o2x9cu1.execute-api.ap-southeast-2.amazonaws.com/prod
+          c() { echo "$1 $2 → $(curl -s -o /tmp/b -w '%{http_code}' -X $1 "$API$2" -H 'Content-Type: application/json' ${3:+-d "$3"}) $(head -c 120 /tmp/b | tr '\n' ' ')"; }
+          c POST /route-plan '{"destination":"Japan","days":5,"tripPrefs":{"adults":2,"kidsAges":[]}}'
+          c GET "/destination-insights?destination=Kyoto"
+          c GET "/recommendations/venues?destination=Hoi%20An&category=Restaurants"
+          c POST /webhook/stripe '{"type":"x"}'
+          c GET /profile
+          c GET /blog
+          c GET /blog/08a02053
+          c GET "/photos/search?q=Hanoi"
+          echo "== test alert: synthetic pdf-builder crash record (alert-only path, no DB writes)"
+          cat > ev.json <<'J'
+          {"version":"1.0","requestContext":{"functionArn":"arn:aws:lambda:ap-southeast-2:595710543932:function:wanderzenai-pdf-builder-prod:$LATEST","condition":"RetriesExhausted","approximateInvokeCount":2},"requestPayload":{"submissionId":"wz_ALERT_TEST_NOT_A_TRIP","itineraryId":"alert-test"},"responsePayload":{"errorType":"AlertTest","errorMessage":"Synthetic record to test the alert pipeline (Nov 15)"}}
+          J
+          aws lambda invoke --function-name wanderzenai-generation-watchdog-prod --cli-binary-format raw-in-base64-out --payload file://ev.json resp.json --query 'StatusCode' --output text; cat resp.json; echo
+          echo "waiting for the metric + alarm..."; 
+          for i in $(seq 1 16); do s=$(aws cloudwatch describe-alarms --alarm-names wanderzenai-prod-chain-crash-or-stuck --query 'MetricAlarms[0].StateValue' --output text); echo "t+$((i*20))s $s"; [ "$s" = ALARM ] && break; sleep 20; done
+          echo "== all alarms"
+          aws cloudwatch describe-alarms --alarm-name-prefix wanderzenai-prod --query 'MetricAlarms[].[AlarmName,StateValue,length(AlarmActions)]' --output text
+          echo "== SNS topic subscriptions"
+          T=$(aws sns list-topics --query "Topics[?contains(TopicArn,'wanderzenai-ops-alerts-prod')].TopicArn" --output text); echo "$T"; aws sns list-subscriptions-by-topic --topic-arn "$T" --query 'length(Subscriptions)'
+          echo "== metric WanderZenAI/AsyncCrash"
+          aws cloudwatch get-metric-statistics --namespace WanderZenAI --metric-name AsyncCrash --dimensions Name=Stage,Value=prod --start-time $(date -u -d '-30 min' +%FT%TZ) --end-time $(date -u +%FT%TZ) --period 300 --statistics Sum --query 'Datapoints[].Sum' --output text
+          } > out/verify.txt 2>&1
+      - if: always()
         run: |
-          cd audit && rm -rf node_modules package*.json walk.mjs
-          git init -q -b smoke/plan-audit-results && git add -A
-          git -c user.name=audit -c user.email=audit@users.noreply.github.com commit -qm "seo e2e"
+          cd out && git init -q -b smoke/plan-audit-results && git add -A
+          git -c user.name=audit -c user.email=audit@users.noreply.github.com commit -qm verify
           git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" smoke/plan-audit-results
