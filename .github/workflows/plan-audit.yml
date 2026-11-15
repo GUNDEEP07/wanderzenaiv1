@@ -3,7 +3,7 @@ on:
   push:
     branches: ['smoke/plan-audit']
 permissions:
-  contents: read
+  contents: write
 jobs:
   walk:
     runs-on: ubuntu-latest
@@ -16,9 +16,10 @@ jobs:
           mkdir audit && cd audit && cp ../.github/plan-audit-walk.mjs walk.mjs
           npm init -y >/dev/null && npm i playwright@1 >/dev/null 2>&1 && npx playwright install --with-deps chromium >/dev/null 2>&1
           node walk.mjs
-      - uses: actions/upload-artifact@v4
+      - name: Push screenshots to a results branch (fetched by Claude; delete afterwards)
         if: always()
-        with: { name: plan-audit, path: audit/shots, retention-days: 3 }
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with: { name: plan-audit-report, path: audit/report.json, retention-days: 3 }
+        run: |
+          cd audit && rm -rf node_modules package*.json walk.mjs
+          git init -q -b smoke/plan-audit-results && git add -A
+          git -c user.name=audit -c user.email=audit@users.noreply.github.com commit -qm "planner audit screenshots"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" smoke/plan-audit-results
