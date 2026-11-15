@@ -80,3 +80,4 @@ for (const r of out) {
   for (const b of (r.bgBroken?.bad || []).slice(0, 4)) console.log('      BG', b);
   if (r.postsFound) console.log('      posts:', r.postsFound);
 }
+// rerun after #42 1794715869
