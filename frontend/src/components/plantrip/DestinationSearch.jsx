@@ -14,7 +14,7 @@ export function destinationLabel(d) {
   return lower === country.toLowerCase() || lower.endsWith(`, ${country.toLowerCase()}`) ? name : `${name}, ${country}`;
 }
 
-export function DestinationSearch({ onSelect, disabled, allowMultiple = false, initialSelected = null }) {
+export function DestinationSearch({ onSelect, disabled, allowMultiple = false, initialSelected = null, label = 'Where do you want to travel?' }) {
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -205,7 +205,7 @@ export function DestinationSearch({ onSelect, disabled, allowMultiple = false, i
 
   return (
     <div className="destination-search">
-      <label htmlFor="destination-input">Where do you want to travel?</label>
+      <label htmlFor="destination-input">{label}</label>
       <input
         id="destination-input"
         type="text"

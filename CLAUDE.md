@@ -21,10 +21,15 @@ AI-powered slow-travel itinerary SaaS. Live at wanderzenai.com. Solo-maintained.
   anything sensitive before committing.
 - Frontend itinerary flow: `frontend/src/pages/PlanTrip.jsx` (multi-step form; it lives in
   `pages/`, not `components/`). Open to guests — see "Guest planning" below.
-- Plan flow (6 steps): Destination → Dates → **Your route** (`StepRoute.jsx`, POST
-  `/route-plan`) → Trip overview → Choose experiences (`VenueSelection`, one tab per route
-  base) → Review & submit (`StepReview.jsx`, loads the /preview outline itself). Step
-  indexes are the `STEP_*` constants in PlanTrip.jsx — never hard-code numbers.
+- Plan flow (5 steps, Nov 2026 redesign): Trip basics (`StepBasics.jsx`: where, days+dates,
+  who, pace, budget; "More options" = interests, language, travel between stops, start time)
+  → Your route (`StepRoute.jsx`, POST `/route-plan`) → Plan your days (`StepDays.jsx`: one tab
+  per route stop, day boxes, "Picked for you" / browse by category / search / add your own,
+  via `api/places.js` → `/recommendations/venues`) → Stays & flights (`StepStays.jsx`,
+  optional, route-aware links, no invented prices) → Check your trip (`StepReview.jsx`, no new
+  questions; the footer button submits). All share `PlanShell.jsx` (summary bar, progress,
+  sticky Back/Continue). Step numbers: `utils/planSteps.js` (never hard-code; `resumeStep()`
+  maps old 6-step saved plans). Days ↔ dates: `utils/tripDates.js`.
 - Route first: the confirmed route travels in `selected_venues.route` and is shaped by
   `backend/layers/shared/nodejs/route-plan.js` (sanitize, day→base plan, prompt blocks).
 - Route options (option B): Step 1 asks the country (`CountryChips`) and who's travelling
@@ -44,7 +49,8 @@ AI-powered slow-travel itinerary SaaS. Live at wanderzenai.com. Solo-maintained.
 - `src/api/itinerary.js` is the service layer: `fetchPreview()`, `submitItinerary()`,
   `fetchRoutePlan()`, `fetchProgress()`.
 - Step 3 picks travel as `selected_venues` v2 `{ version: 2, picks, interests }` — see
-  `backend/layers/shared/nodejs/selected-venues.js`.
+  `backend/layers/shared/nodejs/selected-venues.js` (max 40 picks; `day` is the trip day number).
+  `/recommendations/venues` returns plural category names ("Restaurants") — use them all.
 - Claude calls: model IDs come from `MODELS` in `backend/layers/shared/nodejs/claude.js`
   (template params `ClaudeModelFast` / `ClaudeModelStrong`); read response text with
   `firstText()`, never `content[0].text` (current models may return a thinking block first).

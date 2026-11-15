@@ -14,15 +14,21 @@ test('draftTitle', () => {
   expect(draftTitle({ destinations: [], days: 1 })).toBe('Your trip · 1 day');
 });
 
-test('shows the saved plan and resumes it at its step', async () => {
+test('an old 6-step draft resumes at the matching new step (old 2 "route" → new 2 of 5)', async () => {
   fetchPlanDraft.mockResolvedValue(draft);
   render(<ContinuePlan />);
   expect(await screen.findByText('Peru · 10 days')).toBeInTheDocument();
-  expect(screen.getByText(/Step 3 of 6: Your route · saved today/)).toBeInTheDocument();
+  expect(screen.getByText(/Step 2 of 5: Your route · saved today/)).toBeInTheDocument();
   fireEvent.click(screen.getByText('Continue →'));
   expect(JSON.parse(sessionStorage.getItem('wz_plan_form_v2')).destinations[0].name).toBe('Peru');
-  expect(sessionStorage.getItem('wz_plan_step_v2')).toBe('2');
+  expect(sessionStorage.getItem('wz_plan_step_v3')).toBe('1');
   expect(mockNavigate).toHaveBeenCalledWith('/plan');
+});
+
+test('a new draft keeps its step', async () => {
+  fetchPlanDraft.mockResolvedValue({ ...draft, form: { ...draft.form, planVersion: 3 }, step: 2 });
+  render(<ContinuePlan />);
+  expect(await screen.findByText(/Step 3 of 5: Plan your days/)).toBeInTheDocument();
 });
 
 test('discard removes it', async () => {

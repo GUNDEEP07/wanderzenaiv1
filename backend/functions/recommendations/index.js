@@ -367,6 +367,9 @@ async function handleVenues(event) {
         ],
         'views': { id: '4bf58dd8d48988d165941735', name: 'viewpoint' },
         'nightlife': { id: '4bf58dd8d48988d116941735', name: 'bar' },
+        // Planner "Browse by category" (Nov 2026)
+        'cafes': { id: '4bf58dd8d48988d16d941735', name: 'cafe' },
+        'markets': { id: '50be8ee891d4fa8dcc7199a7', name: 'market' },
       };
 
       const mapped = activityMap[lowerActivity];
