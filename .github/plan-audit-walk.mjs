@@ -1,84 +1,160 @@
-// Image audit: broken images, failed image requests, stretched/squashed images, missing alt,
-// broken CSS background images — every public page, phone + desktop, after scrolling.
+// SEO release end-to-end check on the live site (Nov 15 2026, after #44/#45).
+// Part A: raw HTTP, no JavaScript (what a crawler gets). Part B: real browser, phone + desktop.
 import { chromium } from 'playwright';
 import fs from 'fs';
 const BASE = 'https://www.wanderzenai.com';
+const API = 'https://y44o2x9cu1.execute-api.ap-southeast-2.amazonaws.com/prod';
 fs.mkdirSync('shots', { recursive: true });
-const PAGES = ['/', '/explore', '/pricing', '/blog', 'BLOGPOSTS', '/plan', '/itinerary/wz_mw6d79lh_9lVr5-9EZHzCTs82', '/confirmation?id=wz_x', '/login', '/signup', '/contact', '/feedback', '/privacy', '/terms', '/agency', '/no-such-page'];
-const out = [];
+const R = { http: [], browser: [], fails: [] };
+const fail = (where, msg) => { R.fails.push(`${where}: ${msg}`); };
+const get = async (path, opts = {}) => {
+  const r = await fetch(BASE + path, { redirect: 'manual', ...opts });
+  const text = /text|xml|json/.test(r.headers.get('content-type') || '') ? await r.text() : '';
+  return { status: r.status, type: r.headers.get('content-type'), cache: r.headers.get('cache-control'), location: r.headers.get('location'), text };
+};
+const pick = (html, re) => (html.match(re) || [])[1] || '';
+
+// ── A. HTTP ───────────────────────────────────────────────────────────────────
+const sm = await get('/sitemap.xml');
+const urls = [...sm.text.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]);
+R.sitemap = { status: sm.status, type: sm.type, count: urls.length };
+if (sm.status !== 200 || urls.length < 20) fail('sitemap', `${sm.status} ${urls.length} urls`);
+for (const u of urls) {
+  const path = new URL(u).pathname;
+  const r = await get(path);
+  const row = {
+    path, status: r.status, cache: r.cache,
+    title: pick(r.text, /<title>([^<]*)<\/title>/),
+    canonical: pick(r.text, /<link rel="canonical" href="([^"]+)"/),
+    robots: pick(r.text, /<meta name="robots" content="([^"]+)"/),
+    desc: pick(r.text, /<meta name="description" content="([^"]+)"/).slice(0, 80),
+    ogImage: pick(r.text, /<meta property="og:image" content="([^"]+)"/),
+    h1: pick(r.text, /<h1[^>]*>([\s\S]*?)<\/h1>/).replace(/<[^>]+>/g, '').slice(0, 80),
+    words: r.text.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/g, ' ').replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length,
+    ldjson: (r.text.match(/application\/ld\+json/g) || []).length,
+  };
+  R.http.push(row);
+  if (r.status !== 200) fail(path, `status ${r.status}`);
+  if (row.canonical !== u) fail(path, `canonical ${row.canonical}`);
+  if (!row.h1) fail(path, 'no h1 in raw HTML');
+  if (/noindex/.test(row.robots)) fail(path, 'noindex');
+  if (row.words < 80) fail(path, `only ${row.words} words in raw HTML`);
+  if (!/no-cache/.test(r.cache || '')) fail(path, `html cache-control ${r.cache}`);
+}
+const titles = R.http.map(r => r.title); if (new Set(titles).size !== titles.length) fail('titles', 'duplicate titles');
+const checks = [
+  ['/no-such-page', r => r.status === 404 && /noindex/.test(r.text), '404 + noindex'],
+  ['/guides/atlantis', r => r.status === 404, '404'],
+  ['/blog/', r => r.status === 301 && r.location === '/blog', '301 → /blog'],
+  ['/guides/vietnam/?ref=x', r => r.status === 301 && r.location === '/guides/vietnam?ref=x', '301 keeps query'],
+  ['/blog/08a02053-e1b9-4a6d-a4c2-3440817ad6e6', r => r.status === 200 && /http-equiv="refresh"[^>]+\/blog\/vietnam-slowly/.test(r.text) && /rel="canonical"/.test(r.text), 'old link → redirect stub'],
+  ['/plan', r => r.status === 200 && !/data-prerendered/.test(r.text) && /\/assets\/index-/.test(r.text), 'app shell'],
+  ['/dashboard', r => r.status === 200 && !/data-prerendered/.test(r.text), 'app shell'],
+  ['/itinerary/wz_x', r => r.status === 200 && !/data-prerendered/.test(r.text), 'app shell'],
+  ['/robots.txt', r => r.status === 200 && /Sitemap: https:\/\/www\.wanderzenai\.com\/sitemap\.xml/.test(r.text) && /text\/plain/.test(r.type), 'robots'],
+  ['/og-image.png', r => r.status === 200 && r.type === 'image/png', 'png'],
+  ['/favicon.ico', r => r.status === 200 && /icon/.test(r.type), 'ico'],
+  ['/apple-touch-icon.png', r => r.status === 200 && r.type === 'image/png', 'png'],
+  ['/prerender-manifest.json', r => r.status === 200 && JSON.parse(r.text).failed.length === 0, 'manifest, nothing failed'],
+  ['/sw.js', r => r.status === 200 && /no-cache/.test(r.cache || ''), 'sw no-cache'],
+];
+for (const [p, ok, what] of checks) {
+  const r = await get(p);
+  const pass = (() => { try { return ok(r); } catch { return false; } })();
+  R.http.push({ path: p, status: r.status, type: r.type, cache: r.cache, location: r.location, check: what, pass });
+  if (!pass) fail(p, `${what}: got ${r.status} ${r.type} ${r.location || ''}`);
+}
+const home = await get('/');
+const asset = pick(home.text, /src="(\/assets\/index-[^"]+\.js)"/);
+const a = await get(asset);
+if (!/immutable/.test(a.cache || '')) fail('assets', `cache ${a.cache}`);
+const api = await fetch(`${API}/blog/08a02053`); const aj = await api.json().catch(() => null);
+if (api.status !== 200 || !aj?.data?.id?.startsWith('08a02053')) fail('API', `/blog/08a02053 → ${api.status}`);
+const apex = await fetch('https://wanderzenai.com/').then(r => r.status).catch(e => `unreachable (${e.cause?.code || e.message})`);
+R.apex = apex;
+
+// ── B. Browser ────────────────────────────────────────────────────────────────
 const browser = await chromium.launch();
+const PAGES = ['/', '/guides', '/guides/vietnam', '/guides/new-zealand', '/blog', '/blog/vietnam-slowly-rice-fields-river-mornings-and-a-quiet-hoi-08a02053', '/explore', '/pricing', '/contact', '/privacy', '/plan', '/login', '/no-such-page'];
 for (const [w, h, label] of [[390, 844, 'phone'], [1280, 900, 'desktop']]) {
-  const ctx = await browser.newContext({ viewport: { width: w, height: h } });
-  const page = await ctx.newPage();
-  let posts = [];
-  const queue = [];
-  for (const p of PAGES) queue.push(p);
-  while (queue.length) {
-    let path = queue.shift();
-    if (path === 'BLOGPOSTS') { queue.unshift(...posts.slice(0, 3)); continue; }
-    const failed = [];
-    const onResp = r => { const t = r.request().resourceType(); if (t === 'image' && r.status() >= 400) failed.push(`${r.status()} ${r.url().slice(0, 140)}`); };
-    const onFail = r => { if (r.resourceType() === 'image') failed.push(`FAILED ${r.failure()?.errorText} ${r.url().slice(0, 140)}`); };
-    page.on('response', onResp); page.on('requestfailed', onFail);
+  for (const path of PAGES) {
+    const ctx = await browser.newContext({ viewport: { width: w, height: h } });
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message.slice(0, 160)));
+    page.on('console', m => { if (m.type() === 'error') errors.push(m.text().slice(0, 160)); });
     const row = { label, path };
     try {
-      await page.goto(BASE + path, { waitUntil: 'networkidle', timeout: 45000 });
-      await page.getByRole('button', { name: 'Accept' }).click({ timeout: 1500 }).catch(() => {});
-      // scroll through to trigger lazy images
-      const H = await page.evaluate(() => document.documentElement.scrollHeight);
-      for (let y = 0; y < H; y += h * 0.8) { await page.evaluate(v => window.scrollTo(0, v), y); await page.waitForTimeout(350); }
-      await page.waitForTimeout(2500);
-      if (path === '/blog') {
-        posts = await page.evaluate(() => [...new Set([...document.querySelectorAll('a[href^="/blog/"]')].map(a => new URL(a.href).pathname))]);
-        if (!posts.length) {
-          // cards may navigate on click: click the first card
-          const card = page.locator('[class*="card"], article').first();
-          if (await card.count()) { await card.click().catch(() => {}); await page.waitForTimeout(2500); const u = new URL(page.url()).pathname; if (u.startsWith('/blog/')) posts = [u]; await page.goBack().catch(() => {}); }
-        }
-        row.postsFound = posts;
+      await page.goto(BASE + path, { waitUntil: 'commit', timeout: 45000 });
+      const frames = []; const t0 = Date.now();
+      while (Date.now() - t0 < 4000) {
+        const f = await page.evaluate(() => {
+          const vis = el => { for (let e = el; e; e = e.parentElement) { const s = getComputedStyle(e); if (s.visibility === 'hidden' || s.display === 'none' || s.opacity === '0') return false; } return el.getBoundingClientRect().height > 0; };
+          return { h1: [...document.querySelectorAll('h1')].some(vis), copy: !!document.getElementById('prerendered-root'), spinner: !!document.querySelector('[style*="spin"]') && ![...document.querySelectorAll('h1')].some(vis) };
+        }).catch(() => null);
+        if (f && document) frames.push(f);
+        await page.waitForTimeout(80);
       }
-      row.images = await page.evaluate(() => [...document.querySelectorAll('img')].map(img => {
-        const r = img.getBoundingClientRect();
-        const cs = getComputedStyle(img);
-        const visible = r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none';
-        const nat = img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : null;
-        const shown = r.height ? r.width / r.height : null;
-        const fit = cs.objectFit;
-        const distortion = nat && shown && (fit === 'fill' || !fit) ? Math.abs(shown / nat - 1) : 0;
-        return {
-          src: (img.currentSrc || img.src || '').slice(0, 120), alt: img.getAttribute('alt'), visible,
-          broken: img.complete && img.naturalWidth === 0 && !!(img.currentSrc || img.src),
-          size: `${Math.round(r.width)}x${Math.round(r.height)}`, natural: `${img.naturalWidth}x${img.naturalHeight}`,
-          fit, distortion: Math.round(distortion * 100),
-          overflow: r.right > window.innerWidth + 1,
-          upscaled: img.naturalWidth && r.width > img.naturalWidth * 1.6,
-        };
-      }));
-      row.bgBroken = await page.evaluate(async () => {
-        const urls = new Set();
-        for (const el of document.querySelectorAll('*')) { const m = getComputedStyle(el).backgroundImage.match(/url\(["']?([^"')]+)/); if (m && !m[1].startsWith('data:')) urls.add(m[1]); }
-        const bad = [];
-        for (const u of urls) { await new Promise(res => { const i = new Image(); i.onload = () => res(); i.onerror = () => { bad.push(u.slice(0, 140)); res(); }; i.src = u; setTimeout(res, 8000); }); }
-        return { count: urls.size, bad };
-      });
-      await page.screenshot({ path: `shots/img-${label}-${path.replace(/[^a-z0-9]+/gi, '_').slice(0, 60)}.png`, fullPage: true });
-    } catch (e) { row.error = e.message.slice(0, 160); }
-    page.off('response', onResp); page.off('requestfailed', onFail);
-    row.failedRequests = [...new Set(failed)];
-    out.push(row);
+      await page.waitForLoadState('networkidle', { timeout: 20000 }).catch(() => {});
+      row.copyStillThere = await page.evaluate(() => !!document.getElementById('prerendered-root'));
+      row.blankFrames = frames.filter(f => !f.h1).length;
+      row.frames = frames.length;
+      row.title = await page.title();
+      row.url = new URL(page.url()).pathname;
+      row.homeLink = await page.evaluate(() => [...document.querySelectorAll('a')].some(a => new URL(a.href, location.href).pathname === '/' && a.getBoundingClientRect().width > 0));
+      row.guidesLink = await page.evaluate(() => [...document.querySelectorAll('a[href="/guides"]')].length > 0);
+      row.brokenImages = await page.evaluate(() => [...document.querySelectorAll('img')].filter(i => i.complete && i.naturalWidth === 0 && i.src).map(i => i.src.slice(0, 100)));
+      row.errors = errors.filter(e => !/favicon|Failed to load resource: the server responded with a status of 404/.test(e) || path !== '/no-such-page');
+      await page.screenshot({ path: `shots/${label}${path.replace(/\W+/g, '_').slice(0, 60) || '_home'}.png` });
+      if (row.copyStillThere) fail(`${label} ${path}`, 'prerendered copy never handed over');
+      if (path !== '/no-such-page' && path !== '/plan' && path !== '/login' && row.blankFrames > 2) fail(`${label} ${path}`, `${row.blankFrames}/${row.frames} frames without a visible h1`);
+      if (row.brokenImages.length) fail(`${label} ${path}`, `broken images ${row.brokenImages.join(' ')}`);
+      if (row.errors.length) fail(`${label} ${path}`, `console: ${row.errors.join(' | ')}`);
+      if (!row.homeLink && path !== '/') fail(`${label} ${path}`, 'no visible link home');
+      if (path === '/guides/vietnam') {
+        row.mapCanvas = await page.evaluate(() => document.querySelectorAll('.maplibregl-canvas, canvas').length);
+        if (!row.mapCanvas) fail(`${label} ${path}`, 'no route map');
+        await page.getByRole('button', { name: 'Accept' }).click({ timeout: 1500 }).catch(() => {});
+        await page.getByRole('link', { name: 'Plan this route' }).first().click();
+        await page.waitForURL('**/plan', { timeout: 15000 });
+        await page.waitForTimeout(2500);
+        row.planAfterGuide = await page.evaluate(() => ({ url: location.pathname, text: document.body.innerText.slice(0, 600) }));
+        const t = row.planAfterGuide.text;
+        if (!/Vietnam/.test(t)) fail(`${label} guide→plan`, 'Vietnam not prefilled');
+        await page.screenshot({ path: `shots/${label}_guide_to_plan.png` });
+      }
+      if (path === '/blog') {
+        await page.getByRole('button', { name: 'Accept' }).click({ timeout: 1500 }).catch(() => {});
+        const first = page.locator('a[href^="/blog/"]').first();
+        row.firstStoryHref = await first.getAttribute('href');
+        if (!/^\/blog\/[a-z0-9-]+-[0-9a-f]{8}$/.test(row.firstStoryHref || '')) fail(`${label} /blog`, `story link ${row.firstStoryHref}`);
+      }
+    } catch (e) { row.error = e.message.slice(0, 200); fail(`${label} ${path}`, row.error); }
+    R.browser.push(row);
+    await ctx.close();
   }
-  await ctx.close();
+}
+// Old UUID link in a browser lands on the readable address.
+{
+  const page = await browser.newPage();
+  await page.goto(BASE + '/blog/08a02053-e1b9-4a6d-a4c2-3440817ad6e6', { waitUntil: 'networkidle' });
+  R.oldLink = new URL(page.url()).pathname;
+  if (!/^\/blog\/vietnam-slowly-.*-08a02053$/.test(R.oldLink)) fail('old blog link', R.oldLink);
+  await page.close();
+}
+// Planner still works for a guest: pick a country, continue, route options appear.
+{
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await page.goto(BASE + '/plan', { waitUntil: 'networkidle' });
+  await page.getByRole('button', { name: 'Accept' }).click({ timeout: 2000 }).catch(() => {});
+  await page.getByRole('button', { name: 'Japan', exact: true }).click();
+  await page.getByRole('button', { name: /Continue/ }).last().click();
+  await page.waitForTimeout(6000);
+  R.planner = (await page.evaluate(() => document.body.innerText)).slice(0, 500);
+  await page.screenshot({ path: 'shots/planner_step2.png' });
+  if (!/route/i.test(R.planner) || !/Kyoto|Tokyo|Fukuoka/.test(R.planner)) fail('planner', 'no route options after step 1');
+  await page.close();
 }
 await browser.close();
-fs.writeFileSync('report.json', JSON.stringify({ images: out }, null, 2));
-for (const r of out) {
-  const imgs = r.images || [];
-  const issues = imgs.filter(i => i.visible && (i.broken || i.distortion > 4 || i.overflow || i.upscaled || i.alt === null));
-  console.log(`${r.label[0]} ${r.path.padEnd(42)} imgs=${imgs.length} visible=${imgs.filter(i => i.visible).length} broken=${imgs.filter(i => i.broken).length} issues=${issues.length} failedReq=${r.failedRequests.length} bg=${r.bgBroken?.count}/${r.bgBroken?.bad?.length} ${r.error || ''}`);
-  for (const i of issues.slice(0, 8)) console.log('     ', JSON.stringify(i));
-  for (const f of r.failedRequests.slice(0, 6)) console.log('      REQ', f);
-  for (const b of (r.bgBroken?.bad || []).slice(0, 4)) console.log('      BG', b);
-  if (r.postsFound) console.log('      posts:', r.postsFound);
-}
-// rerun after #42 1794715869
-// rerun 2026-11-15T04:23:05Z after #43
+fs.writeFileSync('report.json', JSON.stringify(R, null, 1));
+console.log(`fails: ${R.fails.length}`); R.fails.forEach(f => console.log(' -', f));
