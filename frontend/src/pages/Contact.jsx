@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import './Contact.css';
 import SiteHeader from '../components/SiteHeader';
 
@@ -10,7 +11,9 @@ const w60 = 'rgba(255,255,255,0.6)';
 const w40 = 'rgba(255,255,255,0.6)'; // secondary text (raised from 0.4 for contrast, Nov 2026)
 
 export default function Contact() {
-  const [inquiryType, setInquiryType] = useState('general');
+  const [params] = useSearchParams();
+  // "For agencies" links open the partnership form (/contact?type=partnership).
+  const [inquiryType, setInquiryType] = useState(params.get('type') === 'partnership' ? 'partnership' : 'general');
   const [formData, setFormData] = useState({
     name: '',
     email: '',

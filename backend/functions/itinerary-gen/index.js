@@ -8,17 +8,8 @@ const { findDuplicateVenues, planRepairs, repairRules } = require('./validate');
 const { GenerationFailed, handleGenerationFailure } = require('./failure');
 const { progressRecorder, daySummary } = require('/opt/nodejs/progress');
 const dayAdjust = require('/opt/nodejs/day-adjust');
-const { SESClient, SendEmailCommand } = require('@aws-sdk/client-ses');
-
-const ses = new SESClient({ region: 'ap-southeast-2' });
-const sendEmail = ({ to, subject, text, html }) => ses.send(new SendEmailCommand({
-  Source: `WanderZenAI <${process.env.FROM_EMAIL}>`,
-  Destination: { ToAddresses: [to] },
-  Message: {
-    Subject: { Data: subject, Charset: 'UTF-8' },
-    Body: { Html: { Data: html, Charset: 'UTF-8' }, Text: { Data: text, Charset: 'UTF-8' } },
-  },
-}));
+const { sendEmail } = require('./mailer');
+const { countMetric } = require('/opt/nodejs/metrics');
 // Stop this long before the Lambda timeout so a failure is handled (refund + email)
 // instead of the function being killed mid-way with the submission stuck in 'processing'.
 const DEADLINE_MARGIN_MS = 60000;
@@ -424,6 +415,7 @@ async function adjustOneDay({ adjustmentId, submissionId }, db) {
     }));
   } catch (err) {
     log.error('Day adjustment failed', { submissionId, adjustmentId, dayNumber, error: err.message });
+    countMetric('DayAdjustFailed', { submissionId, adjustmentId, dayNumber });
     await dayAdjust.finishAdjustment(db, adjustmentId, 'failed', err.message).catch(() => {});
   }
 }
@@ -453,6 +445,7 @@ exports.handler = async (event, context) => {
   } catch (err) {
     ctl.aborted = true;
     log.error('Itinerary generation failed', { submissionId, reason: err.reason || 'error', error: err.message });
+    countMetric('TripFailed', { submissionId, reason: err.reason || 'error' });
     try {
       const outcome = await handleGenerationFailure({
         db, sendEmail, submissionId, creditSource, errorMessage: err.message,

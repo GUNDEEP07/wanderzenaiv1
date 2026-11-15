@@ -102,6 +102,16 @@ AI-powered slow-travel itinerary SaaS. Live at wanderzenai.com. Solo-maintained.
   everything else escaped); "Budget by day" table from per-day costs.
 - Profile name: GET /profile fills an empty `users.name` from the verified token's `name` claim
   (never overwrites one set in Settings).
+- Ops alerts (Nov 2026, backlog P1-7): failure paths call `countMetric()` (`layers/shared/nodejs/metrics.js`,
+  EMF log line → CloudWatch metric `WanderZenAI/<Name>`, dimension Stage); alarms in template.yaml email
+  the SNS topic `wanderzenai-ops-alerts-<stage>` (subscription from the `ALERT_EMAIL` repo variable).
+  itinerary-gen/pdf-builder/email-sender send crashed async invocations (OnFailure) to
+  `itinerary-gen/watchdog.js`, which also fails trips stuck 20+ min (last 24 h) every 10 min — refund +
+  email via `failure.js`, exactly once. itinerary-gen has NO async retries (a retry = a second Opus bill).
+- Secrets (Nov 2026, backlog P1-4): only DB credentials are in Globals. Claude, Stripe, Foursquare and
+  Google keys are set per function in template.yaml; a function that needs a new one must list it.
+- `/agency` is a demo (sample data): RoleGate agency/admin only; public "For agencies" links go to
+  `/contact?type=partnership`.
 - SEO (Nov 2026): every page sets its head tags with `src/seo/Seo.jsx` (static pages in App.jsx's
   `page()`, data pages themselves with `ready={!loading}`); app pages are noindex. Deploy prerenders
   the public pages with Playwright (`frontend/scripts/prerender.mjs` → `<path>/index.html`,

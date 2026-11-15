@@ -14,17 +14,15 @@ Globals:
         DB_HOST: !Ref DBHost
         DB_NAME: !Ref DBName
         DB_USER: !Ref DBUser
+        # Every function uses the database. Other secrets (Claude, Stripe, Foursquare,
+        # Google Places) are set ONLY on the functions that use them (backlog P1-4, Nov 2026):
+        # the blog's upload handler, for one, holds no payment or AI keys.
         DB_PASSWORD: !Ref DBPassword
-        CLAUDE_API_KEY: !Ref ClaudeApiKey
         FROM_EMAIL: !Ref FromEmail
-        STRIPE_SECRET_KEY: !Ref StripeSecretKey
-        STRIPE_WEBHOOK_SECRET: !Ref StripeWebhookSecret
         STRIPE_SINGLE_PLAN_LINK: !Ref StripeSinglePlanLink
         STRIPE_WANDERER_LINK: !Ref StripeWandererLink
         FRONTEND_URL: !Ref FrontendUrl
-        FOURSQUARE_API_KEY: !Ref FoursquareApiKey
         FOURSQUARE_ENABLED: !Ref FoursquareEnabled
-        GOOGLE_PLACES_API_KEY: !Ref GooglePlacesApiKey
         # Read by the shared token verifier (backend/layers/shared/nodejs/auth.js) in every function.
         FIREBASE_PROJECT_ID: !Ref FirebaseProjectId
         REQUIRE_EMAIL_VERIFIED: !Ref RequireEmailVerified
@@ -105,6 +103,10 @@ Parameters:
     Default: 'wanderzenai-9c343'
     AllowedPattern: '^[a-z0-9-]{4,40}$'
     Description: Firebase project ID — pins the aud/iss of every verified ID token. Not a secret.
+  AlertEmail:
+    Type: String
+    Default: ''
+    Description: Where ops alerts are emailed (failed/stuck trips, crashes, API errors). Empty = alarms only (visible in CloudWatch). Set from the ALERT_EMAIL repo variable; AWS emails a confirmation link first.
   RequireEmailVerified:
     Type: String
     Default: 'true'
@@ -143,6 +145,7 @@ Parameters:
 
 Conditions:
   HasFrontendDomain: !Not [!Equals [!Ref FrontendCertificateArn, '']]
+  HasAlertEmail: !Not [!Equals [!Ref AlertEmail, '']]
 
 Resources:
 
@@ -219,6 +222,9 @@ Resources:
       CodeUri: ../backend/functions/form-handler
       Handler: index.handler
       Description: Receives form submissions, validates, stores to DB, triggers itinerary generation
+      Environment:
+        Variables:
+          CLAUDE_API_KEY: !Ref ClaudeApiKey  # /preview and /route-plan
       Events:
         PreviewSubmit:
           Type: Api
@@ -314,6 +320,19 @@ Resources:
       Timeout: 900
       MemorySize: 1024
       Description: Calls Claude API with slow-travel prompt, parses structured JSON, stores itinerary
+      Environment:
+        Variables:
+          CLAUDE_API_KEY: !Ref ClaudeApiKey
+          FOURSQUARE_API_KEY: !Ref FoursquareApiKey
+      # No automatic retry: a re-run would pay for a second Opus generation. A crash goes
+      # to the watchdog, which fails the trip once, gives the itinerary back and emails.
+      EventInvokeConfig:
+        MaximumRetryAttempts: 0
+        MaximumEventAgeInSeconds: 3600
+        DestinationConfig:
+          OnFailure:
+            Type: Lambda
+            Destination: !GetAtt GenerationWatchdogFunction.Arn
       Policies:
         - Version: '2012-10-17'
           Statement:
@@ -335,6 +354,13 @@ Resources:
       Timeout: 120
       MemorySize: 2048
       Description: Renders itinerary HTML template to PDF via Puppeteer, uploads to S3
+      EventInvokeConfig:
+        MaximumRetryAttempts: 1
+        MaximumEventAgeInSeconds: 3600
+        DestinationConfig:
+          OnFailure:
+            Type: Lambda
+            Destination: !GetAtt GenerationWatchdogFunction.Arn
       Policies:
         - S3WritePolicy:
             BucketName: !Ref PDFBucket
@@ -346,6 +372,161 @@ Resources:
     Metadata:
       BuildMethod: nodejs24.x
 
+  # ─── Generation watchdog (backlog P1-7) ───────────────────────────────────
+  # Receives crashed invocations of the trip chain (OnFailure destinations above) and, every
+  # 10 minutes, fails trips stuck unfinished — refund + traveller email via failure.js.
+  GenerationWatchdogFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub wanderzenai-generation-watchdog-${Stage}
+      CodeUri: ../backend/functions/itinerary-gen
+      Handler: watchdog.handler
+      Timeout: 60
+      MemorySize: 256
+      Description: Fails crashed or stuck trips once (refund + email) and counts them for alarms
+      Events:
+        Sweep:
+          Type: Schedule
+          Properties:
+            Schedule: rate(10 minutes)
+            Name: !Sub wanderzenai-generation-watchdog-${Stage}
+            Description: Fail trips stuck unfinished for 20+ minutes
+            Enabled: true
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action: [ses:SendEmail]
+              Resource: '*'
+
+  # ─── Ops alerts ─────────────────────────────────────────────────────────────
+  # Counters come from the code (layers/shared/nodejs/metrics.js, namespace WanderZenAI) plus
+  # AWS's own Lambda and API Gateway metrics. Any alarm emails AlertEmail (after it confirms).
+  OpsAlertsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub wanderzenai-ops-alerts-${Stage}
+      DisplayName: WanderZenAI alerts
+
+  OpsAlertsEmail:
+    Type: AWS::SNS::Subscription
+    Condition: HasAlertEmail
+    Properties:
+      TopicArn: !Ref OpsAlertsTopic
+      Protocol: email
+      Endpoint: !Ref AlertEmail
+
+  TripFailedAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub wanderzenai-${Stage}-trip-failed
+      AlarmDescription: A trip could not be generated (the traveller was refunded and emailed). Check itinerary-gen logs.
+      Namespace: WanderZenAI
+      MetricName: TripFailed
+      Dimensions: [{ Name: Stage, Value: !Ref Stage }]
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref OpsAlertsTopic]
+
+  DeliveryFailedAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub wanderzenai-${Stage}-delivery-failed
+      AlarmDescription: A PDF could not be built or a trip email did not send. Check pdf-builder / email-sender logs.
+      Metrics:
+        - Id: pdf
+          ReturnData: false
+          MetricStat:
+            Metric: { Namespace: WanderZenAI, MetricName: PdfFailed, Dimensions: [{ Name: Stage, Value: !Ref Stage }] }
+            Period: 300
+            Stat: Sum
+        - Id: mail
+          ReturnData: false
+          MetricStat:
+            Metric: { Namespace: WanderZenAI, MetricName: EmailFailed, Dimensions: [{ Name: Stage, Value: !Ref Stage }] }
+            Period: 300
+            Stat: Sum
+        - Id: adjust
+          ReturnData: false
+          MetricStat:
+            Metric: { Namespace: WanderZenAI, MetricName: DayAdjustFailed, Dimensions: [{ Name: Stage, Value: !Ref Stage }] }
+            Period: 300
+            Stat: Sum
+        - Id: total
+          Expression: FILL(pdf, 0) + FILL(mail, 0) + FILL(adjust, 0)
+          Label: Delivery failures
+          ReturnData: true
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref OpsAlertsTopic]
+
+  ChainCrashAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub wanderzenai-${Stage}-chain-crash-or-stuck
+      AlarmDescription: A trip-chain Lambda crashed (timeout, memory, start-up) or a trip was stuck 20+ minutes. The watchdog failed and refunded it; find the cause in the watchdog logs.
+      Metrics:
+        - Id: crash
+          ReturnData: false
+          MetricStat:
+            Metric: { Namespace: WanderZenAI, MetricName: AsyncCrash, Dimensions: [{ Name: Stage, Value: !Ref Stage }] }
+            Period: 300
+            Stat: Sum
+        - Id: stuck
+          ReturnData: false
+          MetricStat:
+            Metric: { Namespace: WanderZenAI, MetricName: StuckTrip, Dimensions: [{ Name: Stage, Value: !Ref Stage }] }
+            Period: 300
+            Stat: Sum
+        - Id: total
+          Expression: FILL(crash, 0) + FILL(stuck, 0)
+          Label: Crashed or stuck trips
+          ReturnData: true
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref OpsAlertsTopic]
+
+  LambdaErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub wanderzenai-${Stage}-lambda-errors
+      AlarmDescription: Lambda functions in this account and region threw unhandled errors (3+ in 5 minutes).
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 3
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref OpsAlertsTopic]
+
+  Api5xxAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub wanderzenai-${Stage}-api-5xx
+      AlarmDescription: The API returned 5+ server errors in 5 minutes (database down, a handler bug, a dependency outage).
+      Namespace: AWS/ApiGateway
+      MetricName: 5XXError
+      Dimensions:
+        - { Name: ApiName, Value: !Sub 'wanderzenai-api-${Stage}' }
+        - { Name: Stage, Value: !Ref Stage }
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 5
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref OpsAlertsTopic]
+
   # ─── Email Sender Lambda ───────────────────────────────────────────────────
   EmailSenderFunction:
     Type: AWS::Serverless::Function
@@ -354,6 +535,13 @@ Resources:
       CodeUri: ../backend/functions/email-sender
       Handler: index.handler
       Description: Sends branded email with signed S3 PDF download link via SES
+      EventInvokeConfig:
+        MaximumRetryAttempts: 1
+        MaximumEventAgeInSeconds: 3600
+        DestinationConfig:
+          OnFailure:
+            Type: Lambda
+            Destination: !GetAtt GenerationWatchdogFunction.Arn
       Policies:
         - Version: '2012-10-17'
           Statement:
@@ -372,6 +560,9 @@ Resources:
       CodeUri: ../backend/functions/form-handler
       Handler: stripe-webhook.handler
       Description: Confirms Stripe payments, unlocks itinerary generation for paid users
+      Environment:
+        Variables:
+          STRIPE_WEBHOOK_SECRET: !Ref StripeWebhookSecret
       Events:
         StripeWebhook:
           Type: Api
@@ -406,6 +597,9 @@ Resources:
       Timeout: 900
       MemorySize: 512
       Description: Runs every Sunday — fetches Foursquare + Amadeus data and populates recommendations_cache
+      Environment:
+        Variables:
+          FOURSQUARE_API_KEY: !Ref FoursquareApiKey
       Events:
         WeeklyCronJob:
           Type: Schedule
@@ -434,6 +628,7 @@ Resources:
           CLAUDE_API_KEY: !Ref ClaudeApiKey
           UNSPLASH_ACCESS_KEY: !Ref UnsplashAccessKey
           YOUTUBE_API_KEY: !Ref YoutubeApiKey
+          GOOGLE_PLACES_API_KEY: !Ref GooglePlacesApiKey
       Events:
         GetPhotoSearch:
           Type: Api
@@ -500,6 +695,10 @@ Resources:
       Timeout: 30
       MemorySize: 512
       Description: Generates destination insights via Foursquare (primary) and Claude (fallback)
+      Environment:
+        Variables:
+          CLAUDE_API_KEY: !Ref ClaudeApiKey
+          FOURSQUARE_API_KEY: !Ref FoursquareApiKey
       Events:
         GetDestinationInsights:
           Type: Api

@@ -564,7 +564,7 @@ export default function ExplorePage() {
         <div style={{ display: 'flex', gap: '1.5rem' }}>
           <a href="/" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.55)', textDecoration: 'none' }}>Home</a>
           <a href="/pricing" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.55)', textDecoration: 'none' }}>Pricing</a>
-          <a href="/agency" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.55)', textDecoration: 'none' }}>For agencies</a>
+          <a href="/contact?type=partnership" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.55)', textDecoration: 'none' }}>For agencies</a>
           <a href="mailto:travel@wanderzenai.com" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.55)', textDecoration: 'none' }}>Contact</a>
         </div>
       </div>
