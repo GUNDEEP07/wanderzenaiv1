@@ -1,0 +1,24 @@
+name: Planner audit (temporary)
+on:
+  push:
+    branches: ['smoke/plan-audit']
+permissions:
+  contents: read
+jobs:
+  walk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '24' }
+      - name: Walk the live planner as a guest (no secrets)
+        run: |
+          mkdir audit && cd audit && cp ../.github/plan-audit-walk.mjs walk.mjs
+          npm init -y >/dev/null && npm i playwright@1 >/dev/null 2>&1 && npx playwright install --with-deps chromium >/dev/null 2>&1
+          node walk.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: plan-audit, path: audit/shots, retention-days: 3 }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: plan-audit-report, path: audit/report.json, retention-days: 3 }
