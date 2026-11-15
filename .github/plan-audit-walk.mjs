@@ -42,3 +42,4 @@ for (const [w, h, label] of [[390, 844, 'phone'], [1280, 900, 'desktop']]) {
 await browser.close();
 fs.writeFileSync('report.json', JSON.stringify({ nav: report }, null, 2));
 for (const r of report) console.log(JSON.stringify(r));
+// rerun 1794714151
