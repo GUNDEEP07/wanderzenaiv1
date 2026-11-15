@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { fetchPost, fetchComments, createComment, updateComment, deleteComment } from '../api/blog';
 import { BlogCommentThread } from '../components/blog/BlogCommentThread';
+import SiteHeader from '../components/SiteHeader';
 
 /** Comments stay closed until launch (Nov 8 2026, "3C"). The API refuses them too
  *  (BLOG_COMMENTS_OPEN); flip both to reopen. */
@@ -219,6 +220,7 @@ export default function BlogDetailPage() {
 
   return (
     <div style={s.page}>
+      <SiteHeader />
       {/* Header */}
       <div style={s.header}>
         <button onClick={() => navigate('/blog')} style={s.backBtn}>

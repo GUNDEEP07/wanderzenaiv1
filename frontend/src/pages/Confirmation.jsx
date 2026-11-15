@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useSearchParams } from "react-router-dom"
 import RouteMap from "../components/map/RouteMap"
 import { fetchProgress } from "../api/itinerary"
 import { useAuth } from "../context/AuthContext"
+import SiteHeader from "../components/SiteHeader";
 
 const API_URL = import.meta.env.VITE_API_URL
 const POLL_MS = 4000
@@ -221,18 +222,18 @@ export default function Confirmation() {
 
   if (status === "failed") {
     return (
-      <div style={s.page}><div style={{ ...s.wrap, ...s.center }}>
+      <><SiteHeader variant="light" /><div style={s.page}><div style={{ ...s.wrap, ...s.center }}>
         <div style={s.badge("#faecea")}>✕</div>
         <h1 style={s.h1}>Something went wrong</h1>
         <p style={s.lead}>{progress?.message || "We could not generate your itinerary. Please try again — this is usually a temporary issue."}</p>
         <button onClick={() => navigate("/plan")} style={s.primary}>Try again</button>
-      </div><Keyframes /></div>
+      </div><Keyframes /></div></>
     )
   }
 
   if (status === "email_sent") {
     return (
-      <div style={s.page}><div style={s.wrap}>
+      <><SiteHeader variant="light" /><div style={s.page}><div style={s.wrap}>
         <div style={s.center}>
           <div style={s.badge("#e8f0ea")}>✓</div>
           <div style={s.kicker()}>Delivered</div>
@@ -250,12 +251,12 @@ export default function Confirmation() {
           </div>
         )}
         <FeedbackWidget submissionId={submissionId} destination={destination} />
-      </div><Keyframes /></div>
+      </div><Keyframes /></div></>
     )
   }
 
   return (
-    <div style={s.page}><div style={s.wrap}>
+    <><SiteHeader variant="light" /><div style={s.page}><div style={s.wrap}>
       <div style={s.center}>
         <div style={s.badge("#e8f0ea")}><div style={s.spinner} /></div>
         <div style={s.kicker()}>In progress · {fmtElapsed(now - startedAt)}</div>
@@ -285,7 +286,7 @@ export default function Confirmation() {
           <DaysSoFar progress={progress} writing={writing} />
         </>
       )}
-    </div><Keyframes /></div>
+    </div><Keyframes /></div></>
   )
 }
 

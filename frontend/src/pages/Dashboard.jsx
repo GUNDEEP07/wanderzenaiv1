@@ -201,10 +201,10 @@ export default function Dashboard() {
 
       {/* NAV */}
       <nav style={s.nav} className="dash-nav">
-        <div style={s.logo}>
+        <a href="/" style={{ ...s.logo, textDecoration: 'none', color: 'inherit' }} aria-label="WanderZenAI home">
           <div style={s.logoMark}>W</div>
           <span style={s.logoText}>WanderZenAI</span>
-        </div>
+        </a>
         <div style={s.navRight}>
           <div style={s.avatar}><Avatar user={currentUser} /></div>
           <span style={s.navName}>{firstName}</span>

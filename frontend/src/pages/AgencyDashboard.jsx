@@ -112,6 +112,7 @@ function Sidebar({ active, setActive, agency }) {
   return (
     <div style={s.sidebar}>
       <div style={s.sidebarTop}>
+        <a href="/" style={{ display: 'inline-flex', alignItems: 'center', minHeight: 36, fontSize: 13, color: 'rgba(255,255,255,0.7)', textDecoration: 'none', marginBottom: 8 }}>← WanderZenAI home</a>
         <div style={s.agencyName}>{agency.name}</div>
         <div style={{ marginTop: 6 }}>
           <span style={s.planBadge}>{agency.plan} plan</span>

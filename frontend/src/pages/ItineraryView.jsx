@@ -241,7 +241,7 @@ export default function ItineraryView() {
       <div style={{ ...s.page, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: 24 }}>
         <div style={{ fontFamily: "'Fraunces', serif", fontSize: 24, fontWeight: 900, marginBottom: 8 }}>Itinerary not found</div>
         <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', marginBottom: 24 }}>This itinerary may still be generating or doesn't exist.</div>
-        <button onClick={() => navigate('/dashboard')} style={{ ...s.action, ...s.actionPrimary }}>Back to Dashboard</button>
+        <button onClick={() => navigate(currentUser ? '/dashboard' : '/')} style={{ ...s.action, ...s.actionPrimary }}>{currentUser ? 'Back to Dashboard' : 'Go to home'}</button>
       </div>
     );
   }
@@ -252,12 +252,20 @@ export default function ItineraryView() {
 
   return (
     <div style={s.page}>
-      <style>{'* { box-sizing: border-box; } .wz-daybar::-webkit-scrollbar { display: none; }'}</style>
+      <style>{'* { box-sizing: border-box; } .wz-daybar::-webkit-scrollbar { display: none; } @media (max-width: 420px) { .wz-hide-narrow { display: none; } }'}</style>
 
       <nav style={s.nav}>
-        <button onClick={() => navigate('/dashboard')} style={{ ...s.navBtn, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-          <Icon d={ICON.back} /> Dashboard
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <a href="/" aria-label="WanderZenAI home" style={{ ...s.navBtn, display: 'inline-flex', alignItems: 'center', gap: 8, color: '#fff', fontWeight: 800, textDecoration: 'none' }}>
+            <span aria-hidden="true" style={{ width: 26, height: 26, borderRadius: 7, background: 'linear-gradient(135deg,#00d4aa,#00916a)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#0a0f1e' }}>W</span>
+            <span className="wz-hide-narrow">WanderZenAI</span>
+          </a>
+          {currentUser && (
+            <button onClick={() => navigate('/dashboard')} style={{ ...s.navBtn, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <Icon d={ICON.back} /> Dashboard
+            </button>
+          )}
+        </div>
         <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
           <button onClick={share} style={{ ...s.navBtn, display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon d={ICON.share} /> Share</button>
           <button onClick={() => navigate('/feedback')} style={s.navBtn}>Feedback</button>

@@ -4,6 +4,7 @@ import { fetchPosts } from '../api/blog';
 import { BlogPostCard } from '../components/blog/BlogPostCard';
 import { CountryFilter } from '../components/blog/CountryFilter';
 import { CategoryFilter } from '../components/blog/CategoryFilter';
+import SiteHeader from '../components/SiteHeader';
 
 export default function BlogListPage() {
   const { currentUser, getIdToken } = useAuth();
@@ -192,6 +193,7 @@ export default function BlogListPage() {
 
   return (
     <div style={s.page}>
+      <SiteHeader />
       {/* Header */}
       <div style={s.header}>
         <div style={s.title}>Travel Stories</div>
