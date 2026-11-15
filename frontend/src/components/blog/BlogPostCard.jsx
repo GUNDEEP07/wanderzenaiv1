@@ -1,5 +1,6 @@
 import { useNavigate, Link } from 'react-router-dom';
 import { CreditedPhoto } from '../PhotoCredit';
+import { blogPhotoQuery } from '../../utils/blogPhoto';
 
 /**
  * BlogPostCard - Displays a blog post in card format
@@ -57,7 +58,7 @@ export function BlogPostCard({ post, currentUserId, onEdit, onDelete }) {
           stories without uploaded photos showed no image at all. */}
       {!post.thumbnail_url && (
         <CreditedPhoto
-          keyword={[post.location, post.country].filter(Boolean).join(' ') || post.title}
+          {...blogPhotoQuery(post)}
           size="card"
           alt=""
           corner="bottom-right"

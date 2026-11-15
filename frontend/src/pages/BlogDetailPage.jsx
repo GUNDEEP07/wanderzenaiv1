@@ -5,6 +5,7 @@ import { fetchPost, fetchComments, createComment, updateComment, deleteComment }
 import { BlogCommentThread } from '../components/blog/BlogCommentThread';
 import SiteHeader from '../components/SiteHeader';
 import { CreditedPhoto } from '../components/PhotoCredit';
+import { blogPhotoQuery } from '../utils/blogPhoto';
 
 /** Comments stay closed until launch (Nov 8 2026, "3C"). The API refuses them too
  *  (BLOG_COMMENTS_OPEN); flip both to reopen. */
@@ -259,7 +260,7 @@ export default function BlogDetailPage() {
             {/* Cover: the story's own photo, else a matching (credited) Unsplash photo. */}
             {!post.thumbnail_url && (
               <CreditedPhoto
-                keyword={[post.location, post.country].filter(Boolean).join(' ') || post.title}
+                {...blogPhotoQuery(post)}
                 size="hero"
                 alt=""
                 corner="bottom-right"
