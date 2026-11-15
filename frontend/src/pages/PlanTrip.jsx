@@ -24,6 +24,7 @@ import { getUserLocationFromIP } from '../utils/geolocation';
 import { getCurrencyForCountry } from '../utils/countryToCurrency';
 import { validateBudget } from '../utils/validators/budgetValidator';
 import { validateDateRange, calculateTripDays } from '../utils/validators/dateValidator';
+import { addDaysIso, todayIso, tripDatesText, endDateFor, daysForEnd, MIN_DAYS, MAX_DAYS } from '../utils/tripDates';
 import { FlightsSection } from '../components/plantrip/subcomponents/FlightsSection';
 import { AccommodationSection } from '../components/plantrip/subcomponents/AccommodationSection';
 import { BudgetClarificationBox } from '../components/plantrip/subcomponents/BudgetClarificationBox';
@@ -71,6 +72,7 @@ const PREDEFINED_INTERESTS = [
 // Step names drive the progress bar — keep in sync with step indices
 // 0 Destination · 1 Dates · 2 Your route · 3 Trip overview (skipped when already booked)
 // · 4 Choose experiences (per base) · 5 Review & submit (preview)
+
 const STEPS = ['Destination & Preferences', 'Travel dates', 'Your route', 'Trip Overview', 'Choose your experiences', 'Review & submit'];
 const STEP_ROUTE = 2;
 const STEP_OVERVIEW = 3;
@@ -110,9 +112,10 @@ const s = {
   daysRow: { display: 'flex', alignItems: 'center', gap: '1rem' },
   daysBtn: { width: 44, height: 44, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.04)', color: '#fff', fontSize: '1.25rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' },
   daysNum: { fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '2.5rem', fontWeight: 800, color: '#00d4aa', minWidth: 60, textAlign: 'center' },
-  grid4: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' },
-  grid2: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' },
-  grid3: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' },
+  // auto-fit: on a phone the cards wrap instead of pushing the page sideways.
+  grid4: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 120px), 1fr))', gap: '0.5rem' },
+  grid2: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '0.75rem' },
+  grid3: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))', gap: '0.75rem' },
   choiceBtn: (sel) => ({
     padding: '0.75rem 1rem',
     border: `${sel ? '2px' : '1px'} solid ${sel ? '#00d4aa' : 'rgba(255,255,255,0.1)'}`,
@@ -295,6 +298,22 @@ export default function PlanTrip() {
     setErrors(e => ({ ...e, [key]: '' }));
   };
 
+  // Trip length and dates stay in step: the days chosen in step 1 fill the end date,
+  // and changing the end date changes the trip length (which re-plans the route).
+  const setDays = (n) => {
+    const days = Math.min(MAX_DAYS, Math.max(MIN_DAYS, n));
+    setForm(f => ({ ...f, days, travelDateEnd: endDateFor(f.travelDate, days) || f.travelDateEnd }));
+    setErrors(e => ({ ...e, days: '', travelDateEnd: '' }));
+  };
+  const setStartDate = (iso) => {
+    setForm(f => ({ ...f, travelDate: iso, travelDateEnd: endDateFor(iso, f.days) || f.travelDateEnd }));
+    setErrors(e => ({ ...e, travelDate: '', travelDateEnd: '' }));
+  };
+  const setEndDate = (iso) => {
+    setForm(f => ({ ...f, travelDateEnd: iso, days: daysForEnd(f.travelDate, iso, f.days) }));
+    setErrors(e => ({ ...e, travelDateEnd: '' }));
+  };
+
   const setCurrency = (code) => {
     set('currency', code);
     if (typeof localStorage !== 'undefined') {
@@ -379,6 +398,20 @@ export default function PlanTrip() {
 
   // Places Step 4 suggests for: the route's bases (once each — a route can pass through a
   // town twice, e.g. Hanoi → Sapa → Hanoi), or the destination when there is no route.
+  // Each step-5 tab's days on the route, so it only offers its own days and dates.
+  const experienceStops = (() => {
+    const bases = form.route?.bases || [];
+    if (!bases.length) return [];
+    let day = 1;
+    const firstSeen = new Map();
+    bases.forEach(b => {
+      const from = day;
+      day += b.days || 0;
+      if (!firstSeen.has(b.name)) firstSeen.set(b.name, { fromDay: from, toDay: day - 1 });
+    });
+    return [...firstSeen.values()];
+  })();
+
   const experienceDestinations = form.route?.bases?.length
     ? form.route.bases
       .filter((b, i, all) => all.findIndex(x => x.name === b.name) === i)
@@ -411,6 +444,10 @@ export default function PlanTrip() {
       if (!form.budgetScope) errs.budgetScope = 'Tell us what your budget covers';
     }
     if (step === 1) {
+      const span = calculateTripDays(form.travelDate, form.travelDateEnd);
+      if (form.travelDate && form.travelDateEnd && (span < MIN_DAYS || span > MAX_DAYS)) {
+        errs.travelDateEnd = `Trips can be ${MIN_DAYS}–${MAX_DAYS} days — these dates make ${span}.`;
+      }
       const dateValidation = validateDateRange(form.travelDate, form.travelDateEnd);
       if (!dateValidation.valid) {
         dateValidation.errors.forEach(err => {
@@ -511,12 +548,13 @@ export default function PlanTrip() {
     input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.4); }
     select option { background: #111827; color: #fff; }
     @keyframes spin { to { transform: rotate(360deg); } }
+    @supports (height: 100dvh) { .plantrip-exp-page { height: 100dvh !important; } }
   `;
 
   /* ── Step 4 (Experiences): full-bleed, full-height ───────────────── */
   if (step === STEP_EXPERIENCES && form.destinations.length > 0) {
     return (
-      <div style={{ ...s.page, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+      <div className="plantrip-exp-page" style={{ ...s.page, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
         <style>{sharedStyles}</style>
         <nav className="plantrip-nav" style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 var(--desktop-pad, 2.5rem)', background: 'rgba(10,15,30,0.92)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
           <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
@@ -531,10 +569,11 @@ export default function PlanTrip() {
             {stepLabel(STEP_EXPERIENCES)} — Choose your experiences{form.route?.bases?.length > 1 ? ' in each stop' : ''}
           </div>
         </div>
-        <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+        <div style={{ flex: 1, overflow: 'auto', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           <ErrorBoundary scoped={true}>
             <VenueSelection
               destinations={experienceDestinations}
+              stops={experienceStops}
               travelStyles={form.travelStyle}
               startDate={form.travelDate}
               endDate={form.travelDateEnd}
@@ -578,7 +617,7 @@ export default function PlanTrip() {
           {step === 0 && (
             <div>
               <div style={s.stepLabel}>{stepLabel(0)}</div>
-              <h2 style={s.stepTitle}>Where & When</h2>
+              <h2 style={s.stepTitle}>Where & who</h2>
               <p style={s.stepSub}>Pick a country, tell us who's coming, and we'll suggest the route.</p>
 
               {/* Destination — country first */}
@@ -612,24 +651,31 @@ export default function PlanTrip() {
 
               {/* Days */}
               <div style={s.fieldWrap}>
-                <label style={s.label}>Duration (Days) *</label>
-                <div style={s.daysRow}>
+                <label style={s.label} id="wz-days-label">How many days? *</label>
+                <div style={s.daysRow} role="group" aria-labelledby="wz-days-label">
                   <button
                     type="button"
                     style={s.daysBtn}
-                    onClick={() => set('days', Math.max(2, form.days - 1))}
+                    aria-label="One day fewer"
+                    onClick={() => setDays(form.days - 1)}
                   >
                     −
                   </button>
-                  <div style={s.daysNum}>{form.days}</div>
+                  <div style={s.daysNum} aria-live="polite">{form.days}</div>
                   <button
                     type="button"
                     style={s.daysBtn}
-                    onClick={() => set('days', Math.min(30, form.days + 1))}
+                    aria-label="One day more"
+                    onClick={() => setDays(form.days + 1)}
                   >
                     +
                   </button>
                 </div>
+                {form.travelDate && form.travelDateEnd && (
+                  <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.65)', marginTop: '0.5rem' }}>
+                    {tripDatesText(form.travelDate, form.travelDateEnd)}
+                  </div>
+                )}
                 {errors.days && <div style={s.error}>{errors.days}</div>}
               </div>
 
@@ -824,25 +870,35 @@ export default function PlanTrip() {
 
               {/* Start Date */}
               <div style={s.fieldWrap}>
-                <label style={s.label}>Start date *</label>
+                <label style={s.label} htmlFor="wz-start-date">Start date *</label>
                 <input
+                  id="wz-start-date"
                   style={{ ...s.input, ...(errors.travelDate ? s.inputError : {}) }}
                   type="date"
+                  min={todayIso()}
                   value={form.travelDate}
-                  onChange={e => set('travelDate', e.target.value)}
+                  onChange={e => setStartDate(e.target.value)}
                 />
                 {errors.travelDate && <div style={s.error}>{errors.travelDate}</div>}
               </div>
 
               {/* End Date */}
               <div style={s.fieldWrap}>
-                <label style={s.label}>End date *</label>
+                <label style={s.label} htmlFor="wz-end-date">End date *</label>
                 <input
+                  id="wz-end-date"
                   style={{ ...s.input, ...(errors.travelDateEnd ? s.inputError : {}) }}
                   type="date"
+                  min={form.travelDate ? addDaysIso(form.travelDate, MIN_DAYS - 1) : todayIso()}
+                  max={form.travelDate ? addDaysIso(form.travelDate, MAX_DAYS - 1) : undefined}
                   value={form.travelDateEnd}
-                  onChange={e => set('travelDateEnd', e.target.value)}
+                  onChange={e => setEndDate(e.target.value)}
                 />
+                {!errors.travelDateEnd && (
+                  <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', marginTop: '0.4rem' }}>
+                    Filled in from your {form.days} days — change it and the trip length follows.
+                  </div>
+                )}
                 {errors.travelDateEnd && <div style={s.error}>{errors.travelDateEnd}</div>}
               </div>
 
@@ -850,7 +906,7 @@ export default function PlanTrip() {
               {form.travelDate && form.travelDateEnd && (
                 <div style={s.summaryBox}>
                   <div style={{ color: '#00d4aa', fontSize: '1rem', fontWeight: 600 }}>
-                    📅 {calculateTripDays(form.travelDate, form.travelDateEnd)} days planned
+                    {tripDatesText(form.travelDate, form.travelDateEnd)}
                   </div>
                 </div>
               )}
@@ -901,7 +957,7 @@ export default function PlanTrip() {
                   {/* Flights Section */}
                   {form.destinations.length > 0 && (
                     <FlightsSection
-                      destination={form.destinations[0]}
+                      destination={experienceDestinations[0] || form.destinations[0]}
                       origin={form.userLocation}
                       travelDate={form.travelDate}
                       budgetEstimateUSD={destinationInsights?.budgetEstimateUSD}

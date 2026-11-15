@@ -80,12 +80,12 @@ test('shows error message when fetch fails', async () => {
   );
 });
 
-test('clicking chevron expands a pick card', async () => {
+test('clicking + expands a pick card', async () => {
   render(<DestinationInsightsPanel {...PROPS} />);
   await waitFor(() => expect(screen.getByText('Alps Hiking')).toBeInTheDocument());
   const card = screen.getByText('Alps Hiking').closest('.item-card');
   expect(card.className).not.toContain('item-card--picking');
-  fireEvent.click(card.querySelector('.item-chevron'));
+  fireEvent.click(card.querySelector('.add-btn'));
   expect(card.className).toContain('item-card--picking');
 });
 
@@ -102,8 +102,21 @@ test('selecting a day calls onDayAssign and onActivityToggle', async () => {
   );
   await waitFor(() => expect(screen.getByText('Alps Hiking')).toBeInTheDocument());
   const card = screen.getByText('Alps Hiking').closest('.item-card');
-  fireEvent.click(card.querySelector('.item-chevron'));
+  fireEvent.click(card.querySelector('.add-btn'));
   fireEvent.click(screen.getByText('Day 2').closest('button'));
   expect(onActivityToggle).toHaveBeenCalledWith('Alps Hiking');
   expect(onDayAssign).toHaveBeenCalledWith('Alps Hiking', 'Day 2');
+});
+
+test('a stop later in the route offers only its own days, with their dates', async () => {
+  const onDayAssign = jest.fn();
+  render(<DestinationInsightsPanel {...PROPS} startDate="2026-12-27" endDate="2026-12-29" days={3} firstDay={3} onDayAssign={onDayAssign} onActivityToggle={jest.fn()} />);
+  await waitFor(() => expect(screen.getByText('Alps Hiking')).toBeInTheDocument());
+  fireEvent.click(screen.getByText('Alps Hiking').closest('.item-card').querySelector('.add-btn'));
+  expect(screen.queryByText('Day 1')).toBeNull();
+  expect(screen.getByText('Day 3')).toBeInTheDocument();
+  expect(screen.getByText('Sun 27 Dec')).toBeInTheDocument();
+  expect(screen.getByText('Day 5')).toBeInTheDocument();
+  fireEvent.click(screen.getByText('Day 4').closest('button'));
+  expect(onDayAssign).toHaveBeenCalledWith('Alps Hiking', 'Day 4');
 });

@@ -127,3 +127,46 @@ test('onSubmit receives dayAssignments when Continue clicked', async () => {
     })
   );
 });
+
+// Nov 2026 audit: day pickers return "Day 2"; the selection sent to the generator had
+// `day: null` for every pick, and venues (keyed by `id`) were never captured at all.
+test('a venue picked for "Day 2" reaches the itinerary request with day 2', async () => {
+  foursquare.fetchVenuesForActivity.mockResolvedValue([{ id: 'fsq-1', name: 'Bé Mặn', category: 'Seafood', address: 'Đà Nẵng', lat: 16.06, lng: 108.24 }]);
+  const onSubmit = jest.fn();
+  render(
+    <VenueSelection
+      destinations={[{ name: 'Da Nang, Vietnam', lat: 16.05, lng: 108.2 }, { name: 'Hoi An, Vietnam', lat: 15.88, lng: 108.33 }]}
+      stops={[{ fromDay: 1, toDay: 2 }, { fromDay: 3, toDay: 5 }]}
+      travelStyles={[]}
+      startDate="2026-12-25"
+      endDate="2026-12-29"
+      days={5}
+      onSubmit={onSubmit}
+      onSkip={jest.fn()}
+    />
+  );
+  expect(await screen.findByText(/Da Nang · Days 1–2 · 25–26 Dec/)).toBeInTheDocument();
+  fireEvent.click(screen.getByText('Food').closest('button'));
+  fireEvent.click(await screen.findByRole('button', { name: 'Add Bé Mặn to a day' }));
+  expect(screen.queryByText('Day 3')).toBeNull(); // Hoi An's days aren't offered in Da Nang
+  fireEvent.click(screen.getByText('Day 2').closest('button'));
+  fireEvent.click(screen.getByText('Continue →'));
+  const { selection } = onSubmit.mock.calls[0][0];
+  expect(selection.picks).toEqual([expect.objectContaining({ name: 'Bé Mặn', day: 2, destination: 'Da Nang, Vietnam', lat: 16.06 })]);
+});
+
+test('the second stop offers its own days and dates', async () => {
+  render(
+    <VenueSelection
+      destinations={[{ name: 'Da Nang, Vietnam', lat: 16.05, lng: 108.2 }, { name: 'Hoi An, Vietnam', lat: 15.88, lng: 108.33 }]}
+      stops={[{ fromDay: 1, toDay: 2 }, { fromDay: 3, toDay: 5 }]}
+      travelStyles={[]}
+      startDate="2026-12-25"
+      days={5}
+      onSubmit={jest.fn()}
+      onSkip={jest.fn()}
+    />
+  );
+  fireEvent.click(await screen.findByRole('button', { name: /Hoi An/ }));
+  expect(screen.getByText(/Hoi An · Days 3–5 · 27–29 Dec/)).toBeInTheDocument();
+});

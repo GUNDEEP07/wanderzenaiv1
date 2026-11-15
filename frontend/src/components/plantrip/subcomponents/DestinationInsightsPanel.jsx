@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { fetchDestinationInsights } from '../../../api/destinationInsights';
 import { DayList } from './DayList';
 import { CreditedPhoto } from '../../PhotoCredit';
+import { formatRange } from '../../../utils/dateRange';
 
 const CATEGORY_COLOURS = {
   'Food':      'rgba(251,146,60,0.5)',
@@ -29,6 +30,7 @@ export function DestinationInsightsPanel({
   onFullInsightsLoaded,
   onDayAssign,
   days = 5,
+  firstDay = 1,
 }) {
   const [insights, setInsights] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -66,9 +68,9 @@ export function DestinationInsightsPanel({
   if (loading) {
     return (
       <div className="insights-strip">
-        <div className="insights-strip__header">✨ {destName} · {startDate} – {endDate}</div>
+        <div className="insights-strip__header">{destName?.split(',')[0]} · {formatRange(startDate, endDate)}</div>
         <div className="insights-strip__badges">
-          <span className="insights-badge">Loading insights…</span>
+          <span className="insights-badge" role="status">Finding the best places…</span>
         </div>
       </div>
     );
@@ -94,9 +96,15 @@ export function DestinationInsightsPanel({
 
   const handleAddClick = (e, name) => {
     e.stopPropagation();
-    if (!selectedActivities.includes(name)) {
-      setOpenCard(prev => prev === name ? null : name);
-    }
+    setOpenCard(prev => prev === name ? null : name);
+  };
+
+  const handleRemove = (e, name) => {
+    e.stopPropagation();
+    if (selectedActivities.includes(name)) onActivityToggle?.(name);
+    setDayMap(prev => { const next = { ...prev }; delete next[name]; return next; });
+    onDayAssign?.(name, undefined);
+    setOpenCard(null);
   };
 
   const handleDaySelect = (name, day) => {
@@ -117,11 +125,11 @@ export function DestinationInsightsPanel({
     <div>
       {/* Compact insight badges */}
       <div className="insights-strip" style={{ marginBottom: 14 }}>
-        <div className="insights-strip__header">✨ {destName} · {startDate} – {endDate}</div>
+        <div className="insights-strip__header">{destName?.split(',')[0]} · {formatRange(startDate, endDate)}</div>
         <div className="insights-strip__badges">
-          {weatherShort && <span className="insights-badge insights-badge--weather">☀️ {weatherShort}</span>}
-          {insights.crowdLevel && <span className="insights-badge insights-badge--crowd">👥 {insights.crowdLevel}</span>}
-          <span className="insights-badge insights-badge--months">🗓️ {bestMonthsText}</span>
+          {weatherShort && <span className="insights-badge insights-badge--weather">Weather: {weatherShort}</span>}
+          {insights.crowdLevel && <span className="insights-badge insights-badge--crowd">Crowds: {insights.crowdLevel}</span>}
+          <span className="insights-badge insights-badge--months">Best months: {bestMonthsText}</span>
         </div>
       </div>
 
@@ -156,17 +164,14 @@ export function DestinationInsightsPanel({
                     <div className="item-card__actions">
                       {assignedDay && <span className="item-day-badge">{assignedDay}</span>}
                       <button
+                        type="button"
                         className={`add-btn${isAdded ? ' add-btn--done' : ''}`}
+                        aria-label={isAdded ? `${thing.name}: added${assignedDay ? ` on ${assignedDay}` : ''}. Show options` : `Add ${thing.name} to a day`}
+                        aria-expanded={isOpen || isAdded}
                         onClick={(e) => handleAddClick(e, thing.name)}
                       >
                         {isAdded ? '✓' : '+'}
                       </button>
-                      <div
-                        className="item-chevron"
-                        onClick={(e) => handleChevronClick(e, thing.name)}
-                      >
-                        ▾
-                      </div>
                     </div>
                   </div>
 
@@ -196,17 +201,12 @@ export function DestinationInsightsPanel({
                           ) : (
                             <span style={{ color: 'rgba(255,255,255,0.6)' }}>AI suggestion — check before you go</span>
                           )}
-                          {thing.mapsUrl && (
-                            <a href={thing.mapsUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa' }}>
-                              View on map
-                            </a>
-                          )}
                         </div>
                       )}
 
                       {/* Why visit */}
                       {thing.reason && (
-                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', lineHeight: 1.55, marginBottom: 10 }}>
+                        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.72)', lineHeight: 1.55, marginBottom: 10 }}>
                           {thing.reason}
                         </div>
                       )}
@@ -215,19 +215,19 @@ export function DestinationInsightsPanel({
                       {(thing.openingHours || thing.distanceFromCenter || thing.bestTime) && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 10 }}>
                           {thing.openingHours && (
-                            <div style={{ display: 'flex', gap: 6, fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>
+                            <div style={{ display: 'flex', gap: 6, fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
                               <span style={{ color: '#00d4aa', flexShrink: 0 }}>🕐</span>
                               <span>{thing.openingHours}</span>
                             </div>
                           )}
                           {thing.distanceFromCenter && (
-                            <div style={{ display: 'flex', gap: 6, fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>
+                            <div style={{ display: 'flex', gap: 6, fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
                               <span style={{ color: '#00d4aa', flexShrink: 0 }}>📍</span>
                               <span>{thing.distanceFromCenter}</span>
                             </div>
                           )}
                           {thing.bestTime && (
-                            <div style={{ display: 'flex', gap: 6, fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>
+                            <div style={{ display: 'flex', gap: 6, fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
                               <span style={{ color: '#ffd93d', flexShrink: 0 }}>✨</span>
                               <span>{thing.bestTime}</span>
                             </div>
@@ -241,7 +241,7 @@ export function DestinationInsightsPanel({
                           marginBottom: 10, padding: '6px 8px',
                           background: 'rgba(0,212,170,0.06)', borderRadius: 7,
                           border: '1px solid rgba(0,212,170,0.15)',
-                          fontSize: 10, color: 'rgba(255,255,255,0.7)', lineHeight: 1.4,
+                          fontSize: 12, color: 'rgba(255,255,255,0.78)', lineHeight: 1.45,
                         }}>
                           💡 {thing.visitorTip}
                         </div>
@@ -262,11 +262,11 @@ export function DestinationInsightsPanel({
                         onClick={e => e.stopPropagation()}
                         style={{
                           display: 'inline-flex', alignItems: 'center', gap: 5,
-                          fontSize: 11, color: '#60a5fa', textDecoration: 'none',
+                          fontSize: 13, color: '#5eead4', textDecoration: 'none',
                           marginBottom: 10,
                         }}
                       >
-                        📍 View on Google Maps →
+                        View on Google Maps
                       </a>
 
                       {/* Day picker or confirmation */}
@@ -275,6 +275,7 @@ export function DestinationInsightsPanel({
                           <div className="day-list-section__label">Which day will you visit?</div>
                           <DayList
                             days={days}
+                            firstDay={firstDay}
                             startDate={startDate}
                             selectedDay={assignedDay || null}
                             onSelect={(day) => handleDaySelect(thing.name, day)}
@@ -283,11 +284,12 @@ export function DestinationInsightsPanel({
                       ) : (
                         <div className="day-added-confirm">
                           <div className="day-added-confirm__text">
-                            ✓ Added to <span className="item-day-badge" style={{ marginLeft: 4 }}>{assignedDay}</span>
+                            ✓ Added{assignedDay ? <> to <span className="item-day-badge" style={{ marginLeft: 4 }}>{assignedDay}</span></> : ''}
                           </div>
-                          <button className="day-added-confirm__change" onClick={(e) => handleChangeDay(e, thing.name)}>
-                            Change day
-                          </button>
+                          <div style={{ display: 'flex', gap: 12 }}>
+                            <button type="button" className="day-added-confirm__change" onClick={(e) => handleChangeDay(e, thing.name)}>Change day</button>
+                            <button type="button" className="day-added-confirm__change" onClick={(e) => handleRemove(e, thing.name)}>Remove</button>
+                          </div>
                         </div>
                       )}
                     </div>
