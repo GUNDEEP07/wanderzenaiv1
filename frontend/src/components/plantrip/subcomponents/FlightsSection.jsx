@@ -38,7 +38,8 @@ export function FlightsSection({ destination, origin, travelDate, budgetEstimate
   const flightsHigh = budgetEstimateUSD ? toUserCurrency(budgetEstimateUSD.flightsHigh, currency) : null;
 
   const formattedDate = travelDate ? new Date(travelDate).toISOString().split('T')[0] : '';
-  const googleUrl = `https://www.google.com/travel/flights?q=flights%20from%20${encodeURIComponent(originCity || 'London')}%20to%20${encodeURIComponent(destName)}${formattedDate ? `%20on%20${formattedDate}` : ''}`;
+  // No origin yet → let Google Flights use the traveller's own location (it used to say "from London").
+  const googleUrl = `https://www.google.com/travel/flights?q=${encodeURIComponent(`flights ${originCity ? `from ${originCity} ` : ''}to ${destName}${formattedDate ? ` on ${formattedDate}` : ''}`)}`;
 
   const dateLabel = travelDate ? new Date(travelDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : null;
 

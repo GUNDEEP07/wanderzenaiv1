@@ -6,6 +6,7 @@ import { YouTubeCarousel } from './subcomponents/YouTubeCarousel';
 import { VenuesList } from './subcomponents/VenuesList';
 import { CustomInterestModal } from './subcomponents/CustomInterestModal';
 import { DestinationInsightsPanel } from './subcomponents/DestinationInsightsPanel';
+import { formatRange } from '../../utils/dateRange';
 import { getUserLocationFromIP } from '../../utils/geolocation';
 import { fetchTrendingVideos } from '../../utils/youtube';
 import { fetchVenuesForActivity, getActivitiesForTravelStyle } from '../../utils/foursquare';
@@ -41,7 +42,25 @@ const DEFAULT_ACTIVITY_STATE = {
   lastFetchAt: null,
 };
 
-export function VenueSelection({ destinations, travelStyles, startDate, endDate, days = 5, onSubmit, onSkip, onBack, savedState, onSave, preferredActivities = [], currency = 'USD', budget = 0, userLocation = '' }) {
+/** YYYY-MM-DD plus n days (local calendar, no UTC shift). */
+const addDaysIso = (iso, n) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return '';
+  const d = new Date(`${iso}T00:00:00`);
+  d.setDate(d.getDate() + n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+/** "Day 3" (DayList label) or 3 → 3. */
+export const dayNumberOf = (v) => {
+  const n = Number(String(v ?? '').replace(/^\s*day\s*/i, ''));
+  return Number.isInteger(n) ? n : NaN;
+};
+
+/**
+ * Step 5 — choose experiences, one tab per route stop. `stops[i]` = { fromDay, toDay } of
+ * destinations[i] on the route, so each tab only offers its own days and dates.
+ */
+export function VenueSelection({ destinations, stops = [], travelStyles, startDate, endDate, days = 5, onSubmit, onSkip, onBack, savedState, onSave, preferredActivities = [], currency = 'USD', budget = 0, userLocation = '' }) {
   const [detectedOriginCity, setDetectedOriginCity] = useState('');
   const [selectedDestination, setSelectedDestination] = useState(0);
   const [selectedActivities, setSelectedActivities] = useState(() => savedState?.activities || {});
@@ -83,7 +102,6 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
     }));
   };
   const [showCustomModal, setShowCustomModal] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [countryCode, setCountryCode] = useState('US');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -94,32 +112,35 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
   const destination = destinations?.[selectedDestination];
   const destKey = destination?.name || `destination_${selectedDestination}`;
 
-  // Default dates when user hasn't set travel dates yet — use 30 days from now
-  const effectiveStartDate = startDate || (() => {
+  // This stop's days on the route (whole trip when there's no route).
+  const stop = stops[selectedDestination];
+  const firstDay = stop?.fromDay >= 1 ? stop.fromDay : 1;
+  const lastDay = stop?.toDay >= firstDay ? Math.min(stop.toDay, days) : days;
+  const stopDays = Math.max(1, lastDay - firstDay + 1);
+  const stopStart = startDate ? addDaysIso(startDate, firstDay - 1) : '';
+  const stopEnd = startDate ? addDaysIso(startDate, lastDay - 1) : '';
+  // The insights panel needs dates; without travel dates use a month from now.
+  const effectiveStartDate = stopStart || (() => {
     const d = new Date(); d.setDate(d.getDate() + 30);
     return d.toISOString().split('T')[0];
   })();
-  const effectiveEndDate = endDate || (() => {
-    const d = new Date(); d.setDate(d.getDate() + 30 + days);
-    return d.toISOString().split('T')[0];
-  })();
+  const effectiveEndDate = stopEnd || addDaysIso(effectiveStartDate, stopDays - 1);
   const currentActivities = selectedActivities[destKey] || [];
   const availableActivities = travelStyles?.length > 0
     ? getActivitiesForTravelStyle(travelStyles)
     : PRESET_ACTIVITIES;
 
+  // Country for "trending videos" — in the background; the step never waits for it.
   useEffect(() => {
     getUserLocationFromIP()
       .then(loc => {
-        setCountryCode(loc.countryCode);
-        setLoading(false);
-        // Use detected city as origin fallback if user hasn't set their home city
-        if (!userLocation && loc.city && loc.city !== 'Unknown') {
+        if (loc?.countryCode) setCountryCode(loc.countryCode);
+        if (!userLocation && loc?.city && loc.city !== 'Unknown') {
           setDetectedOriginCity(`${loc.city}, ${loc.country}`);
         }
       })
-      .catch(() => setLoading(false));
-  }, []);
+      .catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchActivityContent = async (activity) => {
     const state = getActivityState(activity);
@@ -203,7 +224,12 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
   };
 
   const handleDayAssign = (nameOrId, day) => {
-    setDayAssignments(prev => ({ ...prev, [nameOrId]: day }));
+    setDayAssignments(prev => {
+      const next = { ...prev };
+      if (day == null) delete next[nameOrId];
+      else next[nameOrId] = day;
+      return next;
+    });
   };
 
   const handleSearch = async (e) => {
@@ -290,8 +316,9 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
     return { activities: selectedActivities, venues: venueData, dayAssignments, venueDetails, activeTab };
   };
 
+  // Day pickers hand back "Day 3"; the generator wants 3 (it was getting null before).
   const toDay = (v) => {
-    const n = Number(v);
+    const n = dayNumberOf(v);
     return Number.isInteger(n) && n >= 1 && n <= days ? n : null;
   };
 
@@ -333,21 +360,14 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
     onSubmit({ activities: snap.activities, venues: snap.venues, dayAssignments: snap.dayAssignments, selection: buildPicks(snap) });
   };
 
-  if (loading) {
-    return (
-      <div className="venue-loading">
-        <div>Detecting your location…</div>
-      </div>
-    );
-  }
-
   const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches;
   const selectedCount = Object.values(selectedActivities).flat().length +
     Object.values(selectedVenues).reduce((s, set) => s + set.size, 0);
-  const scheduledCount = Object.keys(dayAssignments).length;
+  const scheduledCount = Object.values(dayAssignments).filter(Boolean).length;
+  const stopDateText = stopStart ? formatRange(stopStart, stopEnd) : '';
 
   return (
-    <>
+    <div className="venue-root">
       {/* ── Experiences section (split panel) ── */}
       <div className="venue-split">
         {/* LEFT PANEL */}
@@ -360,7 +380,7 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
             {destination && (
               <div className="venue-dest-pill">
                 <div className="venue-dest-pill__dot"></div>
-                {destination.name}{startDate ? ` · ${days} days` : ''}
+                {destination.name.split(',')[0]} · {stopDays > 1 ? `Days ${firstDay}–${lastDay}` : `Day ${firstDay}`}{stopDateText ? ` · ${stopDateText}` : ''}
               </div>
             )}
           </div>
@@ -369,11 +389,14 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
             <div className="venue-dest-tabs">
               {destinations.map((dest, idx) => (
                 <button
+                  type="button"
                   key={dest.name}
+                  aria-pressed={selectedDestination === idx}
                   className={`venue-dest-tab${selectedDestination === idx ? ' venue-dest-tab--active' : ''}`}
                   onClick={() => { setSelectedDestination(idx); setActiveTab(null); }}
                 >
-                  {dest.name}
+                  {dest.name.split(',')[0]}
+                  {stops[idx]?.fromDay && <span className="venue-dest-tab__days"> · {stops[idx].toDay > stops[idx].fromDay ? `Days ${stops[idx].fromDay}–${stops[idx].toDay}` : `Day ${stops[idx].fromDay}`}</span>}
                 </button>
               ))}
             </div>
@@ -394,7 +417,8 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
                 onActivityToggle={handleActivityToggle}
                 onDayAssign={handleDayAssign}
                 onFullInsightsLoaded={setDestinationInsights}
-                days={days}
+                days={stopDays}
+                firstDay={firstDay}
               />
             )}
             <div className="venue-sec-row">
@@ -470,8 +494,9 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
                   onDayAssign={handleDayAssign}
                   loading={false}
                   destination={destination}
-                  days={days}
-                  startDate={startDate}
+                  days={stopDays}
+                  firstDay={firstDay}
+                  startDate={stopStart}
                 />
               </div>
             )}
@@ -487,21 +512,16 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
 
             {activeTab && availableActivities.includes(activeTab) && (
               <>
-                <div className="venue-sec-row" style={{ marginTop: 16 }}>
-                  <div className="venue-sec-label">📺 {activeTab} — watch before you go</div>
-                  <div className="venue-sec-line"></div>
-                </div>
-
                 {(() => {
                   const state = getActivityState(activeTab);
+                  // Only show the video row when there's something in it.
+                  if (!state.videosLoading && !(state.videos || []).length) return null;
                   return (
                     <>
-                      {state.videosError && (
-                        <div style={{ padding: '12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, marginBottom: 12, fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
-                          ⚠️ {state.videosError}
-                        </div>
-                      )}
-
+                      <div className="venue-sec-row" style={{ marginTop: 16 }}>
+                        <div className="venue-sec-label">{activeTab} — watch before you go</div>
+                        <div className="venue-sec-line"></div>
+                      </div>
                       <div className="yt-row">
                         <YouTubeCarousel
                           activity={activeTab}
@@ -534,8 +554,9 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
                         onDayAssign={handleDayAssign}
                         loading={state.venuesLoading || false}
                         destination={destination}
-                        days={days}
-                        startDate={startDate}
+                        days={stopDays}
+                        firstDay={firstDay}
+                        startDate={stopStart}
                       />
                     </>
                   );
@@ -545,11 +566,9 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
 
             {activeTab && !availableActivities.includes(activeTab) && (
               <div style={{ marginTop: 16, padding: '16px', background: 'rgba(0,212,170,0.05)', border: '1px solid rgba(0,212,170,0.15)', borderRadius: 12, textAlign: 'center' }}>
-                <div style={{ fontSize: 24, marginBottom: 8 }}>✦</div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#00d4aa', marginBottom: 4 }}>{activeTab}</div>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>
-                  This is an AI-curated pick — already added to your itinerary.<br />
-                  Assign it a day using the left panel.
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#00d4aa', marginBottom: 4 }}>{activeTab}</div>
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>
+                  On your list. To choose its day, open it under “Curated for you” above.
                 </div>
               </div>
             )}
@@ -557,15 +576,18 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
         </div>
       </div>
 
-      {/* ── Footer (always visible) ── */}
+      {/* ── Footer (always visible: sticky on phones, pinned on desktop) ── */}
       <div className="venue-footer">
-        <button className="venue-footer__skip" onClick={() => { onSave?.(buildSnapshot()); onBack?.(); }}>← Back</button>
-        <div className="venue-footer__count">
-          <b>{selectedCount}</b> selected{scheduledCount > 0 && <> · <b>{scheduledCount}</b> scheduled</>}
+        <button type="button" className="venue-footer__skip" onClick={() => { onSave?.(buildSnapshot()); onBack?.(); }}>← Back</button>
+        <div className="venue-footer__count" aria-live="polite">
+          <b>{selectedCount}</b> picked{scheduledCount > 0 && <> · <b>{scheduledCount}</b> with a day</>}
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button className="venue-footer__skip" onClick={() => { onSave?.(buildSnapshot()); onSkip?.(); }}>Skip</button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {selectedCount === 0 && (
+            <button type="button" className="venue-footer__skip" onClick={() => { onSave?.(buildSnapshot()); onSkip?.(); }}>Skip</button>
+          )}
           <button
+            type="button"
             className="venue-footer__continue"
             onClick={handleContinue}
           >
@@ -581,6 +603,6 @@ export function VenueSelection({ destinations, travelStyles, startDate, endDate,
         onSubmit={handleCustomActivitySubmit}
         loading={false}
       />
-    </>
+    </div>
   );
 }
