@@ -1,5 +1,5 @@
 import GUIDES from '../data/guides.json';
-import { guessOrigin, rankCountries, flightHours, distanceKm, inSeason, ORIGINS, planPrefill, routeLine, ASIA } from './seasons';
+import { guessOrigin, rankCountries, flightHours, distanceKm, inSeason, ORIGINS, planPrefill, routeLine, LIVE_COUNTRIES, liveRegionLabel } from './seasons';
 
 beforeEach(() => { localStorage.clear(); });
 
@@ -36,7 +36,7 @@ test('rankCountries: only Asia, in-season countries first, then closest', () => 
   const sydney = ORIGINS.find(o => o.id === 'sydney');
   for (let month = 1; month <= 12; month++) {
     const ranked = rankCountries(GUIDES, { month, origin: sydney });
-    expect(ranked.map(c => c.name).sort()).toEqual([...ASIA].sort());
+    expect(ranked.map(c => c.name).sort()).toEqual([...LIVE_COUNTRIES].sort());
     const firstOff = ranked.findIndex(c => c.goodRoutes === 0);
     if (firstOff >= 0) expect(ranked.slice(firstOff).every(c => c.goodRoutes === 0)).toBe(true);
     // within a country, in-season routes come first
@@ -59,4 +59,15 @@ test('planPrefill opens the planner on the whole country with the route suggeste
   expect(p.preferRouteId).toBe(vn.routes[0].id);
   expect(p.days).toBe(vn.routes[0].days);
   expect(routeLine(vn.routes[0])).toBe('Hanoi → Sapa → Hanoi → Hoi An');
+});
+
+test('regions are data: live countries come from regions.json; another region joins by data alone', () => {
+  expect(LIVE_COUNTRIES).toEqual(expect.arrayContaining(['Vietnam', 'Japan', 'Nepal']));
+  expect(LIVE_COUNTRIES).not.toContain('Italy'); // Europe exists in the data but isn't live yet
+  expect(liveRegionLabel([{ name: 'Asia' }, { name: 'Europe' }, { name: 'Oceania' }])).toBe('Asia, Europe and Oceania');
+  // A not-yet-live country ranks fine when asked for (its hub falls back to its first stop)
+  const sydney = ORIGINS.find(o => o.id === 'sydney');
+  const it = rankCountries(GUIDES, { month: 5, origin: sydney, only: ['Italy'] });
+  expect(it).toHaveLength(1);
+  expect(it[0].hours).toBeGreaterThan(15);
 });

@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import GUIDES from '../../data/guides.json';
 import { CreditedPhoto } from '../PhotoCredit';
 import {
-  ASIA, ORIGINS, MONTHS, guessOrigin, saveOrigin, currentMonth, rankCountries, inSeason, bestLabel, routeLine, planPrefill,
+  LIVE_REGIONS, liveRegionLabel, ORIGINS, MONTHS, guessOrigin, saveOrigin, currentMonth, rankCountries, inSeason, bestLabel, routeLine, planPrefill,
 } from '../../utils/seasons';
 
 const teal = '#00d4aa';
@@ -52,9 +52,13 @@ export default function RouteFinder() {
   const [len, setLen] = useState(0);
   const [hop, setHop] = useState(0);
   const [kids, setKids] = useState(false);
+  const [region, setRegion] = useState(''); // '' = every live region; the row shows once there are 2+
+  const regions = region ? LIVE_REGIONS.filter(r => r.id === region) : LIVE_REGIONS;
+  const only = regions.flatMap(r => r.countries);
 
-  const all = useMemo(() => rankCountries(GUIDES, { month: month || thisMonth, origin, only: ASIA })
-    .flatMap(c => c.routes.map(r => ({ ...r, country: c.name, hours: c.hours }))), [month, thisMonth, origin]);
+  const onlyKey = only.join('|');
+  const all = useMemo(() => rankCountries(GUIDES, { month: month || thisMonth, origin, only: onlyKey.split('|') })
+    .flatMap(c => c.routes.map(r => ({ ...r, country: c.name, hours: c.hours }))), [month, thisMonth, origin, onlyKey]);
   const results = all
     .filter(r => (!month || inSeason(r, month)) && LENGTHS[len].test(r.days) && HOPS[hop].test(r.longestTransferHours) && (!kids || r.kidFriendly))
     .sort((a, b) => (a.hours ?? 99) - (b.hours ?? 99));
@@ -71,7 +75,7 @@ export default function RouteFinder() {
         <div style={s.eyebrow}>Hand-picked routes</div>
         <h2 id="route-finder-title" style={s.h2}>Find your slow route</h2>
         <div style={s.countRow}>
-          <span>{results.length} of {all.length} Asia routes match, closest to</span>
+          <span>{results.length} of {all.length} {liveRegionLabel(regions)} routes match, closest to</span>
           <label htmlFor="rf-from" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>Planning from</label>
           <select id="rf-from" value={origin.id} onChange={changeOrigin} style={s.select}>
             {ORIGINS.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
@@ -80,6 +84,17 @@ export default function RouteFinder() {
         </div>
 
         <div style={s.panel}>
+          {LIVE_REGIONS.length > 1 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <span style={s.label} id="rf-region">Where</span>
+              <div role="group" aria-labelledby="rf-region" style={s.row}>
+                <button type="button" aria-pressed={region === ''} style={s.pill(region === '')} onClick={() => setRegion('')}>Everywhere</button>
+                {LIVE_REGIONS.map(r => (
+                  <button key={r.id} type="button" aria-pressed={region === r.id} style={s.pill(region === r.id)} onClick={() => setRegion(r.id)}>{r.name}</button>
+                ))}
+              </div>
+            </div>
+          )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <span style={s.label} id="rf-month">When are you going?</span>
             <div role="group" aria-labelledby="rf-month" style={s.row}>

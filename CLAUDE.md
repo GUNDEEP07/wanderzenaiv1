@@ -153,6 +153,12 @@ AI-powered slow-travel itinerary SaaS. Live at wanderzenai.com. Solo-maintained.
   visitor's city, guessed from the browser time zone (`utils/seasons.js`; no prompt, kept in localStorage only).
   `curatedOptions` flags off-season routes for the travel date; Claude route prompts get `seasonRule()`.
   seo-refresh.yml re-saves every page weekly and on the 1st so saved copies show the current month.
+- Regions are DATA (Nov 16 2026): `REGIONS` in `curated-routes.js` (`live: true` = promoted; Asia only today,
+  Europe/Oceania have routes but aren't live) → `src/data/regions.json` via build-guides. Home hero, photo strip,
+  Explore (route finder, browse by region, fallback trending), "Picked for you" (`layers/shared/nodejs/picks.js`:
+  curated routes in season, unplanned countries first, weekly rotation — no Claude) and Claude "Good right now"
+  (prompt + filter limited to `LIVE_COUNTRIES`) all follow it. To launch a region: give its countries routes,
+  seasons and photoQuery, set `live: true`, rerun build-guides. Never hard-code a country list in the UI.
 - Guides: `/guides/<country>` pages come from `curated-routes.js` via `scripts/build-guides.mjs`
   (prebuild; a jest test fails if `src/data/guides*.json` is stale — rerun it after editing routes).
 - Photos: Unsplash only through the backend `GET /photos/search` (key stays server-side, cached);

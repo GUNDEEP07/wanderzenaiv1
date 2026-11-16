@@ -2,6 +2,7 @@
  {
   "slug": "vietnam",
   "name": "Vietnam",
+  "region": "asia",
   "routes": [
    {
     "id": "vn-north-centre",
@@ -232,6 +233,7 @@
  {
   "slug": "japan",
   "name": "Japan",
+  "region": "asia",
   "routes": [
    {
     "id": "jp-kyoto-alps-coast",
@@ -447,6 +449,7 @@
  {
   "slug": "india",
   "name": "India",
+  "region": "asia",
   "routes": [
    {
     "id": "in-kerala",
@@ -661,6 +664,7 @@
  {
   "slug": "thailand",
   "name": "Thailand",
+  "region": "asia",
   "routes": [
    {
     "id": "th-north",
@@ -853,6 +857,7 @@
  {
   "slug": "sri-lanka",
   "name": "Sri Lanka",
+  "region": "asia",
   "routes": [
    {
     "id": "lk-hills-coast",
@@ -1045,6 +1050,7 @@
  {
   "slug": "indonesia",
   "name": "Indonesia",
+  "region": "asia",
   "routes": [
    {
     "id": "id-bali-east",
@@ -1224,6 +1230,7 @@
  {
   "slug": "nepal",
   "name": "Nepal",
+  "region": "asia",
   "routes": [
    {
     "id": "np-classic",
@@ -1435,6 +1442,7 @@
  {
   "slug": "italy",
   "name": "Italy",
+  "region": "europe",
   "routes": [
    {
     "id": "it-puglia",
@@ -1647,6 +1655,7 @@
  {
   "slug": "portugal",
   "name": "Portugal",
+  "region": "europe",
   "routes": [
    {
     "id": "pt-alentejo",
@@ -1859,6 +1868,7 @@
  {
   "slug": "new-zealand",
   "name": "New Zealand",
+  "region": "oceania",
   "routes": [
    {
     "id": "nz-south-lakes",
