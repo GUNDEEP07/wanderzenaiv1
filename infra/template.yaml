@@ -159,7 +159,9 @@ Resources:
         # PUT/DELETE are used by /profile and /blog; without them browser preflight fails.
         AllowMethods: "'POST,GET,PUT,DELETE,OPTIONS'"
         AllowHeaders: "'Content-Type,Authorization,X-Stripe-Signature'"
-        AllowOrigin: "'*'"
+        # Only our site may call the API from a browser (backlog P2-10, Nov 2026). Server-to-server
+        # callers (Stripe webhooks, CI checks) send no Origin and are unaffected.
+        AllowOrigin: !Sub "'${FrontendUrl}'"
       Auth:
         DefaultAuthorizer: NONE
       # Coarse, stage-wide throttling: a ceiling on total spend no matter who is calling.
