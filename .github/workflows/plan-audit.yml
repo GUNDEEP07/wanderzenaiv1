@@ -14,28 +14,10 @@ jobs:
           mkdir -p out/img
           API=https://y44o2x9cu1.execute-api.ap-southeast-2.amazonaws.com/prod
           cat > q.txt <<'Q'
-          vn-sapa|Sapa, Vietnam
-          vn-hoian|Hoi An, Vietnam
-          vn-ninhbinh|Ninh Binh, Vietnam
-          jp-takayama|Takayama, Japan
-          jp-hakone|Hakone, Japan
-          jp-yufuin|Yufuin, Japan
-          in-munnar|Munnar, India
-          in-manali|Manali, India
-          in-udaipur|Udaipur, India
-          th-chiangdao|Chiang Dao, Thailand
-          th-kohlanta|Koh Lanta, Thailand
-          th-kanchanaburi|Kanchanaburi, Thailand
-          lk-ella|Ella, Sri Lanka
-          lk-sigiriya|Sigiriya, Sri Lanka
-          lk-galle|Galle, Sri Lanka
-          id-sidemen|Sidemen, Bali
-          id-giliair|Gili Air, Indonesia
-          id-yogyakarta|Prambanan, Yogyakarta
-          np-bandipur|Bandipur, Nepal
-          np-bhaktapur|Bhaktapur, Nepal
-          np-chitwan|Chitwan, Nepal
-          vn-mysonruins|My Son, Vietnam
+          jp-kurokawa|Kurokawa Onsen
+          id-giliair|Gili Air beach
+          np-chitwan|Chitwan National Park rhino
+          vn-mysonruins|My Son Sanctuary Quang Nam
           Q
           echo '[' > out/manifest.json; first=1
           sed 's/^ *//' q.txt | while IFS='|' read -r key q; do
@@ -53,5 +35,5 @@ jobs:
       - if: always()
         run: |
           cd out && git init -q -b smoke/plan-audit-results && git add -A
-          git -c user.name=audit -c user.email=audit@users.noreply.github.com commit -qm photos
+          git -c user.name=audit -c user.email=audit@users.noreply.github.com commit -qm photos2
           git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" smoke/plan-audit-results
