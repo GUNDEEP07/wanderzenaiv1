@@ -55,14 +55,15 @@ const COUNTRIES = {
   ],
 };
 
-// TRENDING uses getDestinationPhoto — no hardcoded URLs that can rot when Unsplash deletes photos
+// Shown when the API has nothing. Asia first (Nov 2026). Labels describe the place — never
+// invented visitor numbers.
 const TRENDING = [
-  { dest: 'Kyoto, Japan',         trend: 'Slow travel favourite' },
-  { dest: 'Oaxaca, Mexico',       trend: 'Hidden gem' },
-  { dest: 'Bali, Indonesia',      trend: 'Nature first' },
-  { dest: 'Tbilisi, Georgia',     trend: 'Undiscovered' },
-  { dest: 'Matera, Italy',        trend: 'Slow travel icon' },
-  { dest: 'Chefchaouen, Morocco', trend: 'Sensory overload' },
+  { dest: 'Kanazawa, Japan',   trend: 'Quiet alternative to Kyoto' },
+  { dest: 'Ninh Binh, Vietnam', trend: 'Hidden gem' },
+  { dest: 'Ella, Sri Lanka',    trend: 'Tea-country walks' },
+  { dest: 'Hampi, India',       trend: 'Boulders and ruins' },
+  { dest: 'Pai, Thailand',      trend: 'Mountain-valley slow days' },
+  { dest: 'Bandipur, Nepal',    trend: 'Car-free hill town' },
 ];
 
 const MONTH_PICKS = {
@@ -166,7 +167,7 @@ export default function ExplorePage() {
           setApiTrending(d.trending.map(t => ({
             dest: t.destination,
             img: getDestinationPhoto(t.destination, '', 'card'),
-            trend: t.count ? `${t.count} travelers` : (t.badge || 'Trending'),
+            trend: t.badge || 'Worth the trip',
           })));
         }
       })
@@ -267,7 +268,7 @@ export default function ExplorePage() {
           Find your next <span style={{ color: teal, fontStyle: 'italic' }}>slow travel</span> destination
         </h1>
         <p style={{ fontSize: '1rem', color: w40, lineHeight: 1.7, maxWidth: 560, marginBottom: '2rem' }}>
-          Browse trending destinations and hidden gems across every continent. Click any place to instantly generate your personalised itinerary.
+          Asia first, with quiet corners on every continent. Tap a place to start planning it — you choose the dates, pace and route before anything is written.
         </p>
       </div>
 
@@ -318,13 +319,13 @@ export default function ExplorePage() {
             <div>
               <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: teal, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                 <span style={{ width: 24, height: 1, background: teal, display: 'inline-block' }} />
-                Trending now
+                Good right now
               </div>
               <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(1.5rem,3vw,2.25rem)', fontWeight: 700, color: '#fff', letterSpacing: '-0.03em', lineHeight: 1.1 }}>
-                Where slow travellers are going right now
+                Slow Asia at its best in {new Date().toLocaleString('en-AU', { month: 'long' })}
               </h2>
             </div>
-            <div style={{ fontSize: '0.8rem', color: w40, fontStyle: 'italic' }}>Updated weekly</div>
+            <div style={{ fontSize: '0.8rem', color: w40, fontStyle: 'italic' }}>Refreshed daily</div>
           </div>
           <div className="explore-trending-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
             {(apiTrending.length ? apiTrending : TRENDING).map(t => (
@@ -560,7 +561,7 @@ export default function ExplorePage() {
 
       {/* Footer */}
       <div style={{ borderTop: `1px solid ${border}`, padding: '2rem 2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-        <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.55)' }}>© 2025 WanderZenAI · Built for slow travellers</div>
+        <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.55)' }}>© {new Date().getFullYear()} WanderZenAI · Built for slow travellers</div>
         <div style={{ display: 'flex', gap: '1.5rem' }}>
           <a href="/" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.55)', textDecoration: 'none' }}>Home</a>
           <a href="/pricing" style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.55)', textDecoration: 'none' }}>Pricing</a>

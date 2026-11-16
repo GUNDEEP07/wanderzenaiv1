@@ -52,9 +52,9 @@ const PLANS = [
   {
     name: 'Explorer',
     price: 'Free',
-    period: '1 itinerary per month',
-    desc: 'Perfect for occasional travellers',
-    features: ['Full day-by-day itinerary', 'Hidden gems every day', 'Local food picks & insider tips', 'PDF download & email delivery', 'Any destination worldwide'],
+    period: '1 trip preview per month',
+    desc: 'See how we plan before you pay',
+    features: ['Your route, ready to confirm', 'Day 1 written in full', 'Every later day’s theme and base', 'Unlock the rest with one itinerary', 'Any destination worldwide'],
     cta: 'Get started free',
     link: null,
     featured: false,
@@ -64,7 +64,7 @@ const PLANS = [
     price: '$9',
     period: 'per month · cancel anytime',
     desc: 'For passionate slow travellers',
-    features: ['Everything in Free', '5 itineraries per month', 'Longer & more detailed plans', 'Priority generation', 'Accommodation deep-dives', 'Multi-language itineraries'],
+    features: ['5 full itineraries per month', 'Every day unlocked', 'Where to stay, tips & traps to skip', 'Adjust up to 3 days per trip', 'PDF + offline trip page'],
     cta: 'Start Wanderer',
     link: WANDERER_LINK,
     featured: true,
@@ -74,7 +74,7 @@ const PLANS = [
     price: '$7',
     period: 'one-time · no subscription',
     desc: 'Just one trip, no commitment',
-    features: ['Everything in Free', '1 premium itinerary', 'Pay once, keep forever', 'No recurring charges'],
+    features: ['1 full itinerary', 'Or unlock a free trip you made', 'Never expires', 'No recurring charges'],
     cta: 'Buy one plan',
     link: SINGLE_LINK,
     featured: false,
@@ -194,7 +194,7 @@ export default function Pricing() {
               Upgrade to Wanderer for 5 itineraries a month — your {location.state?.destination || 'next destination'} itinerary will generate immediately after.
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              {['5 itineraries a month', 'Priority generation', 'All destinations', 'Keep all PDFs'].map(f => (
+              {['5 full itineraries a month', 'Every day unlocked', 'All destinations', 'Keep all PDFs'].map(f => (
                 <span key={f} style={{ padding: '5px 12px', background: 'rgba(0,212,170,0.1)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 20, fontSize: 12, fontWeight: 600, color: '#00d4aa' }}>
                   ✓ {f}
                 </span>

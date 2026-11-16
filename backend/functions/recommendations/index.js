@@ -870,7 +870,8 @@ async function handleTrending(event) {
   }
 
   const month = new Date().toLocaleString('en-US', { month: 'long' });
-  const cacheKey = `trending:${country}:${month}`;
+  // v2 (Nov 2026): Asia-first, no invented traveller counts, advisory countries filtered.
+  const cacheKey = `trending:v2:${country}:${month}`;
 
   // Check cache (24 hours)
   try {
@@ -893,18 +894,18 @@ async function handleTrending(event) {
 
   try {
     const interestText = interests ? `Their interests include: ${interests}.` : '';
-    const prompt = `You are a slow travel expert. List 6 trending slow-travel destinations popular among travelers from ${country} in ${month}. ${interestText}
+    const prompt = `You are a slow travel expert. Suggest 6 slow-travel destinations in Asia (South, Southeast or East Asia) that are at their best in ${month}, for travelers from ${country}. ${interestText}
 
-Focus on: under-the-radar places gaining popularity, seasonal highlights, and off-the-beaten-path gems.
+Focus on: towns and regions (not capital cities), good weather or a seasonal highlight in ${month}, quieter alternatives to the famous spots.
+Never suggest a place in a country under a "do not travel" government advisory.
+Do not invent numbers, rankings or visitor counts.
 
 Return JSON ONLY:
 [
   {
-    "destination": "City, Country",
-    "emoji": "🇯🇵",
-    "why": "One sentence — why this is trending now for travelers from ${country}",
-    "badge": "🔥 Hot" | "↑ Rising" | "✦ Hidden gem",
-    "count": "estimated number like 142"
+    "destination": "Town, Country",
+    "why": "One sentence — why ${month} is a good time to go",
+    "badge": "Best in ${month}" | "Quiet alternative" | "Hidden gem"
   }
 ]`;
 
@@ -922,7 +923,10 @@ Return JSON ONLY:
 
     const text = firstText(message);
     const match = text.match(/\[[\s\S]*\]/);
-    const trending = match ? JSON.parse(match[0]).slice(0, 6) : [];
+    const trending = (match ? JSON.parse(match[0]) : [])
+      .filter((t) => t && typeof t.destination === 'string' && !isAdvisoryDestination(t.destination))
+      .slice(0, 6)
+      .map(({ destination, why, badge }) => ({ destination, why: typeof why === 'string' ? why : '', badge: typeof badge === 'string' ? badge : '' }));
 
     const result = { trending, country, month };
 
@@ -939,6 +943,18 @@ Return JSON ONLY:
     log.error('Trending failed', { error: err.message });
     return ok({ trending: [], country, month: '' }, event);
   }
+}
+
+/**
+ * Countries under "do not travel" (or near-equivalent) advice from the Australian government
+ * (smartraveller.gov.au) and most others, Nov 2026. Never shown as a trending suggestion.
+ * Advice changes: review this list against Smartraveller when it's touched.
+ */
+const ADVISORY_COUNTRIES = ['myanmar', 'burma', 'afghanistan', 'north korea', 'syria', 'yemen', 'iraq', 'iran', 'lebanon', 'russia', 'ukraine', 'belarus', 'sudan', 'south sudan', 'somalia', 'libya', 'mali', 'niger', 'burkina faso', 'haiti', 'venezuela'];
+
+function isAdvisoryDestination(destination) {
+  const country = String(destination).split(',').pop().trim().toLowerCase();
+  return ADVISORY_COUNTRIES.includes(country);
 }
 
 async function handlePublicStats(event) {
