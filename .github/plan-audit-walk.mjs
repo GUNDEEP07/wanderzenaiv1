@@ -67,3 +67,4 @@ for (const path of ['/', '/explore', '/pricing']) {
 const api = await (await fetch('https://y44o2x9cu1.execute-api.ap-southeast-2.amazonaws.com/prod/recommendations/trending')).json().catch(e => ({ err: e.message }));
 R.trendingApi = api;
 fs.writeFileSync('report.json', JSON.stringify(R, null, 1));
+// rerun 2026-11-16T04:40:42Z
