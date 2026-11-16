@@ -5,27 +5,53 @@ on:
 permissions:
   contents: write
 jobs:
-  probe:
+  photos:
     runs-on: ubuntu-24.04
     steps:
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-southeast-2
-      - uses: actions/checkout@v4
-      - name: Create the GitHub OIDC deploy role (wanderzenai-ci stack, approved P2-9)
+      - name: Fetch credited route photos through our own /photos/search
         run: |
           set +e
-          mkdir out
-          {
-          aws cloudformation deploy --stack-name wanderzenai-ci --template-file infra/ci-oidc.yaml --capabilities CAPABILITY_NAMED_IAM --no-fail-on-empty-changeset
-          echo "exit $?"
-          aws cloudformation describe-stacks --stack-name wanderzenai-ci --query 'Stacks[0].{Status:StackStatus,Outputs:Outputs}' --output json
-          aws cloudformation describe-stack-events --stack-name wanderzenai-ci --max-items 8 --query 'StackEvents[].[LogicalResourceId,ResourceStatus,ResourceStatusReason]' --output text
-          } > out/probe.txt 2>&1
+          mkdir -p out/img
+          API=https://y44o2x9cu1.execute-api.ap-southeast-2.amazonaws.com/prod
+          cat > q.txt <<'Q'
+          vn-sapa|Sapa, Vietnam
+          vn-hoian|Hoi An, Vietnam
+          vn-ninhbinh|Ninh Binh, Vietnam
+          jp-takayama|Takayama, Japan
+          jp-hakone|Hakone, Japan
+          jp-yufuin|Yufuin, Japan
+          in-munnar|Munnar, India
+          in-manali|Manali, India
+          in-udaipur|Udaipur, India
+          th-chiangdao|Chiang Dao, Thailand
+          th-kohlanta|Koh Lanta, Thailand
+          th-kanchanaburi|Kanchanaburi, Thailand
+          lk-ella|Ella, Sri Lanka
+          lk-sigiriya|Sigiriya, Sri Lanka
+          lk-galle|Galle, Sri Lanka
+          id-sidemen|Sidemen, Bali
+          id-giliair|Gili Air, Indonesia
+          id-yogyakarta|Prambanan, Yogyakarta
+          np-bandipur|Bandipur, Nepal
+          np-bhaktapur|Bhaktapur, Nepal
+          np-chitwan|Chitwan, Nepal
+          vn-mysonruins|My Son, Vietnam
+          Q
+          echo '[' > out/manifest.json; first=1
+          sed 's/^ *//' q.txt | while IFS='|' read -r key q; do
+            [ -z "$key" ] && continue
+            j=$(curl -s -G "$API/photos/search" --data-urlencode "query=$q")
+            url=$(echo "$j" | jq -r '.data.photo.url // .photo.url // .data.url // empty')
+            if [ -n "$url" ]; then
+              curl -s -L "${url}&w=900&q=70&fm=jpg" -o "out/img/$key.jpg"
+              [ $first = 1 ] || echo ',' >> out/manifest.json; first=0
+              echo "$j" | jq -c --arg k "$key" --arg q "$q" '{key:$k,q:$q,photo:(.data.photo // .photo // .data)}' >> out/manifest.json
+            else echo "MISS $key $(echo "$j" | head -c 200)" >> out/miss.txt; fi
+          done
+          echo ']' >> out/manifest.json
+          ls -la out/img | head -40 > out/ls.txt
       - if: always()
         run: |
           cd out && git init -q -b smoke/plan-audit-results && git add -A
-          git -c user.name=audit -c user.email=audit@users.noreply.github.com commit -qm probe
+          git -c user.name=audit -c user.email=audit@users.noreply.github.com commit -qm photos
           git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" smoke/plan-audit-results
