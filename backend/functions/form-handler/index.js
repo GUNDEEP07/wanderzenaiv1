@@ -8,6 +8,7 @@ const {
 const { sanitizeSelectedVenues } = require('/opt/nodejs/selected-venues');
 const adjustDay = require('./adjust-day');
 const pdfLink = require('./pdf-link');
+const unlock = require('./unlock');
 const {
   sanitizeRoute, sanitizePrefs, describePrefs, buildRouteOptionsPrompt, parseRouteOptions, routeAngles, dedupeRoutes, settleEnough,
   travelerTypeFromPrefs, dayPlan,
@@ -621,6 +622,20 @@ exports.handler = async (event) => {
   }
   const pdfId = pdfLink.pdfRouteOf(event);
   if (pdfId) return pdfId === 'bad' ? notFound() : pdfLink.handlePdfLink(db, pdfId, user, { ok, notFound, serverError });
+  const unlockId = unlock.unlockRouteOf(event);
+  if (unlockId) {
+    if (unlockId === 'bad') return notFound();
+    return unlock.handleUnlock(db, unlockId, user, {
+      ok, notFound, serverError,
+      respond: (statusCode, body) => ({ ...ok(null), statusCode, body: JSON.stringify(body) }),
+      // Full PDF + "your full trip is unlocked" email (pdf-builder update mode).
+      rebuildPdf: (submissionId) => lambda.send(new InvokeCommand({
+        FunctionName: `wanderzenai-pdf-builder-${process.env.STAGE}`,
+        InvocationType: 'Event',
+        Payload: Buffer.from(JSON.stringify({ submissionId, update: { unlocked: true } })),
+      })),
+    });
+  }
   if (event.httpMethod === 'GET') {
     if (isPath(event, '/entitlement')) return handleEntitlement(db, user);
     const id = progressIdOf(event);

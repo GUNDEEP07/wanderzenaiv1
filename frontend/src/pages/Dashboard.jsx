@@ -606,6 +606,16 @@ export default function Dashboard() {
                         View itinerary →
                       </button>
                     )}
+                    {trip.locked && trip.hasItinerary && trip.status !== 'failed' && (
+                      <button
+                        type="button"
+                        title="Free trip: Day 1 is open. Unlock every day with one itinerary."
+                        style={{ padding: '7px 12px', background: 'rgba(0,212,170,0.1)', border: '1px solid rgba(0,212,170,0.35)', borderRadius: 8, fontSize: 11, fontWeight: 800, color: '#00d4aa', cursor: 'pointer', fontFamily: 'inherit' }}
+                        onClick={e => { e.stopPropagation(); navigate(`/itinerary/${trip.id}?unlock=1`); }}
+                      >
+                        Day 1 · Unlock all
+                      </button>
+                    )}
                     {(trip.hasPdf || trip.hasItinerary) && (
                       <div data-trip-menu style={{ position: 'relative', marginLeft: 'auto' }}>
                         <button

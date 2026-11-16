@@ -11,7 +11,14 @@ const s3 = new S3Client({ region: 'ap-southeast-2' });
 
 const escapeHtml = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-const buildEmailHTML = ({ itineraryTitle, destination, days, downloadUrl, tripUrl = null, isPaid, update = null }) => `
+/** "Day 1 is ready" (a locked free trip), "updated" (adjust / unlock) or "ready". */
+const greetingOf = (update, locked) => {
+  if (update?.unlocked) return 'Your full trip is unlocked ✦';
+  if (update) return 'Your itinerary is updated ✦';
+  return locked ? 'Day 1 of your trip is ready ✦' : 'Your itinerary is ready ✦';
+};
+
+const buildEmailHTML = ({ itineraryTitle, destination, days, downloadUrl, tripUrl = null, isPaid, update = null, locked = false, unlockUrl = null }) => `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -81,12 +88,16 @@ const buildEmailHTML = ({ itineraryTitle, destination, days, downloadUrl, tripUr
   </div>
 
   <div class="body">
-    <div class="greeting">${update ? 'Your itinerary is updated ✦' : 'Your itinerary is ready ✦'}</div>
+    <div class="greeting">${greetingOf(update, locked)}</div>
     <div class="destination-pill">${escapeHtml(destination)} · ${escapeHtml(days)} days</div>
 
     <div class="intro">
-      ${update
+      ${update?.unlocked
+        ? `Every day of your ${escapeHtml(destination)} trip is now open, with where to stay, slow travel tips and the tourist traps to skip. Here is the full guide.`
+        : update
         ? `Day ${update.dayNumber} has been rewritten the way you asked. The rest of your trip is unchanged — here is the full guide with the new day in it.`
+        : locked
+        ? `Your whole ${escapeHtml(days)}-day trip is written. Day 1 is open now; unlock the full trip to see every day, where to stay, slow travel tips and the tourist traps to skip.`
         : `We've crafted a slow travel itinerary tailored to how you actually want to travel —
       hidden cafes, local guesthouses, morning markets, and scenic walks away from the crowds.
       No tourist traps. Just the real ${escapeHtml(destination)}.`}
@@ -116,7 +127,12 @@ const buildEmailHTML = ({ itineraryTitle, destination, days, downloadUrl, tripUr
       </table>
     </div>
 
-    ${!isPaid ? `
+    ${locked && unlockUrl ? `
+    <div class="upgrade-box">
+      <div class="upgrade-title">Days 2–${escapeHtml(days)} are ready and waiting</div>
+      <div class="upgrade-text">Unlock the full trip with one itinerary — a single plan, a credit or your Wanderer allowance.</div>
+      <a href="${escapeHtml(unlockUrl)}" class="upgrade-link">Unlock the full trip →</a>
+    </div>` : !isPaid && !update ? `
     <div class="upgrade-box">
       <div class="upgrade-title">Get 5 itineraries every month</div>
       <div class="upgrade-text">
@@ -149,8 +165,10 @@ const buildEmailHTML = ({ itineraryTitle, destination, days, downloadUrl, tripUr
 
 exports.handler = async (event) => {
   const { itineraryId, submissionId, email, s3Key, destination, days, isPaid, itineraryTitle } = event;
-  // After "Adjust this day": a different subject/intro, and the trip status is left alone.
-  const update = event.update && Number.isInteger(event.update.dayNumber) ? { dayNumber: event.update.dayNumber } : null;
+  const locked = event.locked === true;
+  // After "Adjust this day" or an unlock: a different subject/intro, and the trip status is left alone.
+  const update = Number.isInteger(event.update?.dayNumber) ? { dayNumber: event.update.dayNumber }
+    : event.update?.unlocked === true ? { unlocked: true } : null;
   log.info('Email send started', { itineraryId, email });
 
   const db = getDB();
@@ -169,22 +187,29 @@ exports.handler = async (event) => {
       : null;
 
     // ─── Send email via SES ──────────────────────────────────────────────────
-    const htmlBody = buildEmailHTML({ itineraryTitle, destination, days, downloadUrl: signedUrl, tripUrl, isPaid, update });
+    const unlockUrl = locked && process.env.FRONTEND_URL && submissionId
+      ? `${process.env.FRONTEND_URL}/itinerary/${encodeURIComponent(submissionId)}?unlock=1`
+      : null;
+    const htmlBody = buildEmailHTML({ itineraryTitle, destination, days, downloadUrl: signedUrl, tripUrl, isPaid, update, locked, unlockUrl });
 
     await ses.send(new SendEmailCommand({
       Source: `WanderZenAI <${process.env.FROM_EMAIL}>`,
       Destination: { ToAddresses: [email] },
       Message: {
         Subject: {
-          Data: update
+          Data: update?.unlocked
+            ? `Your full ${destination} trip is unlocked · WanderZenAI`
+            : update
             ? `Your ${destination} itinerary is updated (day ${update.dayNumber}) · WanderZenAI`
+            : locked
+            ? `Day 1 of your ${destination} trip is ready · WanderZenAI`
             : `Your ${destination} itinerary is ready · WanderZenAI`,
           Charset: 'UTF-8',
         },
         Body: {
           Html: { Data: htmlBody, Charset: 'UTF-8' },
           Text: {
-            Data: `${update ? `Day ${update.dayNumber} of your WanderZenAI itinerary for ${destination} has been updated.` : `Your WanderZenAI itinerary for ${destination} (${days} days) is ready.`}\n\nDownload it here: ${signedUrl}\n\nThis link expires in 7 days.\n\nWanderZenAI — wanderzenai.com`,
+            Data: `${update?.unlocked ? `Your full WanderZenAI trip for ${destination} is unlocked.` : update ? `Day ${update.dayNumber} of your WanderZenAI itinerary for ${destination} has been updated.` : locked ? `Day 1 of your WanderZenAI trip for ${destination} is ready. Unlock the full trip: ${unlockUrl}` : `Your WanderZenAI itinerary for ${destination} (${days} days) is ready.`}\n\nDownload it here: ${signedUrl}\n\nThis link expires in 7 days.\n\nWanderZenAI — wanderzenai.com`,
             Charset: 'UTF-8',
           },
         },

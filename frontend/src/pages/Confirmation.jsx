@@ -134,7 +134,10 @@ function DayCard({ d }) {
         {d.base && <span style={s.dayBase}>📍 {d.base}</span>}
       </div>
       {d.theme && <div style={s.dayTheme}>{d.theme}</div>}
-      {(d.stops?.length > 0 || d.eat) && (
+      {d.locked && (
+        <div style={{ ...s.stops, fontStyle: "italic" }}>Written — this day opens when you unlock the full trip.</div>
+      )}
+      {!d.locked && (d.stops?.length > 0 || d.eat) && (
         <div style={s.stops}>
           {d.stops?.join(" · ")}
           {d.eat && <>{d.stops?.length ? " · " : ""}🍜 {d.eat}</>}

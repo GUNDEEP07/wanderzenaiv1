@@ -16,10 +16,15 @@ const s = {
 
 const TIER = { budget: 'budget', mid: 'mid-range', upscale: 'upscale' };
 
-/** Route (with where to stay), budget by day, tips and traps — the "whole trip" view. */
-export default function TripOverview({ itinerary, currency, onPickDay }) {
+/**
+ * Route (with where to stay), budget by day, tips and traps — the "whole trip" view.
+ * A free trip (itinerary.locked) has Day 1 only: stays, tips and traps are held back by the
+ * API, and a blurred card says what unlocking adds (onUnlock opens the unlock card).
+ */
+export default function TripOverview({ itinerary, currency, onPickDay, onUnlock }) {
+  const locked = itinerary?.locked || null;
   const route = routeStops(itinerary);
-  const rows = budgetRows(itinerary);
+  const rows = budgetRows(itinerary).filter(r => !(itinerary?.days || []).find(d => d.dayNumber === r.dayNumber)?.locked);
   const max = Math.max(1, ...rows.map(r => r.total));
   const daysTotal = rows.reduce((a, r) => a + r.total, 0);
   const tripEstimate = toAmount(itinerary?.totalEstimatedCost);
@@ -52,7 +57,7 @@ export default function TripOverview({ itinerary, currency, onPickDay }) {
         <section style={s.card} aria-labelledby="wz-budget">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
             <h2 id="wz-budget" style={s.heading}>Budget by day</h2>
-            {tripEstimate > 0 && <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', marginBottom: 12 }}>Trip estimate {formatMoney(tripEstimate, currency)}</span>}
+            {tripEstimate > 0 && !locked && <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', marginBottom: 12 }}>Trip estimate {formatMoney(tripEstimate, currency)}</span>}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {rows.map(r => (
@@ -66,10 +71,31 @@ export default function TripOverview({ itinerary, currency, onPickDay }) {
             ))}
           </div>
           <p style={s.note}>
-            {gap > 0.5
+            {locked ? 'Day 1 is shown here; every day’s budget opens with the full trip.' : gap > 0.5
               ? `The trip estimate also covers about ${formatMoney(gap, currency)} not in the daily bars — mostly stays and transfers between towns.`
               : 'Daily totals include activities, food and getting around.'} Prices are estimates; check before you book.
           </p>
+        </section>
+      )}
+
+      {locked && (locked.tips > 0 || locked.avoid > 0 || locked.stays > 0) && (
+        <section style={{ ...s.card, position: 'relative', overflow: 'hidden' }} aria-labelledby="wz-locked-extras">
+          <h2 id="wz-locked-extras" style={s.heading}>Tips, traps &amp; where to stay</h2>
+          <div aria-hidden="true" style={{ filter: 'blur(5px)', opacity: 0.5, userSelect: 'none', pointerEvents: 'none' }}>
+            {[88, 72, 80, 64].map((w, i) => <div key={i} style={{ height: 10, width: `${w}%`, borderRadius: 5, background: 'rgba(255,255,255,0.2)', margin: '10px 0' }} />)}
+          </div>
+          <p style={{ ...s.note, marginTop: 4 }}>
+            {[
+              locked.stays ? 'Where to stay in each town' : null,
+              locked.tips ? `${locked.tips} slow travel tips` : null,
+              locked.avoid ? `${locked.avoid} tourist traps to skip` : null,
+            ].filter(Boolean).join(' · ')} — included with the full trip.
+          </p>
+          {onUnlock && (
+            <button type="button" onClick={onUnlock} style={{ marginTop: 10, minHeight: 40, padding: '0 16px', borderRadius: 10, border: '1px solid rgba(0,212,170,0.45)', background: 'rgba(0,212,170,0.1)', color: '#00d4aa', fontWeight: 800, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>
+              Unlock to see them
+            </button>
+          )}
         </section>
       )}
 

@@ -38,6 +38,7 @@ const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const { LambdaClient, InvokeCommand } = require('@aws-sdk/client-lambda');
 const { getDB, getCurrencySymbol, log } = require('/opt/nodejs/index');
 const { countMetric } = require('/opt/nodejs/metrics');
+const { ensureUnlockColumn, isLocked, lockItinerary } = require('/opt/nodejs/trip-access');
 
 const s3 = new S3Client({ region: process.env.AWS_REGION || 'ap-southeast-2' });
 const lambda = new LambdaClient({ region: process.env.AWS_REGION || 'ap-southeast-2' });
@@ -154,7 +155,33 @@ const venueCard = (venue) => {
 
 // ─── HTML template ────────────────────────────────────────────────────────────
 
-const buildHTML = (itinerary, submission, currencySymbol, heroImageUrl = null) => `
+/**
+ * Free trips (trip-access.js): the itinerary arrives with days after Day 1 reduced to teasers
+ * ({ dayNumber, theme, base, locked: true }) and stays/tips/traps removed. This page lists what
+ * unlocking adds, with a link to the trip page where the owner unlocks it.
+ */
+const lockedSection = (itinerary, unlockUrl) => {
+  const shut = (itinerary.days || []).filter(d => d.locked);
+  if (!shut.length) return '';
+  const extra = itinerary.locked || {};
+  const more = [
+    extra.stays ? `where to stay in each town` : '',
+    extra.tips ? `${extra.tips} slow travel tips` : '',
+    extra.avoid ? `${extra.avoid} tourist traps to skip` : '',
+  ].filter(Boolean);
+  return `
+  <div class="accom-box locked-box">
+    <div class="accom-header">
+      <div class="accom-dot"></div>
+      <div class="accom-title">The rest of your trip is ready</div>
+    </div>
+    <div class="accom-why">Days ${escapeHtml(shut[0].dayNumber)}–${escapeHtml(shut[shut.length - 1].dayNumber)} are written and waiting${more.length ? `, with ${escapeHtml(more.join(', '))}` : ''}. Unlock the full trip to see every day, here and on your trip page.</div>
+    ${shut.map(d => `<div class="accom-rec">Day ${escapeHtml(d.dayNumber)}${d.base ? ` · ${escapeHtml(d.base)}` : ''}${d.theme ? ` <span class="accom-why">— ${escapeHtml(d.theme)}</span>` : ''}</div>`).join('')}
+    ${unlockUrl ? `<a class="unlock-link" href="${escapeHtml(unlockUrl)}">Unlock the full trip →</a>` : ''}
+  </div>`;
+};
+
+const buildHTML = (itinerary, submission, currencySymbol, heroImageUrl = null, { unlockUrl = null } = {}) => `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -222,6 +249,9 @@ a { color:var(--teal); text-decoration:none; }
 .search-pills { display:flex; flex-wrap:wrap; gap:4px; }
 .search-pill { font-size:8px; padding:2px 8px; border:1px solid var(--teal-br); border-radius:100px; color:var(--teal); background:rgba(0,212,170,0.05); font-weight:600; }
 
+.locked-box { margin-top:5mm; }
+.locked-box .accom-rec { margin-top:2mm; }
+.unlock-link { display:inline-block; margin-top:4mm; padding:2.5mm 5mm; border-radius:6px; background:var(--teal); color:#0a0f1e; font-weight:800; font-size:9px; text-decoration:none; }
 .day-card { background:var(--navy-2); border:1px solid var(--border); border-radius:10px; margin-bottom:4mm; }
 /* Keep each block whole, but let a day run across pages instead of leaving half a page empty. */
 .day-header { break-after:avoid; border-radius:10px 10px 0 0; }
@@ -381,7 +411,7 @@ a { color:var(--teal); text-decoration:none; }
   </div>` : ''}
 
   <!-- Day cards -->
-  ${(itinerary.days || []).map(day => `
+  ${(itinerary.days || []).filter(day => !day.locked).map(day => `
   <div class="day-card">
     <div class="day-header">
       <div class="day-num">${String(day.dayNumber).padStart(2, '0')}</div>
@@ -439,7 +469,9 @@ a { color:var(--teal); text-decoration:none; }
     </div>
   </div>`).join('')}
 
-  ${budgetTable(itinerary, currencySymbol)}
+  ${lockedSection(itinerary, unlockUrl)}
+
+  ${budgetTable(itinerary.locked ? { days: (itinerary.days || []).filter(d => !d.locked) } : itinerary, currencySymbol)}
 
   <!-- Tips + Avoid -->
   <div class="tips-grid">
@@ -499,10 +531,28 @@ async function loadTripForRebuild(db, submissionId) {
   };
 }
 
+/**
+ * `update` = a rebuild of a delivered trip: { dayNumber } after "Adjust this day", or
+ * { unlocked: true } after a free trip was unlocked. Its status is never changed then (a failed
+ * rebuild must not mark a finished trip failed).
+ */
+function parseUpdate(u) {
+  if (!u || typeof u !== 'object') return null;
+  if (Number.isInteger(u.dayNumber)) return { dayNumber: u.dayNumber };
+  if (u.unlocked === true) return { unlocked: true };
+  return null;
+}
+
+/** Is this trip on the free allowance and not unlocked? (trip-access.js) */
+async function tripLocked(db, submissionId) {
+  if (!submissionId) return false;
+  await ensureUnlockColumn(db);
+  const { rows } = await db.query('SELECT plan, unlocked_at FROM submissions WHERE id = $1', [submissionId]);
+  return isLocked(rows[0]);
+}
+
 exports.handler = async (event) => {
-  // `update` = a rebuild after "Adjust this day": the trip is already delivered, so its
-  // status is never changed here (a failed rebuild must not mark a finished trip failed).
-  const update = event.update && Number.isInteger(event.update.dayNumber) ? { dayNumber: event.update.dayNumber } : null;
+  const update = parseUpdate(event.update);
   const db = getDB();
   const job = update && !event.submission && event.submissionId
     ? { submissionId: event.submissionId, ...(await loadTripForRebuild(db, event.submissionId)) }
@@ -519,7 +569,9 @@ exports.handler = async (event) => {
     );
     if (!result.rows.length) throw new Error('Itinerary not found');
 
-    const itinerary = result.rows[0].itinerary_data;
+    // Free trips print Day 1 and a page listing what unlocking adds (trip-access.js).
+    const locked = await tripLocked(db, submissionId);
+    const itinerary = locked ? lockItinerary(result.rows[0].itinerary_data) : result.rows[0].itinerary_data;
     const currency = result.rows[0].currency;
     const currencySymbol = getCurrencySymbol(currency);
 
@@ -566,7 +618,8 @@ exports.handler = async (event) => {
     browser = await launchBrowser();
 
     const page = await browser.newPage();
-    const html = buildHTML(itinerary, submission, currencySymbol, heroImageUrl);
+    const unlockUrl = locked && process.env.FRONTEND_URL && submissionId ? `${process.env.FRONTEND_URL}/itinerary/${encodeURIComponent(submissionId)}?unlock=1` : null;
+    const html = buildHTML(itinerary, submission, currencySymbol, heroImageUrl, { unlockUrl });
 
     await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 });
 
@@ -614,6 +667,7 @@ exports.handler = async (event) => {
         destination: submission.destination,
         days: submission.days,
         isPaid,
+        locked,
         itineraryTitle: itinerary.title,
         ...(update ? { update } : {}),
       })),
@@ -632,4 +686,4 @@ exports.handler = async (event) => {
 };
 
 // Exported for unit tests.
-exports._internal = { buildHTML, launchBrowser, PDF_PAGE_OPTIONS, budgetTable, toAmount };
+exports._internal = { buildHTML, launchBrowser, PDF_PAGE_OPTIONS, budgetTable, toAmount, parseUpdate, lockedSection };

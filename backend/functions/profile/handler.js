@@ -1,5 +1,6 @@
 'use strict';
 const { log, getDB, requireUser, optionalUser, AuthError, authErrorBody } = require('/opt/nodejs/index');
+const { ensureUnlockColumn, isLocked, lockItinerary } = require('/opt/nodejs/trip-access');
 const Stripe = require('stripe');
 
 const stripe = process.env.STRIPE_SECRET_KEY ? Stripe(process.env.STRIPE_SECRET_KEY) : null;
@@ -24,8 +25,9 @@ async function getItinerary(event, db) {
   }
 
   try {
+    await ensureUnlockColumn(db);
     const submissionResult = await db.query(
-      'SELECT email, destination, days, status, currency, traveler_type, travel_date, created_at FROM submissions WHERE id = $1',
+      'SELECT email, destination, days, status, currency, traveler_type, travel_date, created_at, plan, unlocked_at FROM submissions WHERE id = $1',
       [submissionId]
     );
     if (submissionResult.rows.length === 0) return json(404, { error: 'Not found' });
@@ -39,6 +41,9 @@ async function getItinerary(event, db) {
     const submission = submissionResult.rows[0];
     const viewer = await optionalUser(event).catch(() => null);
     const isOwner = !!viewer?.email && viewer.email.toLowerCase() === String(submission.email).toLowerCase();
+    // Free trips: Day 1 in full, later days as teasers — for everyone, owner included.
+    const locked = isLocked(submission);
+    const itinerary = locked ? lockItinerary(itinResult.rows[0].itinerary_data) : itinResult.rows[0].itinerary_data;
     return json(200, {
       submissionId,
       destination: submission.destination,
@@ -50,7 +55,8 @@ async function getItinerary(event, db) {
       isOwner,
       hasPdf: isOwner && submission.status === 'email_sent',
       travelDate: isOwner && submission.travel_date ? toIsoDate(submission.travel_date) : null,
-      itinerary: itinResult.rows[0].itinerary_data,
+      locked,
+      itinerary,
     });
   } catch (err) {
     log.error('Get itinerary failed', { error: err.message });
@@ -157,9 +163,10 @@ async function handleGetProfile(db, user) {
       userResult = await db.query(`SELECT email, plan FROM users WHERE email = $1`, [email]);
     }
 
+    await ensureUnlockColumn(db);
     const [tripsResult, rolesResult] = await Promise.all([
       db.query(
-        `SELECT s.id, s.destination, s.days, s.status, s.created_at,
+        `SELECT s.id, s.destination, s.days, s.status, s.created_at, s.plan, s.unlocked_at,
                 i.id AS itinerary_id
          FROM submissions s
          LEFT JOIN itineraries i ON i.submission_id = s.id
@@ -187,6 +194,7 @@ async function handleGetProfile(db, user) {
         // The PDF link is made per click (GET /itinerary/{id}/pdf); the old pre-signed URL here
         // used the wrong S3 key and never worked.
         hasPdf:       row.status === 'email_sent' && !!row.itinerary_id,
+        locked:       isLocked(row),
       }))
     );
 

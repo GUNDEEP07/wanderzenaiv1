@@ -149,6 +149,27 @@ export default function Pricing() {
           </div>
         )}
 
+        {reason === 'unlock' && (
+          <div style={{
+            background: 'linear-gradient(135deg,rgba(0,212,170,0.1),rgba(0,168,126,0.06))',
+            border: '1px solid rgba(0,212,170,0.3)',
+            borderRadius: 16,
+            padding: '24px 28px',
+            marginBottom: 40,
+          }}>
+            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#00d4aa', marginBottom: 8 }}>
+              Unlock your trip
+            </div>
+            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 900, color: '#fff', marginBottom: 6, lineHeight: 1.2 }}>
+              {location.state?.destination ? <>Every day of your {location.state.destination} trip is written</> : <>The rest of your trip is written</>}
+            </div>
+            <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', lineHeight: 1.6 }}>
+              Unlocking uses one itinerary. Get the Single Plan or Wanderer below, then open the trip from your
+              dashboard and tap “Unlock the full trip” — every day opens straight away.
+            </div>
+          </div>
+        )}
+
         {reason === 'free_limit' && (
           <div style={{
             background: 'linear-gradient(135deg,rgba(0,212,170,0.1),rgba(0,168,126,0.06))',

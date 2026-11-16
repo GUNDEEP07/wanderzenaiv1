@@ -316,3 +316,23 @@ export async function fetchPdfLink(submissionId) {
   if (res.status === 404) throw new Error(body?.message || 'The PDF for this trip is not available.');
   throw new Error('Could not prepare the download — please try again.');
 }
+
+/**
+ * Unlock every day of a free trip (POST /itinerary/{id}/unlock). Uses one paid itinerary:
+ * this month's Wanderer allowance, else a purchased credit. Errors carry a `code`:
+ * SIGN_IN, NEEDS_ITINERARY (send to Pricing), TRIP_FAILED, NOT_FOUND.
+ * @returns {Promise<{ unlocked: true, source: string|null, remaining: number|null }>}
+ */
+export async function unlockTrip(submissionId) {
+  const headers = await authHeaders();
+  if (!headers.Authorization) throw Object.assign(new Error('Sign in to unlock this trip.'), { code: 'SIGN_IN' });
+  const res = await fetch(`${API_URL}/itinerary/${encodeURIComponent(submissionId)}/unlock`, { method: 'POST', headers });
+  let body = null;
+  try { body = await res.json(); } catch { /* empty */ }
+  if (res.ok && body?.success) return body.data;
+  if (res.status === 401 || res.status === 403) throw Object.assign(new Error('Sign in with the email this trip was sent to, to unlock it.'), { code: 'SIGN_IN' });
+  if (res.status === 402) throw Object.assign(new Error(body?.message || 'Unlocking uses one itinerary.'), { code: 'NEEDS_ITINERARY' });
+  if (res.status === 404) throw Object.assign(new Error('Only the person who planned this trip can unlock it.'), { code: 'NOT_FOUND' });
+  if (body?.code === 'TRIP_FAILED') throw Object.assign(new Error(body.message), { code: 'TRIP_FAILED' });
+  throw new Error(body?.message || 'Could not unlock this trip — nothing was used. Please try again.');
+}
