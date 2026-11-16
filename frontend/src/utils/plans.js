@@ -6,10 +6,13 @@ import { passTerm } from '../hooks/usePricing';
 // The $9/month Wanderer plan is off sale; existing subscribers keep it (Settings → billing).
 export function plansFrom({ trip, pass, loading }) {
   const price = (p) => (p ? formatPrice(p.amount, p.currency) : loading ? '…' : '—');
+  // Big number + small currency code on cards ("A$19" / "AUD"), so the price never wraps.
+  const parts = (p) => (p ? { main: formatPrice(p.amount, p.currency).replace(/\s+[A-Z]{3}$/, ''), code: p.currency } : { main: price(p), code: '' });
   return [
     {
       name: 'Try it',
       price: 'Free',
+      priceParts: { main: 'Free', code: '' },
       period: 'every month',
       features: ['Your route, ready to confirm', 'Day 1 written in full', 'Every later day’s theme and base', 'Any destination worldwide'],
       cta: 'Plan a trip free',
@@ -19,6 +22,7 @@ export function plansFrom({ trip, pass, loading }) {
     {
       name: trip?.name || 'One trip',
       price: price(trip),
+      priceParts: parts(trip),
       period: 'one-time · per trip',
       features: ['Every day unlocked', 'Where to stay, tips & traps to skip', 'Adjust up to 3 days', 'PDF + offline trip page', 'Or unlock a free trip you made', 'Never expires'],
       cta: 'Unlock one trip',
@@ -29,6 +33,7 @@ export function plansFrom({ trip, pass, loading }) {
     {
       name: pass?.name || 'Trip Pass',
       price: price(pass),
+      priceParts: parts(pass),
       period: pass ? `one-time · ${passTerm(pass)}` : 'one-time',
       features: [pass ? `${pass.trips} full trips` : 'Several full trips', 'Everything in One trip', 'No subscription, no auto-renew', 'Use them on any destinations'],
       cta: 'Get the Trip Pass',

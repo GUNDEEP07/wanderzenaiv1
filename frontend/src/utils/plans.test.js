@@ -28,7 +28,7 @@ test('plans come from Stripe data; nothing to buy until prices load', () => {
   expect(loading.map(p => p.price)).toEqual(['Free', '…', '…']);
   expect(loading.filter(p => p.buy).every(p => p.link === null)).toBe(true);
   const ready = plansFrom({ trip, pass, loading: false });
-  expect(ready[1]).toMatchObject({ name: 'One trip', price: 'A$19 AUD', link: trip.url, featured: true });
+  expect(ready[1]).toMatchObject({ name: 'One trip', price: 'A$19 AUD', priceParts: { main: 'A$19', code: 'AUD' }, link: trip.url, featured: true });
   expect(ready[2]).toMatchObject({ name: 'Trip Pass', price: 'A$59 AUD', link: pass.url, period: 'one-time · 6 trips · use within 12 months' });
   expect(JSON.stringify(ready)).not.toMatch(/Wanderer|\/mo/);
 });
