@@ -47,6 +47,17 @@ test('priceFor: visitor currency when Stripe has it, else the price currency; al
   assert.deepEqual(pricing.priceFor(cat, '').map(p => p.currency), ['AUD', 'AUD']);
 });
 
+test('getCatalog: the Stripe search query uses only OR (Stripe rejects AND mixed with OR)', async () => {
+  pricing._reset();
+  const urls = [];
+  const fetchImpl = async (url) => { urls.push(String(url)); return { ok: true, json: async () => ({ data: [] }) }; };
+  await pricing.getCatalog({ secretKey: 'sk_test', fetchImpl, now: 5, log: { warn() {} } });
+  const q = new URL(urls.find(u => u.includes('/products/search'))).searchParams.get('query');
+  assert.equal(q, "metadata['wz_plan']:'trip' OR metadata['wz_plan']:'pass'");
+  assert.doesNotMatch(q, /AND|\(/);
+  pricing._reset();
+});
+
 test('getCatalog: cached; last good copy when Stripe fails; error when there is none', async () => {
   pricing._reset();
   let calls = 0;
