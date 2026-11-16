@@ -260,6 +260,9 @@ jobs:
           VITE_STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
           VITE_STRIPE_SINGLE_PLAN_LINK: ${{ secrets.STRIPE_SINGLE_PLAN_LINK }}
           VITE_STRIPE_WANDERER_LINK: ${{ secrets.STRIPE_WANDERER_LINK }}
+          # Partner ids are public (repo variables, not secrets). Unset → plain links, no commission claimed.
+          VITE_BOOKING_AID: ${{ vars.BOOKING_AFFILIATE_ID }}
+          VITE_GYG_PARTNER_ID: ${{ vars.GYG_PARTNER_ID }}
           VITE_FIREBASE_API_KEY: AIzaSyDn3rruHLzzqCIWFuL0_5nwEwB69MvDTnk
           VITE_FIREBASE_AUTH_DOMAIN: wanderzenai-9c343.firebaseapp.com
           VITE_FIREBASE_PROJECT_ID: wanderzenai-9c343

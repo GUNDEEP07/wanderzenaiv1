@@ -13,6 +13,7 @@ import AdjustDay from '../components/itinerary/AdjustDay';
 import LockedDay, { lockedRange, unlockExtras } from '../components/itinerary/LockedDay';
 import StopRow from '../components/itinerary/StopRow';
 import TripOverview from '../components/itinerary/TripOverview';
+import BookingChecklist from '../components/itinerary/BookingChecklist';
 
 /** How often the page checks on a day being rewritten. */
 export const ADJUST_POLL_MS = 5000;
@@ -427,6 +428,7 @@ export default function ItineraryView() {
         )}
 
         <div style={{ marginTop: 32 }}>
+          {!itin?.locked && <BookingChecklist tripId={id} itinerary={itin} travelDate={data.travelDate || null} />}
           <TripOverview itinerary={itin} currency={currency} onPickDay={(n) => { setSelectedDay(n); window.scrollTo?.({ top: 0, behavior: 'smooth' }); }}
             onUnlock={() => { const first = days.find(d => d.locked); if (first) setSelectedDay(first.dayNumber); window.scrollTo?.({ top: 0, behavior: 'smooth' }); }} />
         </div>
