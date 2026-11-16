@@ -17,10 +17,22 @@
 const FREE_VISIBLE_DAYS = 1;
 const ENSURE_UNLOCK_COLUMN_SQL = 'ALTER TABLE submissions ADD COLUMN IF NOT EXISTS unlocked_at TIMESTAMPTZ';
 
+/**
+ * Free trips made before the Day-1 lock shipped (Nov 16 2026, ~11:40 Sydney) stay fully open:
+ * their owners were promised the whole trip. Idempotent; runs with the column check.
+ */
+const LOCK_STARTED_AT = '2026-11-16T00:40:00Z';
+const GRANDFATHER_SQL = `UPDATE submissions SET unlocked_at = created_at
+  WHERE plan = 'free' AND unlocked_at IS NULL AND created_at < '${LOCK_STARTED_AT}'`;
+
 let ensured = null;
-/** Make sure submissions.unlocked_at exists (once per container). */
+/** Make sure submissions.unlocked_at exists and earlier free trips are open (once per container). */
 function ensureUnlockColumn(db) {
-  if (!ensured) ensured = db.query(ENSURE_UNLOCK_COLUMN_SQL).catch((err) => { ensured = null; throw err; });
+  if (!ensured) {
+    ensured = db.query(ENSURE_UNLOCK_COLUMN_SQL)
+      .then(() => db.query(GRANDFATHER_SQL))
+      .catch((err) => { ensured = null; throw err; });
+  }
   return ensured;
 }
 
@@ -82,6 +94,8 @@ function lockProgressDays(days = [], { visibleDays = FREE_VISIBLE_DAYS } = {}) {
 module.exports = {
   FREE_VISIBLE_DAYS,
   ENSURE_UNLOCK_COLUMN_SQL,
+  GRANDFATHER_SQL,
+  LOCK_STARTED_AT,
   ensureUnlockColumn,
   isLocked,
   lockItinerary,

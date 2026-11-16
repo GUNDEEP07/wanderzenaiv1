@@ -18,7 +18,8 @@ const s = {
   kicker: { fontSize: 12, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#00d4aa' },
   h1: { fontFamily: "'Fraunces', serif", fontSize: 'clamp(26px, 5vw, 32px)', lineHeight: 1.15, margin: '4px 0 4px', fontWeight: 700 },
   sub: { margin: '0 0 16px', fontSize: 15, color: 'rgba(255,255,255,0.72)', lineHeight: 1.5 },
-  footer: { position: 'sticky', bottom: 0, zIndex: 10, background: 'rgba(10,15,30,0.97)', borderTop: '1px solid rgba(255,255,255,0.08)', padding: '10px clamp(16px, 4vw, 32px) calc(12px + env(safe-area-inset-bottom, 0px))' },
+  // Above the cookie banner while it shows (CookieBanner sets --wz-cookie-h).
+  footer: { position: 'sticky', bottom: 'var(--wz-cookie-h, 0px)', zIndex: 10, background: 'rgba(10,15,30,0.97)', borderTop: '1px solid rgba(255,255,255,0.08)', padding: '10px clamp(16px, 4vw, 32px) calc(12px + env(safe-area-inset-bottom, 0px))' },
   footerInner: (wide) => ({ maxWidth: wide ? 1240 : 720, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }),
   back: { minHeight: 48, padding: '0 12px', border: 'none', background: 'none', color: 'rgba(255,255,255,0.8)', fontFamily: 'inherit', fontSize: 15, fontWeight: 600, cursor: 'pointer' },
   status: { flex: 1, textAlign: 'center', fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 1.35 },

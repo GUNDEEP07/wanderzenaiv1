@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getDestinationPhoto, getFallbackPhoto, useDestinationPhotoWithCredit } from '../utils/destinationPhotos';
 import { CreditedPhoto, PhotoCredit } from '../components/PhotoCredit';
+import { CURATED_COUNTRIES } from '../components/plantrip/WhoIsTravelling';
 
 const CONTINENTS = [
   { id: 'asia', name: 'Asia', emoji: '🏯', tagline: 'Ancient temples, mountain villages, street food' },
@@ -66,19 +67,20 @@ const TRENDING = [
   { dest: 'Bandipur, Nepal',    trend: 'Car-free hill town' },
 ];
 
+// Asia only (Nov 2026 focus). Seasons are general guidance; the planner covers any country.
 const MONTH_PICKS = {
-  0:  { label: 'January',   picks: ['Morocco', 'Thailand', 'New Zealand'],    tip: 'Escape winter — North Africa and Southeast Asia are at their best' },
-  1:  { label: 'February',  picks: ['Japan', 'Jordan', 'Colombia'],           tip: 'Cherry blossom season begins in Japan' },
-  2:  { label: 'March',     picks: ['Portugal', 'Vietnam', 'Peru'],           tip: 'Shoulder season gold — before the crowds arrive' },
-  3:  { label: 'April',     picks: ['Japan', 'Italy', 'Nepal'],               tip: 'Ideal hiking weather in Nepal and Tuscany' },
-  4:  { label: 'May',       picks: ['Greece', 'Georgia', 'Ireland'],          tip: 'Peak wildflower season before summer crowds' },
-  5:  { label: 'June',      picks: ['Iceland', 'Norway', 'Albania'],          tip: 'Endless daylight in Scandinavia, the Balkans opening up' },
-  6:  { label: 'July',      picks: ['Chile', 'Morocco', 'Oman'],              tip: 'Southern hemisphere winter is perfect for Patagonia' },
-  7:  { label: 'August',    picks: ['Croatia', 'Slovenia', 'Colombia'],       tip: 'The Balkans are quieter than Italy this month' },
-  8:  { label: 'September', picks: ['Bali', 'Nepal', 'Portugal'],             tip: 'Dry season returns to Southeast Asia — best month for Bali' },
-  9:  { label: 'October',   picks: ['Japan', 'Vietnam', 'Ethiopia'],          tip: 'Autumn foliage in Japan, cool season in Vietnam' },
-  10: { label: 'November',  picks: ['India', 'Tanzania', 'Peru'],             tip: 'Post-monsoon magic in India and East Africa' },
-  11: { label: 'December',  picks: ['New Zealand', 'Colombia', 'Thailand'],   tip: 'Southern summer — New Zealand is at its absolute best' },
+  0:  { label: 'January',   picks: ['Sri Lanka', 'Thailand', 'Vietnam'],   tip: 'Cool, dry season in Thailand; Sri Lanka’s south coast is calm and sunny' },
+  1:  { label: 'February',  picks: ['India', 'Laos', 'Sri Lanka'],         tip: 'Dry and mild across South and Southeast Asia, before the heat builds' },
+  2:  { label: 'March',     picks: ['Japan', 'Nepal', 'Vietnam'],          tip: 'Cherry blossom in Japan from late March; rhododendrons on Nepal’s trails' },
+  3:  { label: 'April',     picks: ['Japan', 'Nepal', 'Vietnam'],          tip: 'Spring trekking season in Nepal; blossom lingers in northern Japan' },
+  4:  { label: 'May',       picks: ['Japan', 'Indonesia', 'Vietnam'],      tip: 'Dry season begins in Bali; fresh greenery in Japan before the June rains' },
+  5:  { label: 'June',      picks: ['Indonesia', 'India', 'Vietnam'],      tip: 'Himalayan passes open to Ladakh; dry season on Java and Bali' },
+  6:  { label: 'July',      picks: ['Indonesia', 'India', 'Japan'],        tip: 'Ladakh and Spiti at their best; Hokkaido stays cool while the rest of Japan is humid' },
+  7:  { label: 'August',    picks: ['Sri Lanka', 'Indonesia', 'India'],    tip: 'Sri Lanka’s east coast is in its dry season; Ladakh is still open' },
+  8:  { label: 'September', picks: ['Vietnam', 'Indonesia', 'Sri Lanka'],  tip: 'Golden rice terraces in northern Vietnam; dry season lingers in eastern Indonesia' },
+  9:  { label: 'October',   picks: ['Nepal', 'Vietnam', 'Japan'],          tip: 'Clear skies for Nepal’s trails; autumn begins in Japan' },
+  10: { label: 'November',  picks: ['India', 'Nepal', 'Japan'],            tip: 'Post-monsoon India, crisp trekking in Nepal and autumn colour in Japan' },
+  11: { label: 'December',  picks: ['Sri Lanka', 'Thailand', 'India'],     tip: 'Cool, dry season in Thailand and southern India; Sri Lanka’s south coast opens' },
 };
 
 const navy = '#0a0f1e';
@@ -220,9 +222,14 @@ export default function ExplorePage() {
   };
 
   const startPlan = (dest) => {
-    // destinations must be an array of { name, lat, lng } for PlanTrip to pre-fill
+    // destinations must be an array of { name, lat, lng } for PlanTrip to pre-fill. A country
+    // with hand-picked routes goes in as a whole-country pick, so Step 2 offers its routes.
     const destName = dest.split(',')[0].trim();
-    navigate('/plan', { state: { prefill: { destinations: [{ name: destName, lat: 0, lng: 0 }] } } });
+    const curated = CURATED_COUNTRIES.find(c => c.name === destName);
+    const pick = curated
+      ? { name: curated.name, country: curated.name, lat: curated.lat, lng: curated.lng, isCountry: true }
+      : { name: destName, lat: 0, lng: 0 };
+    navigate('/plan', { state: { prefill: { destinations: [pick] } } });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
