@@ -123,7 +123,8 @@ function PersonalRecCard({ rec, onClick }) {
 }
 
 function TrendingCard({ t, onClick }) {
-  const { src, credit } = useDestinationPhotoWithCredit(t.dest || '', '', 'card');
+  // Search "Nan Thailand", not "Nan" (which finds naan bread): town + country.
+  const { src, credit } = useDestinationPhotoWithCredit(t.dest || '', String(t.dest || '').replace(/\s*\([^)]*\)/g, '').replace(/,\s*/g, ' ').trim(), 'card');
   return (
     <div
       onClick={onClick}
