@@ -1,11 +1,17 @@
 name: SEO refresh (prerendered pages)
 
 # Re-saves the prerendered pages when blog stories are published, edited or deleted, so
-# search engines see them within a couple of hours without a full deploy. Checks cheaply
+# search engines see them within a couple of hours without a full deploy; and every week and
+# month regardless, so seasonal picks never go stale. Checks cheaply
 # first and does nothing when nothing changed. Run it by hand after publishing to go faster.
 on:
   schedule:
     - cron: '17 */2 * * *'
+    # Weekly and on the 1st of each month: re-save every page, so the saved copies of the home
+    # page, Explore and guides show the current month's in-season routes (the live app already
+    # works them out from today's date when it loads).
+    - cron: '23 0 * * 1'
+    - cron: '23 0 1 * *'
   workflow_dispatch:
     inputs:
       force:
@@ -62,6 +68,9 @@ jobs:
         working-directory: frontend
         run: |
           if [ "${{ inputs.force }}" = "true" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          case "${{ github.event.schedule }}" in
+            '23 0 * * 1'|'23 0 1 * *') echo "Weekly/monthly season refresh"; echo "run=true" >> "$GITHUB_OUTPUT"; exit 0 ;;
+          esac
           node scripts/needs-refresh.mjs "$SITE_URL" "${{ steps.stack.outputs.api }}"
 
       - name: Install dependencies

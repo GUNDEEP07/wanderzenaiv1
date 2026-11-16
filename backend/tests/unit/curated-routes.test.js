@@ -86,3 +86,45 @@ test('options: long journeys fine → everything fits; short trips de-duplicate 
 test('not curated → null (Claude takes over)', () => {
   assert.equal(cr.curatedOptions({ destination: 'Peru', days: 10 }), null);
 });
+
+// ── Seasons (Nov 16 2026): best months per route's region ──────────────────────
+test('seasons: every route has best months (1–12) and a reason', () => {
+  for (const c of Object.values(cr.COUNTRIES)) {
+    for (const r of c.routes) {
+      assert.ok(r.seasons && Array.isArray(r.seasons.best) && r.seasons.best.length >= 3, `${r.id} needs seasons`);
+      assert.ok(r.seasons.best.every(m => Number.isInteger(m) && m >= 1 && m <= 12), `${r.id} months`);
+      assert.ok(r.seasons.note.length > 10 && !r.seasons.note.endsWith('.'), `${r.id} note`);
+    }
+  }
+});
+
+test('seasons: every month has at least 5 Asia routes in season (home page is never empty)', () => {
+  const asia = ['Vietnam', 'Japan', 'India', 'Thailand', 'Sri Lanka', 'Indonesia', 'Nepal'];
+  const routes = Object.values(cr.COUNTRIES).filter(c => asia.includes(c.name)).flatMap(c => c.routes);
+  for (let m = 1; m <= 12; m++) {
+    assert.ok(routes.filter(r => r.seasons.best.includes(m)).length >= 5, `month ${m}`);
+  }
+});
+
+test('monthRanges: joins runs and wraps over the new year', () => {
+  assert.equal(cr.monthRanges([10, 11, 12, 1, 2, 3]), 'Oct–Mar');
+  assert.equal(cr.monthRanges([3, 4, 5, 10, 11]), 'Mar–May, Oct–Nov');
+  assert.equal(cr.monthRanges([6]), 'Jun');
+  assert.equal(cr.monthRanges([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]), 'All year');
+});
+
+test('curatedOptions: travel month puts in-season routes first and flags the rest', () => {
+  const nov = cr.curatedOptions({ destination: 'Vietnam', days: 9, travelDate: '2026-11-20', prefs: { transferComfort: 'long' } });
+  assert.equal(nov.options[0].inSeason, true);
+  const off = nov.options.find(o => o.inSeason === false);
+  assert.match(off.caution, /^Off season in Nov\. .+ Best: /);
+  const none = cr.curatedOptions({ destination: 'Vietnam', days: 9 });
+  assert.ok(none.options.every(o => o.inSeason === null && !/Off season/.test(o.caution || '')));
+});
+
+test('route prompts: travel month → prefer regions in season; no date → say the best months', () => {
+  const base = { destination: 'Laos', days: 8, travelStyle: [], prefs: { adults: 2, kids: [], transferComfort: 'medium' } };
+  assert.match(rp.buildRouteOptionsPrompt({ ...base, travelDate: '2026-07-10' }), /travel in July\. Prefer regions at their best/);
+  assert.match(rp.buildRouteOptionsPrompt({ ...base, travelDate: '' }), /no dates yet\. End each summary with the best months/);
+  assert.match(rp.buildRouteOptionsPrompt({ ...base, travelDate: '2026-01-02', angle: Object.keys(rp.ROUTE_ANGLES || { x: 1 })[0] }), /Season:/);
+});

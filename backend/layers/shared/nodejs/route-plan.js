@@ -337,6 +337,17 @@ function dedupeRoutes(routes, against = []) {
  *   interests, travelDate, userLocation, prefs, count, avoid[], angle? }
  *   With `angle` (a ROUTE_ANGLES key) it asks for ONE route from that angle.
  */
+const MONTH_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+/** One prompt rule about the season (Nov 16 2026): regions at their best for the travel month. */
+function seasonRule(travelDate) {
+  const m = /^\d{4}-(\d{2})-\d{2}$/.test(travelDate || '') ? Number(travelDate.slice(5, 7)) : 0;
+  if (m >= 1 && m <= 12) {
+    return `- Season: they travel in ${MONTH_LONG[m - 1]}. Prefer regions at their best then; avoid monsoon, typhoon, flood or extreme-heat areas for that month. If a stop is still off season, say so plainly in the summary.`;
+  }
+  return '- Season: no dates yet. End each summary with the best months for that route (e.g. "Best Oct–Mar").';
+}
+
 function buildRouteOptionsPrompt(input) {
   const styles = input.travelStyle?.length ? input.travelStyle.join(', ') : 'balanced';
   const angle = ROUTE_ANGLES[input.angle];
@@ -351,6 +362,7 @@ Rules:
 - Order stops so travel is short and logical. "days" must add up to exactly ${input.days}; the first day at each later stop is its travel day.
 - transferIn: from the previous stop (null for the first), realistic door-to-door hours.
 - 2 dayTrips per stop, each under ~1.5 h away. Real places only. lat/lng of the stop town. Keep every text field short.
+${seasonRule(input.travelDate)}
 
 Return ONLY this JSON (no other text):
 ${SINGLE_ROUTE_SCHEMA}`;
@@ -368,6 +380,7 @@ Rules for every route:
 - transferIn: how to get there from the previous stop (null for the first), realistic door-to-door hours.
 - 2–3 dayTrips per stop, each under ~1.5 h away. Real places only. lat/lng of the stop town.
 - Make the ${count} routes genuinely different (regions, pace, or style), each one that fits the traveller.
+${seasonRule(input.travelDate)}
 
 Return ONLY this JSON (no other text):
 ${OPTIONS_SCHEMA}`;
@@ -432,6 +445,7 @@ function settleEnough(promises, { enough, graceMs, deadlineMs }) {
 }
 
 module.exports = {
+  seasonRule,
   MAX_BASES,
   sanitizeRoute,
   balanceDays,

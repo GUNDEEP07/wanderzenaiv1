@@ -57,11 +57,18 @@ export function travelerTypeOf(prefs = {}) {
 
 /** The form as the API wants it: no dates when they're not fixed; traveller type derived. */
 export function formForApi(form) {
+  const { preferRouteId: _p, ...rest } = form; // a UI hint from Home/Explore, not trip data
   return {
-    ...form,
+    ...rest,
     travelerType: travelerTypeOf(form.tripPrefs),
     ...(form.datesFlexible ? { travelDate: '', travelDateEnd: '' } : {}),
   };
+}
+
+/** The route picked on Home/Explore goes first in Step 2 (if the API offered it). */
+export function preferFirst(options = [], id) {
+  const i = id ? options.findIndex(o => o.id === id) : -1;
+  return i > 0 ? [options[i], ...options.slice(0, i), ...options.slice(i + 1)] : options;
 }
 
 /** Route stops with their trip days, de-duplicated (a route can pass a town twice). */
@@ -227,7 +234,7 @@ export default function PlanTrip() {
     try {
       const avoid = more ? routeOptions.list.map(o => o.name) : [];
       const result = await fetchRoutePlan(formForApi(form), { more, avoid });
-      setRouteOptions({ key, list: result.options });
+      setRouteOptions({ key, list: preferFirst(result.options, form.preferRouteId) });
       analytics.stepReached?.('Route options shown', STEP_ROUTE);
     } catch (err) {
       setRouteError(err.message || 'Could not plan a route right now.');
@@ -236,7 +243,7 @@ export default function PlanTrip() {
     }
   };
   const chooseRoute = (option) => {
-    const { fitsConstraints: _f, caution: _c, longestTransferHours: _l, ...route } = option;
+    const { fitsConstraints: _f, caution: _c, longestTransferHours: _l, inSeason: _s, bestMonths: _b, bestMonthsLabel: _bl, ...route } = option;
     setForm(f => ({ ...f, route: { ...route, forKey: routeKey(f) } }));
     setErrors(e => ({ ...e, route: '' }));
     analytics.stepReached?.('Route chosen', STEP_ROUTE);

@@ -79,12 +79,14 @@ body {
 /* ── Hero ── */
 .hero {
   min-height: 100vh;
+  /* Design A: the hero is a two-column picker now; it lays out its own text. */
   display: flex; flex-direction: column;
   justify-content: center; align-items: center;
-  padding: 8rem 2rem 4rem;
+  padding: 7rem 2rem 4rem;
   position: relative; overflow: hidden;
   text-align: center;
 }
+@media (max-width: 640px) { .hero { padding: 5.5rem 1rem 3rem; } }
 
 .hero-bg {
   position: absolute; inset: 0; pointer-events: none;

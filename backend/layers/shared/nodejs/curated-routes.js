@@ -8,6 +8,10 @@
  *
  * Each route:
  *   id, name, summary, kidFriendly (short transfers, no overnight legs),
+ *   photoQuery: the photo search that shows THIS route (checked by eye; a bare town name can
+ *     find the wrong place, e.g. "Yufuin" found Fuji, "Nan" found naan bread),
+ *   seasons: { best: [months 1–12 for THIS route's region], note } — reviewed with the routes;
+ *     used to rank routes for the travel month, flag off-season trips and pick what's in season,
  *   bases: [{ name, region, lat, lng, weight (share of the days), why, stayType,
  *             transferIn: { mode, hours, note } | null, dayTrips: [names] }]
  * `hours` is door-to-door for the realistic option a slow traveller would take.
@@ -15,6 +19,27 @@
  */
 
 const T = (mode, hours, note) => ({ mode, hours, note: note || null });
+/** Best months for the route's region (1 = Jan), and the one-line reason. */
+const S = (best, note) => ({ best, note });
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** 'Mar–May, Oct–Nov' from [3,4,5,10,11]; wraps over the new year (Nov–Mar). */
+function monthRanges(best) {
+  const set = new Set(best);
+  if (set.size === 12) return 'All year';
+  const runs = [];
+  for (let m = 1; m <= 12; m++) {
+    if (set.has(m) && !set.has(m === 1 ? 12 : m - 1)) {
+      let end = m;
+      while (set.has(end === 12 ? 1 : end + 1) && (end === 12 ? 1 : end + 1) !== m) end = end === 12 ? 1 : end + 1;
+      runs.push(m === end ? MONTH_NAMES[m - 1] : `${MONTH_NAMES[m - 1]}–${MONTH_NAMES[end - 1]}`);
+    }
+  }
+  return runs.join(', ');
+}
+
+/** Is `month` (1–12) a good month for this route? null when the month is unknown. */
+const inSeason = (route, month) => (month >= 1 && month <= 12 && route.seasons ? route.seasons.best.includes(month) : null);
 
 const COUNTRIES = {
   vietnam: {
@@ -23,6 +48,8 @@ const COUNTRIES = {
     routes: [
       {
         id: 'vn-north-centre',
+        photoQuery: 'Sapa, Vietnam',
+        seasons: S([3, 4, 5], 'Sapa is clearest in spring and autumn; Hoi An floods in Oct–Dec, so spring suits both ends'),
         name: 'Classic north + centre',
         summary: 'Hanoi’s old quarter, rice terraces around Sapa, then lanterns and beaches in Hoi An.',
         kidFriendly: false,
@@ -35,6 +62,8 @@ const COUNTRIES = {
       },
       {
         id: 'vn-central-easy',
+        photoQuery: 'Hoi An, Vietnam',
+        seasons: S([2, 3, 4, 5, 6, 7, 8], 'Dry from Feb to Aug; Sep–Dec brings heavy rain and floods'),
         name: 'Central coast, easy pace',
         summary: 'One region, short hops: beach mornings in Da Nang, old-town Hoi An, imperial Hue over the Hai Van pass.',
         kidFriendly: true,
@@ -46,6 +75,8 @@ const COUNTRIES = {
       },
       {
         id: 'vn-north-slow',
+        photoQuery: 'Ninh Binh, Vietnam',
+        seasons: S([3, 4, 5, 9, 10, 11], 'Mild and dry in spring and autumn; summer storms can cancel boats on Lan Ha Bay'),
         name: 'The north, slowly',
         summary: 'Stay in the north and skip flights: Hanoi, the karst rivers of Ninh Binh, and a night on quieter Lan Ha Bay.',
         kidFriendly: true,
@@ -64,6 +95,8 @@ const COUNTRIES = {
     routes: [
       {
         id: 'jp-kyoto-alps-coast',
+        photoQuery: 'Takayama, Japan',
+        seasons: S([3, 4, 5, 10, 11], 'Spring blossom and autumn colour; Jun–Jul is the rainy season'),
         name: 'Kyoto, the Alps and the Sea of Japan',
         summary: 'Temples at dawn in Kyoto, an old merchant town in the mountains, then gardens and seafood in Kanazawa.',
         kidFriendly: true,
@@ -75,6 +108,8 @@ const COUNTRIES = {
       },
       {
         id: 'jp-tokyo-hakone-kyoto',
+        photoQuery: 'Hakone, Japan',
+        seasons: S([3, 4, 5, 10, 11], 'Spring blossom and autumn colour; Fuji is clearest Nov–Feb'),
         name: 'Tokyo, Hakone and Kyoto',
         summary: 'A gentle first trip: Tokyo neighbourhoods, a hot-spring night in Hakone, then Kyoto.',
         kidFriendly: true,
@@ -86,6 +121,8 @@ const COUNTRIES = {
       },
       {
         id: 'jp-kyushu-onsen',
+        photoQuery: 'Kurokawa Onsen',
+        seasons: S([3, 4, 5, 10, 11, 12], 'Onsen towns are at their best in cool weather; Jun–Jul is the rainy season'),
         name: 'Kyushu hot-spring towns',
         summary: 'Fewer tourists: Fukuoka food stalls, the onsen village of Yufuin and Kurokawa’s riverside baths.',
         kidFriendly: true,
@@ -104,6 +141,8 @@ const COUNTRIES = {
     routes: [
       {
         id: 'in-kerala',
+        photoQuery: 'Munnar, India',
+        seasons: S([10, 11, 12, 1, 2, 3], 'Dry and comfortable after the monsoon; Jun–Sep is very wet'),
         name: 'Kerala: coast, backwaters, tea hills',
         summary: 'Fort Kochi’s lanes, a slow day on the backwaters, then cool tea estates in Munnar.',
         kidFriendly: true,
@@ -115,6 +154,8 @@ const COUNTRIES = {
       },
       {
         id: 'in-himachal',
+        photoQuery: 'Manali, India',
+        seasons: S([3, 4, 5, 6, 9, 10], 'Spring and autumn are clear; Jul–Aug monsoon brings landslides on mountain roads'),
         name: 'Himachal: Kangra valley to Manali',
         summary: 'Tibetan culture in McLeod Ganj, paragliding country in Bir, apple orchards in old Manali.',
         kidFriendly: false,
@@ -126,6 +167,8 @@ const COUNTRIES = {
       },
       {
         id: 'in-rajasthan-south',
+        photoQuery: 'Udaipur, India',
+        seasons: S([10, 11, 12, 1, 2, 3], 'Cool, dry winters; Apr–Jun is very hot'),
         name: 'Southern Rajasthan, slowly',
         summary: 'Lakes of Udaipur, the great wall of Kumbhalgarh, and the blue city of Jodhpur.',
         kidFriendly: true,
@@ -144,6 +187,8 @@ const COUNTRIES = {
     routes: [
       {
         id: 'th-north',
+        photoQuery: 'Chiang Dao, Thailand',
+        seasons: S([11, 12, 1, 2], 'Cool and dry; Mar–Apr has haze from crop burning'),
         name: 'The quiet north',
         summary: 'Old-city temples in Chiang Mai, caves and forest in Chiang Dao, tea hills near Chiang Rai.',
         kidFriendly: true,
@@ -155,6 +200,8 @@ const COUNTRIES = {
       },
       {
         id: 'th-andaman-easy',
+        photoQuery: 'Koh Lanta, Thailand',
+        seasons: S([11, 12, 1, 2, 3, 4], 'Calm seas Nov–Apr; May–Oct is the rainy season and some Lanta resorts close'),
         name: 'Andaman coast, easy',
         summary: 'Krabi’s cliffs and then a long, unhurried stay on Koh Lanta.',
         kidFriendly: true,
@@ -165,6 +212,8 @@ const COUNTRIES = {
       },
       {
         id: 'th-west-isaan',
+        photoQuery: 'Kanchanaburi, Thailand',
+        seasons: S([11, 12, 1, 2], 'Coolest and driest months; Mar–May is very hot'),
         name: 'Rivers and national parks',
         summary: 'Bangkok’s canals, the River Kwai in Kanchanaburi, wildlife in Khao Yai.',
         kidFriendly: true,
@@ -183,6 +232,8 @@ const COUNTRIES = {
     routes: [
       {
         id: 'lk-hills-coast',
+        photoQuery: 'Ella, Sri Lanka',
+        seasons: S([12, 1, 2, 3, 4], 'The south coast is dry Dec–Apr; May–Sep the south-west monsoon arrives'),
         name: 'Hill country to the south coast',
         summary: 'Kandy, the famous train into the tea hills of Ella, then the south coast.',
         kidFriendly: false,
@@ -194,6 +245,8 @@ const COUNTRIES = {
       },
       {
         id: 'lk-cultural-easy',
+        photoQuery: 'Sigiriya, Sri Lanka',
+        seasons: S([1, 2, 3, 4, 6, 7, 8, 9], 'The dry zone is good most of the year; Oct–Dec brings the north-east monsoon'),
         name: 'Cultural triangle, short hops',
         summary: 'Rock fortresses and village life around Sigiriya, then Kandy — no long journeys.',
         kidFriendly: true,
@@ -205,6 +258,8 @@ const COUNTRIES = {
       },
       {
         id: 'lk-south-slow',
+        photoQuery: 'Galle, Sri Lanka',
+        seasons: S([12, 1, 2, 3, 4], 'Calm, sunny south coast Dec–Apr; rough seas May–Sep'),
         name: 'South coast, unhurried',
         summary: 'Galle fort and then quiet beaches near Tangalle.',
         kidFriendly: true,
@@ -222,6 +277,8 @@ const COUNTRIES = {
     routes: [
       {
         id: 'id-bali-east',
+        photoQuery: 'Sidemen, Bali',
+        seasons: S([4, 5, 6, 7, 8, 9, 10], 'Dry season Apr–Oct; Nov–Mar is wet but green'),
         name: 'Bali, the quiet east',
         summary: 'Ubud’s rice fields, the Sidemen valley, and snorkelling off Amed.',
         kidFriendly: true,
@@ -233,6 +290,8 @@ const COUNTRIES = {
       },
       {
         id: 'id-bali-gili',
+        photoQuery: 'Gili Air beach',
+        seasons: S([5, 6, 7, 8, 9], 'Dry season with calm crossings to the Gilis'),
         name: 'Ubud and the Gili islands',
         summary: 'Rice terraces, then car-free island time on Gili Air.',
         kidFriendly: false,
@@ -243,6 +302,8 @@ const COUNTRIES = {
       },
       {
         id: 'id-java-bali',
+        photoQuery: 'Prambanan, Yogyakarta',
+        seasons: S([4, 5, 6, 7, 8, 9, 10], 'Dry season for clear Borobudur sunrises'),
         name: 'Temples of Java, then Bali',
         summary: 'Borobudur at dawn from Yogyakarta, then Ubud.',
         kidFriendly: true,
@@ -260,6 +321,8 @@ const COUNTRIES = {
     routes: [
       {
         id: 'np-classic',
+        photoQuery: 'Bandipur, Nepal',
+        seasons: S([10, 11, 3, 4], 'Clearest mountain views in autumn; rhododendrons in spring; Jun–Sep monsoon hides the peaks'),
         name: 'Kathmandu, Pokhara and Bandipur',
         summary: 'Valley temples, lakeside Pokhara with Himalayan views, and the car-free hill town of Bandipur.',
         kidFriendly: true,
@@ -271,6 +334,8 @@ const COUNTRIES = {
       },
       {
         id: 'np-valley-slow',
+        photoQuery: 'Bhaktapur, Nepal',
+        seasons: S([10, 11, 12, 1, 2, 3, 4], 'Dry and clear from autumn to spring; winter nights are cold'),
         name: 'Kathmandu valley, slowly',
         summary: 'No flights or long drives: Patan, medieval Bhaktapur and a sunrise from Nagarkot.',
         kidFriendly: true,
@@ -282,6 +347,8 @@ const COUNTRIES = {
       },
       {
         id: 'np-chitwan-pokhara',
+        photoQuery: 'Chitwan National Park rhino',
+        seasons: S([10, 11, 12, 1, 2, 3], 'Cool, dry months for jungle walks; Apr–May is very hot in Chitwan'),
         name: 'Jungle and lakes',
         summary: 'Kathmandu, then rhinos in Chitwan and lakeside Pokhara.',
         kidFriendly: false, // Chitwan → Pokhara is ~5 h by road
@@ -300,6 +367,8 @@ const COUNTRIES = {
     routes: [
       {
         id: 'it-puglia',
+        photoQuery: 'Ostuni, Italy',
+        seasons: S([5, 6, 9, 10], 'Warm sea without the August crowds'),
         name: 'Puglia, town to town',
         summary: 'Sea-cliff Polignano, white Ostuni among olive groves, baroque Lecce — all within an hour of each other.',
         kidFriendly: true,
@@ -311,6 +380,8 @@ const COUNTRIES = {
       },
       {
         id: 'it-tuscany',
+        photoQuery: 'Val d Orcia, Tuscany',
+        seasons: S([4, 5, 6, 9, 10], 'Spring green and the autumn harvest; August is hot and busy'),
         name: 'Tuscany beyond Florence',
         summary: 'Florence, then cypress hills in Val d’Orcia and walled Lucca.',
         kidFriendly: true,
@@ -322,6 +393,8 @@ const COUNTRIES = {
       },
       {
         id: 'it-dolomites',
+        photoQuery: 'Val Gardena, Dolomites',
+        seasons: S([6, 7, 8, 9], 'Huts and lifts open mid-June to late September'),
         name: 'Dolomites',
         summary: 'Alpine meadows and huts from Val Gardena and Cortina.',
         kidFriendly: true,
@@ -340,6 +413,8 @@ const COUNTRIES = {
     routes: [
       {
         id: 'pt-alentejo',
+        photoQuery: 'Evora, Portugal',
+        seasons: S([3, 4, 5, 6, 9, 10], 'Spring flowers and mild autumns; Jul–Aug is very hot inland'),
         name: 'Lisbon and the Alentejo',
         summary: 'Lisbon’s hills, Roman Évora, then the wild Alentejo coast.',
         kidFriendly: true,
@@ -351,6 +426,8 @@ const COUNTRIES = {
       },
       {
         id: 'pt-north',
+        photoQuery: 'Douro valley vineyards',
+        seasons: S([5, 6, 7, 8, 9, 10], 'Douro harvest in September; winters are rainy in the north'),
         name: 'Porto, the Douro and the Minho',
         summary: 'Porto, terraced vineyards in the Douro valley, and green Ponte de Lima.',
         kidFriendly: true,
@@ -362,6 +439,8 @@ const COUNTRIES = {
       },
       {
         id: 'pt-coast',
+        photoQuery: 'Lagos, Portugal cliffs',
+        seasons: S([5, 6, 9, 10], 'Warm and quieter than the July–August peak'),
         name: 'Lisbon to the Algarve, the quiet way',
         summary: 'Lisbon, the rice fields and dunes of Comporta, then the cliffs around Lagos.',
         kidFriendly: true,
@@ -380,6 +459,8 @@ const COUNTRIES = {
     routes: [
       {
         id: 'nz-south-lakes',
+        photoQuery: 'Lake Wanaka',
+        seasons: S([12, 1, 2, 3], 'Long summer days for walks; Jun–Aug is ski season with short days'),
         name: 'South Island lakes',
         summary: 'Dark-sky Tekapo, Wanaka’s lake walks, Queenstown’s mountains — no drive over 3 hours.',
         kidFriendly: true,
@@ -392,6 +473,8 @@ const COUNTRIES = {
       },
       {
         id: 'nz-north',
+        photoQuery: 'Rotorua, New Zealand',
+        seasons: S([11, 12, 1, 2, 3, 4], 'Beach weather from late spring to autumn'),
         name: 'North Island: coast and geothermal',
         summary: 'Coromandel beaches, Rotorua’s Māori culture and hot pools, Lake Taupō.',
         kidFriendly: true,
@@ -404,6 +487,8 @@ const COUNTRIES = {
       },
       {
         id: 'nz-top-south',
+        photoQuery: 'Abel Tasman National Park',
+        seasons: S([12, 1, 2, 3], 'Settled summer weather for kayaking Abel Tasman'),
         name: 'Top of the South',
         summary: 'Nelson’s sunshine, golden bays of Abel Tasman, and whales off Kaikōura.',
         kidFriendly: true,
@@ -470,11 +555,12 @@ const COMFORT_HOURS = { short: 2.5, medium: 4.5, long: Infinity };
  * @param {object} args { destination, days, prefs: { kids: number[], transferComfort, overnightOk } }
  * @returns {null | { country: string, options: object[] }} null when the country isn't curated
  */
-function curatedOptions({ destination, days, prefs = {} }) {
+function curatedOptions({ destination, days, prefs = {}, travelDate = '' }) {
   const country = findCountry(destination);
   if (!country) return null;
   const withKids = Array.isArray(prefs.kids) && prefs.kids.length > 0;
   const limit = COMFORT_HOURS[prefs.transferComfort] ?? COMFORT_HOURS.medium;
+  const travelMonth = /^\d{4}-(\d{2})-\d{2}$/.test(travelDate) ? Number(travelDate.slice(5, 7)) : 0;
 
   const seen = new Set();
   const options = [];
@@ -491,6 +577,7 @@ function curatedOptions({ destination, days, prefs = {} }) {
     const longest = longestTransfer(bases);
     const kidOk = r.kidFriendly || bases.length < r.bases.length && longest <= COMFORT_HOURS.short;
     const reasons = [];
+    const season = inSeason(r, travelMonth);
     if (withKids && !kidOk) reasons.push('has a long or rough transfer for kids');
     if (longest > limit) reasons.push(`longest transfer is ~${longest} h`);
     const shortened = bases.length < r.bases.length;
@@ -504,15 +591,24 @@ function curatedOptions({ destination, days, prefs = {} }) {
       kidFriendly: kidOk,
       longestTransferHours: longest,
       fitsConstraints: reasons.length === 0,
-      caution: reasons.length ? `Heads-up: ${reasons.join('; ')}.` : null,
+      caution: [
+        reasons.length ? `Heads-up: ${reasons.join('; ')}.` : null,
+        season === false ? `Off season in ${MONTH_NAMES[travelMonth - 1]}. ${r.seasons.note}. Best: ${monthRanges(r.seasons.best)}.` : null,
+      ].filter(Boolean).join(' ') || null,
+      inSeason: season,
+      bestMonths: r.seasons ? r.seasons.best : [],
+      bestMonthsLabel: r.seasons ? monthRanges(r.seasons.best) : '',
       bases,
     });
   }
-  options.sort((a, b) => (b.fitsConstraints - a.fitsConstraints) || (a.longestTransferHours - b.longestTransferHours));
+  // Fits the traveller first, then in season for their month, then the shortest transfers.
+  options.sort((a, b) => (b.fitsConstraints - a.fitsConstraints)
+    || ((b.inSeason !== false) - (a.inSeason !== false))
+    || (a.longestTransferHours - b.longestTransferHours));
   return { country: country.name, options };
 }
 
 /** All curated countries, for the destination chips. */
 const CURATED_COUNTRIES = Object.values(COUNTRIES).map(c => c.name);
 
-module.exports = { COUNTRIES, CURATED_COUNTRIES, findCountry, fitDays, maxStops, longestTransfer, curatedOptions };
+module.exports = { COUNTRIES, CURATED_COUNTRIES, MONTH_NAMES, findCountry, fitDays, maxStops, longestTransfer, curatedOptions, inSeason, monthRanges };

@@ -32,3 +32,16 @@ test('old saved plans resume at the matching new step', () => {
   expect(resumeStep({ planVersion: 3 }, 2)).toBe(2);
   expect(resumeStep({ planVersion: 3 }, 9)).toBe(4);
 });
+
+describe('preferFirst / formForApi (Home and Explore hand-off)', () => {
+  const { preferFirst, formForApi } = require('./PlanTrip');
+  test('moves the picked route first and leaves the rest in order', () => {
+    const o = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+    expect(preferFirst(o, 'c').map(x => x.id)).toEqual(['c', 'a', 'b']);
+    expect(preferFirst(o, 'zzz')).toBe(o);
+    expect(preferFirst(o, null)).toBe(o);
+  });
+  test('the hint never reaches the API', () => {
+    expect(formForApi({ preferRouteId: 'vn-north-slow', tripPrefs: {} })).not.toHaveProperty('preferRouteId');
+  });
+});

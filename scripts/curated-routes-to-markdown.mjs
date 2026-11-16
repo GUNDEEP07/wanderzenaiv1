@@ -4,7 +4,7 @@
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
-const { COUNTRIES, fitDays, longestTransfer } = require('../backend/layers/shared/nodejs/curated-routes.js');
+const { COUNTRIES, fitDays, longestTransfer, monthRanges } = require('../backend/layers/shared/nodejs/curated-routes.js');
 
 const esc = (s) => String(s ?? '').replace(/\|/g, '/').replace(/\n/g, ' ');
 const transfer = (t) => (t ? `${t.mode} ~${t.hours} h${t.note ? ` — ${t.note}` : ''}` : 'arrival');
@@ -16,7 +16,8 @@ for (const c of Object.values(COUNTRIES)) {
   for (const r of c.routes) {
     out.push(`### ${r.name}`);
     out.push(`${r.summary}`);
-    out.push(`<b>Kid-friendly:</b> ${r.kidFriendly ? 'yes' : 'no'} · <b>Longest transfer:</b> ~${longestTransfer(r.bases)} h · <b>id:</b> <code>${r.id}</code>`, '');
+    out.push(`<b>Kid-friendly:</b> ${r.kidFriendly ? 'yes' : 'no'} · <b>Longest transfer:</b> ~${longestTransfer(r.bases)} h · <b>id:</b> <code>${r.id}</code>`);
+    out.push(`<b>Best months:</b> ${r.seasons ? monthRanges(r.seasons.best) : '—'}${r.seasons ? ` — ${r.seasons.note}` : ''} · <b>Photo search:</b> ${r.photoQuery || '—'}`, '');
     out.push('| Stop | Share of days | Getting there | Stay | Why | Day trips |');
     out.push('| --- | --- | --- | --- | --- | --- |');
     for (const b of r.bases) {

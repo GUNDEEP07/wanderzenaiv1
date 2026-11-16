@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { getDestinationPhoto, getFallbackPhoto, useDestinationPhotoWithCredit } from '../utils/destinationPhotos';
 import { CreditedPhoto, PhotoCredit } from '../components/PhotoCredit';
 import { CURATED_COUNTRIES } from '../components/plantrip/WhoIsTravelling';
+import RouteFinder from '../components/explore/RouteFinder';
 
 const CONTINENTS = [
   { id: 'asia', name: 'Asia', emoji: '🏯', tagline: 'Ancient temples, mountain villages, street food' },
@@ -67,21 +68,6 @@ const TRENDING = [
   { dest: 'Bandipur, Nepal',    trend: 'Car-free hill town' },
 ];
 
-// Asia only (Nov 2026 focus). Seasons are general guidance; the planner covers any country.
-const MONTH_PICKS = {
-  0:  { label: 'January',   picks: ['Sri Lanka', 'Thailand', 'Vietnam'],   tip: 'Cool, dry season in Thailand; Sri Lanka’s south coast is calm and sunny' },
-  1:  { label: 'February',  picks: ['India', 'Laos', 'Sri Lanka'],         tip: 'Dry and mild across South and Southeast Asia, before the heat builds' },
-  2:  { label: 'March',     picks: ['Japan', 'Nepal', 'Vietnam'],          tip: 'Cherry blossom in Japan from late March; rhododendrons on Nepal’s trails' },
-  3:  { label: 'April',     picks: ['Japan', 'Nepal', 'Vietnam'],          tip: 'Spring trekking season in Nepal; blossom lingers in northern Japan' },
-  4:  { label: 'May',       picks: ['Japan', 'Indonesia', 'Vietnam'],      tip: 'Dry season begins in Bali; fresh greenery in Japan before the June rains' },
-  5:  { label: 'June',      picks: ['Indonesia', 'India', 'Vietnam'],      tip: 'Himalayan passes open to Ladakh; dry season on Java and Bali' },
-  6:  { label: 'July',      picks: ['Indonesia', 'India', 'Japan'],        tip: 'Ladakh and Spiti at their best; Hokkaido stays cool while the rest of Japan is humid' },
-  7:  { label: 'August',    picks: ['Sri Lanka', 'Indonesia', 'India'],    tip: 'Sri Lanka’s east coast is in its dry season; Ladakh is still open' },
-  8:  { label: 'September', picks: ['Vietnam', 'Indonesia', 'Sri Lanka'],  tip: 'Golden rice terraces in northern Vietnam; dry season lingers in eastern Indonesia' },
-  9:  { label: 'October',   picks: ['Nepal', 'Vietnam', 'Japan'],          tip: 'Clear skies for Nepal’s trails; autumn begins in Japan' },
-  10: { label: 'November',  picks: ['India', 'Nepal', 'Japan'],            tip: 'Post-monsoon India, crisp trekking in Nepal and autumn colour in Japan' },
-  11: { label: 'December',  picks: ['Sri Lanka', 'Thailand', 'India'],     tip: 'Cool, dry season in Thailand and southern India; Sri Lanka’s south coast opens' },
-};
 
 const navy = '#0a0f1e';
 const navy2 = '#111827';
@@ -280,26 +266,9 @@ export default function ExplorePage() {
         </p>
       </div>
 
-      {/* Seasonal context banner */}
-      {(() => {
-        const month = MONTH_PICKS[new Date().getMonth()];
-        return (
-          <div style={{ background: 'rgba(0,212,170,0.04)', borderTop: `1px solid ${border}`, borderBottom: `1px solid ${border}`, padding: '12px 2rem' }}>
-            <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: teal, flexShrink: 0 }}>🗓 {month.label} picks</div>
-              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', fontStyle: 'italic', flex: 1, minWidth: 200 }}>{month.tip}</div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {month.picks.map(p => (
-                  <button key={p} type="button" onClick={() => startPlan(p)}
-                    style={{ padding: '5px 12px', borderRadius: 20, background: tealGlow, border: `1px solid ${tealBorder}`, fontSize: 12, fontWeight: 700, color: teal, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
-                    {p}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      {/* Design B (Nov 16 2026): hand-picked Asia routes, in season for the month, closest first.
+          Replaces the hand-written month picks — seasons now live with each route (curated-routes.js). */}
+      <RouteFinder />
 
       {/* Personalised for logged-in users */}
       {personalRecs.length > 0 && (
