@@ -13,22 +13,17 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-southeast-2
-      - name: IAM probe (read-only)
+      - uses: actions/checkout@v4
+      - name: Create the GitHub OIDC deploy role (wanderzenai-ci stack, approved P2-9)
         run: |
           set +e
           mkdir out
           {
-          echo "== caller"; aws sts get-caller-identity --query '{Account:Account,Arn:Arn}' --output json
-          U=$(aws sts get-caller-identity --query Arn --output text | sed 's#.*:user/##')
-          echo "== user policies (attached)"; aws iam list-attached-user-policies --user-name "$U" --output json
-          echo "== user inline"; aws iam list-user-policies --user-name "$U" --output json
-          echo "== groups"; for g in $(aws iam list-groups-for-user --user-name "$U" --query 'Groups[].GroupName' --output text); do echo "group $g"; aws iam list-attached-group-policies --group-name $g --output json; aws iam list-group-policies --group-name $g --output json; done
-          echo "== OIDC providers"; aws iam list-open-id-connect-providers --output json
-          echo "== roles named github/deploy"; aws iam list-roles --query "Roles[?contains(RoleName,'ithub') || contains(RoleName,'deploy') || contains(RoleName,'Deploy')].RoleName" --output json
-          echo "== access keys"; aws iam list-access-keys --user-name "$U" --query 'AccessKeyMetadata[].{Id:AccessKeyId,Status:Status,Created:CreateDate}' --output json
-          echo "== stacks"; aws cloudformation list-stacks --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE --query 'StackSummaries[].StackName' --output json
+          aws cloudformation deploy --stack-name wanderzenai-ci --template-file infra/ci-oidc.yaml --capabilities CAPABILITY_NAMED_IAM --no-fail-on-empty-changeset
+          echo "exit $?"
+          aws cloudformation describe-stacks --stack-name wanderzenai-ci --query 'Stacks[0].{Status:StackStatus,Outputs:Outputs}' --output json
+          aws cloudformation describe-stack-events --stack-name wanderzenai-ci --max-items 8 --query 'StackEvents[].[LogicalResourceId,ResourceStatus,ResourceStatusReason]' --output text
           } > out/probe.txt 2>&1
-          sed -i -E 's/(AKIA[A-Z0-9]{4})[A-Z0-9]+/\1…/g' out/probe.txt
       - if: always()
         run: |
           cd out && git init -q -b smoke/plan-audit-results && git add -A
