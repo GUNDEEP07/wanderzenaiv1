@@ -162,6 +162,16 @@ await check('OPTIONS /blog/{id} allows DELETE',
     if (!/DELETE/.test(allow)) throw new Error(`Allow-Methods was "${allow}" (status ${r.status})`);
     return allow;
   });
+await check('CORS: only our site is allowed (P2-10)',
+  async () => {
+    const r = await call('OPTIONS', '/profile', { headers: { Origin: 'https://evil.example', 'Access-Control-Request-Method': 'GET' } });
+    const allow = r.headers.get('access-control-allow-origin') || '';
+    if (allow === '*' || allow.includes('evil.example')) throw new Error(`Allow-Origin was "${allow}"`);
+    const g = await call('GET', '/blog');
+    const getAllow = g.headers.get('access-control-allow-origin') || '';
+    if (getAllow === '*') throw new Error('GET /blog still answers Allow-Origin: *');
+    return `preflight → ${allow}; GET → ${getAllow}`;
+  });
 
 // ── Frontend ──────────────────────────────────────────────────────────────────
 if (FRONTEND_URL) {

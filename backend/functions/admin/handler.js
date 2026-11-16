@@ -19,7 +19,7 @@ const pool = new Pool({
 });
 
 const CORS = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': process.env.FRONTEND_URL || 'https://www.wanderzenai.com', // only our site (P2-10)
   'Access-Control-Allow-Headers': 'Content-Type,Authorization',
   'Content-Type': 'application/json',
 };
