@@ -20,14 +20,13 @@ jobs:
           case "$SK" in sk_live_*) echo "mode: LIVE";; sk_test_*) echo "mode: TEST";; rk_live_*) echo "mode: LIVE (restricted)";; rk_test_*) echo "mode: TEST (restricted)";; *) echo "mode: unknown";; esac
           echo "single link host/path: $(echo "$L1" | sed -E 's#https://([^/]+)/(test_)?.*#\1 \2#')"
           echo "wanderer link host/path: $(echo "$L2" | sed -E 's#https://([^/]+)/(test_)?.*#\1 \2#')"
-          curl -s -u "$SK:" "https://api.stripe.com/v1/payment_links?limit=20" | jq -c '.data[]? | {id, active, url, metadata}' 
-          echo "== prices"
-          curl -s -u "$SK:" "https://api.stripe.com/v1/prices?limit=20&expand[]=data.product" | jq -c '.data[]? | {id, active, currency, unit_amount, type, recurring: (.recurring.interval // null), product: .product.name, currency_options: (.currency_options|keys? // null)}'
-          echo "== account"
-          curl -s -u "$SK:" "https://api.stripe.com/v1/account" | jq -c '{country, default_currency}'
+          for id in plink_1TJw5ZK906lrgxCeBraaCdsi plink_1TJw40K906lrgxCeU0LpyIAy; do
+            curl -s -u "$SK:" "https://api.stripe.com/v1/payment_links/$id" | jq -c '{id, after_completion, allow_promotion_codes, customer_creation, billing_address_collection, invoice_creation: .invoice_creation.enabled, payment_method_types, submit_type, metadata, automatic_tax: .automatic_tax.enabled, tax_id: .tax_id_collection.enabled, phone: .phone_number_collection.enabled, consent: .consent_collection}'
+          done
+          curl -s -u "$SK:" "https://api.stripe.com/v1/products/search" --get --data-urlencode "query=metadata['wz_plan']:'trip' OR metadata['wz_plan']:'pass'" | jq -c '.data|length'
           } > out/probe.txt 2>&1
       - if: always()
         run: |
           cd out && git init -q -b smoke/plan-audit-results && git add -A
-          git -c user.name=audit -c user.email=audit@users.noreply.github.com commit -qm stripe
+          git -c user.name=audit -c user.email=audit@users.noreply.github.com commit -qm stripe2
           git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" smoke/plan-audit-results
