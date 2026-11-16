@@ -99,6 +99,10 @@ AI-powered slow-travel itinerary SaaS. Live at wanderzenai.com. Solo-maintained.
   network-first `public/sw.js`, deployed no-cache). GET /itinerary?id= is public but returns
   `travelDate`/`hasPdf` to the owner only (optionalUser). Calendar export is built in the browser
   (`utils/ics.js`).
+- Book your trip (design C2, Nov 16 2026): `components/itinerary/BookingChecklist.jsx` on the trip page (not for
+  locked free trips): a row per stay in route order + flights, ticks in localStorage. Partner ids come from repo
+  variables `BOOKING_AFFILIATE_ID` / `GYG_PARTNER_ID` (`utils/partnerLinks.js`); without them links are untagged and
+  the note says we earn nothing. Never prices.
 - PDF downloads: GET /itinerary/{id}/pdf (form-handler `pdf-link.js`, owner only, 15-min signed URL;
   the S3 key holds the owner's email, so never sign it for share-link viewers). The email's main
   button opens `/itinerary/{id}?download=1`; its direct S3 link only lasts hours (Lambda creds).
