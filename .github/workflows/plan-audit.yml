@@ -5,35 +5,29 @@ on:
 permissions:
   contents: write
 jobs:
-  photos:
+  stripe:
     runs-on: ubuntu-24.04
     steps:
-      - name: Fetch credited route photos through our own /photos/search
+      - name: Read-only Stripe check (mode, payment links, their prices and currencies)
+        env:
+          SK: ${{ secrets.STRIPE_SECRET_KEY }}
+          L1: ${{ secrets.STRIPE_SINGLE_PLAN_LINK }}
+          L2: ${{ secrets.STRIPE_WANDERER_LINK }}
         run: |
           set +e
-          mkdir -p out/img
-          API=https://y44o2x9cu1.execute-api.ap-southeast-2.amazonaws.com/prod
-          cat > q.txt <<'Q'
-          jp-kurokawa|Kurokawa Onsen
-          id-giliair|Gili Air beach
-          np-chitwan|Chitwan National Park rhino
-          vn-mysonruins|My Son Sanctuary Quang Nam
-          Q
-          echo '[' > out/manifest.json; first=1
-          sed 's/^ *//' q.txt | while IFS='|' read -r key q; do
-            [ -z "$key" ] && continue
-            j=$(curl -s -G "$API/photos/search" --data-urlencode "query=$q")
-            url=$(echo "$j" | jq -r '.data.photo.url // .photo.url // .data.url // empty')
-            if [ -n "$url" ]; then
-              curl -s -L "${url}&w=900&q=70&fm=jpg" -o "out/img/$key.jpg"
-              [ $first = 1 ] || echo ',' >> out/manifest.json; first=0
-              echo "$j" | jq -c --arg k "$key" --arg q "$q" '{key:$k,q:$q,photo:(.data.photo // .photo // .data)}' >> out/manifest.json
-            else echo "MISS $key $(echo "$j" | head -c 200)" >> out/miss.txt; fi
-          done
-          echo ']' >> out/manifest.json
-          ls -la out/img | head -40 > out/ls.txt
+          mkdir out
+          {
+          case "$SK" in sk_live_*) echo "mode: LIVE";; sk_test_*) echo "mode: TEST";; rk_live_*) echo "mode: LIVE (restricted)";; rk_test_*) echo "mode: TEST (restricted)";; *) echo "mode: unknown";; esac
+          echo "single link host/path: $(echo "$L1" | sed -E 's#https://([^/]+)/(test_)?.*#\1 \2#')"
+          echo "wanderer link host/path: $(echo "$L2" | sed -E 's#https://([^/]+)/(test_)?.*#\1 \2#')"
+          curl -s -u "$SK:" "https://api.stripe.com/v1/payment_links?limit=20" | jq -c '.data[]? | {id, active, url, metadata}' 
+          echo "== prices"
+          curl -s -u "$SK:" "https://api.stripe.com/v1/prices?limit=20&expand[]=data.product" | jq -c '.data[]? | {id, active, currency, unit_amount, type, recurring: (.recurring.interval // null), product: .product.name, currency_options: (.currency_options|keys? // null)}'
+          echo "== account"
+          curl -s -u "$SK:" "https://api.stripe.com/v1/account" | jq -c '{country, default_currency}'
+          } > out/probe.txt 2>&1
       - if: always()
         run: |
           cd out && git init -q -b smoke/plan-audit-results && git add -A
-          git -c user.name=audit -c user.email=audit@users.noreply.github.com commit -qm photos2
+          git -c user.name=audit -c user.email=audit@users.noreply.github.com commit -qm stripe
           git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" smoke/plan-audit-results
