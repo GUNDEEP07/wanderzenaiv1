@@ -190,12 +190,13 @@ export default function Pricing() {
               {plan.featured && (
                 <>
                   <div style={s.cardTop(true)} />
-                  <div style={s.badge}>Most popular</div>
+                  <div style={s.badge}>No subscription</div>
                 </>
               )}
               <div style={s.planName}>{plan.name}</div>
               <div style={s.price}>
-                {plan.price}
+                {plan.priceParts.main}
+                {plan.priceParts.code && <span style={{ ...s.priceSub, marginLeft: 8, fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, letterSpacing: '0.04em' }}>{plan.priceParts.code}</span>}
               </div>
               <div style={s.period}>{plan.period}</div>
               <ul style={s.features}>

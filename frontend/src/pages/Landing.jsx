@@ -330,9 +330,12 @@ export default function Landing() {
           <div className="pricing-grid">
             {plans.map((plan, i) => (
               <div key={plan.name} className={`plan-card${plan.featured ? ' plan-card-featured' : ''} reveal${i ? ` reveal-delay-${i}` : ''}`} ref={addRef}>
-                {plan.featured && <div className="plan-badge">Most trips</div>}
+                {plan.featured && <div className="plan-badge">No subscription</div>}
                 <div className="plan-name">{plan.name}</div>
-                <div className="plan-price">{plan.price}</div>
+                <div className="plan-price">
+                  {plan.priceParts.main}
+                  {plan.priceParts.code && <span className="plan-price-sub" style={{ marginLeft: 6 }}>{plan.priceParts.code}</span>}
+                </div>
                 <div className="plan-period">{plan.period}</div>
                 <ul className="plan-features">
                   {plan.features.slice(0, 4).map(f => (
