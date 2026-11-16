@@ -8,25 +8,41 @@ jobs:
   stripe:
     runs-on: ubuntu-24.04
     steps:
-      - name: Read-only Stripe check (mode, payment links, their prices and currencies)
+      - name: Create One trip + Trip Pass (Stripe TEST mode only, idempotent)
         env:
           SK: ${{ secrets.STRIPE_SECRET_KEY }}
-          L1: ${{ secrets.STRIPE_SINGLE_PLAN_LINK }}
-          L2: ${{ secrets.STRIPE_WANDERER_LINK }}
         run: |
           set +e
           mkdir out
           {
-          case "$SK" in sk_live_*) echo "mode: LIVE";; sk_test_*) echo "mode: TEST";; rk_live_*) echo "mode: LIVE (restricted)";; rk_test_*) echo "mode: TEST (restricted)";; *) echo "mode: unknown";; esac
-          echo "single link host/path: $(echo "$L1" | sed -E 's#https://([^/]+)/(test_)?.*#\1 \2#')"
-          echo "wanderer link host/path: $(echo "$L2" | sed -E 's#https://([^/]+)/(test_)?.*#\1 \2#')"
-          for id in plink_1TJw5ZK906lrgxCeBraaCdsi plink_1TJw40K906lrgxCeU0LpyIAy; do
-            curl -s -u "$SK:" "https://api.stripe.com/v1/payment_links/$id" | jq -c '{id, after_completion, allow_promotion_codes, customer_creation, billing_address_collection, invoice_creation: .invoice_creation.enabled, payment_method_types, submit_type, metadata, automatic_tax: .automatic_tax.enabled, tax_id: .tax_id_collection.enabled, phone: .phone_number_collection.enabled, consent: .consent_collection}'
-          done
-          curl -s -u "$SK:" "https://api.stripe.com/v1/products/search" --get --data-urlencode "query=metadata['wz_plan']:'trip' OR metadata['wz_plan']:'pass'" | jq -c '.data|length'
+          case "$SK" in sk_test_*|rk_test_*) ;; *) echo "REFUSING: not a test-mode key"; exit 0;; esac
+          api() { curl -s -u "$SK:" "$@"; }
+          make() { # $1 plan $2 name $3 amount $4 trips $5 valid_days $6 description
+            found=$(api "https://api.stripe.com/v1/products/search" --get --data-urlencode "query=metadata['wz_plan']:'$1' AND active:'true'" | jq -r '.data[0].id // empty')
+            if [ -z "$found" ]; then
+              found=$(api https://api.stripe.com/v1/products -d name="$2" -d description="$6" \
+                -d "metadata[wz_plan]=$1" -d "metadata[trips]=$4" -d "metadata[valid_days]=$5" \
+                -d "default_price_data[currency]=aud" -d "default_price_data[unit_amount]=$3" | jq -r '.id')
+              echo "created product $1 $found"
+            else echo "product $1 exists $found"; fi
+            price=$(api "https://api.stripe.com/v1/products/$found" | jq -r '.default_price')
+            link=$(api "https://api.stripe.com/v1/payment_links?limit=100&active=true" | jq -r --arg p "$1" '[.data[] | select(.metadata.wz_plan == $p)][0].id // empty')
+            if [ -z "$link" ]; then
+              link=$(api https://api.stripe.com/v1/payment_links -d "line_items[0][price]=$price" -d "line_items[0][quantity]=1" \
+                -d "metadata[wz_plan]=$1" -d "metadata[trips]=$4" -d "metadata[valid_days]=$5" \
+                -d "after_completion[type]=hosted_confirmation" \
+                -d "after_completion[hosted_confirmation][custom_message]=Thank you! Your trips are in your account — head back to WanderZenAI to plan or unlock a trip." \
+                -d customer_creation=always | jq -c '{id, url, metadata}')
+              echo "created link $1 $link"
+            else echo "link $1 exists $link"; fi
+          }
+          make trip "One trip" 1900 1 3650 "Every day of one trip unlocked: stays, tips, traps to skip, day adjustments, PDF and offline trip page."
+          make pass "Trip Pass" 5900 6 365 "6 full trips to use within 12 months. One-time payment, no auto-renew."
+          echo "== now"
+          api "https://api.stripe.com/v1/payment_links?limit=100&active=true" | jq -c '.data[] | {id, url, metadata}'
           } > out/probe.txt 2>&1
       - if: always()
         run: |
           cd out && git init -q -b smoke/plan-audit-results && git add -A
-          git -c user.name=audit -c user.email=audit@users.noreply.github.com commit -qm stripe2
+          git -c user.name=audit -c user.email=audit@users.noreply.github.com commit -qm stripe3
           git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" smoke/plan-audit-results
