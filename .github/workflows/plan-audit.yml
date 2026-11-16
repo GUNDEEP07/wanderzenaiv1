@@ -5,44 +5,18 @@ on:
 permissions:
   contents: write
 jobs:
-  stripe:
+  walk:
     runs-on: ubuntu-24.04
     steps:
-      - name: Create One trip + Trip Pass (Stripe TEST mode only, idempotent)
-        env:
-          SK: ${{ secrets.STRIPE_SECRET_KEY }}
-        run: |
-          set +e
-          mkdir out
-          {
-          case "$SK" in sk_test_*|rk_test_*) ;; *) echo "REFUSING: not a test-mode key"; exit 0;; esac
-          api() { curl -s -u "$SK:" "$@"; }
-          make() { # $1 plan $2 name $3 amount $4 trips $5 valid_days $6 description
-            found=$(api "https://api.stripe.com/v1/products/search" --get --data-urlencode "query=metadata['wz_plan']:'$1' AND active:'true'" | jq -r '.data[0].id // empty')
-            if [ -z "$found" ]; then
-              found=$(api https://api.stripe.com/v1/products -d name="$2" -d description="$6" \
-                -d "metadata[wz_plan]=$1" -d "metadata[trips]=$4" -d "metadata[valid_days]=$5" \
-                -d "default_price_data[currency]=aud" -d "default_price_data[unit_amount]=$3" | jq -r '.id')
-              echo "created product $1 $found"
-            else echo "product $1 exists $found"; fi
-            price=$(api "https://api.stripe.com/v1/products/$found" | jq -r '.default_price')
-            link=$(api "https://api.stripe.com/v1/payment_links?limit=100&active=true" | jq -r --arg p "$1" '[.data[] | select(.metadata.wz_plan == $p)][0].id // empty')
-            if [ -z "$link" ]; then
-              link=$(api https://api.stripe.com/v1/payment_links -d "line_items[0][price]=$price" -d "line_items[0][quantity]=1" \
-                -d "metadata[wz_plan]=$1" -d "metadata[trips]=$4" -d "metadata[valid_days]=$5" \
-                -d "after_completion[type]=hosted_confirmation" \
-                -d "after_completion[hosted_confirmation][custom_message]=Thank you! Your trips are in your account — head back to WanderZenAI to plan or unlock a trip." \
-                -d customer_creation=always | jq -c '{id, url, metadata}')
-              echo "created link $1 $link"
-            else echo "link $1 exists $link"; fi
-          }
-          make trip "One trip" 1900 1 3650 "Every day of one trip unlocked: stays, tips, traps to skip, day adjustments, PDF and offline trip page."
-          make pass "Trip Pass" 5900 6 365 "6 full trips to use within 12 months. One-time payment, no auto-renew."
-          echo "== now"
-          api "https://api.stripe.com/v1/payment_links?limit=100&active=true" | jq -c '.data[] | {id, url, metadata}'
-          } > out/probe.txt 2>&1
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '24' }
+      - run: |
+          mkdir w && cd w && npm init -y >/dev/null && npm i playwright@1.60.0 >/dev/null && npx playwright install --with-deps chromium >/dev/null
+          cp ../.github/plan-audit-walk.mjs . && node plan-audit-walk.mjs || echo "script error $?" >> report.txt
       - if: always()
         run: |
+          mkdir out && cp w/report.txt out/ 2>/dev/null; cp -r w/shots out/ 2>/dev/null
           cd out && git init -q -b smoke/plan-audit-results && git add -A
-          git -c user.name=audit -c user.email=audit@users.noreply.github.com commit -qm stripe3
+          git -c user.name=audit -c user.email=audit@users.noreply.github.com commit -qm walk
           git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" smoke/plan-audit-results

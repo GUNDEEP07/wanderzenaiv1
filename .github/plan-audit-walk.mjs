@@ -1,70 +1,64 @@
-// UX review capture (after #48): home + explore, phone + desktop. Read-only.
+// Live check after #53–#55: home hero (A), Explore finder (B), pricing (D), guide season line, raw HTML.
 import { chromium } from 'playwright';
 import fs from 'fs';
 const BASE = 'https://www.wanderzenai.com';
 fs.mkdirSync('shots', { recursive: true });
-const R = {};
+const out = []; const check = (n, c, d = '') => out.push(`${c ? 'PASS' : 'FAIL'}  ${n}${d ? '  — ' + d : ''}`);
 const b = await chromium.launch();
-for (const [w, h, tag] of [[390, 844, 'phone'], [1440, 900, 'desk']]) {
-  for (const path of ['/', '/explore']) {
-    const ctx = await b.newContext({ viewport: { width: w, height: h } });
-    const p = await ctx.newPage();
-    const errors = []; p.on('pageerror', e => errors.push(e.message.slice(0, 150))); p.on('console', m => { if (m.type() === 'error') errors.push(m.text().slice(0, 150)); });
-    const t0 = Date.now();
-    await p.goto(BASE + path, { waitUntil: 'networkidle', timeout: 60000 });
-    const loadMs = Date.now() - t0;
-    await p.getByRole('button', { name: 'Accept' }).click({ timeout: 2000 }).catch(() => {});
-    // scroll through so reveal-on-scroll sections show
-    const H = await p.evaluate(() => document.body.scrollHeight);
-    for (let y = 0; y < H; y += 500) { await p.evaluate(y => window.scrollTo(0, y), y); await p.waitForTimeout(120); }
-    await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(500);
-    const name = `${tag}${path === '/' ? '_home' : '_explore'}`;
-    // viewport-sized slices (full-page shots distort sticky headers)
-    const total = await p.evaluate(() => document.body.scrollHeight);
-    let i = 0;
-    for (let y = 0; y < total && i < 14; y += h - 80, i++) { await p.evaluate(y => window.scrollTo(0, y), y); await p.waitForTimeout(250); await p.screenshot({ path: `shots/${name}_${String(i).padStart(2, '0')}.png` }); }
-    const info = await p.evaluate(() => {
-      const vis = el => { const r = el.getBoundingClientRect(); const s = getComputedStyle(el); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none'; };
-      return {
-        title: document.title, height: document.body.scrollHeight,
-        headings: [...document.querySelectorAll('h1,h2,h3')].filter(vis).map(h => `${h.tagName} ${h.textContent.trim().slice(0, 90)}`),
-        buttons: [...document.querySelectorAll('button')].filter(vis).map(x => x.textContent.trim().slice(0, 50)).filter(Boolean),
-        links: [...new Set([...document.querySelectorAll('a')].filter(vis).map(a => `${a.textContent.trim().slice(0, 40)} → ${a.getAttribute('href')}`))],
-        inputs: [...document.querySelectorAll('input,select,textarea')].filter(vis).map(x => `${x.tagName} ${x.type || ''} ${x.placeholder || x.getAttribute('aria-label') || x.name || ''}`),
-        images: [...document.querySelectorAll('img')].map(i => ({ src: i.currentSrc.slice(0, 80), w: i.naturalWidth, broken: i.complete && i.naturalWidth === 0 })).filter(i => i.broken).length,
-        text: document.body.innerText.slice(0, 6000),
-        smallTargets: [...document.querySelectorAll('a,button')].filter(vis).filter(el => { const r = el.getBoundingClientRect(); return r.height < 32 || r.width < 32; }).map(el => `${el.textContent.trim().slice(0, 30)} ${Math.round(el.getBoundingClientRect().width)}x${Math.round(el.getBoundingClientRect().height)}`).slice(0, 25),
-        hScroll: document.documentElement.scrollWidth > window.innerWidth,
-      };
-    });
-    const perf = await p.evaluate(() => { const n = performance.getEntriesByType('navigation')[0]; const lcp = performance.getEntriesByType('largest-contentful-paint').pop(); return { domContentLoaded: Math.round(n.domContentLoadedEventEnd), load: Math.round(n.loadEventEnd), bytes: performance.getEntriesByType('resource').reduce((a, r) => a + (r.transferSize || 0), 0), requests: performance.getEntriesByType('resource').length }; });
-    R[name] = { loadMs, perf, errors, ...info };
-    await ctx.close();
-  }
-}
-// Explore interactions (phone): try search, filters, a card click
-{
-  const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
-  const p = await ctx.newPage();
-  await p.goto(BASE + '/explore', { waitUntil: 'networkidle' });
-  await p.getByRole('button', { name: 'Accept' }).click({ timeout: 2000 }).catch(() => {});
-  const steps = [];
-  const inp = p.locator('input').first();
-  if (await inp.count()) { await inp.fill('Japan'); await p.waitForTimeout(1500); steps.push('search Japan: ' + (await p.evaluate(() => document.body.innerText.slice(0, 600)))); await p.screenshot({ path: 'shots/phone_explore_search.png' }); await inp.fill(''); }
-  const chips = await p.locator('button').allTextContents();
-  steps.push('buttons: ' + chips.slice(0, 40).join(' | '));
-  const firstCard = p.getByText(/Plan this/).first();
-  if (await firstCard.count()) { await firstCard.click(); await p.waitForTimeout(2500); steps.push('after Plan this: ' + p.url()); await p.screenshot({ path: 'shots/phone_explore_after_plan.png' }); }
-  R.exploreInteractions = steps;
-  await ctx.close();
-}
+const ctx = await b.newContext({ viewport: { width: 1440, height: 900 }, timezoneId: 'Australia/Sydney' });
+const p = await ctx.newPage();
+const errors = []; p.on('pageerror', e => errors.push(e.message.slice(0, 160)));
+const photoReqs = []; p.on('request', r => { if (r.url().includes('/photos/search')) photoReqs.push(decodeURIComponent(r.url().split('query=')[1] || '')); });
+
+await p.goto(BASE + '/', { waitUntil: 'networkidle', timeout: 60000 });
+await p.getByRole('button', { name: 'Accept' }).click({ timeout: 2000 }).catch(() => {});
+check('home: hero heading', await p.getByRole('heading', { name: 'Where do you want to slow down?' }).isVisible());
+const from = await p.getByLabel('Planning from').inputValue().catch(() => '');
+check('home: planning from Sydney (time zone)', from === 'sydney', from);
+const first = await p.locator('[aria-label="Country"] button').first().innerText();
+check('home: first country is in season for November', /good in Nov/.test(first), first.replace(/\n/g, ' '));
+await p.getByRole('button', { name: /^Vietnam/ }).click();
+const tab = await p.getByRole('tab', { selected: true }).innerText();
+check('home: Vietnam opens on its in-season route (the north)', tab === 'The north, slowly', tab);
+await p.waitForTimeout(2500);
+const img = await p.locator('img[alt*="The north, slowly"]').getAttribute('src').catch(() => '');
+check('home: route photo from Unsplash, credited', /images\.unsplash\.com/.test(img || '') && await p.getByText(/^Photo:/).first().isVisible().catch(() => false), (img || '').slice(0, 70));
+await p.screenshot({ path: 'shots/home_hero.png' });
+await p.getByLabel('Planning from').selectOption('london');
+check('home: London re-orders the list', /closest to London/.test(await p.locator('p').filter({ hasText: 'closest to' }).first().innerText()));
+const homePricing = await p.locator('.pricing-grid').innerText().catch(() => '');
+check('home pricing: Stripe prices with currency, no Wanderer', /A\$19 AUD/.test(homePricing) && /A\$59 AUD/.test(homePricing) && !/Wanderer|\/mo/.test(homePricing), homePricing.replace(/\n/g, ' ').slice(0, 160));
+await p.getByLabel('Planning from').selectOption('sydney');
+await p.getByRole('button', { name: 'Plan this route, free' }).click();
+await p.waitForURL(/\/plan/, { timeout: 15000 });
+check('home → planner with the country picked', p.url().includes('/plan'));
+
+await p.goto(BASE + '/explore', { waitUntil: 'networkidle', timeout: 60000 });
+check('explore: finder heading', await p.getByRole('heading', { name: 'Find your slow route' }).isVisible());
+const cnt = async () => Number((await p.getByText(/Asia routes match/).innerText()).match(/^(\d+)/)[1]);
+const nov = await cnt();
+check('explore: defaults to Nov (now) with in-season routes', await p.getByRole('button', { name: 'Nov (now)' }).getAttribute('aria-pressed') === 'true' && nov >= 5, `${nov}`);
+await p.getByRole('button', { name: 'Any month' }).click();
+check('explore: any month → all 21', await cnt() === 21);
+await p.getByRole('button', { name: 'Show all routes' }).click();
+check('explore: kids filter narrows', await cnt() < 21);
+await p.waitForTimeout(2000);
+await p.screenshot({ path: 'shots/explore_finder.png' });
+
+await p.goto(BASE + '/pricing', { waitUntil: 'networkidle', timeout: 60000 });
+const pr = await p.locator('.pricing-cards-grid').innerText();
+check('pricing: One trip A$19 AUD, Trip Pass A$59 AUD / 6 trips / 12 months', /A\$19 AUD/.test(pr) && /A\$59 AUD/.test(pr) && /6 trips · use within 12 months/.test(pr), pr.replace(/\n/g, ' ').slice(0, 200));
+check('pricing: currency note', await p.getByText(/Prices in AUD, charged by Stripe/).isVisible());
+await p.screenshot({ path: 'shots/pricing.png' });
+
+await p.goto(BASE + '/guides/vietnam', { waitUntil: 'networkidle', timeout: 60000 });
+check('guide: best time per route', await p.getByText(/Best Mar–May/).first().isVisible().catch(() => false) && await p.getByText(/When to go:/).first().isVisible().catch(() => false));
+
+const api = await (await fetch('https://y44o2x9cu1.execute-api.ap-southeast-2.amazonaws.com/prod/pricing?country=AU')).json();
+check('GET /pricing live', api?.data?.plans?.length === 2 && api.data.plans[0].currency === 'AUD', JSON.stringify(api.data?.plans?.map(x => [x.plan, x.amount, x.currency, x.trips])));
+const raw = await (await fetch(BASE + '/')).text();
+check('saved home page HTML has the new hero', raw.includes('Where do you want to slow down?'));
+check('no page errors', errors.length === 0, errors.join(' | '));
+check('photo searches use the checked queries', photoReqs.some(q => /Ninh Binh/.test(q)), photoReqs.slice(0, 6).join(', '));
+fs.writeFileSync('report.txt', out.join('\n') + `\n\n${out.filter(x => x.startsWith('PASS')).length}/${out.length} passed\n`);
 await b.close();
-// Raw HTML checks (what crawlers and first paint get)
-for (const path of ['/', '/explore', '/pricing']) {
-  const html = await (await fetch(BASE + path)).text();
-  R['raw' + path] = { testimonials: /Prabhsimran|Meena C\.|Jaideep S\./.test(html), trusted: /Trusted by/.test(html), senso: /Senso-ji/.test(html), priority: /Priority generation/.test(html), fullFree: /Full day-by-day/.test(html), travelers: /\d[\d,]* travelers/.test(html), myanmar: /Myanmar/.test(html), dayOne: /Day 1 written in full|Day 1/.test(html) };
-}
-const api = await (await fetch('https://y44o2x9cu1.execute-api.ap-southeast-2.amazonaws.com/prod/recommendations/trending')).json().catch(e => ({ err: e.message }));
-R.trendingApi = api;
-fs.writeFileSync('report.json', JSON.stringify(R, null, 1));
-// rerun 2026-11-16T04:40:42Z
