@@ -1,9 +1,9 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import ItineraryView, { ADJUST_POLL_MS } from './ItineraryView';
-import { fetchAdjustments, startDayAdjustment, fetchPdfLink } from '../api/itinerary';
+import { fetchAdjustments, startDayAdjustment, fetchPdfLink, unlockTrip } from '../api/itinerary';
 import { openUrl } from '../utils/openUrl';
 
-jest.mock('../api/itinerary', () => ({ fetchAdjustments: jest.fn(), startDayAdjustment: jest.fn(), fetchPdfLink: jest.fn() }));
+jest.mock('../api/itinerary', () => ({ fetchAdjustments: jest.fn(), startDayAdjustment: jest.fn(), fetchPdfLink: jest.fn(), unlockTrip: jest.fn() }));
 jest.mock('../utils/openUrl', () => ({ openUrl: jest.fn() }));
 jest.mock('../utils/analytics', () => ({ analytics: { itineraryViewed: jest.fn() } }));
 let mockUser = { uid: 'u1', email: 'a@example.com' };
@@ -150,4 +150,63 @@ test('from the email, signed out: asks to sign in and comes back to download', a
   expect(fetchPdfLink).not.toHaveBeenCalled();
   fireEvent.click(screen.getAllByText('Sign in')[0]);
   expect(mockNavigate).toHaveBeenCalledWith(`/login?next=${encodeURIComponent(`/itinerary/${ID}?download=1`)}`);
+});
+
+
+// ── Free trips: Day 1 open, later days locked until the owner unlocks ──────────
+const lockedTrip = (extra = {}) => ({
+  ...trip(mkDay(2, 'Old 2')),
+  locked: true,
+  itinerary: { title: 'Vietnam slowly', days: [mkDay(1, 'Old 1'), { dayNumber: 2, theme: 'Lanterns and river', base: 'Hoi An', travelDay: false, locked: true }], locked: { visibleDays: 1, totalDays: 2, stays: 1, tips: 4, avoid: 2 } },
+  ...extra,
+});
+const openLocked = (n) => fireEvent.click(screen.getByRole('tab', { name: `Day ${n}, locked` }));
+
+test('locked day: teaser header, blurred stand-in and unlock card; no adjust; tips held back', async () => {
+  global.fetch = jest.fn().mockResolvedValue(okJson(lockedTrip()));
+  fetchAdjustments.mockResolvedValue({ max: 3, used: 0, remaining: 3, pending: null, items: [] });
+  render(<ItineraryView />);
+  await screen.findByText('Old 1');
+  expect(screen.queryByText(/free changes left/)).toBeNull();
+  openLocked(2);
+  expect(screen.getByText('Lanterns and river')).toBeInTheDocument();
+  expect(screen.getByText('Day 2 is written and waiting')).toBeInTheDocument();
+  expect(screen.getByText(/where to stay, 4 slow travel tips, 2 tourist traps to skip/)).toBeInTheDocument();
+  expect(screen.queryByText('✎ Adjust this day')).toBeNull();
+  expect(screen.getByText(/4 slow travel tips · 2 tourist traps to skip — included with the full trip/)).toBeInTheDocument();
+});
+
+test('owner unlocks: the trip reloads with every day and a notice', async () => {
+  global.fetch = jest.fn()
+    .mockResolvedValueOnce(okJson(lockedTrip()))
+    .mockResolvedValue(okJson({ ...trip(mkDay(2, 'Old 2')), locked: false }));
+  unlockTrip.mockResolvedValue({ unlocked: true, source: 'credit', remaining: 0 });
+  render(<ItineraryView />);
+  await screen.findByText('Old 1');
+  openLocked(2);
+  fireEvent.click(screen.getByText('Unlock the full trip', { selector: 'button' }));
+  await flush(); await flush();
+  expect(unlockTrip).toHaveBeenCalledWith(ID);
+  expect(await screen.findByText(/Your full trip is unlocked/)).toBeInTheDocument();
+  expect(screen.getByText('Old 2')).toBeInTheDocument();
+});
+
+test('nothing to spend → Pricing with the unlock reason', async () => {
+  global.fetch = jest.fn().mockResolvedValue(okJson(lockedTrip()));
+  unlockTrip.mockRejectedValue(Object.assign(new Error('Unlocking uses one itinerary.'), { code: 'NEEDS_ITINERARY' }));
+  render(<ItineraryView />);
+  await screen.findByText('Old 1');
+  openLocked(2);
+  fireEvent.click(screen.getByText('Unlock the full trip', { selector: 'button' }));
+  await flush();
+  expect(mockNavigate).toHaveBeenCalledWith('/pricing', { state: { reason: 'unlock', destination: 'Vietnam', tripId: ID } });
+});
+
+test('?unlock=1 opens on the first locked day; signed-out viewers are asked to sign in', async () => {
+  mockSearch = '?unlock=1';
+  mockUser = null;
+  global.fetch = jest.fn().mockResolvedValue(okJson(lockedTrip({ isOwner: false, hasPdf: false })));
+  render(<ItineraryView />);
+  expect(await screen.findByText('Day 2 is written and waiting')).toBeInTheDocument();
+  expect(screen.getByText('Sign in to unlock')).toBeInTheDocument();
 });

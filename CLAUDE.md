@@ -110,6 +110,14 @@ AI-powered slow-travel itinerary SaaS. Live at wanderzenai.com. Solo-maintained.
   email via `failure.js`, exactly once. itinerary-gen has NO async retries (a retry = a second Opus bill).
 - Secrets (Nov 2026, backlog P1-4): only DB credentials are in Globals. Claude, Stripe, Foursquare and
   Google keys are set per function in template.yaml; a function that needs a new one must list it.
+- Free trips (Nov 16 2026): the generator writes every day, but a trip with `plan = 'free'` and no
+  `submissions.unlocked_at` is LOCKED wherever it leaves the system — GET /itinerary (profile),
+  live progress, adjust-day (402), the PDF and its email — via `layers/shared/nodejs/trip-access.js`
+  (`lockItinerary`: Day 1 whole, later days `{dayNumber, theme, base, locked}`, stays/tips/traps
+  counted not sent). Never blur real text in the browser only. `POST /itinerary/{id}/unlock`
+  (form-handler `unlock.js`, owner only) spends Wanderer monthly → credit (test accounts free) in one
+  transaction, sets `unlocked_at` (plan stays 'free' so the monthly free count is unchanged), then
+  rebuilds the PDF with `update: { unlocked: true }`. UI: `components/itinerary/LockedDay.jsx`.
 - `/agency` is a demo (sample data): RoleGate agency/admin only; public "For agencies" links go to
   `/contact?type=partnership`.
 - SEO (Nov 2026): every page sets its head tags with `src/seo/Seo.jsx` (static pages in App.jsx's

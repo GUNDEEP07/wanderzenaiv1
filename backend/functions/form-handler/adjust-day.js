@@ -12,6 +12,7 @@
  */
 
 const { ok, badRequest, notFound, serverError, log, checkRateLimit, userSubject, tooManyRequests } = require('/opt/nodejs/index');
+const { ensureUnlockColumn, isLocked } = require('/opt/nodejs/trip-access');
 const adjust = require('/opt/nodejs/day-adjust');
 
 const SUBMISSION_ID = /^wz_[a-z0-9]{6,12}_[A-Za-z0-9_-]{16}$/;
@@ -42,8 +43,9 @@ function adjustRouteOf(event) {
 
 /** The caller's own finished trip, or null. */
 async function ownTrip(db, submissionId, user) {
+  await ensureUnlockColumn(db);
   const { rows } = await db.query(
-    'SELECT id, days, status FROM submissions WHERE id = $1 AND email = $2',
+    'SELECT id, days, status, plan, unlocked_at FROM submissions WHERE id = $1 AND email = $2',
     [submissionId, user.email]
   );
   return rows[0] || null;
@@ -73,6 +75,8 @@ async function handleStart(event, db, user, submissionId, dayNumber, invokeGener
     const trip = await ownTrip(db, submissionId, user);
     if (!trip) return notFound('Trip not found');
     if (!FINISHED.has(trip.status)) return respond(409, { success: false, code: 'NOT_READY', message: 'This itinerary is still being written — try again when it is ready.' });
+    // A free trip shows only Day 1 (trip-access.js): changes come with the full trip.
+    if (isLocked(trip)) return respond(402, { success: false, code: 'TRIP_LOCKED', message: 'Unlock the full trip to change its days.' });
     if (dayNumber < 1 || dayNumber > trip.days) return badRequest(`Pick a day between 1 and ${trip.days}`);
 
     // A rewrite is an Opus call: limit per account on top of the per-trip cap.

@@ -113,7 +113,7 @@ const runGen = async () => { const p = invokes.filter(i => i.fn.includes('itiner
 
   // Two clicks at the same moment: exactly one starts
   const id3 = `wz_adj${String(n).slice(-6)}_${'C'.repeat(16)}`;
-  await db.query(`INSERT INTO submissions (id,email,destination,days,budget,currency,traveler_type,plan,status) VALUES ($1,$2,'Peru',3,2000,'AUD','Couple','free','email_sent')`, [id3, email]);
+  await db.query(`INSERT INTO submissions (id,email,destination,days,budget,currency,traveler_type,plan,status) VALUES ($1,$2,'Peru',3,2000,'AUD','Couple','paid','email_sent')`, [id3, email]);
   await db.query('DELETE FROM rate_limits');
   const both = await Promise.all([1, 2, 3].map(dn => call('POST', `/itinerary/${id3}/days/${dn}/adjust`, tok, { note: 'quieter please' })));
   check('three simultaneous requests -> exactly one starts, the others 409', both.filter(x => x.status === 202).length === 1 && both.filter(x => x.status === 409).length === 2, both.map(x => x.status).join());

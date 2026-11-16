@@ -274,6 +274,13 @@ Resources:
             RestApiId: !Ref WanderZenApi
             Method: GET
             Path: /itinerary/{id}/pdf
+        # Free trips show Day 1; the owner unlocks the rest with a paid itinerary (unlock.js).
+        UnlockTrip:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Method: POST
+            Path: /itinerary/{id}/unlock
       Policies:
         # GET /itinerary/{id}/pdf signs a short-lived link to the owner's PDF.
         - S3ReadPolicy:
@@ -282,7 +289,9 @@ Resources:
           Statement:
             - Effect: Allow
               Action: [lambda:InvokeFunction]
-              Resource: !GetAtt ItineraryGenFunction.Arn
+              Resource:
+                - !GetAtt ItineraryGenFunction.Arn
+                - !GetAtt PDFBuilderFunction.Arn  # full PDF after an unlock
 
   # ─── Welcome Email Lambda ─────────────────────────────────────────────────
   WelcomeEmailFunction:

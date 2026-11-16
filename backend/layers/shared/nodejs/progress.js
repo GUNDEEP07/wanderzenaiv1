@@ -1,5 +1,7 @@
 'use strict';
 
+const { ensureUnlockColumn, isLocked, lockProgressDays } = require('./trip-access');
+
 /**
  * Live generation progress (Nov 7 2026 — "watch your trip being written").
  *
@@ -115,8 +117,9 @@ function progressRecorder(db, submissionId, log) {
  * @param {{ email: string }} user verified caller (requireUser)
  */
 async function readProgress(db, submissionId, user) {
+  await ensureUnlockColumn(db);
   const run = () => db.query(
-    `SELECT id, email, status, destination, days, progress
+    `SELECT id, email, status, destination, days, progress, plan, unlocked_at
        FROM submissions WHERE id = $1`,
     [submissionId],
   );
@@ -124,8 +127,12 @@ async function readProgress(db, submissionId, user) {
   const row = rows[0];
   if (!row || !user?.email || String(row.email).toLowerCase() !== String(user.email).toLowerCase()) return null;
   const p = row.progress || {};
-  const days = Array.isArray(p.days) ? [...p.days].sort((a, b) => (a.day || 0) - (b.day || 0)) : [];
+  const sorted = Array.isArray(p.days) ? [...p.days].sort((a, b) => (a.day || 0) - (b.day || 0)) : [];
+  // Free trips: days after Day 1 arrive as teasers only (trip-access.js).
+  const locked = isLocked(row);
+  const days = locked ? lockProgressDays(sorted) : sorted;
   return {
+    locked,
     submissionId: row.id,
     status: row.status,
     destination: row.destination,

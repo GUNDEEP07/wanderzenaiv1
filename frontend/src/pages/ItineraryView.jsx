@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { analytics } from '../utils/analytics';
-import { fetchAdjustments, startDayAdjustment, fetchPdfLink } from '../api/itinerary';
+import { fetchAdjustments, startDayAdjustment, fetchPdfLink, unlockTrip } from '../api/itinerary';
 import { plainText } from '../utils/plainText';
 import { buildIcs } from '../utils/ics';
 import { dayDate, dayStops, directionsUrl, formatMoney, shortDate, todayDayNumber, upNext } from '../utils/tripPlan';
@@ -10,6 +10,7 @@ import { loadDone, loadSavedTrip, saveDone, saveTrip } from '../utils/tripCache'
 import { nextQuery } from '../utils/safeNext';
 import { openUrl } from '../utils/openUrl';
 import AdjustDay from '../components/itinerary/AdjustDay';
+import LockedDay, { lockedRange, unlockExtras } from '../components/itinerary/LockedDay';
 import StopRow from '../components/itinerary/StopRow';
 import TripOverview from '../components/itinerary/TripOverview';
 
@@ -64,6 +65,7 @@ const ICON = {
   calendar: 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z',
   share: 'M4 12v7a2 2 0 002 2h12a2 2 0 002-2v-7M16 6l-4-4-4 4M12 2v14',
   nav: 'M3 11l18-8-8 18-2-8-8-2z',
+  lock: 'M7 11V7a5 5 0 0110 0v4M5 11h14v10H5z',
 };
 
 export default function ItineraryView() {
@@ -85,8 +87,12 @@ export default function ItineraryView() {
   const [adjustNotice, setAdjustNotice] = useState(null);
   const watchedId = useRef(null);
   const autoDownloadTried = useRef(false);
+  // Free trips: Day 1 only until the owner unlocks (trip-access.js on the API).
+  const [unlockBusy, setUnlockBusy] = useState(false);
+  const [unlockError, setUnlockError] = useState(null);
 
   const wantsDownload = new URLSearchParams(location.search || '').get('download') === '1';
+  const wantsUnlock = new URLSearchParams(location.search || '').get('unlock') === '1';
 
   const loadItinerary = useCallback(async () => {
     const headers = {};
@@ -122,9 +128,12 @@ export default function ItineraryView() {
   const days = itin?.days || [];
   const todayNumber = todayDayNumber(data?.travelDate, days.length);
 
-  // Open on today's day when the trip is under way, else day 1.
+  // Open on today's day when the trip is under way, else day 1 — or, from an "Unlock" link,
+  // on the first locked day, where the unlock card is.
   useEffect(() => {
     if (!days.length || selectedDay != null) return;
+    const firstLocked = days.find(d => d.locked);
+    if (wantsUnlock && firstLocked) { setSelectedDay(firstLocked.dayNumber); return; }
     setSelectedDay(todayNumber && days.some(d => d.dayNumber === todayNumber) ? todayNumber : days[0].dayNumber);
   }, [days.length, todayNumber]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -168,6 +177,28 @@ export default function ItineraryView() {
   };
 
   const signInPath = `/login?${nextQuery(`/itinerary/${id}?download=1`)}`;
+  const unlockSignInPath = `/login?${nextQuery(`/itinerary/${id}?unlock=1`)}`;
+
+  const unlock = async () => {
+    setUnlockBusy(true);
+    setUnlockError(null);
+    try {
+      await unlockTrip(id);
+      const fresh = await loadItinerary();
+      setData(fresh);
+      setSavedOffline(saveTrip(id, fresh));
+      setNotice({ tone: 'ok', text: 'Your full trip is unlocked — every day is open, and a PDF with all of it is on its way to your email.' });
+    } catch (e) {
+      if (e.code === 'NEEDS_ITINERARY') {
+        navigate('/pricing', { state: { reason: 'unlock', destination: data?.destination, tripId: id } });
+        return;
+      }
+      if (e.code === 'SIGN_IN') { navigate(unlockSignInPath); return; }
+      setUnlockError(e.message);
+    } finally {
+      setUnlockBusy(false);
+    }
+  };
 
   const downloadPdf = useCallback(async () => {
     setPdfBusy(true);
@@ -311,7 +342,7 @@ export default function ItineraryView() {
             </div>
           )}
           {adjustNotice && <div role="status" style={s.notice(adjustNotice.tone)}>{adjustNotice.text}</div>}
-          {adjust && adjust.remaining > 0 && !adjust.pending && !adjustNotice && (
+          {!data.locked && adjust && adjust.remaining > 0 && !adjust.pending && !adjustNotice && (
             <div style={{ margin: '8px 0', fontSize: 13, color: 'rgba(255,255,255,0.65)' }}>
               Not quite right? Adjust any day — {adjust.remaining} free change{adjust.remaining === 1 ? '' : 's'} left on this trip.
             </div>
@@ -325,8 +356,10 @@ export default function ItineraryView() {
                 const isTodayChip = d.dayNumber === todayNumber;
                 return (
                   <button key={d.dayNumber} role="tab" aria-selected={d.dayNumber === selectedDay} aria-controls="wz-day-panel"
-                    style={s.dayChip(d.dayNumber === selectedDay, isTodayChip)} onClick={() => setSelectedDay(d.dayNumber)}>
+                    aria-label={d.locked ? `Day ${d.dayNumber}, locked` : undefined}
+                    style={{ ...s.dayChip(d.dayNumber === selectedDay, isTodayChip), ...(d.locked ? { display: 'inline-flex', alignItems: 'center', gap: 5 } : {}) }} onClick={() => setSelectedDay(d.dayNumber)}>
                     {isTodayChip ? `Today · ${d.dayNumber}` : `Day ${d.dayNumber}`}
+                    {d.locked && <Icon d={ICON.lock} size={13} />}
                   </button>
                 );
               })}
@@ -348,6 +381,18 @@ export default function ItineraryView() {
                   {formatMoney(day.dailyCost, currency) && <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 4 }}>Day budget ≈ {formatMoney(day.dailyCost, currency)}</div>}
                 </div>
 
+                {day.locked ? (
+                  <LockedDay
+                    range={lockedRange(days)}
+                    extras={unlockExtras(itin?.locked)}
+                    error={unlockError}
+                    action={data.isOwner
+                      ? { kind: 'unlock', onClick: unlock, busy: unlockBusy }
+                      : !currentUser
+                        ? { kind: 'signin', to: unlockSignInPath, onNavigate: () => navigate(unlockSignInPath) }
+                        : { kind: 'owner-only' }}
+                  />
+                ) : (<>
                 {nextStop && (
                   <section aria-label="Up next" style={s.next}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
@@ -369,7 +414,8 @@ export default function ItineraryView() {
                   ))}
                 </ol>
 
-                <AdjustDay dayNumber={day.dayNumber} summary={adjust} onStart={startAdjust} />
+                {!data.locked && <AdjustDay dayNumber={day.dayNumber} summary={adjust} onStart={startAdjust} />}
+                </>)}
 
                 <div style={s.pager}>
                   <button style={{ ...s.action, visibility: idx > 0 ? 'visible' : 'hidden' }} onClick={() => setSelectedDay(days[idx - 1]?.dayNumber)}><Icon d={ICON.back} /> Day {days[idx - 1]?.dayNumber}</button>
@@ -381,7 +427,8 @@ export default function ItineraryView() {
         )}
 
         <div style={{ marginTop: 32 }}>
-          <TripOverview itinerary={itin} currency={currency} onPickDay={(n) => { setSelectedDay(n); window.scrollTo?.({ top: 0, behavior: 'smooth' }); }} />
+          <TripOverview itinerary={itin} currency={currency} onPickDay={(n) => { setSelectedDay(n); window.scrollTo?.({ top: 0, behavior: 'smooth' }); }}
+            onUnlock={() => { const first = days.find(d => d.locked); if (first) setSelectedDay(first.dayNumber); window.scrollTo?.({ top: 0, behavior: 'smooth' }); }} />
         </div>
 
         <footer style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
