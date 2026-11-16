@@ -1,4 +1,4 @@
-// UX review capture: home + explore, phone + desktop. Read-only.
+// UX review capture (after #48): home + explore, phone + desktop. Read-only.
 import { chromium } from 'playwright';
 import fs from 'fs';
 const BASE = 'https://www.wanderzenai.com';
@@ -59,4 +59,11 @@ for (const [w, h, tag] of [[390, 844, 'phone'], [1440, 900, 'desk']]) {
   await ctx.close();
 }
 await b.close();
+// Raw HTML checks (what crawlers and first paint get)
+for (const path of ['/', '/explore', '/pricing']) {
+  const html = await (await fetch(BASE + path)).text();
+  R['raw' + path] = { testimonials: /Prabhsimran|Meena C\.|Jaideep S\./.test(html), trusted: /Trusted by/.test(html), senso: /Senso-ji/.test(html), priority: /Priority generation/.test(html), fullFree: /Full day-by-day/.test(html), travelers: /\d[\d,]* travelers/.test(html), myanmar: /Myanmar/.test(html), dayOne: /Day 1 written in full|Day 1/.test(html) };
+}
+const api = await (await fetch('https://y44o2x9cu1.execute-api.ap-southeast-2.amazonaws.com/prod/recommendations/trending')).json().catch(e => ({ err: e.message }));
+R.trendingApi = api;
 fs.writeFileSync('report.json', JSON.stringify(R, null, 1));
