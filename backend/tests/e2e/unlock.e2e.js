@@ -43,6 +43,8 @@ const ITIN = { title: 'Slow Vietnam', summary: 'A slow week', totalEstimatedCost
   await db.query(`INSERT INTO users (email, plan, itineraries_remaining) VALUES ($1, 'free', 0)`, [email]);
   const free = await mk('F', 'free');
   const paid = await mk('P', 'paid');
+  const old = await mk('O', 'free');
+  await db.query(`UPDATE submissions SET created_at = '2026-11-10T00:00:00Z', unlocked_at = NULL WHERE id = $1`, [old]);
 
   // ── What leaves the system for a locked trip ────────────────────────────
   let r = await view(free);
@@ -54,6 +56,8 @@ const ITIN = { title: 'Slow Vietnam', summary: 'A slow week', totalEstimatedCost
   check('free trip: counts of what unlocking adds', r.json.itinerary?.locked?.tips === 2 && r.json.itinerary.locked.avoid === 1 && r.json.itinerary.locked.stays === 1, JSON.stringify(r.json.itinerary?.locked));
   r = await view(free, tok);
   check('the owner sees the same locked trip', r.json.isOwner === true && r.json.locked === true && !JSON.stringify(r.json).includes('SECRET-EVENING-2'));
+  r = await view(old);
+  check('free trip made before the lock (Nov 16) stays fully open', r.json.locked === false && JSON.stringify(r.json).includes('SECRET-EVENING-3'), JSON.stringify(r.json).slice(0, 160));
   r = await view(paid);
   check('paid trip: everything, not locked', r.json.locked === false && JSON.stringify(r.json).includes('SECRET-TIP-A') && r.json.itinerary.days[2].eveningActivity.venueName === 'SECRET-EVENING-3');
 
@@ -82,7 +86,7 @@ const ITIN = { title: 'Slow Vietnam', summary: 'A slow week', totalEstimatedCost
   check('full PDF rebuilt once (update: unlocked)', rebuilds.length === 1 && rebuilds[0].payload.update?.unlocked === true && rebuilds[0].payload.submissionId === free, JSON.stringify(invokes));
   r = await view(free);
   check('after unlocking: every day, tips and stays', r.json.locked === false && r.json.itinerary.days[2].eveningActivity?.venueName === 'SECRET-EVENING-3' && r.json.itinerary.practicalTips?.length === 2);
-  const freeCount = (await db.query(`SELECT COUNT(*)::int AS c FROM submissions WHERE email = $1 AND plan = 'free'`, [email])).rows[0].c;
+  const freeCount = (await db.query(`SELECT COUNT(*)::int AS c FROM submissions WHERE email = $1 AND plan = 'free' AND id <> $2`, [email, old])).rows[0].c;
   check('an unlocked trip still counts as the free trip of the month', freeCount === 1, `${freeCount}`);
 
   // Wanderer allowance is spent before purchased credits; a failed trip can't be unlocked.

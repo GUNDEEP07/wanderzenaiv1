@@ -41,3 +41,15 @@ test('lockProgressDays', () => {
   assert.deepEqual(out[0], { day: 1, stops: ['a'] });
   assert.deepEqual(out[1], { day: 2, theme: 'x', base: null, travelDay: false, locked: true });
 });
+
+test('ensureUnlockColumn: adds the column, opens pre-lock free trips, once per container', async () => {
+  ta._reset();
+  const seen = [];
+  const db = { query: async (sql) => { seen.push(sql); return { rows: [] }; } };
+  await ta.ensureUnlockColumn(db);
+  await ta.ensureUnlockColumn(db);
+  assert.equal(seen.length, 2);
+  assert.match(seen[0], /ADD COLUMN IF NOT EXISTS unlocked_at/);
+  assert.match(seen[1], /UPDATE submissions SET unlocked_at = created_at[\s\S]*plan = 'free'[\s\S]*created_at < '2026-11-16T00:40:00Z'/);
+  ta._reset();
+});
