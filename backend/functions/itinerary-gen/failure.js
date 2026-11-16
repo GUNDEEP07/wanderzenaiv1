@@ -51,7 +51,7 @@ function failureEmail({ destination, refunded, frontendUrl }) {
  * @param {object} args.db       pg pool/client
  * @param {(msg: object) => Promise} args.sendEmail  { to, subject, text, html }
  * @param {string} args.submissionId
- * @param {'monthly'|'credit'|null} args.creditSource from the /submit invoke payload
+ * @param {'monthly'|'credit'|string|null} args.creditSource from the /submit invoke payload ('pass:<id>' for a Trip Pass)
  * @param {string} args.errorMessage stored on the submission (internal)
  * @returns {Promise<{ handled: boolean, refunded: boolean, emailed: boolean }>}
  */
@@ -67,7 +67,17 @@ async function handleGenerationFailure({ db, sendEmail, submissionId, creditSour
 
   let refunded = false;
   const column = REFUND_COLUMNS[creditSource];
-  if (column) {
+  const passId = typeof creditSource === 'string' && /^pass:\d+$/.test(creditSource) ? Number(creditSource.slice(5)) : null;
+  if (passId) {
+    // A Trip Pass trip (layers/shared/nodejs/trip-pass.js passSource): back to the same pass.
+    try {
+      await db.query('UPDATE trip_passes SET trips_left = LEAST(trips_left + 1, trips_total) WHERE id = $1', [passId]);
+      refunded = true;
+      log.info?.('Trip Pass trip refunded after failed generation', { submissionId, passId });
+    } catch (err) {
+      log.error?.('Trip Pass refund after failed generation FAILED — refund by hand', { submissionId, passId, error: err.message });
+    }
+  } else if (column) {
     try {
       await db.query(`UPDATE users SET ${column} = ${column} + 1, updated_at = NOW() WHERE email = $1`, [email]);
       refunded = true;

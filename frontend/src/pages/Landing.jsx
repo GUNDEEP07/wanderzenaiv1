@@ -2,6 +2,8 @@ import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './Landing.css';
+import { usePricing } from '../hooks/usePricing';
+import { plansFrom } from '../utils/plans';
 import GUIDES from '../data/guides-index.json';
 import SeasonHero from '../components/home/SeasonHero';
 
@@ -51,6 +53,7 @@ export default function Landing() {
   const { currentUser } = useAuth();
   // Anyone can plan; sign-in comes at Submit (Nov 2026).
   const planRoute = () => navigate('/plan');
+  const plans = plansFrom(usePricing());
   const sectionsRef = useRef([]);
 
 
@@ -320,46 +323,27 @@ export default function Landing() {
           <div className="reveal" ref={addRef}>
             <div className="section-tag">Pricing</div>
             <h2 className="section-title">Simple, honest pricing.</h2>
-            <p className="section-sub">No hidden fees. Cancel anytime. Your PDF is yours to keep forever.</p>
+            <p className="section-sub">Pay per trip — no subscription. Your PDF is yours to keep forever.</p>
           </div>
 
+          {/* Same plans and Stripe prices as /pricing (design D) — nothing hard-coded. */}
           <div className="pricing-grid">
-            <div className="plan-card reveal" ref={addRef}>
-              <div className="plan-name">Explorer</div>
-              <div className="plan-price">Free</div>
-              <div className="plan-period">1 itinerary per month</div>
-              <ul className="plan-features">
-                {['Your route, ready to confirm', 'Day 1 written in full', 'See every later day’s theme', 'Unlock the rest with one itinerary'].map(f => (
-                  <li key={f}><span className="plan-check">✓</span>{f}</li>
-                ))}
-              </ul>
-              <button className="plan-btn plan-btn-outline" onClick={planRoute}>Get started free</button>
-            </div>
-
-            <div className="plan-card plan-card-featured reveal reveal-delay-1" ref={addRef}>
-              <div className="plan-badge">Most popular</div>
-              <div className="plan-name">Wanderer</div>
-              <div className="plan-price">$9<span className="plan-price-sub">/mo</span></div>
-              <div className="plan-period">5 itineraries per month</div>
-              <ul className="plan-features">
-                {['5 full itineraries a month', 'Every day unlocked', 'Where to stay, tips & traps to skip', 'Adjust up to 3 days per trip', 'Cancel anytime'].map(f => (
-                  <li key={f}><span className="plan-check">✓</span>{f}</li>
-                ))}
-              </ul>
-              <button className="plan-btn plan-btn-filled" onClick={() => navigate('/pricing')}>Start Wanderer</button>
-            </div>
-
-            <div className="plan-card reveal reveal-delay-2" ref={addRef}>
-              <div className="plan-name">Single Plan</div>
-              <div className="plan-price">$7</div>
-              <div className="plan-period">One-time payment</div>
-              <ul className="plan-features">
-                {['1 full itinerary', 'Or unlock a free trip you made', 'No subscription', 'Never expires'].map(f => (
-                  <li key={f}><span className="plan-check">✓</span>{f}</li>
-                ))}
-              </ul>
-              <button className="plan-btn plan-btn-outline" onClick={() => navigate('/pricing')}>Buy one plan</button>
-            </div>
+            {plans.map((plan, i) => (
+              <div key={plan.name} className={`plan-card${plan.featured ? ' plan-card-featured' : ''} reveal${i ? ` reveal-delay-${i}` : ''}`} ref={addRef}>
+                {plan.featured && <div className="plan-badge">Most trips</div>}
+                <div className="plan-name">{plan.name}</div>
+                <div className="plan-price">{plan.price}</div>
+                <div className="plan-period">{plan.period}</div>
+                <ul className="plan-features">
+                  {plan.features.slice(0, 4).map(f => (
+                    <li key={f}><span className="plan-check">✓</span>{f}</li>
+                  ))}
+                </ul>
+                <button className={`plan-btn ${plan.featured ? 'plan-btn-filled' : 'plan-btn-outline'}`} onClick={() => (plan.buy ? navigate('/pricing') : planRoute())}>
+                  {plan.cta}
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       </section>

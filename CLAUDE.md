@@ -64,6 +64,14 @@ AI-powered slow-travel itinerary SaaS. Live at wanderzenai.com. Solo-maintained.
 - DB migrations: CI cannot reach RDS. New tables/columns that code depends on create
   themselves on first use (`rate_limits`, `stripe_events`, `photo_cache`,
   `users.monthly_remaining`); `infra/migrations/NNN_*.sql` document them.
+- Pricing (design D, Nov 16 2026): prices are NOT in code. GET /pricing (form-handler, public, cached 10 min)
+  reads Stripe: active products with metadata `wz_plan` = `trip` | `pass` (+ `trips`, `valid_days`), their
+  default price (+ `currency_options` for per-country prices) and the active payment link with the same
+  `wz_plan` (`layers/shared/nodejs/pricing.js`). Change a price in Stripe and the site follows; the currency is
+  always shown ("A$19 AUD"). The webhook reads the link's metadata from the session: `trip` → credits,
+  `pass` → a row in `trip_passes` (`trip-pass.js`, self-creates, 012). Spend order everywhere: test → Wanderer
+  monthly → Trip Pass (soonest expiry) → credit → free; a pass trip refunds as creditSource `pass:<id>`.
+  Wanderer ($9/mo) is off sale; existing subscribers keep it. Stripe is in TEST mode (Nov 2026).
 - Plans: Wanderer = 5 itineraries per billing month (`users.monthly_remaining`, reset on Stripe
   `invoice.paid` with `billing_reason=subscription_cycle`); purchased credits live in
   `itineraries_remaining` and never expire. See `form-handler/subscription.js`.

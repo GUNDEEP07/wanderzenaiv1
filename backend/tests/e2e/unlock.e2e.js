@@ -88,6 +88,14 @@ const ITIN = { title: 'Slow Vietnam', summary: 'A slow week', totalEstimatedCost
   check('after unlocking: every day, tips and stays', r.json.locked === false && r.json.itinerary.days[2].eveningActivity?.venueName === 'SECRET-EVENING-3' && r.json.itinerary.practicalTips?.length === 2);
   const freeCount = (await db.query(`SELECT COUNT(*)::int AS c FROM submissions WHERE email = $1 AND plan = 'free' AND id <> $2`, [email, old])).rows[0].c;
   check('an unlocked trip still counts as the free trip of the month', freeCount === 1, `${freeCount}`);
+  // Trip Pass (pricing D): spent before a purchased credit.
+  const free2 = await mk('G', 'free');
+  await db.query(`UPDATE submissions SET created_at = NOW() WHERE id = $1`, [free2]);
+  await db.query('UPDATE users SET itineraries_remaining = 1 WHERE email = $1', [email]);
+  await db.query(`INSERT INTO trip_passes (email, trips_total, trips_left, expires_at) VALUES ($1, 2, 1, NOW() + interval '30 days')`, [email]);
+  r = await call('POST', `/itinerary/${free2}/unlock`, tok);
+  const after = (await db.query('SELECT (SELECT COALESCE(SUM(trips_left),0)::int FROM trip_passes WHERE email = $1) AS pass, itineraries_remaining AS credits FROM users WHERE email = $1', [email])).rows[0];
+  check('unlock spends a Trip Pass trip before a purchased credit', r.status === 200 && r.json.data?.source === 'pass' && after.pass === 0 && after.credits === 1, JSON.stringify({ r: r.json, after }));
 
   // Wanderer allowance is spent before purchased credits; a failed trip can't be unlocked.
   const sub = `sub${n}@example.com`, subTok = token('uS' + n, sub);

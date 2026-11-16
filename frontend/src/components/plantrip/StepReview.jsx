@@ -15,6 +15,7 @@ export function entitlementLine(e) {
   const n = Number(e.remaining) || 0;
   if (e.source === 'free') return 'Uses your free itinerary for this month.';
   if (e.source === 'credit') return n <= 1 ? 'Uses your last itinerary credit.' : `Uses 1 of your ${n} itinerary credits.`;
+  if (e.source === 'pass') return n <= 1 ? 'Uses the last trip on your Trip Pass.' : `Uses 1 of the ${n} trips on your Trip Pass.`;
   if (e.source === 'monthly') return n <= 1 ? 'Uses your last Wanderer itinerary this month.' : `Uses 1 of the ${n} Wanderer itineraries left this month.`;
   return null; // test accounts
 }
@@ -23,8 +24,8 @@ export function entitlementLine(e) {
 export function limitMessage(e) {
   if (!e || e.allowed) return null;
   return e.code === 'MONTHLY_LIMIT_REACHED'
-    ? "You've used this month's Wanderer itineraries — they reset on your next billing date. A single plan gets you one now."
-    : "You've used this month's free itinerary. A single plan or Wanderer gets you this one now.";
+    ? "You've used this month's Wanderer itineraries — they reset on your next billing date. One trip gets you this one now."
+    : "You've used this month's free itinerary. One trip or a Trip Pass gets you this one now.";
 }
 
 /** The footer button for this step: { label, kind: 'submit' | 'signup' | 'plans' }. */

@@ -60,7 +60,7 @@ export default function App() {
               {/* Open to guests (Nov 2026): sign-in is asked for at Submit, on the Review step. */}
               <Route path="/plan"         element={page({ title: 'Plan a trip', ...PRIVATE }, <PlanTrip />)} />
               <Route path="/confirmation" element={page({ title: 'Your trip is on its way', ...PRIVATE }, <Confirmation />)} />
-              <Route path="/pricing"      element={page({ title: 'Pricing', description: 'Start free, then pay per trip or join Wanderer for five AI slow travel itineraries a month. Simple, honest pricing with no lock-in.', path: '/pricing' }, <Pricing />)} />
+              <Route path="/pricing"      element={page({ title: 'Pricing', description: 'Start free, then pay per trip or get a Trip Pass for several trips. No subscription, prices in your currency.', path: '/pricing' }, <Pricing />)} />
               <Route path="/dashboard"    element={page({ title: 'Your trips', ...PRIVATE }, <ProtectedRoute><Dashboard /></ProtectedRoute>)} />
               {/* The agency dashboard is still a demo with sample data (backlog P2-11): agency accounts
                   and the team only. Public "For agencies" links go to the partnership form. */}

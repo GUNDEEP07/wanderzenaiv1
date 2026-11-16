@@ -227,7 +227,14 @@ Resources:
       Environment:
         Variables:
           CLAUDE_API_KEY: !Ref ClaudeApiKey  # /preview and /route-plan
+          STRIPE_SECRET_KEY: !Ref StripeSecretKey  # GET /pricing reads prices + payment links (read only)
       Events:
+        Pricing:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Method: GET
+            Path: /pricing
         PreviewSubmit:
           Type: Api
           Properties:

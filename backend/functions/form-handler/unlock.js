@@ -1,5 +1,7 @@
 'use strict';
 
+const tripPass = require('/opt/nodejs/trip-pass');
+
 /**
  * POST /itinerary/{id}/unlock — open every day of a free trip (Nov 16 2026).
  *
@@ -69,9 +71,13 @@ async function unlockTrip(db, submissionId, user) {
          RETURNING monthly_remaining`,
         [trip.email]
       );
+      const pass = monthly.rows.length ? null : await tripPass.spendPass(client, trip.email);
       if (monthly.rows.length) {
         source = 'monthly';
         remaining = monthly.rows[0].monthly_remaining;
+      } else if (pass) {
+        source = 'pass';
+        remaining = pass.tripsLeft;
       } else {
         const credit = await client.query(
           `UPDATE users SET itineraries_remaining = itineraries_remaining - 1, updated_at = NOW()

@@ -3,6 +3,7 @@
 const crypto = require('crypto');
 const { getDB, log } = require('/opt/nodejs/index');
 const { SUBSCRIPTION_MONTHLY_ITINERARIES, ENSURE_MONTHLY_COLUMN_SQL } = require('./subscription');
+const tripPass = require('/opt/nodejs/trip-pass');
 
 const SIGNATURE_TOLERANCE_SECONDS = 300;
 
@@ -131,7 +132,27 @@ async function fulfilCheckout(client, session) {
 
   const isSubscription = session.mode === 'subscription';
   const plan = isSubscription ? 'subscriber' : 'paid_once';
-  const credits = isSubscription ? SUBSCRIPTION_MONTHLY_ITINERARIES : SINGLE_PLAN_CREDITS;
+  // Pricing design D (Nov 16 2026): the payment link's metadata (copied onto the session) says
+  // what was bought — wz_plan 'trip' (N credits that never expire) or 'pass' (N trips within
+  // valid_days, trip-pass.js). Links without it are the original Single Plan (1 credit).
+  const wz = session.metadata?.wz_plan;
+  const trips = Math.max(1, Math.min(50, Number.parseInt(session.metadata?.trips, 10) || SINGLE_PLAN_CREDITS));
+  const credits = isSubscription ? SUBSCRIPTION_MONTHLY_ITINERARIES : (wz === 'trip' ? trips : SINGLE_PLAN_CREDITS);
+
+  if (!isSubscription && wz === 'pass') {
+    await client.query(
+      `INSERT INTO users (email, plan, stripe_customer_id, created_at) VALUES ($1, 'paid_once', $2, NOW())
+       ON CONFLICT (email) DO UPDATE
+       SET plan = CASE WHEN users.plan = 'subscriber' THEN 'subscriber' ELSE 'paid_once' END,
+           stripe_customer_id = COALESCE(EXCLUDED.stripe_customer_id, users.stripe_customer_id),
+           updated_at = NOW()`,
+      [email, session.customer || null]
+    );
+    const granted = await tripPass.grantPass(client, { email, trips, validDays: session.metadata?.valid_days, sessionId: session.id });
+    log.info('Trip Pass added', { email, trips, created: granted.created, matchedBy, sessionId: session.id });
+    try { await grantReferralReward(client, email); } catch (refErr) { log.warn('Referral reward failed', { error: refErr.message }); }
+    return { fulfilled: true, email, plan: 'pass', credits: trips, matchedBy };
+  }
 
   if (isSubscription) {
     // Start of the subscription: this month's allowance is set (not added — no stacking
@@ -156,7 +177,7 @@ async function fulfilCheckout(client, session) {
            itineraries_remaining = users.itineraries_remaining + $2,
            stripe_customer_id = COALESCE(EXCLUDED.stripe_customer_id, users.stripe_customer_id),
            updated_at = NOW()`,
-      [email, SINGLE_PLAN_CREDITS, session.customer || null]
+      [email, credits, session.customer || null]
     );
   }
   log.info('User plan upgraded', { email, plan, credits, matchedBy, sessionId: session.id });
