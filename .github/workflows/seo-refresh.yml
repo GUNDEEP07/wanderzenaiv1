@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write   # OIDC token for the deploy role
 
 env:
   AWS_REGION: ap-southeast-2
@@ -35,11 +36,11 @@ jobs:
         with:
           ref: main
 
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials (keyless, OIDC — infra/ci-oidc.yaml)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: arn:aws:iam::595710543932:role/wanderzenai-github-deploy
+          role-session-name: seo-refresh-${{ github.run_id }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup Node.js

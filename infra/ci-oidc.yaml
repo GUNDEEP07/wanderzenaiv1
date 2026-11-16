@@ -1,0 +1,93 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  GitHub Actions → AWS without stored keys (backlog P2-9, Nov 2026). Deploys from the main
+  branch of GUNDEEP07/wanderzenaiv1 assume this role with a short-lived OIDC token.
+  Separate stack (wanderzenai-ci) so the app stack's deploy role can never edit its own trust.
+  Deploy/update by hand or from a one-off workflow with admin credentials:
+    aws cloudformation deploy --stack-name wanderzenai-ci --template-file infra/ci-oidc.yaml \
+      --capabilities CAPABILITY_NAMED_IAM
+
+Parameters:
+  GitHubRepo:
+    Type: String
+    Default: GUNDEEP07/wanderzenaiv1
+  AppStackPrefix:
+    Type: String
+    Default: wanderzenai
+    Description: Roles the app stack creates start with this (wanderzenai-prod-...).
+
+Resources:
+  GitHubOidcProvider:
+    Type: AWS::IAM::OIDCProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList: [sts.amazonaws.com]
+      # AWS no longer checks these for GitHub's provider; kept for older SDKs/tools.
+      ThumbprintList:
+        - 6938fd4d98bab03faadb97b34396831e3780aea1
+        - 1c58a3a8518e8759bf075b76b750d4f2df264fcd
+
+  GitHubDeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: wanderzenai-github-deploy
+      Description: Assumed by GitHub Actions on main (deploy.yml, seo-refresh.yml). No stored keys.
+      MaxSessionDuration: 7200
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Ref GitHubOidcProvider
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+                # Only workflows running on main — never a pull request or another branch.
+                token.actions.githubusercontent.com:sub: !Sub repo:${GitHubRepo}:ref:refs/heads/main
+      # Everything SAM needs except IAM (PowerUserAccess excludes IAM) ...
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/PowerUserAccess
+      Policies:
+        # ... plus IAM only for the app's own Lambda roles, and never admin policies on them.
+        - PolicyName: app-roles-only
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: ReadIam
+                Effect: Allow
+                Action: ['iam:Get*', 'iam:List*']
+                Resource: '*'
+              - Sid: ManageAppRoles
+                Effect: Allow
+                Action:
+                  - iam:CreateRole
+                  - iam:DeleteRole
+                  - iam:UpdateRole
+                  - iam:UpdateAssumeRolePolicy
+                  - iam:TagRole
+                  - iam:UntagRole
+                  - iam:PutRolePolicy
+                  - iam:DeleteRolePolicy
+                  - iam:AttachRolePolicy
+                  - iam:DetachRolePolicy
+                  - iam:PassRole
+                Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/${AppStackPrefix}-prod-*
+              - Sid: NoAdminOnAppRoles
+                Effect: Deny
+                Action: iam:AttachRolePolicy
+                Resource: '*'
+                Condition:
+                  ArnEquals:
+                    iam:PolicyARN:
+                      - arn:aws:iam::aws:policy/AdministratorAccess
+                      - arn:aws:iam::aws:policy/IAMFullAccess
+                      - arn:aws:iam::aws:policy/PowerUserAccess
+              - Sid: ServiceLinkedRoles
+                Effect: Allow
+                Action: iam:CreateServiceLinkedRole
+                Resource: '*'
+
+Outputs:
+  DeployRoleArn:
+    Value: !GetAtt GitHubDeployRole.Arn

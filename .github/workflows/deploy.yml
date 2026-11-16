@@ -92,17 +92,27 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test, e2e]
     if: github.ref == 'refs/heads/main'
+    permissions:
+      id-token: write   # OIDC token for the deploy role
+      contents: read
+    # One stack update at a time: a second merge waits instead of failing with
+    # "stack is in UPDATE_IN_PROGRESS state" (seen Nov 16).
+    concurrency:
+      group: deploy-backend-prod
+      cancel-in-progress: false
     outputs:
       api-url: ${{ steps.get-outputs.outputs.api-url }}
       cloudfront-url: ${{ steps.get-outputs.outputs.cloudfront-url }}
     steps:
       - uses: actions/checkout@v4
 
+      # Keyless (backlog P2-9): a short-lived OIDC token assumes the deploy role, which only
+      # trusts this repo's main branch (infra/ci-oidc.yaml, stack wanderzenai-ci).
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: arn:aws:iam::595710543932:role/wanderzenai-github-deploy
+          role-session-name: gh-${{ github.run_id }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup SAM CLI
@@ -214,17 +224,22 @@ jobs:
     needs: deploy-backend
     if: github.ref == 'refs/heads/main'
     # Never at the same time as the scheduled SEO refresh (seo-refresh.yml): both write pages.
+    permissions:
+      id-token: write   # OIDC token for the deploy role
+      contents: read
     concurrency:
       group: frontend-publish
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
 
+      # Keyless (backlog P2-9): a short-lived OIDC token assumes the deploy role, which only
+      # trusts this repo's main branch (infra/ci-oidc.yaml, stack wanderzenai-ci).
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: arn:aws:iam::595710543932:role/wanderzenai-github-deploy
+          role-session-name: gh-${{ github.run_id }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup Node.js
