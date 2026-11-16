@@ -13,6 +13,10 @@ AI-powered slow-travel itinerary SaaS. Live at wanderzenai.com. Solo-maintained.
 - **Payments:** Stripe (402 gate; bypassed for rows in `test_accounts` table).
 - **Email:** AWS SES.
 - **Deploy:** GitHub Actions auto-deploy from `main` (repo: GUNDEEP07/wanderzenaiv1).
+  No stored AWS keys (Nov 2026, P2-9): deploy.yml and seo-refresh.yml assume
+  `wanderzenai-github-deploy` via GitHub OIDC (stack `wanderzenai-ci`, `infra/ci-oidc.yaml`); the
+  role trusts only `main` and has PowerUser + IAM limited to `wanderzenai-prod-*` roles. A job that
+  needs AWS must declare `permissions: id-token: write`. Only our site's origin may call the API (P2-10).
 
 ## Repo layout — non-obvious
 - SAM template lives at `infra/template.yaml`, NOT repo root.
