@@ -1,0 +1,39 @@
+[
+ {
+  "id": "asia",
+  "name": "Asia",
+  "tagline": "Rice terraces, mountain towns, old ports and tea country",
+  "live": true,
+  "order": 1,
+  "countries": [
+   "Vietnam",
+   "Japan",
+   "India",
+   "Thailand",
+   "Sri Lanka",
+   "Indonesia",
+   "Nepal"
+  ]
+ },
+ {
+  "id": "europe",
+  "name": "Europe",
+  "tagline": "Farmhouse stays, hill towns and quiet coasts",
+  "live": false,
+  "order": 2,
+  "countries": [
+   "Italy",
+   "Portugal"
+  ]
+ },
+ {
+  "id": "oceania",
+  "name": "Oceania",
+  "tagline": "Lakes, bush walks and empty beaches",
+  "live": false,
+  "order": 3,
+  "countries": [
+   "New Zealand"
+  ]
+ }
+]

@@ -6,20 +6,26 @@ import { usePricing } from '../hooks/usePricing';
 import { plansFrom } from '../utils/plans';
 import GUIDES from '../data/guides-index.json';
 import SeasonHero from '../components/home/SeasonHero';
+import FULL_GUIDES from '../data/guides.json';
+import { CreditedPhoto } from '../components/PhotoCredit';
+import { LIVE_COUNTRIES, liveRegionLabel, currentMonth, inSeason } from '../utils/seasons';
 
-// The focus is Asia (Nov 2026): these guides lead wherever guides are listed.
-const ASIA = new Set(['Vietnam', 'Japan', 'India', 'Thailand', 'Sri Lanka', 'Indonesia', 'Nepal']);
-const ASIA_GUIDES = GUIDES.filter(g => ASIA.has(g.name));
+// Which countries we promote comes from the curated data (regions.json, `live` regions —
+// Asia today). Turning on another region there updates this page with no code change.
+const LIVE = new Set(LIVE_COUNTRIES);
+const LIVE_GUIDES = GUIDES.filter(g => LIVE.has(g.name));
+const REGION_LABEL = liveRegionLabel();
 
-// Curated Unsplash images — slow travel, nature, hidden places aesthetic
-const PHOTO_STRIP = [
-  { url: 'https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=400&h=560&fit=crop&auto=format', alt: 'Kyoto temple path at dawn', label: 'Kyoto' },
-  { url: 'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=400&h=560&fit=crop&auto=format', alt: 'Patagonia mountain trail', label: 'Patagonia' },
-  { url: 'https://images.unsplash.com/photo-1539635278303-d4002c07eae3?w=400&h=560&fit=crop&auto=format', alt: 'Bali rice terraces', label: 'Bali' },
-  { url: 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=400&h=560&fit=crop&auto=format', alt: 'European village street', label: 'Puglia' },
-  { url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=560&fit=crop&auto=format', alt: 'Tropical beach hidden cove', label: 'Sri Lanka' },
-  { url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400&h=560&fit=crop&auto=format', alt: 'Mountain landscape trail', label: 'Faroe Islands' },
-];
+// "The places we actually send you to": one real curated route per live country, the one in
+// season this month, with its hand-checked photo (credited). Never stock photos of places
+// we don't plan.
+function photoStrip(month = currentMonth()) {
+  return FULL_GUIDES
+    .filter(g => LIVE.has(g.name))
+    .map(g => ({ country: g.name, route: [...g.routes].sort((x, y) => inSeason(y, month) - inSeason(x, month))[0] }))
+    .filter(x => x.route?.photoQuery)
+    .slice(0, 6);
+}
 
 const SAMPLE_IMAGES = [
   'https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=600&h=300&fit=crop&auto=format',
@@ -118,7 +124,7 @@ export default function Landing() {
 
         <div className="hero-proof reveal" ref={addRef}>
           <div className="proof-item"><div className="proof-num">{GUIDES.length}</div><div className="proof-label">countries with hand-picked routes</div></div>
-          <div className="proof-item"><div className="proof-num">{ASIA_GUIDES.length}</div><div className="proof-label">of them in Asia</div></div>
+          <div className="proof-item"><div className="proof-num">{LIVE_GUIDES.length}</div><div className="proof-label">of them in {REGION_LABEL}</div></div>
           <div className="proof-item"><div className="proof-num">Day 1</div><div className="proof-label">free to read before you pay</div></div>
           <div className="proof-item"><div className="proof-num">$0</div><div className="proof-label">to get started</div></div>
         </div>
@@ -128,12 +134,12 @@ export default function Landing() {
       <div style={{ textAlign: 'center', padding: '1rem 2rem 3rem', background: '#0a0f1e' }}>
         <a href="/explore" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '12px 24px', borderRadius: 100, border: '1px solid rgba(0,212,170,0.25)', background: 'rgba(0,212,170,0.06)', color: '#00d4aa', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 600, transition: 'all 0.2s' }}>
           <span>✦</span>
-          Explore destinations — Asia first
+          Explore destinations — {REGION_LABEL} first
           <span>→</span>
         </a>
       </div>
 
-      {/* ── Slow routes (country guides, Asia first) ── */}
+      {/* ── Slow routes (country guides, live regions first) ── */}
       <section style={{ background: '#0a0f1e', padding: '0 0 4rem' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 2rem' }}>
           <div className="reveal" ref={addRef} style={{ textAlign: 'center', marginBottom: '2rem' }}>
@@ -141,16 +147,16 @@ export default function Landing() {
               Slow routes, ready to go
             </h2>
             <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.95rem', marginTop: '0.5rem' }}>
-              Hand-picked routes with fewer stops and longer stays — most of them in Asia.
+              Hand-picked routes with fewer stops and longer stays — starting with {REGION_LABEL}.
             </p>
           </div>
           <div className="reveal" ref={addRef} style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
-            {[...ASIA_GUIDES, ...GUIDES.filter(g => !ASIA.has(g.name))].map((g, i) => (
+            {[...LIVE_GUIDES, ...GUIDES.filter(g => !LIVE.has(g.name))].map((g, i) => (
               <a key={g.slug} href={`/guides/${g.slug}`} style={{
                 display: 'inline-flex', alignItems: 'center', minHeight: 40, padding: '8px 18px', borderRadius: 100,
-                background: ASIA.has(g.name) ? 'rgba(0,212,170,0.1)' : 'rgba(255,255,255,0.04)',
-                border: `1px solid ${ASIA.has(g.name) ? 'rgba(0,212,170,0.3)' : 'rgba(255,255,255,0.12)'}`,
-                fontSize: 13, fontWeight: 600, color: ASIA.has(g.name) ? '#00d4aa' : 'rgba(255,255,255,0.75)',
+                background: LIVE.has(g.name) ? 'rgba(0,212,170,0.1)' : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${LIVE.has(g.name) ? 'rgba(0,212,170,0.3)' : 'rgba(255,255,255,0.12)'}`,
+                fontSize: 13, fontWeight: 600, color: LIVE.has(g.name) ? '#00d4aa' : 'rgba(255,255,255,0.75)',
                 textDecoration: 'none', fontFamily: "'Plus Jakarta Sans', sans-serif",
               }}>
                 {g.name}
@@ -167,41 +173,25 @@ export default function Landing() {
             <h2 className="section-title" style={{ fontSize: 'clamp(1.5rem,3vw,2.5rem)' }}>The places we actually send you to</h2>
           </div>
           <div className="reveal photo-strip-grid" ref={addRef}>
-            {PHOTO_STRIP.map((photo, i) => (
-              <div key={photo.label} style={{
+            {photoStrip().map(({ country, route }, i) => (
+              <div key={route.id} style={{
                 position: 'relative', borderRadius: 12, overflow: 'hidden',
                 aspectRatio: '9/16', animationDelay: `${i * 0.1}s`,
               }}>
-                <img
-                  src={photo.url}
-                  alt={photo.alt}
-                  loading="lazy"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 0.5s ease' }}
-                  onMouseEnter={e => e.target.style.transform = 'scale(1.05)'}
-                  onMouseLeave={e => e.target.style.transform = 'scale(1)'}
-                />
-                {/* Dark gradient overlay */}
+                <CreditedPhoto destination={country} keyword={route.photoQuery} size="card" alt={`${route.name}, ${country}`} style={{ position: 'absolute', inset: 0 }} corner="top-right" />
                 <div style={{
-                  position: 'absolute', inset: 0,
+                  position: 'absolute', inset: 0, pointerEvents: 'none',
                   background: 'linear-gradient(to top, rgba(10,15,30,0.85) 0%, rgba(10,15,30,0.1) 50%, transparent 100%)',
                 }} />
-                {/* Label */}
                 <div style={{
-                  position: 'absolute', bottom: 12, left: 12,
+                  position: 'absolute', bottom: 12, left: 12, right: 12, pointerEvents: 'none',
                   fontSize: '0.75rem', fontWeight: 700, color: '#fff',
-                  letterSpacing: '0.08em', textTransform: 'uppercase',
-                }}>{photo.label}</div>
-                {/* Teal accent line */}
-                <div style={{
-                  position: 'absolute', bottom: 0, left: 0, right: 0,
-                  height: 2, background: '#00d4aa', transform: 'scaleX(0)',
-                  transition: 'transform 0.3s', transformOrigin: 'left',
-                }} className="photo-accent" />
+                  letterSpacing: '0.08em', textTransform: 'uppercase', lineHeight: 1.35,
+                }}>{country}<span style={{ display: 'block', textTransform: 'none', letterSpacing: 0, fontWeight: 500, opacity: 0.85 }}>{route.name}</span></div>
+                {/* Whole-card link under the photo credit (credit links sit above at z-index 2). */}
+                <a href={`/guides/${FULL_GUIDES.find(g => g.name === country)?.slug || ''}`} aria-label={`${route.name}, ${country} — read the guide`} style={{ position: 'absolute', inset: 0, zIndex: 1 }} />
               </div>
             ))}
-          </div>
-          <div style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.55)', fontStyle: 'italic' }}>
-            Photos via Unsplash
           </div>
         </div>
       </section>
@@ -238,10 +228,14 @@ export default function Landing() {
         <div className="section-inner">
           {/* Feature image banner */}
           <div className="reveal" ref={addRef} style={{ borderRadius: 16, overflow: 'hidden', marginBottom: '4rem', position: 'relative', height: 280 }}>
-            <img
-              src="https://images.unsplash.com/photo-1501854140801-50d01698950b?w=1200&h=400&fit=crop&auto=format"
-              alt="Patagonia mountain trail slow travel"
-              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            {/* A real curated place (the first live country's first route), credited — not stock. */}
+            <CreditedPhoto
+              destination={LIVE_GUIDES[0]?.name}
+              keyword={FULL_GUIDES.find(g => g.name === LIVE_GUIDES[0]?.name)?.routes[0]?.photoQuery}
+              size="hero"
+              alt={`${FULL_GUIDES.find(g => g.name === LIVE_GUIDES[0]?.name)?.routes[0]?.name || 'Slow route'}, ${LIVE_GUIDES[0]?.name || ''}`}
+              style={{ position: 'absolute', inset: 0 }}
+              corner="bottom-right"
             />
             <div style={{
               position: 'absolute', inset: 0,

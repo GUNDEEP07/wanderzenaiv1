@@ -7,66 +7,35 @@ import { getDestinationPhoto, getFallbackPhoto, useDestinationPhotoWithCredit } 
 import { CreditedPhoto, PhotoCredit } from '../components/PhotoCredit';
 import { CURATED_COUNTRIES } from '../components/plantrip/WhoIsTravelling';
 import RouteFinder from '../components/explore/RouteFinder';
+import FULL_GUIDES from '../data/guides.json';
+import { LIVE_REGIONS, LIVE_COUNTRIES, currentMonth, inSeason, planPrefill } from '../utils/seasons';
 
-const CONTINENTS = [
-  { id: 'asia', name: 'Asia', emoji: '🏯', tagline: 'Ancient temples, mountain villages, street food' },
-  { id: 'europe', name: 'Europe', emoji: '🏰', tagline: 'Countryside lanes, hilltop towns, hidden trattorias' },
-  { id: 'africa', name: 'Africa', emoji: '🌍', tagline: 'Desert trails, tribal markets, untouched coastlines' },
-  { id: 'americas', name: 'Americas', emoji: '🌎', tagline: 'Cloud forests, colonial towns, coastal villages' },
-  { id: 'oceania', name: 'Oceania', emoji: '🌏', tagline: 'Remote islands, bush walks, indigenous culture' },
-  { id: 'mideast', name: 'Middle East', emoji: '🕌', tagline: 'Ancient souks, desert camps, sea villages' },
-];
+// Browse by region comes from the curated data (regions.json + guides.json): only LIVE regions
+// show (Asia today), each country with its real hand-picked routes and stops. Turning on another
+// region in curated-routes.js adds its tab and countries here with no code change.
+const CONTINENTS = LIVE_REGIONS.map(r => ({ id: r.id, name: r.name, tagline: r.tagline }));
+const COUNTRIES = Object.fromEntries(LIVE_REGIONS.map(r => [r.id, FULL_GUIDES
+  .filter(g => r.countries.includes(g.name))
+  .map(g => ({
+    name: g.name,
+    slug: g.slug,
+    tag: `${g.routes.length} hand-picked ${g.routes.length === 1 ? 'route' : 'routes'}`,
+    desc: g.routes[0]?.summary || '',
+    places: [...new Set(g.routes.flatMap(rt => rt.stops.map(st => st.name)))],
+  }))]));
 
-const COUNTRIES = {
-  asia: [
-    { name: 'Japan',       tag: 'Slow travel favourite', desc: 'Backstreet Kyoto, mountain onsen towns, morning fish markets',  places: ['Kyoto', 'Kanazawa', 'Yakushima', 'Naoshima', 'Takayama'] },
-    { name: 'Vietnam',     tag: 'Hidden gem',            desc: 'Mekong villages, limestone karsts, lantern-lit old towns',      places: ['Hoi An', 'Ha Giang', 'Ninh Binh', 'Phong Nha', 'Mui Ne'] },
-    { name: 'India',       tag: 'Cultural depth',        desc: 'Rajasthani villages, spice routes, Himalayan trails',           places: ['Varanasi', 'Hampi', 'Coorg', 'Spiti Valley', 'Pondicherry'] },
-    { name: 'Sri Lanka',   tag: 'Rising star',           desc: 'Tea plantation stays, whale watching, ancient rock temples',    places: ['Ella', 'Galle', 'Sigiriya', 'Trincomalee', 'Kandy'] },
-    { name: 'Indonesia',   tag: 'Nature first',          desc: 'Rice terrace villages, volcano hikes, surf towns',              places: ['Ubud', 'Lombok', 'Flores', 'Nusa Penida', 'Sumba'] },
-    { name: 'Georgia',     tag: 'Undiscovered',          desc: 'Wine country, Caucasus peaks, ancient cave cities',             places: ['Tbilisi', 'Mestia', 'Sighnaghi', 'Kazbegi', 'Uplistsikhe'] },
-  ],
-  europe: [
-    { name: 'Italy',       tag: 'Slow travel icon',      desc: 'Puglia farmhouses, Dolomite villages, Sicilian markets',        places: ['Matera', 'Alberobello', 'Orvieto', 'Noto', 'Civita di Bagnoregio'] },
-    { name: 'Portugal',    tag: 'Crowd free',            desc: 'Alentejo plains, fishing villages, azulejo-tiled towns',        places: ['Evora', 'Obidos', 'Monsanto', 'Tavira', 'Peneda-Geres'] },
-    { name: 'Slovenia',    tag: 'Hidden gem',            desc: 'Alpine lakes, karst caves, wine villages',                      places: ['Lake Bled', 'Piran', 'Soca Valley', 'Skocjan', 'Ptuj'] },
-    { name: 'Greece',      tag: 'Beyond the islands',    desc: 'Mainland villages, Zagori trails, off-island life',             places: ['Meteora', 'Zagori', 'Monemvasia', 'Pelion', 'Naxos'] },
-    { name: 'Croatia',     tag: 'Coastal magic',         desc: 'Dalmatian islands, walled towns, olive grove trails',           places: ['Hvar', 'Vis', 'Plitvice', 'Rovinj', 'Korcula'] },
-    { name: 'Albania',     tag: 'Undiscovered',          desc: 'Ottoman bazaars, Riviera bays, mountain villages',              places: ['Berat', 'Gjirokaster', 'Theth', 'Ksamil', 'Valbona'] },
-  ],
-  africa: [
-    { name: 'Morocco',     tag: 'Sensory overload',      desc: 'Mountain Berber villages, Sahara camps, blue medinas',          places: ['Chefchaouen', 'Merzouga', 'Essaouira', 'Ait Benhaddou', 'Imlil'] },
-    { name: 'Ethiopia',    tag: 'Ancient world',         desc: 'Rock-hewn churches, tribal cultures, coffee origins',           places: ['Lalibela', 'Omo Valley', 'Simien Mountains', 'Axum', 'Harar'] },
-    { name: 'Tanzania',    tag: 'Wildlife + culture',    desc: 'Maasai villages, spice islands, remote beaches',                places: ['Zanzibar', 'Ngorongoro', 'Pemba Island', 'Usambara', 'Stone Town'] },
-    { name: 'Rwanda',      tag: 'Rising star',           desc: 'Gorilla trekking, tea plantations, Lake Kivu villages',         places: ['Volcanoes NP', 'Lake Kivu', 'Nyungwe', 'Musanze', 'Akagera'] },
-  ],
-  americas: [
-    { name: 'Mexico',      tag: 'Beyond the resorts',    desc: 'Colonial highland towns, cenote villages, Pacific coast',       places: ['Oaxaca', 'San Cristobal', 'Guanajuato', 'Bacalar', 'Merida'] },
-    { name: 'Colombia',    tag: 'Transformation story',  desc: 'Coffee region fincas, Caribbean coast, flower towns',           places: ['Salento', 'Cartagena', 'Barichara', 'Palomino', 'Villa de Leyva'] },
-    { name: 'Peru',        tag: 'Beyond Machu Picchu',   desc: 'Amazon villages, Lake Titicaca islands, Sacred Valley',         places: ['Cusco', 'Huaraz', 'Chachapoyas', 'Colca Canyon', 'Pisac'] },
-    { name: 'Chile',       tag: 'End of the world',      desc: 'Patagonia trails, lake district towns, Atacama villages',       places: ['Torres del Paine', 'Chiloe', 'Pucon', 'Valle de Elqui', 'Punta Arenas'] },
-  ],
-  oceania: [
-    { name: 'New Zealand', tag: 'Nature paradise',       desc: 'Fiordland walks, Maori culture, remote farmstays',              places: ['Queenstown', 'Abel Tasman', 'Rotorua', 'Coromandel', 'Milford Sound'] },
-    { name: 'Australia',   tag: 'Beyond the cities',     desc: 'Outback stations, Cape York, Kimberley gorges',                 places: ['Blue Mountains', 'Margaret River', 'Daintree', 'Flinders Ranges', 'Byron Bay'] },
-    { name: 'Fiji',        tag: 'Village life',          desc: 'Off-grid island villages, coral reefs, local kava ceremonies',  places: ['Yasawa Islands', 'Taveuni', 'Kadavu', 'Vanua Levu', 'Beqa'] },
-  ],
-  mideast: [
-    { name: 'Jordan',      tag: 'Ancient wonder',        desc: 'Rose-red Petra, Wadi Rum camps, Dead Sea shores',               places: ['Petra', 'Wadi Rum', 'Aqaba', 'Wadi Mujib', 'Dana Reserve'] },
-    { name: 'Oman',        tag: 'Underrated gem',        desc: 'Wadis, frankincense towns, dhow sailing, Bedouin camps',        places: ['Muscat', 'Salalah', 'Nizwa', 'Wahiba Sands', 'Jebel Akhdar'] },
-  ],
-};
-
-// Shown when the API has nothing. Asia first (Nov 2026). Labels describe the place — never
-// invented visitor numbers.
-const TRENDING = [
-  { dest: 'Kanazawa, Japan',   trend: 'Quiet alternative to Kyoto' },
-  { dest: 'Ninh Binh, Vietnam', trend: 'Hidden gem' },
-  { dest: 'Ella, Sri Lanka',    trend: 'Tea-country walks' },
-  { dest: 'Hampi, India',       trend: 'Boulders and ruins' },
-  { dest: 'Pai, Thailand',      trend: 'Mountain-valley slow days' },
-  { dest: 'Bandipur, Nepal',    trend: 'Car-free hill town' },
-];
+// Shown when the API has nothing: an in-season curated route per live country (its second
+// stop — usually the quieter one), so even the fallback follows the regions and the month.
+const TRENDING = FULL_GUIDES
+  .filter(g => LIVE_COUNTRIES.includes(g.name))
+  .map(g => {
+    const month = currentMonth();
+    const r = [...g.routes].sort((x, y) => inSeason(y, month) - inSeason(x, month))[0];
+    const stop = r?.stops[1] || r?.stops[0];
+    return stop ? { dest: `${stop.name}, ${g.name}`, trend: r.name } : null;
+  })
+  .filter(Boolean)
+  .slice(0, 6);
 
 
 const navy = '#0a0f1e';
@@ -90,7 +59,8 @@ function CountryPhoto({ name, style }) {
 }
 
 function PersonalRecCard({ rec, onClick }) {
-  const { src, credit } = useDestinationPhotoWithCredit(rec.destination || '', '', 'card');
+  // Curated picks carry a hand-checked photo search (picks.js); older answers just a place name.
+  const { src, credit } = useDestinationPhotoWithCredit(rec.country || rec.destination || '', rec.photoQuery || '', 'card');
   return (
     <div onClick={onClick}
       style={{ borderRadius: 14, overflow: 'hidden', cursor: 'pointer', border: `1px solid ${border}`, background: navy3, transition: 'all 0.2s' }}
@@ -100,7 +70,9 @@ function PersonalRecCard({ rec, onClick }) {
         <img src={src} alt={rec.destination} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={e => { e.target.src = getFallbackPhoto('card'); }} />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(10,15,30,0.9), transparent 60%)' }} />
         <PhotoCredit credit={credit} />
-        <div style={{ position: 'absolute', bottom: 8, left: 12, fontSize: 14, fontWeight: 700, color: '#fff' }}>{rec.destination?.split(',')[0]}</div>
+        <div style={{ position: 'absolute', bottom: 8, left: 12, right: 12, fontSize: 14, fontWeight: 700, color: '#fff' }}>
+          {rec.routeName ? `${rec.country} · ${rec.routeName}` : rec.destination?.split(',')[0]}
+        </div>
       </div>
       <div style={{ padding: '10px 12px' }}>
         <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5, marginBottom: 8 }}>{rec.reason}</div>
@@ -137,7 +109,7 @@ function TrendingCard({ t, onClick }) {
 
 export default function ExplorePage() {
   const navigate = useNavigate();
-  const [activeContinent, setActiveContinent] = useState('asia');
+  const [activeContinent, setActiveContinent] = useState(LIVE_REGIONS[0]?.id || '');
   const [activeCountry, setActiveCountry] = useState(null);
   const [apiTrending, setApiTrending]   = useState([]);
   const [apiCountries, setApiCountries] = useState({});
@@ -278,11 +250,13 @@ export default function ExplorePage() {
               <span style={{ width: 24, height: 1, background: teal, display: 'inline-block' }} />✦ Picked for you
             </div>
             <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(1.25rem,2.5vw,1.75rem)', fontWeight: 700, color: '#fff', letterSpacing: '-0.03em', marginBottom: '1.25rem', lineHeight: 1.1 }}>
-              Based on your travel history
+              In season now, somewhere you haven’t planned yet
             </h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 14 }}>
               {personalRecs.map((rec, i) => (
-                <PersonalRecCard key={i} rec={rec} onClick={() => startPlan(rec.destination)} />
+                <PersonalRecCard key={i} rec={rec} onClick={() => (rec.routeId
+                  ? navigate('/plan', { state: { prefill: planPrefill(rec.country, { id: rec.routeId, days: rec.days }) } })
+                  : startPlan(rec.destination))} />
               ))}
             </div>
           </div>
@@ -323,7 +297,7 @@ export default function ExplorePage() {
             <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: 'clamp(1.5rem,3vw,2.25rem)', fontWeight: 700, color: '#fff', letterSpacing: '-0.03em', marginBottom: '0.5rem', lineHeight: 1.1 }}>
               Where do you want to <span style={{ color: teal, fontStyle: 'italic' }}>wander</span>?
             </h2>
-            <p style={{ fontSize: '0.95rem', color: w40, lineHeight: 1.7 }}>Pick a region to see where locals actually go.</p>
+            <p style={{ fontSize: '0.95rem', color: w40, lineHeight: 1.7 }}>Countries we have hand-picked routes for. Pick one for its towns and a quick brief.</p>
           </div>
 
           {/* Continent tabs */}
@@ -346,7 +320,7 @@ export default function ExplorePage() {
                   transition: 'all 0.2s',
                 }}
               >
-                {c.emoji} {c.name}
+                {c.name}
               </div>
             ))}
           </div>

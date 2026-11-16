@@ -13,11 +13,22 @@
  */
 
 import { CURATED_COUNTRIES } from '../components/plantrip/WhoIsTravelling';
+import REGIONS from '../data/regions.json';
 
 export const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 export const MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-export const ASIA = ['Vietnam', 'Japan', 'India', 'Thailand', 'Sri Lanka', 'Indonesia', 'Nepal'];
+/**
+ * Regions come from the curated data (curated-routes.js REGIONS → src/data/regions.json).
+ * Only `live` regions are promoted; switching one on there needs no change here.
+ */
+export const LIVE_REGIONS = REGIONS.filter(r => r.live);
+export const LIVE_COUNTRIES = LIVE_REGIONS.flatMap(r => r.countries);
+/** "Asia", "Asia and Europe", "Asia, Europe and Oceania" */
+export const liveRegionLabel = (regions = LIVE_REGIONS) => {
+  const n = regions.map(r => r.name);
+  return n.length <= 1 ? (n[0] || '') : `${n.slice(0, -1).join(', ')} and ${n[n.length - 1]}`;
+};
 
 /** Where travellers usually fly into, per curated country — for the distance estimate. */
 export const ARRIVAL_HUB = {
@@ -97,14 +108,16 @@ export const inSeason = (route, month) => (route.bestMonths || []).includes(mont
  * then the shortest flight. Each carries its routes ordered in-season first.
  * @param {object[]} guides  src/data/guides.json
  */
-export function rankCountries(guides, { month, origin, only = ASIA }) {
+export function rankCountries(guides, { month, origin, only = LIVE_COUNTRIES }) {
   const here = [origin.lat, origin.lng];
   return guides
     .filter(g => !only || only.includes(g.name))
     .map(g => {
       const routes = [...g.routes].sort((a, b) => inSeason(b, month) - inSeason(a, month));
       const good = routes.filter(r => inSeason(r, month)).length;
-      const hub = ARRIVAL_HUB[g.name];
+      // A new country needs no hub entry: its first route's first stop is close enough.
+      const first = g.routes[0]?.stops?.[0];
+      const hub = ARRIVAL_HUB[g.name] || (first ? [first.lat, first.lng] : null);
       return { ...g, routes, goodRoutes: good, hours: hub ? flightHours(distanceKm(here, hub)) : null };
     })
     .sort((a, b) => (Math.min(b.goodRoutes, 1) - Math.min(a.goodRoutes, 1)) || ((a.hours ?? 99) - (b.hours ?? 99)));

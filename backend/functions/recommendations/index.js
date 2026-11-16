@@ -7,6 +7,8 @@ const {
   checkRateLimit, userSubject, ipSubject, rateLimitBody,
 } = require('/opt/nodejs/index');
 const { MODELS, firstText, withEffort, maxTokensFor } = require('/opt/nodejs/claude');
+const { pickForUser } = require('/opt/nodejs/picks');
+const { LIVE_COUNTRIES } = require('/opt/nodejs/curated-routes');
 const { searchPhoto, normaliseQuery } = require('./photos');
 const { searchVideos, normaliseVideoQuery } = require('./videos');
 
@@ -577,115 +579,39 @@ Rules:
 async function handlePersonalised(event) {
   const auth = await authenticateOrRespond(event);
   if (auth.response) return auth.response;
-  const { user } = auth;
-  const { email } = user;
+  const { email } = auth.user;
 
-  // Check 7-day cache
+  // Picked from the curated routes in live regions, in season now (layers/shared/nodejs/picks.js).
+  // No Claude call (it used to suggest any place on earth, cached for a week), so no rate limit.
   try {
-    const cached = await getDB().query(
-      `SELECT recommendations FROM recommendation_cache
-       WHERE email = $1 AND created_at > NOW() - INTERVAL '7 days'`,
-      [email]
-    );
-    if (cached.rows.length > 0) {
-      log.info('Personalised recs cache hit', { email });
-      return ok(cached.rows[0].recommendations, event);
-    }
-  } catch (cacheErr) {
-    log.warn('Recs cache lookup failed', { error: cacheErr.message });
-  }
-
-  if (!anthropic) return ok({ recommendations: [], preferred_activities: [] }, event);
-
-  // Only cache misses reach Claude, so only they count against the limit.
-  const limited = await rateLimitedResponse('personalised', userSubject(user), event);
-  if (limited) return limited;
-
-  try {
-    // Fetch past destinations and profile in parallel
-    const [tripsResult, profileResult] = await Promise.all([
-      getDB().query(
-        `SELECT DISTINCT destination FROM submissions WHERE email = $1 ORDER BY destination LIMIT 10`,
-        [email]
-      ),
-      getDB().query(
-        `SELECT age, gender, home_city FROM users WHERE email = $1`,
-        [email]
-      ),
+    const db = getDB();
+    const [trips, styles] = await Promise.all([
+      db.query(`SELECT DISTINCT destination FROM submissions WHERE email = $1 AND destination IS NOT NULL LIMIT 50`, [email]),
+      db.query(`SELECT travel_style, traveler_type FROM submissions WHERE email = $1 AND travel_style IS NOT NULL LIMIT 15`, [email]),
     ]);
 
-    const pastDestinations = tripsResult.rows.map(r => r.destination).filter(Boolean);
-    const profile = profileResult.rows[0] || {};
-
-    const profileDesc = [
-      profile.age    ? `age ${profile.age}`          : null,
-      profile.gender || null,
-      profile.home_city ? `based in ${profile.home_city}` : null,
-    ].filter(Boolean).join(', ');
-
-    const pastDesc = pastDestinations.length > 0
-      ? `has visited: ${pastDestinations.join(', ')}`
-      : 'has no past trips yet';
-
-    const prompt = `You are a slow-travel expert. A traveller (${profileDesc || 'profile unknown'}) ${pastDesc}.
-
-Recommend 3 new slow-travel destinations they haven't visited yet.
-Return JSON array ONLY — no explanation:
-[
-  { "destination": "City, Country", "country": "Country", "emoji": "🇯🇵", "reason": "One sentence why this suits them" }
-]`;
-
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 8000);
-    let message;
-    try {
-      message = await anthropic.messages.create(
-        fastBody(512, { messages: [{ role: 'user', content: prompt }] }),
-        { signal: controller.signal }
-      );
-    } finally {
-      clearTimeout(timer);
-    }
-
-    const text = firstText(message);
-    const match = text.match(/\[[\s\S]*\]/);
-    const recommendations = match ? JSON.parse(match[0]).slice(0, 3) : [];
-
-    // Compute preferred activities from travel_style column
-    const activitiesResult = await getDB().query(
-      `SELECT travel_style, traveler_type FROM submissions WHERE email = $1 AND travel_style IS NOT NULL LIMIT 15`,
-      [email]
-    );
     const counts = {};
-    for (const row of activitiesResult.rows) {
+    for (const row of styles.rows) {
       try {
-        const styles = Array.isArray(row.travel_style) ? row.travel_style : JSON.parse(row.travel_style || '[]');
-        styles.forEach(s => { if (s) counts[s] = (counts[s] || 0) + 1; });
+        const list = Array.isArray(row.travel_style) ? row.travel_style : JSON.parse(row.travel_style || '[]');
+        list.forEach(st => { if (st) counts[st] = (counts[st] || 0) + 1; });
       } catch { /* skip */ }
     }
-    const preferred_activities = Object.entries(counts)
-      .sort((a, b) => b[1] - a[1]).slice(0, 4).map(([s]) => s);
+    const preferred_activities = Object.entries(counts).sort((x, y) => y[1] - x[1]).slice(0, 4).map(([k]) => k);
+    const travelerTypes = styles.rows.map(r => r.traveler_type).filter(Boolean);
+    const typeCounts = {};
+    travelerTypes.forEach(t => { typeCounts[t] = (typeCounts[t] || 0) + 1; });
+    const top_traveler_type = Object.entries(typeCounts).sort((x, y) => y[1] - x[1])[0]?.[0] || null;
 
-    // Most common traveler type
-    const travelerCounts = {};
-    activitiesResult.rows.forEach(r => { if (r.traveler_type) travelerCounts[r.traveler_type] = (travelerCounts[r.traveler_type] || 0) + 1; });
-    const top_traveler_type = Object.entries(travelerCounts).sort((a,b) => b[1]-a[1])[0]?.[0] || null;
-
-    const result = { recommendations, preferred_activities, top_traveler_type };
-
-    // Cache result
-    try {
-      await getDB().query(
-        `INSERT INTO recommendation_cache (email, recommendations)
-         VALUES ($1, $2)
-         ON CONFLICT (email) DO UPDATE SET recommendations = $2, created_at = NOW()`,
-        [email, JSON.stringify(result)]
-      );
-    } catch (cacheErr) {
-      log.warn('Recs cache write failed', { error: cacheErr.message });
-    }
-
-    return ok(result, event);
+    const now = new Date();
+    const week = Math.floor(now.getTime() / (7 * 24 * 3600 * 1000));
+    const recommendations = pickForUser({
+      pastDestinations: trips.rows.map(r => r.destination),
+      travelerTypes,
+      month: now.getUTCMonth() + 1,
+      seed: `${email}:${week}`,
+    });
+    return ok({ recommendations, preferred_activities, top_traveler_type }, event);
   } catch (err) {
     log.error('Personalised recs failed', { error: err.message });
     return ok({ recommendations: [], preferred_activities: [] }, event);
@@ -871,7 +797,9 @@ async function handleTrending(event) {
 
   const month = new Date().toLocaleString('en-US', { month: 'long' });
   // v2 (Nov 2026): Asia-first, no invented traveller counts, advisory countries filtered.
-  const cacheKey = `trending:v2:${country}:${month}`;
+  // v3 (Nov 16 2026): only countries in LIVE regions (curated-routes.js) — the key carries them,
+  // so switching a region on refreshes the list at once.
+  const cacheKey = `trending:v3:${LIVE_COUNTRIES.join(',').toLowerCase().replace(/[^a-z,]/g, '')}:${country}:${month}`;
 
   // Check cache (24 hours)
   try {
@@ -894,7 +822,7 @@ async function handleTrending(event) {
 
   try {
     const interestText = interests ? `Their interests include: ${interests}.` : '';
-    const prompt = `You are a slow travel expert. Suggest 6 slow-travel destinations in Asia (South, Southeast or East Asia) that are at their best in ${month}, for travelers from ${country}. ${interestText}
+    const prompt = `You are a slow travel expert. Suggest 6 slow-travel destinations that are at their best in ${month}, for travelers from ${country}, ONLY in these countries: ${LIVE_COUNTRIES.join(', ')}. ${interestText}
 
 Focus on: towns and regions (not capital cities), good weather or a seasonal highlight in ${month}, quieter alternatives to the famous spots.
 Never suggest a place in a country under a "do not travel" government advisory.
@@ -924,7 +852,8 @@ Return JSON ONLY:
     const text = firstText(message);
     const match = text.match(/\[[\s\S]*\]/);
     const trending = (match ? JSON.parse(match[0]) : [])
-      .filter((t) => t && typeof t.destination === 'string' && !isAdvisoryDestination(t.destination))
+      .filter((t) => t && typeof t.destination === 'string' && !isAdvisoryDestination(t.destination)
+        && inLiveCountry(t.destination))
       .slice(0, 6)
       .map(({ destination, why, badge }) => ({ destination, why: typeof why === 'string' ? why : '', badge: typeof badge === 'string' ? badge : '' }));
 
@@ -950,6 +879,12 @@ Return JSON ONLY:
  * (smartraveller.gov.au) and most others, Nov 2026. Never shown as a trending suggestion.
  * Advice changes: review this list against Smartraveller when it's touched.
  */
+/** "Town, Country" is in a live country (the model is told the list; this enforces it). */
+function inLiveCountry(destination) {
+  const c = String(destination).split(',').pop().trim().toLowerCase();
+  return LIVE_COUNTRIES.some(n => n.toLowerCase() === c);
+}
+
 const ADVISORY_COUNTRIES = ['myanmar', 'burma', 'afghanistan', 'north korea', 'syria', 'yemen', 'iraq', 'iran', 'lebanon', 'russia', 'ukraine', 'belarus', 'sudan', 'south sudan', 'somalia', 'libya', 'mali', 'niger', 'burkina faso', 'haiti', 'venezuela'];
 
 function isAdvisoryDestination(destination) {

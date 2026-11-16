@@ -7,6 +7,7 @@ import { TravelChat } from '../components/TravelChat';
 import ContinuePlan from '../components/dashboard/ContinuePlan';
 import { timeAgo, extractCountry, lastPlanHeadline } from '../utils/tripStats';
 import { fetchPdfLink } from '../api/itinerary';
+import { planPrefill } from '../utils/seasons';
 import { openUrl } from '../utils/openUrl';
 import './Dashboard.css';
 
@@ -65,8 +66,8 @@ function recCardGradient(i) {
   return g[i % g.length];
 }
 
-function DestPhoto({ destination, height = 130, children }) {
-  const { src, credit } = useDestinationPhotoWithCredit(destination || '', '', 'card');
+function DestPhoto({ destination, keyword = '', height = 130, children }) {
+  const { src, credit } = useDestinationPhotoWithCredit(destination || '', keyword, 'card');
   return (
     <div style={{ height, position: 'relative', overflow: 'hidden' }}>
       <img src={src} alt={destination} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.src = getFallbackPhoto('card'); }} />
@@ -317,23 +318,26 @@ export default function Dashboard() {
               {recs.map((rec, i) => (
                 <div
                   key={i}
-                  onClick={() => navigate('/plan', { state: { prefill: { destinations: [{ name: rec.destination?.split(',')[0]?.trim(), lat: 0, lng: 0 }] } } })}
+                  onClick={() => navigate('/plan', { state: { prefill: rec.routeId
+                    ? planPrefill(rec.country, { id: rec.routeId, days: rec.days })
+                    : { destinations: [{ name: rec.destination?.split(',')[0]?.trim(), lat: 0, lng: 0 }] } } })}
                   style={{ borderRadius: 18, overflow: 'hidden', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.03)', transition: 'all 0.25s' }}
                   onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.borderColor = 'rgba(0,212,170,0.3)'; e.currentTarget.style.boxShadow = '0 12px 36px rgba(0,0,0,0.3)'; }}
                   onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.boxShadow = 'none'; }}
                 >
-                  <DestPhoto destination={rec.destination} height={130}>
+                  <DestPhoto destination={rec.country || rec.destination} keyword={rec.photoQuery || ''} height={130}>
                     <div style={{ position: 'absolute', inset: 0, background: recCardGradient(i), opacity: 0.6 }} />
                     <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 52, filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.4))' }}>
                       {rec.emoji || getFlag(rec.destination)}
                     </div>
                   </DestPhoto>
                   <div style={{ padding: '16px 18px' }}>
-                    <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>{rec.destination}</div>
+                    <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>{rec.routeName ? `${rec.country} · ${rec.routeName}` : rec.destination}</div>
+                    {rec.routeName && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.72)', marginBottom: 6 }}>{rec.destination?.replace(/,\s*[^,]+$/, '')} · {rec.days} days</div>}
                     <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', lineHeight: 1.45, marginBottom: 12 }}>{rec.reason}</div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#00d4aa', background: 'rgba(0,212,170,0.08)', border: '1px solid rgba(0,212,170,0.15)', borderRadius: 4, padding: '3px 7px' }}>
-                        AI pick
+                        {rec.routeId ? (rec.inSeason ? 'In season' : `Best ${rec.bestLabel}`) : 'Suggestion'}
                       </span>
                       <span style={{ fontSize: 16, color: '#00d4aa' }}>→</span>
                     </div>

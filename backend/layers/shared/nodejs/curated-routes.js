@@ -41,9 +41,24 @@ function monthRanges(best) {
 /** Is `month` (1–12) a good month for this route? null when the month is unknown. */
 const inSeason = (route, month) => (month >= 1 && month <= 12 && route.seasons ? route.seasons.best.includes(month) : null);
 
+/**
+ * Regions the site is built around (Nov 2026). Turning a region on is a DATA change, not a code
+ * change: set `live: true` here (and give its countries routes + seasons), and the home page,
+ * Explore (route finder, browse by region), "Picked for you" and "Good right now" all include it
+ * on the next deploy. `order` decides which region leads. Countries in a region that isn't live
+ * still plan normally (the planner uses their curated routes) — they're just not promoted.
+ */
+const REGIONS = [
+  { id: 'asia', name: 'Asia', tagline: 'Rice terraces, mountain towns, old ports and tea country', live: true, order: 1 },
+  { id: 'europe', name: 'Europe', tagline: 'Farmhouse stays, hill towns and quiet coasts', live: false, order: 2 },
+  { id: 'oceania', name: 'Oceania', tagline: 'Lakes, bush walks and empty beaches', live: false, order: 3 },
+];
+const LIVE_REGIONS = REGIONS.filter(r => r.live).sort((a, b) => a.order - b.order).map(r => r.id);
+
 const COUNTRIES = {
   vietnam: {
     name: 'Vietnam',
+    region: 'asia',
     aliases: ['vietnam', 'viet nam'],
     routes: [
       {
@@ -91,6 +106,7 @@ const COUNTRIES = {
 
   japan: {
     name: 'Japan',
+    region: 'asia',
     aliases: ['japan', 'nippon'],
     routes: [
       {
@@ -137,6 +153,7 @@ const COUNTRIES = {
 
   india: {
     name: 'India',
+    region: 'asia',
     aliases: ['india', 'bharat'],
     routes: [
       {
@@ -183,6 +200,7 @@ const COUNTRIES = {
 
   thailand: {
     name: 'Thailand',
+    region: 'asia',
     aliases: ['thailand'],
     routes: [
       {
@@ -228,6 +246,7 @@ const COUNTRIES = {
 
   'sri lanka': {
     name: 'Sri Lanka',
+    region: 'asia',
     aliases: ['sri lanka', 'srilanka', 'ceylon'],
     routes: [
       {
@@ -273,6 +292,7 @@ const COUNTRIES = {
 
   indonesia: {
     name: 'Indonesia',
+    region: 'asia',
     aliases: ['indonesia'],
     routes: [
       {
@@ -317,6 +337,7 @@ const COUNTRIES = {
 
   nepal: {
     name: 'Nepal',
+    region: 'asia',
     aliases: ['nepal'],
     routes: [
       {
@@ -363,6 +384,7 @@ const COUNTRIES = {
 
   italy: {
     name: 'Italy',
+    region: 'europe',
     aliases: ['italy', 'italia'],
     routes: [
       {
@@ -409,6 +431,7 @@ const COUNTRIES = {
 
   portugal: {
     name: 'Portugal',
+    region: 'europe',
     aliases: ['portugal'],
     routes: [
       {
@@ -455,6 +478,7 @@ const COUNTRIES = {
 
   'new zealand': {
     name: 'New Zealand',
+    region: 'oceania',
     aliases: ['new zealand', 'aotearoa', 'nz'],
     routes: [
       {
@@ -610,5 +634,10 @@ function curatedOptions({ destination, days, prefs = {}, travelDate = '' }) {
 
 /** All curated countries, for the destination chips. */
 const CURATED_COUNTRIES = Object.values(COUNTRIES).map(c => c.name);
+/** Countries the site promotes right now (in a live region), in region order. */
+const LIVE_COUNTRIES = Object.values(COUNTRIES)
+  .filter(c => LIVE_REGIONS.includes(c.region))
+  .sort((a, b) => LIVE_REGIONS.indexOf(a.region) - LIVE_REGIONS.indexOf(b.region))
+  .map(c => c.name);
 
-module.exports = { COUNTRIES, CURATED_COUNTRIES, MONTH_NAMES, findCountry, fitDays, maxStops, longestTransfer, curatedOptions, inSeason, monthRanges };
+module.exports = { COUNTRIES, CURATED_COUNTRIES, REGIONS, LIVE_REGIONS, LIVE_COUNTRIES, MONTH_NAMES, findCountry, fitDays, maxStops, longestTransfer, curatedOptions, inSeason, monthRanges };

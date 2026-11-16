@@ -12,10 +12,12 @@ import path from 'node:path';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
-const { COUNTRIES, fitDays, monthRanges } = require(path.resolve(here, '../../backend/layers/shared/nodejs/curated-routes.js'));
+const { COUNTRIES, REGIONS, fitDays, monthRanges } = require(path.resolve(here, '../../backend/layers/shared/nodejs/curated-routes.js'));
 const OUT = path.resolve(here, '../src/data/guides.json');
 // Names and addresses only, for links on pages that shouldn't load the whole guides file.
 const OUT_INDEX = path.resolve(here, '../src/data/guides-index.json');
+// Regions and which are live (promoted): the site reads this instead of a hard-coded list.
+const OUT_REGIONS = path.resolve(here, '../src/data/regions.json');
 
 const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
@@ -23,6 +25,7 @@ export function buildGuides() {
   return Object.values(COUNTRIES).map((c) => ({
     slug: slug(c.name),
     name: c.name,
+    region: c.region,
     routes: c.routes.map((r) => {
       const days = Math.max(1, Math.round(r.bases.reduce((a, b) => a + b.weight, 0)));
       return {
@@ -56,7 +59,10 @@ export function buildGuides() {
 const guides = buildGuides();
 const files = [
   [OUT, `${JSON.stringify(guides, null, 1)}\n`],
-  [OUT_INDEX, `${JSON.stringify(guides.map(({ slug, name }) => ({ slug, name })))}\n`],
+  [OUT_INDEX, `${JSON.stringify(guides.map(({ slug, name, region }) => ({ slug, name, region })))}\n`],
+  [OUT_REGIONS, `${JSON.stringify(REGIONS.map(({ id, name, tagline, live, order }) => ({
+    id, name, tagline, live, order, countries: guides.filter(g => g.region === id).map(g => g.name),
+  })).sort((a, b) => a.order - b.order), null, 1)}\n`],
 ];
 if (process.argv.includes('--check')) {
   for (const [file, json] of files) {
