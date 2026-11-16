@@ -30,7 +30,11 @@ async function stripeGet(path, params, { secretKey, fetchImpl }) {
     headers: { Authorization: `Bearer ${secretKey}` },
     signal: AbortSignal.timeout(8000),
   });
-  if (!res.ok) throw new Error(`Stripe ${path} ${res.status}`);
+  if (!res.ok) {
+    let reason = '';
+    try { reason = (await res.json())?.error?.message || ''; } catch { /* not JSON */ }
+    throw new Error(`Stripe ${path} ${res.status}${reason ? `: ${reason.slice(0, 160)}` : ''}`);
+  }
   return res.json();
 }
 
@@ -69,7 +73,8 @@ async function getCatalog({ secretKey, fetchImpl = fetch, now = Date.now(), log 
     const opts = { secretKey, fetchImpl };
     const [products, links] = await Promise.all([
       stripeGet('/products/search', {
-        query: "active:'true' AND (metadata['wz_plan']:'trip' OR metadata['wz_plan']:'pass')",
+        // Stripe search can't mix AND with OR (or use brackets): match the plans, filter active in code.
+        query: PLANS.map(p => `metadata['wz_plan']:'${p}'`).join(' OR '),
         'expand[]': 'data.default_price.currency_options',
         limit: '20',
       }, opts),
