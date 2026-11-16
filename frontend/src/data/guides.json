@@ -8,6 +8,14 @@
     "name": "Classic north + centre",
     "summary": "Hanoi’s old quarter, rice terraces around Sapa, then lanterns and beaches in Hoi An.",
     "kidFriendly": false,
+    "bestMonths": [
+     3,
+     4,
+     5
+    ],
+    "bestLabel": "Mar–May",
+    "seasonNote": "Sapa is clearest in spring and autumn; Hoi An floods in Oct–Dec, so spring suits both ends",
+    "photoQuery": "Sapa, Vietnam",
     "days": 9,
     "longestTransferHours": 5.5,
     "stops": [
@@ -83,6 +91,18 @@
     "name": "Central coast, easy pace",
     "summary": "One region, short hops: beach mornings in Da Nang, old-town Hoi An, imperial Hue over the Hai Van pass.",
     "kidFriendly": true,
+    "bestMonths": [
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8
+    ],
+    "bestLabel": "Feb–Aug",
+    "seasonNote": "Dry from Feb to Aug; Sep–Dec brings heavy rain and floods",
+    "photoQuery": "Hoi An, Vietnam",
     "days": 9,
     "longestTransferHours": 2.5,
     "stops": [
@@ -143,6 +163,17 @@
     "name": "The north, slowly",
     "summary": "Stay in the north and skip flights: Hanoi, the karst rivers of Ninh Binh, and a night on quieter Lan Ha Bay.",
     "kidFriendly": true,
+    "bestMonths": [
+     3,
+     4,
+     5,
+     9,
+     10,
+     11
+    ],
+    "bestLabel": "Mar–May, Sep–Nov",
+    "seasonNote": "Mild and dry in spring and autumn; summer storms can cancel boats on Lan Ha Bay",
+    "photoQuery": "Ninh Binh, Vietnam",
     "days": 8,
     "longestTransferHours": 3,
     "stops": [
@@ -207,6 +238,16 @@
     "name": "Kyoto, the Alps and the Sea of Japan",
     "summary": "Temples at dawn in Kyoto, an old merchant town in the mountains, then gardens and seafood in Kanazawa.",
     "kidFriendly": true,
+    "bestMonths": [
+     3,
+     4,
+     5,
+     10,
+     11
+    ],
+    "bestLabel": "Mar–May, Oct–Nov",
+    "seasonNote": "Spring blossom and autumn colour; Jun–Jul is the rainy season",
+    "photoQuery": "Takayama, Japan",
     "days": 10,
     "longestTransferHours": 3.5,
     "stops": [
@@ -268,6 +309,16 @@
     "name": "Tokyo, Hakone and Kyoto",
     "summary": "A gentle first trip: Tokyo neighbourhoods, a hot-spring night in Hakone, then Kyoto.",
     "kidFriendly": true,
+    "bestMonths": [
+     3,
+     4,
+     5,
+     10,
+     11
+    ],
+    "bestLabel": "Mar–May, Oct–Nov",
+    "seasonNote": "Spring blossom and autumn colour; Fuji is clearest Nov–Feb",
+    "photoQuery": "Hakone, Japan",
     "days": 9,
     "longestTransferHours": 2.5,
     "stops": [
@@ -328,6 +379,17 @@
     "name": "Kyushu hot-spring towns",
     "summary": "Fewer tourists: Fukuoka food stalls, the onsen village of Yufuin and Kurokawa’s riverside baths.",
     "kidFriendly": true,
+    "bestMonths": [
+     3,
+     4,
+     5,
+     10,
+     11,
+     12
+    ],
+    "bestLabel": "Mar–May, Oct–Dec",
+    "seasonNote": "Onsen towns are at their best in cool weather; Jun–Jul is the rainy season",
+    "photoQuery": "Kurokawa Onsen",
     "days": 8,
     "longestTransferHours": 2.25,
     "stops": [
@@ -391,6 +453,17 @@
     "name": "Kerala: coast, backwaters, tea hills",
     "summary": "Fort Kochi’s lanes, a slow day on the backwaters, then cool tea estates in Munnar.",
     "kidFriendly": true,
+    "bestMonths": [
+     10,
+     11,
+     12,
+     1,
+     2,
+     3
+    ],
+    "bestLabel": "Oct–Mar",
+    "seasonNote": "Dry and comfortable after the monsoon; Jun–Sep is very wet",
+    "photoQuery": "Munnar, India",
     "days": 8,
     "longestTransferHours": 4.5,
     "stops": [
@@ -449,6 +522,17 @@
     "name": "Himachal: Kangra valley to Manali",
     "summary": "Tibetan culture in McLeod Ganj, paragliding country in Bir, apple orchards in old Manali.",
     "kidFriendly": false,
+    "bestMonths": [
+     3,
+     4,
+     5,
+     6,
+     9,
+     10
+    ],
+    "bestLabel": "Mar–Jun, Sep–Oct",
+    "seasonNote": "Spring and autumn are clear; Jul–Aug monsoon brings landslides on mountain roads",
+    "photoQuery": "Manali, India",
     "days": 9,
     "longestTransferHours": 5,
     "stops": [
@@ -509,6 +593,17 @@
     "name": "Southern Rajasthan, slowly",
     "summary": "Lakes of Udaipur, the great wall of Kumbhalgarh, and the blue city of Jodhpur.",
     "kidFriendly": true,
+    "bestMonths": [
+     10,
+     11,
+     12,
+     1,
+     2,
+     3
+    ],
+    "bestLabel": "Oct–Mar",
+    "seasonNote": "Cool, dry winters; Apr–Jun is very hot",
+    "photoQuery": "Udaipur, India",
     "days": 8,
     "longestTransferHours": 3.5,
     "stops": [
@@ -572,6 +667,15 @@
     "name": "The quiet north",
     "summary": "Old-city temples in Chiang Mai, caves and forest in Chiang Dao, tea hills near Chiang Rai.",
     "kidFriendly": true,
+    "bestMonths": [
+     11,
+     12,
+     1,
+     2
+    ],
+    "bestLabel": "Nov–Feb",
+    "seasonNote": "Cool and dry; Mar–Apr has haze from crop burning",
+    "photoQuery": "Chiang Dao, Thailand",
     "days": 9,
     "longestTransferHours": 2.5,
     "stops": [
@@ -630,6 +734,17 @@
     "name": "Andaman coast, easy",
     "summary": "Krabi’s cliffs and then a long, unhurried stay on Koh Lanta.",
     "kidFriendly": true,
+    "bestMonths": [
+     11,
+     12,
+     1,
+     2,
+     3,
+     4
+    ],
+    "bestLabel": "Nov–Apr",
+    "seasonNote": "Calm seas Nov–Apr; May–Oct is the rainy season and some Lanta resorts close",
+    "photoQuery": "Koh Lanta, Thailand",
     "days": 8,
     "longestTransferHours": 2.5,
     "stops": [
@@ -672,6 +787,15 @@
     "name": "Rivers and national parks",
     "summary": "Bangkok’s canals, the River Kwai in Kanchanaburi, wildlife in Khao Yai.",
     "kidFriendly": true,
+    "bestMonths": [
+     11,
+     12,
+     1,
+     2
+    ],
+    "bestLabel": "Nov–Feb",
+    "seasonNote": "Coolest and driest months; Mar–May is very hot",
+    "photoQuery": "Kanchanaburi, Thailand",
     "days": 8,
     "longestTransferHours": 4,
     "stops": [
@@ -735,6 +859,16 @@
     "name": "Hill country to the south coast",
     "summary": "Kandy, the famous train into the tea hills of Ella, then the south coast.",
     "kidFriendly": false,
+    "bestMonths": [
+     12,
+     1,
+     2,
+     3,
+     4
+    ],
+    "bestLabel": "Dec–Apr",
+    "seasonNote": "The south coast is dry Dec–Apr; May–Sep the south-west monsoon arrives",
+    "photoQuery": "Ella, Sri Lanka",
     "days": 8,
     "longestTransferHours": 7,
     "stops": [
@@ -792,6 +926,19 @@
     "name": "Cultural triangle, short hops",
     "summary": "Rock fortresses and village life around Sigiriya, then Kandy — no long journeys.",
     "kidFriendly": true,
+    "bestMonths": [
+     1,
+     2,
+     3,
+     4,
+     6,
+     7,
+     8,
+     9
+    ],
+    "bestLabel": "Jan–Apr, Jun–Sep",
+    "seasonNote": "The dry zone is good most of the year; Oct–Dec brings the north-east monsoon",
+    "photoQuery": "Sigiriya, Sri Lanka",
     "days": 7,
     "longestTransferHours": 3.5,
     "stops": [
@@ -848,6 +995,16 @@
     "name": "South coast, unhurried",
     "summary": "Galle fort and then quiet beaches near Tangalle.",
     "kidFriendly": true,
+    "bestMonths": [
+     12,
+     1,
+     2,
+     3,
+     4
+    ],
+    "bestLabel": "Dec–Apr",
+    "seasonNote": "Calm, sunny south coast Dec–Apr; rough seas May–Sep",
+    "photoQuery": "Galle, Sri Lanka",
     "days": 8,
     "longestTransferHours": 1.5,
     "stops": [
@@ -894,6 +1051,18 @@
     "name": "Bali, the quiet east",
     "summary": "Ubud’s rice fields, the Sidemen valley, and snorkelling off Amed.",
     "kidFriendly": true,
+    "bestMonths": [
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10
+    ],
+    "bestLabel": "Apr–Oct",
+    "seasonNote": "Dry season Apr–Oct; Nov–Mar is wet but green",
+    "photoQuery": "Sidemen, Bali",
     "days": 10,
     "longestTransferHours": 1.5,
     "stops": [
@@ -952,6 +1121,16 @@
     "name": "Ubud and the Gili islands",
     "summary": "Rice terraces, then car-free island time on Gili Air.",
     "kidFriendly": false,
+    "bestMonths": [
+     5,
+     6,
+     7,
+     8,
+     9
+    ],
+    "bestLabel": "May–Sep",
+    "seasonNote": "Dry season with calm crossings to the Gilis",
+    "photoQuery": "Gili Air beach",
     "days": 9,
     "longestTransferHours": 4,
     "stops": [
@@ -992,6 +1171,18 @@
     "name": "Temples of Java, then Bali",
     "summary": "Borobudur at dawn from Yogyakarta, then Ubud.",
     "kidFriendly": true,
+    "bestMonths": [
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10
+    ],
+    "bestLabel": "Apr–Oct",
+    "seasonNote": "Dry season for clear Borobudur sunrises",
+    "photoQuery": "Prambanan, Yogyakarta",
     "days": 8,
     "longestTransferHours": 3,
     "stops": [
@@ -1039,6 +1230,15 @@
     "name": "Kathmandu, Pokhara and Bandipur",
     "summary": "Valley temples, lakeside Pokhara with Himalayan views, and the car-free hill town of Bandipur.",
     "kidFriendly": true,
+    "bestMonths": [
+     10,
+     11,
+     3,
+     4
+    ],
+    "bestLabel": "Mar–Apr, Oct–Nov",
+    "seasonNote": "Clearest mountain views in autumn; rhododendrons in spring; Jun–Sep monsoon hides the peaks",
+    "photoQuery": "Bandipur, Nepal",
     "days": 8,
     "longestTransferHours": 2.5,
     "stops": [
@@ -1098,6 +1298,18 @@
     "name": "Kathmandu valley, slowly",
     "summary": "No flights or long drives: Patan, medieval Bhaktapur and a sunrise from Nagarkot.",
     "kidFriendly": true,
+    "bestMonths": [
+     10,
+     11,
+     12,
+     1,
+     2,
+     3,
+     4
+    ],
+    "bestLabel": "Oct–Apr",
+    "seasonNote": "Dry and clear from autumn to spring; winter nights are cold",
+    "photoQuery": "Bhaktapur, Nepal",
     "days": 7,
     "longestTransferHours": 1,
     "stops": [
@@ -1155,6 +1367,17 @@
     "name": "Jungle and lakes",
     "summary": "Kathmandu, then rhinos in Chitwan and lakeside Pokhara.",
     "kidFriendly": false,
+    "bestMonths": [
+     10,
+     11,
+     12,
+     1,
+     2,
+     3
+    ],
+    "bestLabel": "Oct–Mar",
+    "seasonNote": "Cool, dry months for jungle walks; Apr–May is very hot in Chitwan",
+    "photoQuery": "Chitwan National Park rhino",
     "days": 8,
     "longestTransferHours": 5,
     "stops": [
@@ -1218,6 +1441,15 @@
     "name": "Puglia, town to town",
     "summary": "Sea-cliff Polignano, white Ostuni among olive groves, baroque Lecce — all within an hour of each other.",
     "kidFriendly": true,
+    "bestMonths": [
+     5,
+     6,
+     9,
+     10
+    ],
+    "bestLabel": "May–Jun, Sep–Oct",
+    "seasonNote": "Warm sea without the August crowds",
+    "photoQuery": "Ostuni, Italy",
     "days": 9,
     "longestTransferHours": 1,
     "stops": [
@@ -1278,6 +1510,16 @@
     "name": "Tuscany beyond Florence",
     "summary": "Florence, then cypress hills in Val d’Orcia and walled Lucca.",
     "kidFriendly": true,
+    "bestMonths": [
+     4,
+     5,
+     6,
+     9,
+     10
+    ],
+    "bestLabel": "Apr–Jun, Sep–Oct",
+    "seasonNote": "Spring green and the autumn harvest; August is hot and busy",
+    "photoQuery": "Val d Orcia, Tuscany",
     "days": 9,
     "longestTransferHours": 2.5,
     "stops": [
@@ -1337,6 +1579,15 @@
     "name": "Dolomites",
     "summary": "Alpine meadows and huts from Val Gardena and Cortina.",
     "kidFriendly": true,
+    "bestMonths": [
+     6,
+     7,
+     8,
+     9
+    ],
+    "bestLabel": "Jun–Sep",
+    "seasonNote": "Huts and lifts open mid-June to late September",
+    "photoQuery": "Val Gardena, Dolomites",
     "days": 9,
     "longestTransferHours": 2,
     "stops": [
@@ -1402,6 +1653,17 @@
     "name": "Lisbon and the Alentejo",
     "summary": "Lisbon’s hills, Roman Évora, then the wild Alentejo coast.",
     "kidFriendly": true,
+    "bestMonths": [
+     3,
+     4,
+     5,
+     6,
+     9,
+     10
+    ],
+    "bestLabel": "Mar–Jun, Sep–Oct",
+    "seasonNote": "Spring flowers and mild autumns; Jul–Aug is very hot inland",
+    "photoQuery": "Evora, Portugal",
     "days": 8,
     "longestTransferHours": 2,
     "stops": [
@@ -1462,6 +1724,17 @@
     "name": "Porto, the Douro and the Minho",
     "summary": "Porto, terraced vineyards in the Douro valley, and green Ponte de Lima.",
     "kidFriendly": true,
+    "bestMonths": [
+     5,
+     6,
+     7,
+     8,
+     9,
+     10
+    ],
+    "bestLabel": "May–Oct",
+    "seasonNote": "Douro harvest in September; winters are rainy in the north",
+    "photoQuery": "Douro valley vineyards",
     "days": 8,
     "longestTransferHours": 2.5,
     "stops": [
@@ -1519,6 +1792,15 @@
     "name": "Lisbon to the Algarve, the quiet way",
     "summary": "Lisbon, the rice fields and dunes of Comporta, then the cliffs around Lagos.",
     "kidFriendly": true,
+    "bestMonths": [
+     5,
+     6,
+     9,
+     10
+    ],
+    "bestLabel": "May–Jun, Sep–Oct",
+    "seasonNote": "Warm and quieter than the July–August peak",
+    "photoQuery": "Lagos, Portugal cliffs",
     "days": 9,
     "longestTransferHours": 2.5,
     "stops": [
@@ -1583,6 +1865,15 @@
     "name": "South Island lakes",
     "summary": "Dark-sky Tekapo, Wanaka’s lake walks, Queenstown’s mountains — no drive over 3 hours.",
     "kidFriendly": true,
+    "bestMonths": [
+     12,
+     1,
+     2,
+     3
+    ],
+    "bestLabel": "Dec–Mar",
+    "seasonNote": "Long summer days for walks; Jun–Aug is ski season with short days",
+    "photoQuery": "Lake Wanaka",
     "days": 9,
     "longestTransferHours": 3,
     "stops": [
@@ -1658,6 +1949,17 @@
     "name": "North Island: coast and geothermal",
     "summary": "Coromandel beaches, Rotorua’s Māori culture and hot pools, Lake Taupō.",
     "kidFriendly": true,
+    "bestMonths": [
+     11,
+     12,
+     1,
+     2,
+     3,
+     4
+    ],
+    "bestLabel": "Nov–Apr",
+    "seasonNote": "Beach weather from late spring to autumn",
+    "photoQuery": "Rotorua, New Zealand",
     "days": 10,
     "longestTransferHours": 3,
     "stops": [
@@ -1733,6 +2035,15 @@
     "name": "Top of the South",
     "summary": "Nelson’s sunshine, golden bays of Abel Tasman, and whales off Kaikōura.",
     "kidFriendly": true,
+    "bestMonths": [
+     12,
+     1,
+     2,
+     3
+    ],
+    "bestLabel": "Dec–Mar",
+    "seasonNote": "Settled summer weather for kayaking Abel Tasman",
+    "photoQuery": "Abel Tasman National Park",
     "days": 8,
     "longestTransferHours": 4.5,
     "stops": [

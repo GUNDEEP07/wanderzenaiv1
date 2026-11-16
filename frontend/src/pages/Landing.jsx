@@ -3,25 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './Landing.css';
 import GUIDES from '../data/guides-index.json';
+import SeasonHero from '../components/home/SeasonHero';
 
 // The focus is Asia (Nov 2026): these guides lead wherever guides are listed.
 const ASIA = new Set(['Vietnam', 'Japan', 'India', 'Thailand', 'Sri Lanka', 'Indonesia', 'Nepal']);
 const ASIA_GUIDES = GUIDES.filter(g => ASIA.has(g.name));
-
-const DESTINATIONS = [
-  { name: 'Kyoto backstreets', color: '#00d4aa' },
-  { name: 'Patagonia trails', color: '#ffd93d' },
-  { name: 'Oaxaca markets', color: '#ff6b6b' },
-  { name: 'Faroe Islands', color: '#00d4aa' },
-  { name: 'Tbilisi wine country', color: '#ffd93d' },
-  { name: 'Hoi An villages', color: '#ff6b6b' },
-  { name: 'Lofoten Islands', color: '#00d4aa' },
-  { name: 'Puglia farmhouses', color: '#ffd93d' },
-  { name: 'Luang Prabang', color: '#ff6b6b' },
-  { name: 'Bir Billing trails', color: '#00d4aa' },
-  { name: 'Azores crater lakes', color: '#ffd93d' },
-  { name: 'Georgia mountains', color: '#ff6b6b' },
-];
 
 // Curated Unsplash images — slow travel, nature, hidden places aesthetic
 const PHOTO_STRIP = [
@@ -124,42 +110,8 @@ export default function Landing() {
           <div className="hero-glow-3" />
         </div>
 
-        <div className="hero-eyebrow">
-          <div className="hero-eyebrow-dot" />
-          AI-powered slow travel planning
-        </div>
-
-        <h1 className="hero-title hero-title-gradient">
-          Find the <span className="hero-title-teal">real</span> destination<br />
-          <span className="hero-title-dim">hiding behind the tourist trail</span>
-        </h1>
-
-        <p className="hero-sub">
-          Personalised itineraries built on one belief — the best places are never in the guidebook.
-          Hidden cafes, nature trails, village stays and morning markets, crafted by AI trained to avoid tourist traps.
-        </p>
-
-        <div className="hero-actions">
-          <button className="btn-primary" onClick={planRoute}>
-            {currentUser ? 'Plan my trip' : 'Get started — free'} <span>→</span>
-          </button>
-          <button className="btn-ghost" onClick={() => document.getElementById('sample').scrollIntoView({ behavior: 'smooth' })}>
-            See a sample plan
-          </button>
-        </div>
-
-        <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.55)', fontStyle: 'italic', marginBottom: '1.5rem' }}>
-          Free to start · Day 1 of every trip is on us
-        </div>
-
-        <div className="hero-tags">
-          {DESTINATIONS.map((d, i) => (
-            <div key={d.name} className="dest-tag" style={{ animationDelay: `${i * 0.08}s` }}>
-              <div className="dest-tag-dot" style={{ background: d.color }} />
-              {d.name}
-            </div>
-          ))}
-        </div>
+        {/* Design A (Nov 16 2026): in-season countries first, closest to the visitor; a real route + photo. */}
+        <SeasonHero />
 
         <div className="hero-proof reveal" ref={addRef}>
           <div className="proof-item"><div className="proof-num">{GUIDES.length}</div><div className="proof-label">countries with hand-picked routes</div></div>

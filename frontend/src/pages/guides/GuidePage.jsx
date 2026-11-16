@@ -107,10 +107,12 @@ export default function GuidePage() {
             <section key={r.id} id={r.id} className="guide-route" aria-labelledby={`${r.id}-title`}>
               <h2 id={`${r.id}-title`} style={s.h2}>{r.name}: {r.days} days</h2>
               <p style={s.summary}>{r.summary}</p>
+              {r.seasonNote && <p style={{ ...s.summary, fontSize: '0.9rem', opacity: 0.85 }}>When to go: {r.seasonNote}.</p>}
               <div style={s.badges}>
                 <span style={s.badge(true)}>{routeLine(r.stops)}</span>
                 {r.kidFriendly && <span style={s.badge(false)}>Good with kids</span>}
                 {r.longestTransferHours > 0 && <span style={s.badge(false)}>Longest transfer ~{formatHours(r.longestTransferHours)}</span>}
+                {r.bestLabel && <span style={s.badge(false)} title={r.seasonNote}>Best {r.bestLabel}</span>}
               </div>
               <div className="guide-route__layout">
                 <ol style={{ listStyle: 'none', padding: 0, margin: 0 }}>

@@ -135,6 +135,12 @@ AI-powered slow-travel itinerary SaaS. Live at wanderzenai.com. Solo-maintained.
   `seo-refresh.yml` re-prerenders every 2 h when blog posts change. Blog addresses are
   `/blog/<title-words>-<first 8 of id>` (`utils/blogSlug.js`; the API resolves the 8-hex prefix).
   The distribution's alias + ACM cert are declared in template.yaml (they were hand-set; never drop them).
+- Seasons + home/Explore (Nov 16 2026, designs A + B): every curated route has `seasons: { best: [1–12], note }`
+  for ITS region and a hand-checked `photoQuery`. The home hero (`components/home/SeasonHero.jsx`) and Explore's
+  `components/explore/RouteFinder.jsx` rank by today's month (in season first) then rough flight time from the
+  visitor's city, guessed from the browser time zone (`utils/seasons.js`; no prompt, kept in localStorage only).
+  `curatedOptions` flags off-season routes for the travel date; Claude route prompts get `seasonRule()`.
+  seo-refresh.yml re-saves every page weekly and on the 1st so saved copies show the current month.
 - Guides: `/guides/<country>` pages come from `curated-routes.js` via `scripts/build-guides.mjs`
   (prebuild; a jest test fails if `src/data/guides*.json` is stale — rerun it after editing routes).
 - Photos: Unsplash only through the backend `GET /photos/search` (key stays server-side, cached);

@@ -12,7 +12,7 @@ import path from 'node:path';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
-const { COUNTRIES, fitDays } = require(path.resolve(here, '../../backend/layers/shared/nodejs/curated-routes.js'));
+const { COUNTRIES, fitDays, monthRanges } = require(path.resolve(here, '../../backend/layers/shared/nodejs/curated-routes.js'));
 const OUT = path.resolve(here, '../src/data/guides.json');
 // Names and addresses only, for links on pages that shouldn't load the whole guides file.
 const OUT_INDEX = path.resolve(here, '../src/data/guides-index.json');
@@ -30,6 +30,11 @@ export function buildGuides() {
         name: r.name,
         summary: r.summary,
         kidFriendly: !!r.kidFriendly,
+        // Best months for this route's region (1 = Jan): Explore and the home page rank by them.
+        bestMonths: r.seasons?.best || [],
+        bestLabel: r.seasons ? monthRanges(r.seasons.best) : '',
+        seasonNote: r.seasons?.note || '',
+        photoQuery: r.photoQuery || '',
         days,
         longestTransferHours: Math.max(0, ...r.bases.map((b) => b.transferIn?.hours || 0)),
         stops: fitDays(r.bases, days).map((b) => ({

@@ -103,6 +103,8 @@ function OptionCard({ option, onChoose, focused, onFocusCard }) {
       </div>
       {option.summary && <div style={s.meta}>{option.summary}</div>}
       <div style={{ ...s.meta, marginTop: 4 }}>Longest transfer: {hours(option.longestTransferHours)}</div>
+      {option.inSeason === true && <div style={{ ...s.meta, marginTop: 4, color: '#7fffe0' }}>✓ Good season for your dates{option.bestMonthsLabel ? ` (best ${option.bestMonthsLabel})` : ''}</div>}
+      {option.inSeason == null && option.bestMonthsLabel && <div style={{ ...s.meta, marginTop: 4 }}>Best time: {option.bestMonthsLabel}</div>}
       {option.caution && <div style={s.caution}>⚠︎ {option.caution}</div>}
       <button type="button" style={s.choose} onClick={() => onChoose(option)}>This looks good →</button>
     </div>
