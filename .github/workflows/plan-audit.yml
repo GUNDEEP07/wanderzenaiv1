@@ -19,20 +19,23 @@ jobs:
           mkdir out
           {
           API=https://y44o2x9cu1.execute-api.ap-southeast-2.amazonaws.com/prod
-          c() { echo "$1 $2 → $(curl -s -o /tmp/b -w '%{http_code}' -X $1 "$API$2" -H 'Content-Type: application/json' ${3:+-d "$3"}) $(head -c 160 /tmp/b | tr '\n' ' ')"; }
-          echo "== Claude path on form-handler (/route-plan more:true, guest)"
-          c POST /route-plan '{"destination":"Slovenia","days":6,"more":true,"tripPrefs":{"adults":2,"kidsAges":[]}}'
-          echo "== Claude/Foursquare path on destination-insights"
-          c GET "/destination-insights?destination=Kyoto&startDate=2027-03-01&endDate=2027-03-05"
-          echo "== Unsplash key on recommendations"
-          c GET "/photos/search?query=Hanoi"
-          echo "== Foursquare on recommendations"
-          c GET "/recommendations/venues?destination=Hoi%20An&lat=15.88&lng=108.33&category=Restaurants"
-          echo "== watchdog schedule (last 40 min)"
-          for m in Invocations Errors; do aws cloudwatch get-metric-statistics --namespace AWS/Lambda --metric-name $m --dimensions Name=FunctionName,Value=wanderzenai-generation-watchdog-prod --start-time $(date -u -d '-40 min' +%FT%TZ) --end-time $(date -u +%FT%TZ) --period 2400 --statistics Sum --query 'Datapoints[0].Sum' --output text | sed "s/^/$m: /"; done
-          aws logs filter-log-events --log-group-name /aws/lambda/wanderzenai-generation-watchdog-prod --start-time $(( ($(date +%s) - 2400) * 1000 )) --query 'events[].message' --output text | grep -oE '"msg":"[^"]*"|Task timed out|ERROR|START|REPORT' | sort | uniq -c
-          echo "== lambda errors in the account (last 40 min, per function)"
-          for f in form-handler itinerary-gen pdf-builder email-sender recommendations destination-insights profile stripe-webhook generation-watchdog; do e=$(aws cloudwatch get-metric-statistics --namespace AWS/Lambda --metric-name Errors --dimensions Name=FunctionName,Value=wanderzenai-$f-prod --start-time $(date -u -d '-40 min' +%FT%TZ) --end-time $(date -u +%FT%TZ) --period 2400 --statistics Sum --query 'Datapoints[0].Sum' --output text); echo "$f $e"; done
+          c() { echo "$1 $2 → $(curl -s -o /tmp/b -w '%{http_code}' -X $1 "$API$2" -H 'Content-Type: application/json' -H 'Origin: https://www.wanderzenai.com' ${3:+-d "$3"}) $(head -c 160 /tmp/b | tr '\n' ' ')"; }
+          echo "== free-trip lock release"
+          c GET "/itinerary?id=wz_abc123_NOSUCHTRIPAAAAAAA"
+          c POST /itinerary/wz_abc123_ABCDEFGHIJKLMNOP/unlock
+          c POST /itinerary/not-an-id/unlock
+          c GET /itinerary/wz_abc123_ABCDEFGHIJKLMNOP/progress
+          echo "preflight: $(curl -s -o /dev/null -w '%{http_code}' -X OPTIONS "$API/itinerary/wz_abc123_ABCDEFGHIJKLMNOP/unlock" -H 'Origin: https://www.wanderzenai.com' -H 'Access-Control-Request-Method: POST' -H 'Access-Control-Request-Headers: authorization')"
+          echo "== route exists in API Gateway"
+          aws apigateway get-resources --rest-api-id y44o2x9cu1 --limit 500 --query "items[?path=='/itinerary/{id}/unlock'].resourceMethods" --output json
+          echo "== unlocked_at column (via profile logs: any ALTER/column errors since deploy)"
+          for f in profile form-handler pdf-builder email-sender; do aws logs filter-log-events --log-group-name /aws/lambda/wanderzenai-$f-prod --start-time $(( ($(date +%s) - 1800) * 1000 )) --filter-pattern '"ERROR"' --query 'events[].message' --output text | head -c 600; echo " [$f]"; done
+          echo "== lambda errors last 30 min"
+          for f in profile form-handler pdf-builder email-sender; do e=$(aws cloudwatch get-metric-statistics --namespace AWS/Lambda --metric-name Errors --dimensions Name=FunctionName,Value=wanderzenai-$f-prod --start-time $(date -u -d '-30 min' +%FT%TZ) --end-time $(date -u +%FT%TZ) --period 1800 --statistics Sum --query 'Datapoints[0].Sum' --output text); echo "$f $e"; done
+          echo "== frontend"
+          echo "trip page shell: $(curl -s -o /tmp/s -w '%{http_code}' https://www.wanderzenai.com/itinerary/wz_abc123_ABCDEFGHIJKLMNOP)"
+          JS=$(grep -oE '/assets/index-[^"]+\.js' /tmp/s | head -1); curl -s "https://www.wanderzenai.com$JS" -o /tmp/main.js; echo "main bundle $JS"
+          grep -oE 'assets/ItineraryView-[A-Za-z0-9_-]+\.js' /tmp/main.js | head -1 | while read f; do curl -s "https://www.wanderzenai.com/$f" | grep -c "written and waiting" | sed 's/^/ItineraryView chunk has unlock card: /'; done
           echo "== alarms"
           aws cloudwatch describe-alarms --alarm-name-prefix wanderzenai-prod --query 'MetricAlarms[].[AlarmName,StateValue]' --output text
           } > out/verify.txt 2>&1
