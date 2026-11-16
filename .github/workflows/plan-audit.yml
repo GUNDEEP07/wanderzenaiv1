@@ -5,18 +5,25 @@ on:
 permissions:
   contents: write
 jobs:
-  walk:
+  probe:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: '24' }
+      - uses: aws-actions/configure-aws-credentials@v4
+        continue-on-error: true
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-southeast-2
       - run: |
-          mkdir w && cd w && npm init -y >/dev/null && npm i playwright@1.60.0 >/dev/null && npx playwright install --with-deps chromium >/dev/null
-          cp ../.github/plan-audit-walk.mjs . && node plan-audit-walk.mjs || echo "script error $?" >> report.txt
+          set +e; mkdir out
+          {
+          curl -s -i "https://y44o2x9cu1.execute-api.ap-southeast-2.amazonaws.com/prod/pricing?country=AU" | head -30
+          echo; echo "== logs"
+          aws logs filter-log-events --log-group-name /aws/lambda/wanderzenai-form-handler-prod --start-time $(( ($(date +%s) - 3600) * 1000 )) --filter-pattern '"Pricing"' --query 'events[-10:].message' --output text 2>&1 | cut -c1-400
+          } > out/probe.txt 2>&1
+          sed -i -E 's/sk_(test|live)_[A-Za-z0-9]+/sk_***/g' out/probe.txt
       - if: always()
         run: |
-          mkdir out && cp w/report.txt out/ 2>/dev/null; cp -r w/shots out/ 2>/dev/null
           cd out && git init -q -b smoke/plan-audit-results && git add -A
-          git -c user.name=audit -c user.email=audit@users.noreply.github.com commit -qm walk
+          git -c user.name=audit -c user.email=audit@users.noreply.github.com commit -qm probe
           git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" smoke/plan-audit-results
