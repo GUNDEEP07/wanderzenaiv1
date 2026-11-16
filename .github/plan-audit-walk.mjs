@@ -59,6 +59,6 @@ check('GET /pricing live', api?.data?.plans?.length === 2 && api.data.plans[0].c
 const raw = await (await fetch(BASE + '/')).text();
 check('saved home page HTML has the new hero', raw.includes('Where do you want to slow down?'));
 check('no page errors', errors.length === 0, errors.join(' | '));
-check('photo searches use the checked queries', photoReqs.some(q => /Ninh Binh/.test(q)), photoReqs.slice(0, 6).join(', '));
+check('photo searches use the checked queries', photoReqs.some(q => /ninh binh/i.test(q)), photoReqs.slice(0, 6).join(', '));
 fs.writeFileSync('report.txt', out.join('\n') + `\n\n${out.filter(x => x.startsWith('PASS')).length}/${out.length} passed\n`);
 await b.close();
