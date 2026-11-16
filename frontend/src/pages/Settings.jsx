@@ -5,6 +5,8 @@ import { updatePassword, EmailAuthProvider, reauthenticateWithCredential, delete
 import { auth, FIREBASE_CONFIGURED } from '../firebase';
 import { analytics } from '../utils/analytics';
 import { withCheckoutIdentity } from '../utils/paymentLink';
+import { usePricing, passTerm } from '../hooks/usePricing';
+import { formatPrice } from '../api/pricing';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -67,6 +69,8 @@ export default function Settings() {
   const [referralCode, setReferralCode] = useState('');
   const [referralCount, setReferralCount] = useState(0);
   const [plan, setPlan]                 = useState('free');
+  const [tripPass, setTripPass]         = useState(null);
+  const pricing = usePricing();
   const [portalLoading, setPortalLoading] = useState(false);
 
   const { currentUser, getIdToken, signOut } = useAuth();
@@ -79,6 +83,7 @@ export default function Settings() {
         const token = await getIdToken();
         const res = await fetch(`${API_URL}/profile`, { headers: { Authorization: `Bearer ${token}` } });
         const d = await res.json();
+        if (d.tripPass) setTripPass(d.tripPass);
         if (d.profile) {
           const p = d.profile;
           setName(p.name || currentUser.displayName || '');
@@ -268,7 +273,7 @@ export default function Settings() {
               <div style={s.planCard}>
                 <div>
                   <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>
-                    {plan === 'subscriber' ? 'Wanderer Plan' : plan === 'paid_once' ? 'Single Trip' : 'Free Plan'}
+                    {plan === 'subscriber' ? 'Wanderer Plan' : plan === 'paid_once' ? 'Paid trips' : 'Free Plan'}
                   </div>
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
                     {plan === 'subscriber' ? '5 itineraries a month · priority generation'
@@ -303,24 +308,24 @@ export default function Settings() {
                   )}
                 </div>
               </div>
-              <div style={s.planCard}>
-                <div>
-                  <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>Single Trip &mdash; $7</div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>One additional itinerary · no subscription</div>
+              {/* Pricing design D: prices and links from Stripe (GET /pricing); Wanderer is off sale. */}
+              {[pricing.trip, pricing.pass].filter(Boolean).map(p => (
+                <div key={p.plan} style={s.planCard}>
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>{p.name} &mdash; {formatPrice(p.amount, p.currency)}</div>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>{p.plan === 'pass' ? `${passTerm(p)} · one-time` : 'One full trip · never expires · one-time'}</div>
+                  </div>
+                  <a href={withCheckoutIdentity(p.url, currentUser)} target="_blank" rel="noreferrer" onClick={() => analytics.upgradeClicked(p.plan, 'settings')}>
+                    <button style={s.upgradeBtn}>Buy</button>
+                  </a>
                 </div>
-                <a href={withCheckoutIdentity(import.meta.env.VITE_STRIPE_SINGLE_PLAN_LINK, currentUser)} target="_blank" rel="noreferrer" onClick={() => analytics.upgradeClicked('single', 'settings')}>
-                  <button style={s.upgradeBtn}>Buy now</button>
-                </a>
-              </div>
-              <div style={s.planCard}>
-                <div>
-                  <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>Wanderer &mdash; $9/mo</div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>5 itineraries a month · priority generation</div>
+              ))}
+              {tripPass?.tripsLeft > 0 && (
+                <div style={{ fontSize: 13, color: '#7fffe0', marginTop: 8 }}>
+                  Trip Pass: {tripPass.tripsLeft} {tripPass.tripsLeft === 1 ? 'trip' : 'trips'} left
+                  {tripPass.expiresAt ? ` · use by ${new Date(tripPass.expiresAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}` : ''}
                 </div>
-                <a href={withCheckoutIdentity(import.meta.env.VITE_STRIPE_WANDERER_LINK, currentUser)} target="_blank" rel="noreferrer" onClick={() => analytics.upgradeClicked('wanderer', 'settings')}>
-                  <button style={s.upgradeBtn}>Upgrade</button>
-                </a>
-              </div>
+              )}
             </div>
             <div style={s.section}>
               <div style={s.sectionTitle}>Usage</div>

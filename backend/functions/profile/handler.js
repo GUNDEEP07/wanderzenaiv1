@@ -1,6 +1,7 @@
 'use strict';
 const { log, getDB, requireUser, optionalUser, AuthError, authErrorBody } = require('/opt/nodejs/index');
 const { ensureUnlockColumn, isLocked, lockItinerary } = require('/opt/nodejs/trip-access');
+const { passSummary } = require('/opt/nodejs/trip-pass');
 const Stripe = require('stripe');
 
 const stripe = process.env.STRIPE_SECRET_KEY ? Stripe(process.env.STRIPE_SECRET_KEY) : null;
@@ -200,11 +201,14 @@ async function handleGetProfile(db, user) {
 
     if (userResult.rows.length === 0) return json(200, { exists: false, pastTrips });
 
+    // Trip Pass (pricing D): trips left on live passes and the soonest expiry. Best effort.
+    const tripPass = await passSummary(db, email).catch(() => ({ tripsLeft: 0, expiresAt: null }));
     return json(200, {
       exists: true,
       profile: userResult.rows[0],
       pastTrips,
       roles: rolesResult.rows.map(r => r.name),
+      tripPass,
     });
   } catch (err) {
     log.error('Profile GET failed', { error: err.message });

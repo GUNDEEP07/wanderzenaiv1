@@ -2,10 +2,9 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { withCheckoutIdentity } from '../utils/paymentLink';
+import { usePricing } from '../hooks/usePricing';
+import { plansFrom } from '../utils/plans';
 import './Pricing.css';
-
-const SINGLE_LINK = import.meta.env.VITE_STRIPE_SINGLE_PLAN_LINK;
-const WANDERER_LINK = import.meta.env.VITE_STRIPE_WANDERER_LINK;
 
 const s = {
   page: { minHeight: '100vh', background: '#0a0f1e', fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#fff' },
@@ -48,38 +47,6 @@ const s = {
   footerLink: { color: '#00d4aa', textDecoration: 'none' },
 };
 
-const PLANS = [
-  {
-    name: 'Explorer',
-    price: 'Free',
-    period: '1 trip preview per month',
-    desc: 'See how we plan before you pay',
-    features: ['Your route, ready to confirm', 'Day 1 written in full', 'Every later day’s theme and base', 'Unlock the rest with one itinerary', 'Any destination worldwide'],
-    cta: 'Get started free',
-    link: null,
-    featured: false,
-  },
-  {
-    name: 'Wanderer',
-    price: '$9',
-    period: 'per month · cancel anytime',
-    desc: 'For passionate slow travellers',
-    features: ['5 full itineraries per month', 'Every day unlocked', 'Where to stay, tips & traps to skip', 'Adjust up to 3 days per trip', 'PDF + offline trip page'],
-    cta: 'Start Wanderer',
-    link: WANDERER_LINK,
-    featured: true,
-  },
-  {
-    name: 'Single Plan',
-    price: '$7',
-    period: 'one-time · no subscription',
-    desc: 'Just one trip, no commitment',
-    features: ['1 full itinerary', 'Or unlock a free trip you made', 'Never expires', 'No recurring charges'],
-    cta: 'Buy one plan',
-    link: SINGLE_LINK,
-    featured: false,
-  },
-];
 
 const FAQS = [
   { q: 'How long does it take?', a: 'Your itinerary is generated and emailed about 5 minutes after you submit the form.' },
@@ -87,7 +54,9 @@ const FAQS = [
   { q: 'Can I request any destination?', a: 'Yes — any city, region or country worldwide. The more specific your interests, the better the plan.' },
   { q: 'What makes this different?', a: 'We avoid tourist traps by design. Every plan includes hidden gems, local eats and off-the-beaten-path stays that most guides never mention.' },
   { q: 'Can I get my itinerary in another language?', a: 'Yes — choose from English, Hindi, Spanish, French, German, Japanese, Arabic, Portuguese, Italian and Dutch.' },
-  { q: 'Can I cancel my subscription?', a: 'Yes, anytime. No questions asked. All itineraries you have already generated are yours to keep.' },
+  { q: 'Is there a subscription?', a: 'No. You pay once for one trip, or once for a Trip Pass — nothing renews. On the older Wanderer monthly plan? You can cancel any time in Settings, and every itinerary you made is yours to keep.' },
+  { q: 'Which currency are the prices in?', a: 'The currency is written next to every price. Stripe charges in that currency; if your card is in another one, your bank converts it.' },
+  { q: 'How long does a Trip Pass last?', a: 'The time shown on the pass, counted from the day you buy it. Trips you don’t use by then expire; a single One trip never expires.' },
   { q: 'Do you store my payment details?', a: 'No — payments are handled entirely by Stripe. We never see or store your card details.' },
   { q: 'What if my itinerary fails?', a: 'Rare, but if it happens we regenerate it for free. Email travel@wanderzenai.com and we will sort it within the hour.' },
 ];
@@ -98,8 +67,11 @@ export default function Pricing() {
   const reason = location.state?.reason;
   const [openFaq, setOpenFaq] = useState(null);
   const { currentUser } = useAuth();
+  const pricing = usePricing();
+  const PLANS = plansFrom(pricing);
 
   const handleCta = (plan) => {
+    if (plan.buy && !plan.link) return; // prices still loading or unavailable
     if (!plan.link) { navigate('/plan'); return; }
     // A purchase must be tied to an account, or the webhook can't grant it.
     if (!currentUser) { navigate('/login', { state: { from: '/pricing' } }); return; }
@@ -142,9 +114,8 @@ export default function Pricing() {
               You've used this month's 5 Wanderer itineraries
             </div>
             <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', lineHeight: 1.6 }}>
-              They reset on your next billing date. Need one sooner? The Single Plan adds one
-              itinerary that never expires — your {location.state?.destination || 'next destination'} itinerary
-              can generate straight after.
+              They reset on your next billing date. Need one sooner? One trip adds an itinerary that
+              never expires — your {location.state?.destination || 'next destination'} itinerary can generate straight after.
             </div>
           </div>
         )}
@@ -164,7 +135,7 @@ export default function Pricing() {
               {location.state?.destination ? <>Every day of your {location.state.destination} trip is written</> : <>The rest of your trip is written</>}
             </div>
             <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', lineHeight: 1.6 }}>
-              Unlocking uses one itinerary. Get the Single Plan or Wanderer below, then open the trip from your
+              Unlocking uses one trip. Get One trip or a Trip Pass below, then open the trip from your
               dashboard and tap “Unlock the full trip” — every day opens straight away.
             </div>
           </div>
@@ -191,10 +162,10 @@ export default function Pricing() {
             </div>
             <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', marginBottom: 18, lineHeight: 1.6 }}>
               You've used your free itinerary this month.
-              Upgrade to Wanderer for 5 itineraries a month — your {location.state?.destination || 'next destination'} itinerary will generate immediately after.
+              Get One trip, or a Trip Pass if you plan more — your {location.state?.destination || 'next destination'} itinerary will generate immediately after.
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              {['5 full itineraries a month', 'Every day unlocked', 'All destinations', 'Keep all PDFs'].map(f => (
+              {['Pay per trip', 'Every day unlocked', 'No subscription', 'Keep all PDFs'].map(f => (
                 <span key={f} style={{ padding: '5px 12px', background: 'rgba(0,212,170,0.1)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: 20, fontSize: 12, fontWeight: 600, color: '#00d4aa' }}>
                   ✓ {f}
                 </span>
@@ -206,7 +177,7 @@ export default function Pricing() {
         <div style={s.header}>
           <div style={s.eyebrow}>Pricing</div>
           <h1 style={s.title}>Simple, honest pricing.</h1>
-          <p style={s.sub}>No hidden fees. No tourist-trap pricing. Your PDF is yours to keep forever.</p>
+          <p style={s.sub}>Pay per trip — no subscription. Your PDF is yours to keep forever.</p>
         </div>
 
         <div style={s.grid} className="pricing-cards-grid">
@@ -225,7 +196,6 @@ export default function Pricing() {
               <div style={s.planName}>{plan.name}</div>
               <div style={s.price}>
                 {plan.price}
-                {plan.price !== 'Free' && <span style={s.priceSub}></span>}
               </div>
               <div style={s.period}>{plan.period}</div>
               <ul style={s.features}>
@@ -237,7 +207,8 @@ export default function Pricing() {
               </ul>
               <button
                 className={plan.featured ? 'btn-filled' : 'btn-outline'}
-                style={plan.featured ? s.btnFilled : s.btnOutline}
+                style={{ ...(plan.featured ? s.btnFilled : s.btnOutline), ...(plan.buy && !plan.link ? { opacity: 0.5, cursor: 'default' } : {}) }}
+                disabled={plan.buy && !plan.link}
                 onClick={() => handleCta(plan)}
               >
                 {plan.cta}
@@ -245,6 +216,17 @@ export default function Pricing() {
             </div>
           ))}
         </div>
+
+        {pricing.error && (
+          <p style={{ ...s.footer, marginTop: '-3.5rem', marginBottom: '3rem' }}>
+            Prices couldn’t load just now — refresh in a minute, or email us.
+          </p>
+        )}
+        {!pricing.error && (pricing.trip || pricing.pass) && (
+          <p style={{ ...s.footer, marginTop: '-3.5rem', marginBottom: '3rem' }}>
+            Prices in {[...new Set([pricing.trip, pricing.pass].filter(Boolean).map(p => p.currency))].join(' / ')}, charged by Stripe. Your bank may convert to your own currency.
+          </p>
+        )}
 
         <div style={s.faqSection}>
           <h2 style={s.faqTitle}>Common questions</h2>

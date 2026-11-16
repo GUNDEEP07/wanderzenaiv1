@@ -15,6 +15,8 @@ const {
 } = require('/opt/nodejs/route-plan');
 const { curatedOptions } = require('/opt/nodejs/curated-routes');
 const { readProgress } = require('/opt/nodejs/progress');
+const tripPass = require('/opt/nodejs/trip-pass');
+const pricing = require('/opt/nodejs/pricing');
 const { MODELS, createMessage, firstText, withEffort, maxTokensFor } = require('/opt/nodejs/claude');
 const { SUBSCRIPTION_MONTHLY_ITINERARIES, withMonthlyColumn } = require('./subscription');
 
@@ -441,9 +443,11 @@ async function handleSubmit(event, db, user) {
 // Order of precedence for who may generate an itinerary:
 //   1. test account                 → allowed, recorded as paid
 //   2. Wanderer monthly allowance   → 5 per billing month (see subscription.js), spent
-//                                     first because unused ones expire at renewal
-//   3. a purchased/referral credit  → never expires (Single Plan = 1; referral = +1)
-//   4. the monthly free itinerary   → free-plan users only, recorded as free
+//                                     first because unused ones expire at renewal (legacy plan,
+//                                     off sale since Nov 16 2026; existing subscribers keep it)
+//   3. a Trip Pass                  → N trips within a set time (trip-pass.js), soonest expiry first
+//   4. a purchased/referral credit  → never expires (One trip = 1; referral = +1)
+//   5. the monthly free itinerary   → free-plan users only, recorded as free
 // Each paid source is decremented atomically (UPDATE … WHERE … > 0 RETURNING), so
 // parallel submits can never spend more than the user has.
 async function decideEntitlement(db, email) {
@@ -458,6 +462,11 @@ async function decideEntitlement(db, email) {
   ));
   if (monthly.rows.length) {
     return { allowed: true, isPaid: true, reason: 'subscriber_monthly', consumedCredit: true, source: 'monthly', creditsLeft: monthly.rows[0].monthly_remaining };
+  }
+
+  const pass = await tripPass.spendPass(db, email);
+  if (pass) {
+    return { allowed: true, isPaid: true, reason: 'trip_pass', consumedCredit: true, source: tripPass.passSource(pass.id), creditsLeft: pass.tripsLeft };
   }
 
   const credit = await db.query(
@@ -490,7 +499,7 @@ async function decideEntitlement(db, email) {
 /**
  * What the next submission would use — read-only twin of decideEntitlement (same order),
  * shown on the Review step so nobody fills in six steps only to meet the paywall.
- * @returns {Promise<{ allowed: boolean, source: 'test'|'monthly'|'credit'|'free'|null, remaining: number|null, code?: string }>}
+ * @returns {Promise<{ allowed: boolean, source: 'test'|'monthly'|'pass'|'credit'|'free'|null, remaining: number|null, expiresAt?: string, code?: string }>}
  */
 async function peekEntitlement(db, email) {
   const test = await db.query(`SELECT 1 FROM test_accounts WHERE email = $1`, [email]);
@@ -503,6 +512,8 @@ async function peekEntitlement(db, email) {
   ));
   const u = userRow.rows[0] || { plan: 'free', credits: 0, monthly: 0 };
   if (u.plan === 'subscriber' && Number(u.monthly) > 0) return { allowed: true, source: 'monthly', remaining: Number(u.monthly) };
+  const pass = await tripPass.passSummary(db, email);
+  if (pass.tripsLeft > 0) return { allowed: true, source: 'pass', remaining: pass.tripsLeft, expiresAt: pass.expiresAt };
   if (Number(u.credits) > 0) return { allowed: true, source: 'credit', remaining: Number(u.credits) };
   if (u.plan === 'subscriber') return { allowed: false, source: null, remaining: 0, code: 'MONTHLY_LIMIT_REACHED' };
 
@@ -514,6 +525,27 @@ async function peekEntitlement(db, email) {
   return parseInt(usage.rows[0].count, 10) < 1
     ? { allowed: true, source: 'free', remaining: 1 }
     : { allowed: false, source: null, remaining: 0, code: 'FREE_TIER_EXHAUSTED' };
+}
+
+/**
+ * GET /pricing?country=AU — public. Plans, prices and payment links straight from Stripe
+ * (layers/shared/nodejs/pricing.js), in the visitor's currency when Stripe has one for it.
+ * No user data, no Claude call; Stripe is read at most every 10 minutes per container.
+ */
+async function handlePricing(event) {
+  const country = String(event.queryStringParameters?.country || '').toUpperCase();
+  try {
+    const catalog = await pricing.getCatalog({ secretKey: process.env.STRIPE_SECRET_KEY, log });
+    const res = ok({
+      country: /^[A-Z]{2}$/.test(country) ? country : null,
+      plans: pricing.priceFor(catalog, country),
+    });
+    res.headers['Cache-Control'] = 'public, max-age=300';
+    return res;
+  } catch (err) {
+    log.error('Pricing failed', { error: err.message });
+    return { ...serverError('Prices are unavailable right now'), statusCode: 503 };
+  }
 }
 
 /** GET /entitlement */
@@ -528,6 +560,16 @@ async function handleEntitlement(db, user) {
 
 /** Give back what was taken for a submission that was never stored. Best effort. */
 async function refundCredit(db, email, submissionId, source = 'credit') {
+  const passId = tripPass.passIdOf(source);
+  if (passId) {
+    try {
+      await tripPass.refundPass(db, passId);
+      log.info('Trip Pass trip refunded after failed submission', { submissionId, passId });
+    } catch (err) {
+      log.error('Trip Pass refund failed', { submissionId, passId, error: err.message });
+    }
+    return;
+  }
   const column = source === 'monthly' ? 'monthly_remaining' : 'itineraries_remaining';
   try {
     await db.query(
@@ -596,6 +638,7 @@ exports.handler = async (event) => {
   }
 
   if (isPath(event, '/feedback')) return handleFeedback(event);
+  if (event.httpMethod === 'GET' && isPath(event, '/pricing')) return handlePricing(event);
 
   // Planning steps are open to guests (rate limited by IP); see plannerCaller.
   if (event.httpMethod === 'POST' && (isPath(event, '/preview') || isPath(event, '/route-plan'))) {
@@ -647,6 +690,6 @@ exports.handler = async (event) => {
 
 // Exported for unit tests.
 exports._internal = {
-  validatePreviewInput, decideEntitlement, peekEntitlement, refundCredit, limitReachedBody, ROUTE_WAIT, progressIdOf,
+  validatePreviewInput, decideEntitlement, peekEntitlement, refundCredit, limitReachedBody, ROUTE_WAIT, progressIdOf, handlePricing,
   routeCacheKey, rateLimited,
 };
