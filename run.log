@@ -1,0 +1,181 @@
+[mobile] reqfailed: POST https://analytics.google.com/g/collect?v=2&tid=G-30SQXCEL52&gtm=45je6bh1v9253973355za208zd9253973355xf1&_p=1795273401181&_gaz=1&gcd=13l3l3l3 net::ERR_ABORTED
+[mobile] home load 1511ms
+[mobile] 200 GET /prod/photos/search?query=sapa%2C%20vietnam 222ms
+[mobile] 200 GET /prod/photos/search?query=kiyomizu-dera%20lanes%20kyoto 242ms
+[mobile] 200 GET /prod/photos/search?query=chiang%20dao%2C%20thailand 406ms
+[mobile] 200 GET /prod/pricing?country=AU 434ms
+[mobile] 200 GET /prod/photos/search?query=takayama%2C%20japan 472ms
+[mobile] 200 GET /prod/photos/search?query=nanzenji%20temple%20kyoto 473ms
+[mobile] 200 GET /prod/photos/search?query=fushimi%20inari%20trail%20kyoto 515ms
+[mobile] 200 GET /prod/photos/search?query=ninh%20binh%2C%20vietnam 520ms
+[mobile] shot mobile_00_home url=/
+[mobile] home origin guess: sydney
+[mobile] 200 GET /prod/pricing?country=AU 0ms
+[mobile] plan page ready 807ms
+[mobile] shot mobile_01_step1_empty url=/plan
+[mobile] empty-submit alerts: ["Pick a country or search for a place.","Pick a start date, or tick \"Dates not fixed yet\".","Budget must be greater than $0"]
+[mobile] when section: How long, and when? | Days | − | 5 | + | Start | End (from your days) | 5 days · Tue 6 Apr – Sat 10 Apr | Dates not fixed yet — just plan the days
+[mobile] who section: Who's travelling? | Adults | − | 2 | + | Kids | + Add a child | Relaxed | Balanced | Full days
+[mobile] default currency: AUD
+[mobile] shot mobile_02_step1_filled url=/plan
+[mobile] 200 POST /prod/route-plan 589ms
+[mobile] route options shown 821ms
+[mobile] shot mobile_03_step2_routes url=/plan
+[mobile] console.warning: [.WebGL-0x32dc02095400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+[mobile] console.warning: [.WebGL-0x32dc02095400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+[mobile] console.warning: [.WebGL-0x32dc02095400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+[mobile] console.warning: [.WebGL-0x32dc02095400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)
+[mobile] shot mobile_04_step2_chosen url=/plan
+[mobile] 200 GET /prod/destination-insights?destination=Fukuoka%2C+Japan&travelStyles=&startDate=2027-04-06&endDate=2027-04-07 1439ms
+[mobile] reqfailed: POST https://analytics.google.com/g/collect?v=2&tid=G-30SQXCEL52&gtm=45je6bh1v9253973355za200zd9253973355xf1&_p=1795273401181&gcd=13l3l3l3l1l1&np net::ERR_ABORTED
+[mobile] days step 4050ms
+[mobile] shot mobile_05_step3_days url=/plan
+[mobile] add buttons visible: 6
+[mobile] shot mobile_06_step3_added url=/plan
+[mobile] shot mobile_07_step4_stays url=/plan
+[mobile] reqfailed: POST https://analytics.google.com/g/collect?v=2&tid=G-30SQXCEL52&gtm=45je6bh1v9253973355za200zd9253973355xf1&_p=1795273401181&gcd=13l3l3l3l1l1&np net::ERR_ABORTED
+[mobile] 200 POST /prod/preview 3568ms
+[mobile] shot mobile_08_step5_review url=/plan
+[mobile] review buttons: ["Save & exit","Japan · 6–13 Apr · 2 adults · Balanced\nEdit","Edit","Edit","Edit","Edit","I already have an account","Back","Create free account"]
+[mobile] review sign-up links: []
+[mobile] reqfailed: POST https://analytics.google.com/g/collect?v=2&tid=G-30SQXCEL52&gtm=45je6bh1v9253973355za200zd9253973355xf1&_p=1795273401181&gcd=13l3l3l3l1l1&np net::ERR_ABORTED
+[mobile] 200 GET /prod/pricing?country=AU 4ms
+[mobile] 200 POST /prod/preview 2870ms
+[mobile] shot mobile_09_after_reload url=/plan
+[mobile] reqfailed: POST https://analytics.google.com/g/collect?v=2&tid=G-30SQXCEL52&gtm=45je6bh1v9253973355za200zd9253973355xf1&_p=1795273431699&gcd=13l3l3l3l1l1&np net::ERR_ABORTED
+[mobile] reqfailed: POST https://analytics.google.com/g/collect?v=2&tid=G-30SQXCEL52&gtm=45je6bh1v9253973355za208zd9253973355xf1&_p=1795273431699&gcd=13l3l3l3l1l1&np net::ERR_ABORTED
+[mobile] 200 GET /prod/photos/search?query=ninh%20binh%2C%20vietnam 7ms
+[mobile] 200 GET /prod/photos/search?query=chiang%20dao%2C%20thailand 8ms
+[mobile] 200 GET /prod/photos/search?query=takayama%2C%20japan 10ms
+[mobile] 200 GET /prod/photos/search?query=koh%20lanta%2C%20thailand 194ms
+[mobile] 200 GET /prod/photos/search?query=bandipur%2C%20nepal 211ms
+[mobile] 200 GET /prod/photos/search?query=hakone%2C%20japan 439ms
+[mobile] 200 GET /prod/photos/search?query=kanchanaburi%2C%20thailand 443ms
+[mobile] 200 GET /prod/photos/search?query=indonesia 449ms
+[mobile] 200 GET /prod/photos/search?query=vietnam 455ms
+[mobile] 200 GET /prod/photos/search?query=chitwan%20national%20park%20rhino 462ms
+[mobile] 200 GET /prod/photos/search?query=sidemen%20indonesia 476ms
+[mobile] 200 GET /prod/photos/search?query=bhaktapur%2C%20nepal 480ms
+[mobile] 200 GET /prod/photos/search?query=takayama%20japan 486ms
+[mobile] 200 GET /prod/photos/search?query=ella%20sri%20lanka 494ms
+[mobile] 200 GET /prod/photos/search?query=chiang%20dao%20thailand 495ms
+[mobile] 200 GET /prod/photos/search?query=kurokawa%20onsen 502ms
+[mobile] 200 GET /prod/photos/search?query=ninh%20binh%20vietnam 507ms
+[mobile] 200 GET /prod/photos/search?query=thailand 508ms
+[mobile] 200 GET /prod/photos/search?query=udaipur%2C%20india 515ms
+[mobile] 200 GET /prod/photos/search?query=munnar%2C%20india 516ms
+[mobile] 200 GET /prod/photos/search?query=india 516ms
+[mobile] 200 GET /prod/photos/search?query=alleppey%20india 517ms
+[mobile] 200 GET /prod/photos/search?query=nepal 517ms
+[mobile] 200 GET /prod/recommendations/trending 554ms
+[mobile] 200 GET /prod/photos/search?query=japan 594ms
+[mobile] 200 GET /prod/photos/search?query=sri%20lanka 603ms
+[mobile] 200 GET /prod/photos/search?query=pokhara%20nepal 172ms
+[mobile] 200 GET /prod/photos/search?query=bajawa%20indonesia 438ms
+[mobile] 200 GET /prod/photos/search?query=pai%20thailand 438ms
+[mobile] 200 GET /prod/photos/search?query=madikeri%20india 441ms
+[mobile] /explore load 3760ms
+[mobile] reqfailed: POST https://analytics.google.com/g/collect?v=2&tid=G-30SQXCEL52&gtm=45je6bh1v9253973355za208zd9253973355xf1&_p=1795273436190&gcd=13l3l3l3l1l1&np net::ERR_ABORTED
+[mobile] shot mobile_10__explore url=/explore
+[mobile] reqfailed: POST https://analytics.google.com/g/collect?v=2&tid=G-30SQXCEL52&gtm=45je6bh1v9253973355za200zd9253973355xf1&_p=1795273436190&gcd=13l3l3l3l1l1&np net::ERR_ABORTED
+[mobile] 200 GET /prod/photos/search?query=japan 24ms
+[mobile] /guides/japan load 4005ms
+[mobile] shot mobile_11__guides_japan url=/guides/japan
+[mobile] reqfailed: POST https://analytics.google.com/g/collect?v=2&tid=G-30SQXCEL52&gtm=45je6bh1v9253973355za208zd9253973355xf1&_p=1795273442149&gcd=13l3l3l3l1l1&np net::ERR_ABORTED
+[mobile] reqfailed: POST https://analytics.google.com/g/collect?v=2&tid=G-30SQXCEL52&gtm=45je6bh1v9253973355za200zd9253973355xf1&_p=1795273442149&gcd=13l3l3l3l1l1&np net::ERR_ABORTED
+[mobile] 200 GET /prod/pricing?country=AU 1ms
+[mobile] /pricing load 3975ms
+[mobile] shot mobile_12__pricing url=/pricing
+[mobile] reqfailed: POST https://analytics.google.com/g/collect?v=2&tid=G-30SQXCEL52&gtm=45je6bh1v9253973355za200zd9253973355xf1&_p=1795273447857&gcd=13l3l3l3l1l1&np net::ERR_ABORTED
+[mobile] reqfailed: POST https://analytics.google.com/g/collect?v=2&tid=G-30SQXCEL52&gtm=45je6bh1v9253973355za208zd9253973355xf1&_p=1795273447857&gcd=13l3l3l3l1l1&np net::ERR_ABORTED
+[mobile] /signup?next=/plan load 3497ms
+[mobile] shot mobile_13__signup_next__plan url=/signup?next=/plan
+[desktop] home load 685ms
+[desktop] reqfailed: POST https://analytics.google.com/g/collect?v=2&tid=G-30SQXCEL52&gtm=45je6bh1v9253973355za208zd9253973355xf1&_p=1795273457301&_gaz=1&gcd=13l3l3l3 net::ERR_ABORTED
+[desktop] 200 GET /prod/pricing?country=AU 182ms
+[desktop] 200 GET /prod/photos/search?query=nanzenji%20temple%20kyoto 188ms
+[desktop] 200 GET /prod/photos/search?query=sapa%2C%20vietnam 343ms
+[desktop] 200 GET /prod/photos/search?query=kiyomizu-dera%20lanes%20kyoto 458ms
+[desktop] 200 GET /prod/photos/search?query=ninh%20binh%2C%20vietnam 459ms
+[desktop] 200 GET /prod/photos/search?query=chiang%20dao%2C%20thailand 462ms
+[desktop] 200 GET /prod/photos/search?query=fushimi%20inari%20trail%20kyoto 462ms
+[desktop] 200 GET /prod/photos/search?query=takayama%2C%20japan 462ms
+[desktop] shot desktop_00_home url=/
+[desktop] home origin guess: sydney
+[desktop] 200 GET /prod/pricing?country=AU 3ms
+[desktop] plan page ready 127ms
+[desktop] shot desktop_01_step1_empty url=/plan
+[desktop] empty-submit alerts: ["Pick a country or search for a place.","Pick a start date, or tick \"Dates not fixed yet\".","Budget must be greater than $0"]
+[desktop] when section: How long, and when? | Days | − | 5 | + | Start | End (from your days) | 5 days · Tue 6 Apr – Sat 10 Apr | Dates not fixed yet — just plan the days
+[desktop] who section: Who's travelling? | Adults | − | 2 | + | Kids | + Add a child | Relaxed | Balanced | Full days
+[desktop] default currency: AUD
+[desktop] shot desktop_02_step1_filled url=/plan
+[desktop] 200 POST /prod/route-plan 861ms
+[desktop] route options shown 1484ms
+[desktop] shot desktop_03_step2_routes url=/plan
+[desktop] shot desktop_04_step2_chosen url=/plan
+[desktop] 200 GET /prod/destination-insights?destination=Fukuoka%2C+Japan&travelStyles=&startDate=2027-04-06&endDate=2027-04-07 612ms
+[desktop] reqfailed: POST https://analytics.google.com/g/collect?v=2&tid=G-30SQXCEL52&gtm=45je6bh1v9253973355za200zd9253973355xf1&_p=1795273457301&gcd=13l3l3l3l1l1&np net::ERR_ABORTED
+[desktop] days step 4066ms
+[desktop] shot desktop_05_step3_days url=/plan
+[desktop] add buttons visible: 6
+[desktop] shot desktop_06_step3_added url=/plan
+[desktop] shot desktop_07_step4_stays url=/plan
+[desktop] reqfailed: POST https://analytics.google.com/g/collect?v=2&tid=G-30SQXCEL52&gtm=45je6bh1v9253973355za200zd9253973355xf1&_p=1795273457301&gcd=13l3l3l3l1l1&np net::ERR_ABORTED
+[desktop] 200 POST /prod/preview 2992ms
+[desktop] shot desktop_08_step5_review url=/plan
+[desktop] review buttons: ["Save & exit","Japan · 6–13 Apr · 2 adults · Balanced\nEdit","Edit","Edit","Edit","Edit","I already have an account","Back","Create free account"]
+[desktop] review sign-up links: []
+[desktop] reqfailed: POST https://analytics.google.com/g/collect?v=2&tid=G-30SQXCEL52&gtm=45je6bh1v9253973355za200zd9253973355xf1&_p=1795273457301&gcd=13l3l3l3l1l1&np net::ERR_ABORTED
+[desktop] 200 GET /prod/pricing?country=AU 4ms
+[desktop] 200 POST /prod/preview 2532ms
+[desktop] shot desktop_09_after_reload url=/plan
+[desktop] reqfailed: POST https://analytics.google.com/g/collect?v=2&tid=G-30SQXCEL52&gtm=45je6bh1v9253973355za208zd9253973355xf1&_p=1795273487079&gcd=13l3l3l3l1l1&np net::ERR_ABORTED
+[desktop] reqfailed: POST https://analytics.google.com/g/collect?v=2&tid=G-30SQXCEL52&gtm=45je6bh1v9253973355za200zd9253973355xf1&_p=1795273487079&gcd=13l3l3l3l1l1&np net::ERR_ABORTED
+[desktop] 200 GET /prod/photos/search?query=ninh%20binh%2C%20vietnam 2ms
+[desktop] 200 GET /prod/photos/search?query=chiang%20dao%2C%20thailand 2ms
+[desktop] 200 GET /prod/photos/search?query=takayama%2C%20japan 15ms
+[desktop] 200 GET /prod/photos/search?query=kurokawa%20onsen 206ms
+[desktop] 200 GET /prod/photos/search?query=chitwan%20national%20park%20rhino 218ms
+[desktop] 200 GET /prod/photos/search?query=hakone%2C%20japan 367ms
+[desktop] 200 GET /prod/photos/search?query=kanchanaburi%2C%20thailand 452ms
+[desktop] 200 GET /prod/photos/search?query=ella%20sri%20lanka 451ms
+[desktop] 200 GET /prod/photos/search?query=takayama%20japan 507ms
+[desktop] 200 GET /prod/photos/search?query=sri%20lanka 508ms
+[desktop] 200 GET /prod/photos/search?query=indonesia 509ms
+[desktop] 200 GET /prod/photos/search?query=munnar%2C%20india 514ms
+[desktop] 200 GET /prod/photos/search?query=vietnam 515ms
+[desktop] 200 GET /prod/photos/search?query=nepal 519ms
+[desktop] 200 GET /prod/photos/search?query=japan 523ms
+[desktop] 200 GET /prod/photos/search?query=udaipur%2C%20india 528ms
+[desktop] 200 GET /prod/photos/search?query=bandipur%2C%20nepal 537ms
+[desktop] 200 GET /prod/photos/search?query=ninh%20binh%20vietnam 538ms
+[desktop] 200 GET /prod/photos/search?query=alleppey%20india 541ms
+[desktop] 200 GET /prod/photos/search?query=india 542ms
+[desktop] 200 GET /prod/photos/search?query=sidemen%20indonesia 543ms
+[desktop] 200 GET /prod/photos/search?query=chiang%20dao%20thailand 557ms
+[desktop] 200 GET /prod/photos/search?query=bhaktapur%2C%20nepal 596ms
+[desktop] 200 GET /prod/photos/search?query=thailand 606ms
+[desktop] 200 GET /prod/photos/search?query=koh%20lanta%2C%20thailand 622ms
+[desktop] 200 GET /prod/recommendations/trending 660ms
+[desktop] 200 GET /prod/photos/search?query=bajawa%20indonesia 449ms
+[desktop] 200 GET /prod/photos/search?query=pokhara%20nepal 453ms
+[desktop] 200 GET /prod/photos/search?query=madikeri%20india 453ms
+[desktop] 200 GET /prod/photos/search?query=pai%20thailand 465ms
+[desktop] /explore load 3578ms
+[desktop] shot desktop_10__explore url=/explore
+[desktop] reqfailed: POST https://analytics.google.com/g/collect?v=2&tid=G-30SQXCEL52&gtm=45je6bh1v9253973355za208zd9253973355xf1&_p=1795273491505&gcd=13l3l3l3l1l1&np net::ERR_ABORTED
+[desktop] reqfailed: POST https://analytics.google.com/g/collect?v=2&tid=G-30SQXCEL52&gtm=45je6bh1v9253973355za200zd9253973355xf1&_p=1795273491505&gcd=13l3l3l3l1l1&np net::ERR_ABORTED
+[desktop] 200 GET /prod/photos/search?query=japan 39ms
+[desktop] /guides/japan load 3515ms
+[desktop] shot desktop_11__guides_japan url=/guides/japan
+[desktop] reqfailed: POST https://analytics.google.com/g/collect?v=2&tid=G-30SQXCEL52&gtm=45je6bh1v9253973355za208zd9253973355xf1&_p=1795273496396&gcd=13l3l3l3l1l1&np net::ERR_ABORTED
+[desktop] reqfailed: POST https://analytics.google.com/g/collect?v=2&tid=G-30SQXCEL52&gtm=45je6bh1v9253973355za200zd9253973355xf1&_p=1795273496396&gcd=13l3l3l3l1l1&np net::ERR_ABORTED
+[desktop] 200 GET /prod/pricing?country=AU 3ms
+[desktop] /pricing load 3520ms
+[desktop] shot desktop_12__pricing url=/pricing
+[desktop] reqfailed: POST https://analytics.google.com/g/collect?v=2&tid=G-30SQXCEL52&gtm=45je6bh1v9253973355za200zd9253973355xf1&_p=1795273501385&gcd=13l3l3l3l1l1&np net::ERR_ABORTED
+[desktop] reqfailed: POST https://analytics.google.com/g/collect?v=2&tid=G-30SQXCEL52&gtm=45je6bh1v9253973355za208zd9253973355xf1&_p=1795273501385&gcd=13l3l3l3l1l1&np net::ERR_ABORTED
+[desktop] /signup?next=/plan load 3500ms
+[desktop] shot desktop_13__signup_next__plan url=/signup?next=/plan
+exit 0
