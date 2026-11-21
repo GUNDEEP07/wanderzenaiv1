@@ -101,7 +101,7 @@ export default function SeasonHero() {
           key={route.id}
           destination={country.name}
           keyword={route.photoQuery}
-          size="card"
+          size="hero"
           alt={`${route.name}, ${country.name}`}
           loading="eager"
           style={{ height: 270 }}

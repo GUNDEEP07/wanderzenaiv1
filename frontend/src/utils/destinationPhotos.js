@@ -46,15 +46,18 @@ const KNOWN_PHOTOS = {
   'new york': 'photo-1485738422979-f5c462d49f74',
 };
 
-const SIZES = { card: [320, 180], hero: [800, 500], thumb: [200, 130] };
+// Widths sized for retina screens (2x): card ~450 px wide on screen, hero up to ~900. Width only,
+// no crop — the page crops with object-fit, so portrait cards don't upscale a 180-px-tall
+// landscape crop (that was the blur: 320x180 files shown at 608x270 and 183x325, Nov 21).
+const SIZES = { card: 900, hero: 1800, thumb: 480 };
 const FALLBACK_ID = 'photo-1469854523086-cc02fe5d8800';
 
 // Module-level cache so repeated renders don't duplicate API calls
 const _apiCache = new Map();
 
 function buildUrl(id, size) {
-  const [w, h] = SIZES[size] || SIZES.card;
-  return `${BASE}/${id}?w=${w}&h=${h}&fit=crop&auto=format&q=70`;
+  const w = SIZES[size] || SIZES.card;
+  return `${BASE}/${id}?w=${w}&fit=max&auto=format&q=72`;
 }
 
 // Sync lookup — returns known or fallback URL instantly
@@ -95,9 +98,20 @@ function fetchPhoto(query) {
   return p;
 }
 
+/** Unsplash (imgix) URL at our width; replaces any w/h/fit/q already on urls.regular. */
 function sizedUrl(url, size) {
-  const [w, h] = SIZES[size] || SIZES.card;
-  return `${url}${url.includes('?') ? '&' : '?'}w=${w}&h=${h}&fit=crop&q=70`;
+  const w = SIZES[size] || SIZES.card;
+  try {
+    const u = new URL(url);
+    ['w', 'h', 'fit', 'q', 'crop'].forEach(k => u.searchParams.delete(k));
+    u.searchParams.set('w', String(w));
+    u.searchParams.set('fit', 'max');
+    u.searchParams.set('q', '72');
+    u.searchParams.set('auto', 'format');
+    return u.toString();
+  } catch {
+    return url;
+  }
 }
 
 /**
