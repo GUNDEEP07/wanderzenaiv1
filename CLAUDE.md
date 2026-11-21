@@ -147,7 +147,12 @@ AI-powered slow-travel itinerary SaaS. Live at wanderzenai.com. Solo-maintained.
   `seo-refresh.yml` re-prerenders every 2 h when blog posts change. Blog addresses are
   `/blog/<title-words>-<first 8 of id>` (`utils/blogSlug.js`; the API resolves the 8-hex prefix).
   The distribution's alias + ACM cert are declared in template.yaml (they were hand-set; never drop them).
-- Seasons + home/Explore (Nov 16 2026, designs A + B): every curated route has `seasons: { best: [1–12], note }`
+- Home page (design E, Nov 22 2026): `pages/Landing.jsx` + `pages/Home.css` (`lp-` classes; Landing.css is kept
+  for its global reset). Order: what we do + an example trip day → what you get → "Not sure where yet?"
+  (`homePicks()`: live regions, in season, closest first) → how it works → vs Google/AI chat → sample → pricing
+  (Stripe) → FAQ → close. Copy never names a region. Under 760px the phone layout takes over (`lp-desk-only` /
+  `lp-mob-only`, sticky "Plan my trip"). The old design-A hero (SeasonHero) was removed.
+- Seasons + home/Explore (Nov 16 2026, design B; A retired Nov 22): every curated route has `seasons: { best: [1–12], note }`
   for ITS region and a hand-checked `photoQuery`. The home hero (`components/home/SeasonHero.jsx`) and Explore's
   `components/explore/RouteFinder.jsx` rank by today's month (in season first) then rough flight time from the
   visitor's city, guessed from the browser time zone (`utils/seasons.js`; no prompt, kept in localStorage only).
