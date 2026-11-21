@@ -15,30 +15,20 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-southeast-2
-      - name: Read-only health (last 7 days)
+      - name: Live AI-readability check
         run: |
           set +e; mkdir out
+          B=https://www.wanderzenai.com
           {
-          echo "creds: ${{ steps.creds.outcome }}"
-          S=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ); E=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          echo "== alarms"; aws cloudwatch describe-alarms --alarm-name-prefix wanderzenai --query 'MetricAlarms[].[AlarmName,StateValue]' --output text
-          echo "== lambda invocations / errors (7d)"
-          for f in $(aws lambda list-functions --query "Functions[?contains(FunctionName,'prod')].FunctionName" --output text); do
-            i=$(aws cloudwatch get-metric-statistics --namespace AWS/Lambda --metric-name Invocations --dimensions Name=FunctionName,Value=$f --start-time $S --end-time $E --period 604800 --statistics Sum --query 'Datapoints[0].Sum' --output text)
-            e=$(aws cloudwatch get-metric-statistics --namespace AWS/Lambda --metric-name Errors --dimensions Name=FunctionName,Value=$f --start-time $S --end-time $E --period 604800 --statistics Sum --query 'Datapoints[0].Sum' --output text)
-            echo "$f inv=$i err=$e"
+          echo "== llms.txt"; curl -s -D - -o /tmp/l.txt $B/llms.txt | grep -iE "^HTTP|content-type|cache-control"; head -12 /tmp/l.txt; grep -c "/guides/" /tmp/l.txt
+          for p in / /pricing /guides/vietnam; do
+            echo "== $p JSON-LD types"; curl -s $B$p | grep -o '"@type":"[A-Za-z]*"\|"@type": "[A-Za-z]*"' | sort | uniq -c
           done
-          echo "== API (7d)"
-          for m in Count 4XXError 5XXError; do echo "$m $(aws cloudwatch get-metric-statistics --namespace AWS/ApiGateway --metric-name $m --dimensions Name=ApiName,Value=$(aws apigateway get-rest-apis --query "items[?id=='y44o2x9cu1'].name" --output text) Name=Stage,Value=prod --start-time $S --end-time $E --period 604800 --statistics Sum --query 'Datapoints[0].Sum' --output text)"; done
-          echo "== CloudFront requests (7d, us-east-1)"
-          aws cloudwatch get-metric-statistics --region us-east-1 --namespace AWS/CloudFront --metric-name Requests --dimensions Name=DistributionId,Value=E329HHUPH0JQTP Name=Region,Value=Global --start-time $S --end-time $E --period 86400 --statistics Sum --query 'sort_by(Datapoints,&Timestamp)[].[Timestamp,Sum]' --output text
-          echo "== custom metrics (7d)"
-          for m in $(aws cloudwatch list-metrics --namespace WanderZenAI --query 'Metrics[].MetricName' --output text | tr '\t' '\n' | sort -u); do
-            echo "$m $(aws cloudwatch get-metric-statistics --namespace WanderZenAI --metric-name $m --dimensions Name=Stage,Value=prod --start-time $S --end-time $E --period 604800 --statistics Sum --query 'Datapoints[0].Sum' --output text)"
-          done
+          echo "== pricing offers"; curl -s $B/pricing | grep -o '"price":"[0-9.]*","priceCurrency":"[A-Z]*"' | head
+          echo "== guide best time"; curl -s $B/guides/vietnam | grep -o 'Best time: [^."]*' | head -3
           } > out/probe.txt 2>&1
       - if: always()
         run: |
           cd out && git init -q -b smoke/plan-audit-results && git add -A
-          git -c user.name=audit -c user.email=audit@users.noreply.github.com commit -qm health
+          git -c user.name=audit -c user.email=audit@users.noreply.github.com commit -qm ai
           git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" smoke/plan-audit-results
