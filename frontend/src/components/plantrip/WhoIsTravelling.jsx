@@ -152,7 +152,7 @@ export function WhoIsTravelling({ value, onChange, part = 'all' }) {
         style={s.textarea}
         rows={2}
         maxLength={300}
-        placeholder="Anything else? e.g. must see Sapa, skip big cities, grandparent with limited mobility"
+        placeholder="Anything else? e.g. a must-see place, skip big cities, grandparent with limited mobility"
         value={v.notes}
         onChange={e => set({ notes: e.target.value })}
       />

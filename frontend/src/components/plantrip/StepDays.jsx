@@ -178,7 +178,7 @@ export default function StepDays({ stops, startDate, travelStyles = [], value, o
 
         <form className="pd-search" role="search" onSubmit={runSearch}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg>
-          <input type="search" value={query} onChange={e => setQuery(e.target.value)} aria-label={`Search places in ${stop.name}`} placeholder="Search: banh mi, rooftop bar, temple…" maxLength={200} />
+          <input type="search" value={query} onChange={e => setQuery(e.target.value)} aria-label={`Search places in ${stop.name}`} placeholder="Search: a dish, a café, a temple, a view…" maxLength={200} />
           <button type="submit" disabled={!query.trim()}>Search</button>
         </form>
 
@@ -235,7 +235,7 @@ export default function StepDays({ stops, startDate, travelStyles = [], value, o
         <form className="pd-own" onSubmit={addOwn}>
           <label htmlFor="pd-own-name">Can't find it? Add your own place</label>
           <div className="pd-own__row">
-            <input id="pd-own-name" type="text" value={ownName} onChange={e => setOwnName(e.target.value)} placeholder="e.g. my friend's café on Bạch Đằng" maxLength={120} />
+            <input id="pd-own-name" type="text" value={ownName} onChange={e => setOwnName(e.target.value)} placeholder="e.g. my friend's café" maxLength={120} />
             <select aria-label="Day" value={ownDay} onChange={e => setOwnDay(e.target.value)}>
               <option value="">Any day</option>
               {stopDays.map(d => <option key={d} value={d}>Day {d}</option>)}

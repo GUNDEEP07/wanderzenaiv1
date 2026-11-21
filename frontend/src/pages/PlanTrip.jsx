@@ -18,7 +18,8 @@ import { ErrorBoundary } from '../components/ErrorBoundary';
 import { submitItinerary, fetchRoutePlan, fetchEntitlement, savePlanDraft, deletePlanDraft } from '../api/itinerary';
 import { useAuth } from '../context/AuthContext';
 import { analytics } from '../utils/analytics';
-import { getUserLocationFromIP } from '../utils/geolocation';
+import { visitorCountry } from '../api/pricing';
+import { homeCity } from '../utils/seasons';
 import { getCurrencyForCountry } from '../utils/countryToCurrency';
 import { validateBudget } from '../utils/validators/budgetValidator';
 import { validateDateRange, calculateTripDays } from '../utils/validators/dateValidator';
@@ -156,21 +157,21 @@ export default function PlanTrip() {
     })();
   }, [currentUser]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Currency (and a "from" city for flights) from the visitor's location, when not set.
+  // Currency and a "from" city for flights, guessed from the browser time zone (same guess as the
+  // home page and pricing; nothing leaves the browser). Only fills what the visitor hasn't set.
   useEffect(() => {
-    getUserLocationFromIP()
-      .then(({ countryCode, city }) => {
-        setForm(f => {
-          const next = { ...f };
-          if (!(typeof localStorage !== 'undefined' && localStorage.getItem('wz_currency'))) {
-            const detected = getCurrencyForCountry(countryCode);
-            if (SUPPORTED_CURRENCIES.includes(detected)) next.currency = detected;
-          }
-          if (!f.userLocation && city && city !== 'Unknown') next.userLocation = city;
-          return next;
-        });
-      })
-      .catch(() => {});
+    setForm(f => {
+      const next = { ...f };
+      if (!(typeof localStorage !== 'undefined' && localStorage.getItem('wz_currency'))) {
+        const detected = getCurrencyForCountry(visitorCountry());
+        if (SUPPORTED_CURRENCIES.includes(detected)) next.currency = detected;
+      }
+      if (!f.userLocation) {
+        const city = homeCity();
+        if (city) next.userLocation = city;
+      }
+      return next;
+    });
   }, []);
 
   useEffect(() => {
