@@ -18,6 +18,8 @@ if [ "$MODE" = "full" ]; then
   # The offline service worker must never be cached, or a fixed version couldn't reach people.
   aws s3 cp "$DIST/sw.js" "s3://$BUCKET/sw.js" --cache-control "$NOCACHE" --content-type "text/javascript"
   aws s3 cp "$DIST/robots.txt" "s3://$BUCKET/robots.txt" --cache-control "public, max-age=3600" --content-type "text/plain; charset=utf-8"
+  # llms.txt: the site guide for AI assistants (built from the route data by build-guides).
+  aws s3 cp "$DIST/llms.txt" "s3://$BUCKET/llms.txt" --cache-control "public, max-age=3600" --content-type "text/plain; charset=utf-8"
 fi
 
 # Every page: prerendered pages, the app shell, 404, old-address redirects.

@@ -1,0 +1,37 @@
+# WanderZenAI
+
+> WanderZenAI writes slow-travel trip plans, day by day. A traveller says where, when and who is coming; they get a
+> route with fewer stops and longer stays, places to stay close to nature, and every day planned around a quiet
+> café and a short walk, delivered as a PDF and a trip page that works offline.
+
+Any country can be planned. Hand-picked routes, with the best months for each region, cover 10 countries,
+promoted first in: Asia. Day 1 of every plan is free; full trips are paid per trip (no subscription).
+Plans are written by AI around hand-picked routes, using real venue listings where available.
+
+## Start here
+
+- [Plan a trip](https://www.wanderzenai.com/plan): the planner (free to start, no account needed until the plan is written)
+- [How it works and what you get](https://www.wanderzenai.com/): home page
+- [Pricing](https://www.wanderzenai.com/pricing): current prices, in the visitor's currency
+- [Explore routes](https://www.wanderzenai.com/explore): filter hand-picked routes by month, length, travel time and kids
+- [All country guides](https://www.wanderzenai.com/guides)
+
+## Country guides (hand-picked routes)
+
+- [Vietnam](https://www.wanderzenai.com/guides/vietnam): Classic north + centre, 9 days, best Mar–May; Central coast, easy pace, 9 days, best Feb–Aug; The north, slowly, 8 days, best Mar–May, Sep–Nov
+- [Japan](https://www.wanderzenai.com/guides/japan): Kyoto, the Alps and the Sea of Japan, 10 days, best Mar–May, Oct–Nov; Tokyo, Hakone and Kyoto, 9 days, best Mar–May, Oct–Nov; Kyushu hot-spring towns, 8 days, best Mar–May, Oct–Dec
+- [India](https://www.wanderzenai.com/guides/india): Kerala: coast, backwaters, tea hills, 8 days, best Oct–Mar; Himachal: Kangra valley to Manali, 9 days, best Mar–Jun, Sep–Oct; Southern Rajasthan, slowly, 8 days, best Oct–Mar
+- [Thailand](https://www.wanderzenai.com/guides/thailand): The quiet north, 9 days, best Nov–Feb; Andaman coast, easy, 8 days, best Nov–Apr; Rivers and national parks, 8 days, best Nov–Feb
+- [Sri Lanka](https://www.wanderzenai.com/guides/sri-lanka): Hill country to the south coast, 8 days, best Dec–Apr; Cultural triangle, short hops, 7 days, best Jan–Apr, Jun–Sep; South coast, unhurried, 8 days, best Dec–Apr
+- [Indonesia](https://www.wanderzenai.com/guides/indonesia): Bali, the quiet east, 10 days, best Apr–Oct; Ubud and the Gili islands, 9 days, best May–Sep; Temples of Java, then Bali, 8 days, best Apr–Oct
+- [Nepal](https://www.wanderzenai.com/guides/nepal): Kathmandu, Pokhara and Bandipur, 8 days, best Mar–Apr, Oct–Nov; Kathmandu valley, slowly, 7 days, best Oct–Apr; Jungle and lakes, 8 days, best Oct–Mar
+- [Italy](https://www.wanderzenai.com/guides/italy): Puglia, town to town, 9 days, best May–Jun, Sep–Oct; Tuscany beyond Florence, 9 days, best Apr–Jun, Sep–Oct; Dolomites, 9 days, best Jun–Sep
+- [Portugal](https://www.wanderzenai.com/guides/portugal): Lisbon and the Alentejo, 8 days, best Mar–Jun, Sep–Oct; Porto, the Douro and the Minho, 8 days, best May–Oct; Lisbon to the Algarve, the quiet way, 9 days, best May–Jun, Sep–Oct
+- [New Zealand](https://www.wanderzenai.com/guides/new-zealand): South Island lakes, 9 days, best Dec–Mar; North Island: coast and geothermal, 10 days, best Nov–Apr; Top of the South, 8 days, best Dec–Mar
+
+## Optional
+
+- [Travel stories](https://www.wanderzenai.com/blog)
+- [Contact](https://www.wanderzenai.com/contact)
+- [Privacy](https://www.wanderzenai.com/privacy)
+- [Terms](https://www.wanderzenai.com/terms)
