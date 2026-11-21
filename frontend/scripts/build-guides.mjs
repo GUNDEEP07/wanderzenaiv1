@@ -16,6 +16,9 @@ const { COUNTRIES, REGIONS, fitDays, monthRanges } = require(path.resolve(here, 
 const OUT = path.resolve(here, '../src/data/guides.json');
 // Names and addresses only, for links on pages that shouldn't load the whole guides file.
 const OUT_INDEX = path.resolve(here, '../src/data/guides-index.json');
+// llms.txt (llmstxt.org): a plain-text guide to the site for AI assistants and answer engines,
+// built from the same route data, so it can never disagree with the site.
+const OUT_LLMS = path.resolve(here, '../public/llms.txt');
 // Regions and which are live (promoted): the site reads this instead of a hard-coded list.
 const OUT_REGIONS = path.resolve(here, '../src/data/regions.json');
 
@@ -56,8 +59,57 @@ export function buildGuides() {
   }));
 }
 
+const SITE = 'https://www.wanderzenai.com';
+
+/** Markdown for /llms.txt. No prices (they live in Stripe and change): it points to /pricing. */
+function buildLlmsTxt(guides) {
+  const live = REGIONS.filter(r => r.live).sort((a, b) => a.order - b.order);
+  const liveIds = live.map(r => r.id);
+  const ordered = [...guides].sort((a, b) =>
+    (liveIds.includes(b.region) - liveIds.includes(a.region)) || (liveIds.indexOf(a.region) - liveIds.indexOf(b.region)));
+  const regionNames = live.map(r => r.name).join(', ') || 'selected countries';
+  const lines = [
+    '# WanderZenAI',
+    '',
+    '> WanderZenAI writes slow-travel trip plans, day by day. A traveller says where, when and who is coming; they get a',
+    '> route with fewer stops and longer stays, places to stay close to nature, and every day planned around a quiet',
+    '> café and a short walk, delivered as a PDF and a trip page that works offline.',
+    '',
+    `Any country can be planned. Hand-picked routes, with the best months for each region, cover ${guides.length} countries,`,
+    `promoted first in: ${regionNames}. Day 1 of every plan is free; full trips are paid per trip (no subscription).`,
+    'Plans are written by AI around hand-picked routes, using real venue listings where available.',
+    '',
+    '## Start here',
+    '',
+    `- [Plan a trip](${SITE}/plan): the planner (free to start, no account needed until the plan is written)`,
+    `- [How it works and what you get](${SITE}/): home page`,
+    `- [Pricing](${SITE}/pricing): current prices, in the visitor's currency`,
+    `- [Explore routes](${SITE}/explore): filter hand-picked routes by month, length, travel time and kids`,
+    `- [All country guides](${SITE}/guides)`,
+    '',
+    '## Country guides (hand-picked routes)',
+    '',
+  ];
+  for (const g of ordered) {
+    const routes = g.routes.map(r => `${r.name}, ${r.days} days, best ${r.bestLabel || 'all year'}`).join('; ');
+    lines.push(`- [${g.name}](${SITE}/guides/${g.slug}): ${routes}`);
+  }
+  lines.push(
+    '',
+    '## Optional',
+    '',
+    `- [Travel stories](${SITE}/blog)`,
+    `- [Contact](${SITE}/contact)`,
+    `- [Privacy](${SITE}/privacy)`,
+    `- [Terms](${SITE}/terms)`,
+    '',
+  );
+  return lines.join('\n');
+}
+
 const guides = buildGuides();
 const files = [
+  [OUT_LLMS, buildLlmsTxt(guides)],
   [OUT, `${JSON.stringify(guides, null, 1)}\n`],
   [OUT_INDEX, `${JSON.stringify(guides.map(({ slug, name, region }) => ({ slug, name, region })))}\n`],
   [OUT_REGIONS, `${JSON.stringify(REGIONS.map(({ id, name, tagline, live, order }) => ({

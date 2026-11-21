@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { withCheckoutIdentity } from '../utils/paymentLink';
 import { usePricing } from '../hooks/usePricing';
 import { plansFrom } from '../utils/plans';
+import JsonLd from '../seo/JsonLd';
 import './Pricing.css';
 
 const s = {
@@ -78,8 +79,31 @@ export default function Pricing() {
     window.location.href = withCheckoutIdentity(plan.link, currentUser);
   };
 
+  // Plans as structured data once Stripe's prices have loaded (the prerendered copy carries them).
+  const paid = [pricing.trip, pricing.pass].filter(Boolean);
+  const offersLd = paid.length ? {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: 'WanderZenAI trip plans',
+    description: 'Slow-travel trip plans written day by day. Day 1 free; pay per trip or buy a Trip Pass.',
+    brand: { '@type': 'Brand', name: 'WanderZenAI' },
+    offers: [
+      { '@type': 'Offer', name: 'Free', price: '0', priceCurrency: paid[0].currency, description: 'Your route and Day 1 in full, every month', url: 'https://www.wanderzenai.com/pricing' },
+      ...paid.map(p => ({
+        '@type': 'Offer',
+        name: p.name,
+        price: String(p.amount),
+        priceCurrency: p.currency,
+        description: p.plan === 'pass' ? `${p.trips} full trips to use within ${p.validDays} days` : 'One full trip, never expires',
+        url: 'https://www.wanderzenai.com/pricing',
+        availability: 'https://schema.org/InStock',
+      })),
+    ],
+  } : null;
+
   return (
     <div style={{...s.page, margin: 0, padding: 0, minHeight: '100vh', background: '#0a0f1e'}}>
+      <JsonLd data={offersLd} />
       <style>{`
         * { box-sizing: border-box; }
         .plan-card:hover { transform: translateY(-4px); box-shadow: 0 24px 48px rgba(0,0,0,0.4); }

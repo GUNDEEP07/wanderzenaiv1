@@ -71,7 +71,7 @@ export default function GuidePage() {
             '@context': 'https://schema.org',
             '@type': 'TouristTrip',
             name: `${guide.name}: ${r.name} (${r.days} days)`,
-            description: r.summary,
+            description: r.bestLabel ? `${r.summary} Best time: ${r.bestLabel}.` : r.summary,
             url: `${SITE_URL}${path}#${r.id}`,
             touristType: r.kidFriendly ? ['Slow travellers', 'Families'] : ['Slow travellers'],
             itinerary: {

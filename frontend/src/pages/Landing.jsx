@@ -12,6 +12,7 @@ import { usePricing } from '../hooks/usePricing';
 import { plansFrom } from '../utils/plans';
 import GUIDES from '../data/guides.json';
 import { CreditedPhoto } from '../components/PhotoCredit';
+import JsonLd from '../seo/JsonLd';
 import {
   LIVE_COUNTRIES, liveRegionLabel, ORIGINS, MONTHS_LONG, guessOrigin, saveOrigin, currentMonth,
   rankCountries, inSeason, routeLine, planPrefill,
@@ -86,6 +87,12 @@ export default function Landing() {
 
   return (
     <div className="lp">
+      {/* The questions below, as structured data for search and AI answer engines. */}
+      <JsonLd data={{
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: FAQ.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })),
+      }} />
       <header className="lp-header">
         <nav className="lp-nav" aria-label="Main">
           <a className="lp-logo" href="/">
