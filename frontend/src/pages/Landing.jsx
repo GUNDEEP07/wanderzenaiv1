@@ -27,11 +27,9 @@ function photoStrip(month = currentMonth()) {
     .slice(0, 6);
 }
 
-const SAMPLE_IMAGES = [
-  'https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=600&h=300&fit=crop&auto=format',
-  'https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=600&h=300&fit=crop&auto=format',
-  'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=600&h=300&fit=crop&auto=format',
-];
+// Sample-plan photos: searched for the actual places in each day (credited), not stock —
+// Day 1 used to show a neon street for "Dawn temples & whispered gardens".
+const SAMPLE_PHOTO_QUERIES = ['Nanzenji temple Kyoto', 'Fushimi Inari trail Kyoto', 'Kiyomizu-dera lanes Kyoto'];
 
 const FEATURES = [
   { icon: '⊘', title: 'Zero tourist traps', body: 'Every itinerary avoids the top-10 lists. We find the spots locals keep to themselves.' },
@@ -284,12 +282,7 @@ export default function Landing() {
               <div key={s.day} className={`sample-card reveal reveal-delay-${i + 1}`} ref={addRef}>
                 {/* Photo header */}
                 <div style={{ position: 'relative', height: 160, overflow: 'hidden' }}>
-                  <img
-                    src={SAMPLE_IMAGES[i]}
-                    alt={s.theme}
-                    loading="lazy"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                  />
+                  <CreditedPhoto destination="Kyoto" keyword={SAMPLE_PHOTO_QUERIES[i]} size="card" alt={s.theme} style={{ position: 'absolute', inset: 0 }} corner="top-right" />
                   <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(20,29,51,1) 0%, rgba(20,29,51,0.3) 60%, transparent 100%)' }} />
                   <div style={{ position: 'absolute', bottom: 14, left: 16 }}>
                     <div className="sample-day-badge">Day {s.day}</div>
