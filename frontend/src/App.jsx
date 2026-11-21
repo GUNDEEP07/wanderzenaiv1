@@ -53,7 +53,7 @@ export default function App() {
         <BrowserRouter>
           <Suspense fallback={<Spinner />}>
             <Routes>
-              <Route path="/"             element={page({ title: 'WanderZenAI — AI slow travel itinerary planner', description: 'Plan a slow trip with AI: fewer stops, longer stays, hidden cafés, village homestays and morning trails, mapped day by day. Free to start.', path: '/' }, <Landing />)} />
+              <Route path="/"             element={page({ title: 'WanderZenAI — your slow-travel plan, written day by day', description: 'Tell us where, when and who’s coming. Get a route with fewer stops and longer stays, every day planned around a quiet café and a short walk, as a PDF and an offline trip page. Day 1 free.', path: '/' }, <Landing />)} />
               <Route path="/login"        element={page({ title: 'Sign in', ...PRIVATE }, <Login />)} />
               <Route path="/signup"       element={page({ title: 'Create your account', ...PRIVATE }, <Signup />)} />
               <Route path="/onboarding"   element={page({ title: 'Welcome', ...PRIVATE }, <ProtectedRoute><Onboarding /></ProtectedRoute>)} />

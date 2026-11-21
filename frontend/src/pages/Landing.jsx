@@ -1,395 +1,354 @@
-import React, { useEffect, useRef } from 'react';
+// Home page — design E (approved Nov 22 2026): say what we do in the first screen, show the real
+// output, then help people choose. Copy is region-neutral; every route, count and "starting with …"
+// comes from the curated data (regions.json / guides.json, live regions only), so switching on a
+// new region updates this page with no copy change. Prices come from Stripe (GET /pricing).
+// Phone gets its own simpler layout via Home.css (one idea per screen, sticky "Plan my trip").
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './Landing.css';
+import './Home.css';
 import { usePricing } from '../hooks/usePricing';
 import { plansFrom } from '../utils/plans';
-import GUIDES from '../data/guides-index.json';
-import SeasonHero from '../components/home/SeasonHero';
-import FULL_GUIDES from '../data/guides.json';
+import GUIDES from '../data/guides.json';
 import { CreditedPhoto } from '../components/PhotoCredit';
-import { LIVE_COUNTRIES, liveRegionLabel, currentMonth, inSeason } from '../utils/seasons';
+import {
+  LIVE_COUNTRIES, liveRegionLabel, ORIGINS, MONTHS_LONG, guessOrigin, saveOrigin, currentMonth,
+  rankCountries, inSeason, routeLine, planPrefill,
+} from '../utils/seasons';
 
-// Which countries we promote comes from the curated data (regions.json, `live` regions —
-// Asia today). Turning on another region there updates this page with no code change.
-const LIVE = new Set(LIVE_COUNTRIES);
-const LIVE_GUIDES = GUIDES.filter(g => LIVE.has(g.name));
-const REGION_LABEL = liveRegionLabel();
+const LIVE_GUIDES = GUIDES.filter(g => LIVE_COUNTRIES.includes(g.name));
+const ROUTE_COUNT = LIVE_GUIDES.reduce((n, g) => n + g.routes.length, 0);
 
-// "The places we actually send you to": one real curated route per live country, the one in
-// season this month, with its hand-checked photo (credited). Never stock photos of places
-// we don't plan.
-function photoStrip(month = currentMonth()) {
-  return FULL_GUIDES
-    .filter(g => LIVE.has(g.name))
-    .map(g => ({ country: g.name, route: [...g.routes].sort((x, y) => inSeason(y, month) - inSeason(x, month))[0] }))
-    .filter(x => x.route?.photoQuery)
-    .slice(0, 6);
-}
-
-// Sample-plan photos: searched for the actual places in each day (credited), not stock —
-// Day 1 used to show a neon street for "Dawn temples & whispered gardens".
-const SAMPLE_PHOTO_QUERIES = ['Nanzenji temple Kyoto', 'Fushimi Inari trail Kyoto', 'Kiyomizu-dera lanes Kyoto'];
-
-const FEATURES = [
-  { icon: '⊘', title: 'Zero tourist traps', body: 'Every itinerary avoids the top-10 lists. We find the spots locals keep to themselves.' },
-  { icon: '◎', title: 'Slow travel by design', body: 'Hidden cafes, morning trails, village markets — not 8 sights before noon.' },
-  { icon: '△', title: 'Nature-first stays', body: 'Farmhouses, forest retreats and residential homestays — never city-centre chain hotels.' },
-  { icon: '◆', title: 'One hidden gem daily', body: 'Every single day includes something most tourists never find. That\'s a promise.' },
-  { icon: '◑', title: 'Your language', body: 'English, Hindi, Spanish, French, Japanese and 5 more languages.' },
-  { icon: '▦', title: 'Beautiful PDF, forever', body: 'Print-ready PDF with day cards, local eats, insider tips and cost breakdown.' },
-];
+// The example day in the first screen and the cards under "What you get": an illustration of the
+// output's shape (labelled "Example"), taken from a curated route so the photo is a real place.
+const EXAMPLE = {
+  country: 'Vietnam', photoQuery: 'Ninh Binh, Vietnam', place: 'Ninh Binh', day: 4, of: 8,
+  title: 'Boats before the crowds, a walk at golden hour',
+  items: [
+    ['7:00', 'River boat through the caves, before the tour buses'],
+    ['10:30', 'A quiet café by the rice fields'],
+    ['16:30', 'A short walk up to a viewpoint for sunset'],
+  ],
+};
 
 const STEPS = [
-  { num: '01', title: 'Tell us your trip', body: 'Destination, budget, travel style, pace and interests. Two minutes, no account needed to start.' },
-  { num: '02', title: 'AI crafts your plan', body: 'Built on slow-travel philosophy — hidden cafes, local guesthouses, scenic walks away from crowds.' },
-  { num: '03', title: 'Itinerary in your inbox', body: 'Watch it being written day by day — usually a few minutes — then a beautifully designed PDF lands in your email. Yours forever.' },
+  { label: 'Step 1 · 2 minutes', title: 'Tell us the trip', body: 'Where, how many days, who’s coming and your pace. No account needed to start.' },
+  { label: 'Step 2', title: 'Pick your route', body: 'Choose a hand-picked route or let us suggest one, then change the towns and the days in each.' },
+  { label: 'Step 3 · a few minutes', title: 'Get your plan', body: 'Watch it being written day by day. It arrives as a PDF and as a trip page on your phone.' },
 ];
 
-const SAMPLES = [
-  { day: 1, theme: 'Dawn temples & whispered gardens', gem: 'Nanzenji\'s back north gate at 6:30 AM — monks walking, mist on the canal, zero crowds', food: 'Okutan Kappa Zushi at 5:30 PM (opening) — locals dine here, tourists arrive at 7 PM' },
-  { day: 2, theme: 'Mountain paths & artisan markets', gem: 'Fushimi Inari back trails via Inariyama Park — forested, quiet, maybe 3 other people', food: 'Demachi Masugata Shotengai — residential market where locals actually shop for lunch' },
-  { day: 3, theme: 'Slow mornings & neighbourhood life', gem: 'Kiyomizu-dera back lanes going LEFT — family homes, tiny shrines, no souvenir shops', food: 'Yudofu Sagano — hot pot tofu in a wooden room, owner remembers regulars by name' },
+const COMPARE = [
+  ['Time to a full plan', 'Days of tabs', 'Minutes, then lots of checking', 'A few minutes'],
+  ['A route with short travel days', 'You work it out', 'Often too many stops', 'Planned around your travel limit'],
+  ['Right for the season you go', 'If you check', 'Rarely mentioned', 'Built in, per region'],
+  ['Places that exist', 'Yes, but often dated', 'Sometimes invented', 'Matched to real listings'],
+  ['Usable on the road', 'Screenshots', 'A long chat', 'Trip page, offline, opens on today'],
 ];
+
+// Sample days (Kyoto). Kept to places that are well established; no restaurant names.
+const SAMPLES = [
+  { day: 1, query: 'Nanzenji temple Kyoto', theme: 'Dawn temples and quiet gardens', body: 'Nanzen-ji’s back gate at 6:30 am: mist on the canal, monks walking, almost nobody else. Then the Philosopher’s Path before the crowds.' },
+  { day: 2, query: 'Fushimi Inari trail Kyoto', theme: 'Mountain paths and a local market', body: 'Fushimi Inari’s upper trails through the forest, where most visitors turn back. Lunch from a neighbourhood shopping street.' },
+  { day: 3, query: 'Kiyomizu-dera lanes Kyoto', theme: 'Slow mornings, old lanes', body: 'The side lanes below Kiyomizu-dera early, past family homes and tiny shrines, before the souvenir shops open.' },
+];
+
+const FAQ = [
+  ['Which countries can I plan?', `Any country. ${LIVE_GUIDES.length} also have hand-picked routes and guides, starting with ${liveRegionLabel()}, and more are added over time.`],
+  ['Is it all written by AI?', 'Routes in the countries we cover are hand-picked. AI writes the days around your dates, pace and interests, and places are matched to real listings.'],
+  ['Can I change the plan?', 'Yes. Pick the towns and days before it’s written, and rewrite up to three days afterwards with a note.'],
+  ['Does it work with kids?', 'Yes. Tell us who’s coming: travel days stay short and kid-friendly routes come first.'],
+];
+
+/** Top routes for this visitor and month: one per country, in season first, closest first. */
+export function homePicks(origin, month = currentMonth(), count = 3) {
+  return rankCountries(GUIDES, { month, origin })
+    .map(c => ({ country: c.name, hours: c.hours, route: c.routes[0], good: inSeason(c.routes[0], month) }))
+    .filter(x => x.route)
+    .slice(0, count);
+}
 
 export default function Landing() {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  // Anyone can plan; sign-in comes at Submit (Nov 2026).
-  const planRoute = () => navigate('/plan');
   const plans = plansFrom(usePricing());
-  const sectionsRef = useRef([]);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [origin, setOrigin] = useState(() => guessOrigin());
+  const month = currentMonth();
+  const picks = useMemo(() => homePicks(origin, month), [origin, month]);
+  const plan = () => navigate('/plan');
+  const planRoute = (country, route) => navigate('/plan', { state: { prefill: planPrefill(country, route) } });
 
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }),
-      { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }
-    );
-    sectionsRef.current.forEach(el => { if (el) observer.observe(el); });
-    return () => observer.disconnect();
-  }, []);
-
-  const addRef = el => { if (el && !sectionsRef.current.includes(el)) sectionsRef.current.push(el); };
+  const changeOrigin = (e) => {
+    const o = ORIGINS.find(x => x.id === e.target.value);
+    if (o) { saveOrigin(o.id); setOrigin({ ...o, guessed: false }); }
+  };
 
   return (
-    <div style={{ background: '#0a0f1e', minHeight: '100vh' }}>
-
-      {/* ── Nav ── */}
-      <nav className="nav">
-        <div className="nav-inner">
-          <a className="nav-logo" href="/">
-            <div className="nav-logo-mark">W</div>
-            <span className="nav-logo-text">Wander<span>Zen</span>AI</span>
+    <div className="lp">
+      <header className="lp-header">
+        <nav className="lp-nav" aria-label="Main">
+          <a className="lp-logo" href="/">
+            <span className="lp-logo-mark" aria-hidden="true">W</span>
+            WanderZen<span className="lp-accent">AI</span>
           </a>
-          <a href="/explore" className="nav-link">Explore</a>
-          <a href="/guides" className="nav-link">Guides</a>
-          <a href="/blog" className="nav-link">Stories</a>
-          <a href="#how" className="nav-link">How it works</a>
-          <a href="#sample" className="nav-link">Sample plan</a>
-          <a href="/pricing" className="nav-link">Pricing</a>
-          <a href="/contact" className="nav-link">Contact</a>
-          <a href="/contact?type=partnership" className="nav-link">For agencies</a>
-          {currentUser ? (
-            <a href="/dashboard" className="nav-link">Dashboard</a>
-          ) : (
-            <a href="/login" className="nav-link nav-signin">Sign in</a>
-          )}
-          <button className="nav-cta" onClick={planRoute}>
-            {currentUser ? 'Plan my trip' : 'Try it free'}
+          <button type="button" className="lp-menu-btn" aria-label="Menu" aria-expanded={menuOpen} aria-controls="lp-links" onClick={() => setMenuOpen(o => !o)}>
+            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
           </button>
-        </div>
-      </nav>
+          <div id="lp-links" className={`lp-links${menuOpen ? ' lp-links--open' : ''}`}>
+            <a href="/explore">Explore</a>
+            <a href="/guides">Guides</a>
+            <a href="#sample" onClick={() => setMenuOpen(false)}>Sample plan</a>
+            <a href="/pricing">Pricing</a>
+            {currentUser ? <a href="/dashboard">Dashboard</a> : <a href="/login">Sign in</a>}
+            <button type="button" className="lp-btn lp-btn--small" onClick={plan}>Plan my trip</button>
+          </div>
+        </nav>
+      </header>
 
-      {/* ── Hero ── */}
-      <section className="hero">
-        <div className="hero-bg">
-          {/* Subtle background image with dark overlay */}
-          <div style={{
-            position: 'absolute', inset: 0, zIndex: 0,
-            backgroundImage: 'url(https://images.unsplash.com/photo-1506929562872-bb421503ef21?w=1000&h=560&fit=crop&auto=format&q=45)', // at 8% opacity a small image looks the same
-            backgroundSize: 'cover', backgroundPosition: 'center',
-            opacity: 0.08,
-          }} />
-          <div className="hero-grid" />
-          <div className="hero-glow-1" />
-          <div className="hero-glow-2" />
-          <div className="hero-glow-3" />
-        </div>
-
-        {/* Design A (Nov 16 2026): in-season countries first, closest to the visitor; a real route + photo. */}
-        <SeasonHero />
-
-        <div className="hero-proof reveal" ref={addRef}>
-          <div className="proof-item"><div className="proof-num">{GUIDES.length}</div><div className="proof-label">countries with hand-picked routes</div></div>
-          <div className="proof-item"><div className="proof-num">{LIVE_GUIDES.length}</div><div className="proof-label">of them in {REGION_LABEL}</div></div>
-          <div className="proof-item"><div className="proof-num">Day 1</div><div className="proof-label">free to read before you pay</div></div>
-          <div className="proof-item"><div className="proof-num">$0</div><div className="proof-label">to get started</div></div>
-        </div>
-      </section>
-
-      {/* ── Explore teaser ── */}
-      <div style={{ textAlign: 'center', padding: '1rem 2rem 3rem', background: '#0a0f1e' }}>
-        <a href="/explore" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '12px 24px', borderRadius: 100, border: '1px solid rgba(0,212,170,0.25)', background: 'rgba(0,212,170,0.06)', color: '#00d4aa', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 600, transition: 'all 0.2s' }}>
-          <span>✦</span>
-          Explore destinations — {REGION_LABEL} first
-          <span>→</span>
-        </a>
-      </div>
-
-      {/* ── Slow routes (country guides, live regions first) ── */}
-      <section style={{ background: '#0a0f1e', padding: '0 0 4rem' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 2rem' }}>
-          <div className="reveal" ref={addRef} style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <h2 className="section-title" style={{ fontSize: 'clamp(1.5rem,3vw,2.2rem)' }}>
-              Slow routes, ready to go
-            </h2>
-            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.95rem', marginTop: '0.5rem' }}>
-              Hand-picked routes with fewer stops and longer stays — starting with {REGION_LABEL}.
+      <main>
+        {/* 1 · What we do, and what it looks like */}
+        <section className="lp-wrap lp-hero" aria-labelledby="lp-hero-h">
+          <div className="lp-hero-copy">
+            <p className="lp-eyebrow">Slow travel planner</p>
+            <h1 id="lp-hero-h" className="lp-h1">Your slow-travel plan, written day by day.</h1>
+            <p className="lp-lede">
+              Tell us where, when and who’s coming. In a few minutes you get a route with fewer stops and longer stays,
+              places to stay close to nature, and every day planned around a quiet café and a short walk<span className="lp-desk-only">,
+              as a PDF and a trip page that works offline</span>.
             </p>
+            <div className="lp-actions">
+              <button type="button" className="lp-btn" onClick={plan}>Plan my trip, free</button>
+              <a className="lp-btn lp-btn--ghost lp-desk-only" href="#sample">See a sample plan</a>
+            </div>
+            <ul className="lp-trust">
+              <li>✓ Day 1 free, no card</li>
+              <li>✓ Hand-picked routes, any country</li>
+              <li>✓ Pay per trip, no subscription</li>
+            </ul>
           </div>
-          <div className="reveal" ref={addRef} style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
-            {[...LIVE_GUIDES, ...GUIDES.filter(g => !LIVE.has(g.name))].map((g, i) => (
-              <a key={g.slug} href={`/guides/${g.slug}`} style={{
-                display: 'inline-flex', alignItems: 'center', minHeight: 40, padding: '8px 18px', borderRadius: 100,
-                background: LIVE.has(g.name) ? 'rgba(0,212,170,0.1)' : 'rgba(255,255,255,0.04)',
-                border: `1px solid ${LIVE.has(g.name) ? 'rgba(0,212,170,0.3)' : 'rgba(255,255,255,0.12)'}`,
-                fontSize: 13, fontWeight: 600, color: LIVE.has(g.name) ? '#00d4aa' : 'rgba(255,255,255,0.75)',
-                textDecoration: 'none', fontFamily: "'Plus Jakarta Sans', sans-serif",
-              }}>
-                {g.name}
-              </a>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Photo strip ── */}
-      <section style={{ background: '#0a0f1e', padding: '0 0 5rem', overflow: 'hidden' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 2rem' }}>
-          <div className="reveal" ref={addRef} style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-            <h2 className="section-title" style={{ fontSize: 'clamp(1.5rem,3vw,2.5rem)' }}>The places we actually send you to</h2>
-          </div>
-          <div className="reveal photo-strip-grid" ref={addRef}>
-            {photoStrip().map(({ country, route }, i) => (
-              <div key={route.id} style={{
-                position: 'relative', borderRadius: 12, overflow: 'hidden',
-                aspectRatio: '9/16', animationDelay: `${i * 0.1}s`,
-              }}>
-                <CreditedPhoto destination={country} keyword={route.photoQuery} size="card" alt={`${route.name}, ${country}`} style={{ position: 'absolute', inset: 0 }} corner="top-right" />
-                <div style={{
-                  position: 'absolute', inset: 0, pointerEvents: 'none',
-                  background: 'linear-gradient(to top, rgba(10,15,30,0.85) 0%, rgba(10,15,30,0.1) 50%, transparent 100%)',
-                }} />
-                <div style={{
-                  position: 'absolute', bottom: 12, left: 12, right: 12, pointerEvents: 'none',
-                  fontSize: '0.75rem', fontWeight: 700, color: '#fff',
-                  letterSpacing: '0.08em', textTransform: 'uppercase', lineHeight: 1.35,
-                }}>{country}<span style={{ display: 'block', textTransform: 'none', letterSpacing: 0, fontWeight: 500, opacity: 0.85 }}>{route.name}</span></div>
-                {/* Whole-card link under the photo credit (credit links sit above at z-index 2). */}
-                <a href={`/guides/${FULL_GUIDES.find(g => g.name === country)?.slug || ''}`} aria-label={`${route.name}, ${country} — read the guide`} style={{ position: 'absolute', inset: 0, zIndex: 1 }} />
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── How it works ── */}
-      <section className="section how" id="how">
-        <div className="section-inner">
-          <div className="reveal" ref={addRef}>
-            <div className="section-tag">How it works</div>
-            <h2 className="section-title">Three steps.<br />One trip you'll never forget.</h2>
-          </div>
-
-          <div className="steps reveal" ref={addRef}>
-            {STEPS.map(s => (
-              <div key={s.num} className="step">
-                <div className="step-num">{s.num}</div>
-                <div className="step-icon">✦</div>
-                <div className="step-title">{s.title}</div>
-                <div className="step-body">{s.body}</div>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ textAlign: 'center', marginTop: '3rem' }} className="reveal" ref={addRef}>
-            <button className="btn-primary" onClick={planRoute}>
-              Start planning — it's free →
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Features ── */}
-      <section className="section" style={{ background: '#0a0f1e' }}>
-        <div className="section-inner">
-          {/* Feature image banner */}
-          <div className="reveal" ref={addRef} style={{ borderRadius: 16, overflow: 'hidden', marginBottom: '4rem', position: 'relative', height: 280 }}>
-            {/* A real curated place (the first live country's first route), credited — not stock. */}
-            <CreditedPhoto
-              destination={LIVE_GUIDES[0]?.name}
-              keyword={FULL_GUIDES.find(g => g.name === LIVE_GUIDES[0]?.name)?.routes[0]?.photoQuery}
-              size="hero"
-              alt={`${FULL_GUIDES.find(g => g.name === LIVE_GUIDES[0]?.name)?.routes[0]?.name || 'Slow route'}, ${LIVE_GUIDES[0]?.name || ''}`}
-              style={{ position: 'absolute', inset: 0 }}
-              corner="bottom-right"
-            />
-            <div style={{
-              position: 'absolute', inset: 0,
-              background: 'linear-gradient(135deg, rgba(10,15,30,0.9) 0%, rgba(10,15,30,0.4) 60%, rgba(10,15,30,0.1) 100%)',
-              display: 'flex', alignItems: 'center', padding: '0 3rem',
-            }}>
-              <div>
-                <div className="section-tag">Why WanderZenAI</div>
-                <h2 className="section-title" style={{ fontSize: 'clamp(1.75rem,4vw,3rem)', marginBottom: '0.75rem' }}>
-                  Not another<br />generic travel app.
-                </h2>
-                <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '1rem', maxWidth: 400, lineHeight: 1.7 }}>
-                  Built on a slow-travel philosophy. Every feature exists to get you off the tourist trail and into the real destination.
-                </p>
+          <figure className="lp-phone" aria-label="Example of a trip day">
+            <CreditedPhoto destination={EXAMPLE.country} keyword={EXAMPLE.photoQuery} size="hero" alt={`${EXAMPLE.place}, ${EXAMPLE.country}`} loading="eager" style={{ height: 200 }} corner="bottom-right" />
+            <div className="lp-phone-body">
+              <div className="lp-phone-meta"><span>Example · Day {EXAMPLE.day} of {EXAMPLE.of} · {EXAMPLE.place}</span><span className="lp-desk-only">Today</span></div>
+              <p className="lp-phone-title">{EXAMPLE.title}</p>
+              <ol className="lp-times">
+                {EXAMPLE.items.map(([t, what]) => <li key={t}><span>{t}</span>{what}</li>)}
+              </ol>
+              <div className="lp-tags lp-desk-only">
+                <span className="lp-tag lp-tag--teal">Directions</span><span className="lp-tag">Mark as done</span><span className="lp-tag">Works offline</span>
               </div>
             </div>
-          </div>
+          </figure>
+        </section>
 
-          <div className="features-grid">
-            {FEATURES.map((f, i) => (
-              <div key={f.title} className={`feature reveal reveal-delay-${(i % 4) + 1}`} ref={addRef}>
-                <span className="feature-icon" style={{ color: '#00d4aa', fontSize: 16 }}>{f.icon}</span>
-                <div className="feature-title">{f.title}</div>
-                <div className="feature-body">{f.body}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Sample ── */}
-      <section className="section sample" id="sample">
-        <div className="section-inner">
-          <div className="sample-header reveal" ref={addRef}>
-            <div>
-              <div className="section-tag">Sample plan</div>
-              <h2 className="section-title">Quiet Kyoto:<br />Temples, Trails & Morning Mist</h2>
-            </div>
-            <p className="section-sub" style={{ maxWidth: 320 }}>
-              A WanderZenAI sample. Notice what's missing — no midday crush in the Arashiyama bamboo grove, no selfie queues in Gion.
-            </p>
-          </div>
-
-          <div className="sample-cards">
-            {SAMPLES.map((s, i) => (
-              <div key={s.day} className={`sample-card reveal reveal-delay-${i + 1}`} ref={addRef}>
-                {/* Photo header */}
-                <div style={{ position: 'relative', height: 160, overflow: 'hidden' }}>
-                  <CreditedPhoto destination="Kyoto" keyword={SAMPLE_PHOTO_QUERIES[i]} size="card" alt={s.theme} style={{ position: 'absolute', inset: 0 }} corner="top-right" />
-                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(20,29,51,1) 0%, rgba(20,29,51,0.3) 60%, transparent 100%)' }} />
-                  <div style={{ position: 'absolute', bottom: 14, left: 16 }}>
-                    <div className="sample-day-badge">Day {s.day}</div>
+        {/* 2 · What you get */}
+        <section className="lp-band" aria-labelledby="lp-get-h">
+          <div className="lp-wrap">
+            <h2 id="lp-get-h" className="lp-h2">What you get</h2>
+            <p className="lp-sub lp-desk-only">Not a list of sights. A trip you can actually follow, from the first booking to the last morning.</p>
+            <ol className="lp-get">
+              <li className="lp-card">
+                <span className="lp-num" aria-hidden="true">1</span>
+                <div>
+                  <h3>A route that makes sense</h3>
+                  <p>Fewer stops, short travel days, and right for the season you’re going in.</p>
+                  <div className="lp-example lp-desk-only">
+                    <div><span>● Hanoi</span><span>3 days</span></div>
+                    <div><span>● Ninh Binh</span><span>3 days · 2 h by road</span></div>
+                    <div><span>● Lan Ha Bay</span><span>2 days · 2.5 h</span></div>
                   </div>
                 </div>
-
-                <div className="sample-card-body" style={{ padding: '1.25rem 1.5rem' }}>
-                  <div className="sample-card-theme" style={{ marginBottom: '1rem' }}>{s.theme}</div>
-                  <div className="sample-gem-label">Hidden gem</div>
-                  <div className="sample-gem">{s.gem}</div>
-                  <div className="sample-food-label">Where to eat</div>
-                  <div className="sample-food">{s.food}</div>
+              </li>
+              <li className="lp-card">
+                <span className="lp-num" aria-hidden="true">2</span>
+                <div>
+                  <h3>Every day planned</h3>
+                  <p>Times from morning to evening, a quiet café and a short walk, local food to try and the busy spots to skip.</p>
+                  <div className="lp-example lp-desk-only">
+                    <div><b>Skip:</b>&nbsp;the midday boat queue, go at 7 am</div>
+                    <div><b>Stay:</b>&nbsp;a homestay among the rice fields</div>
+                  </div>
                 </div>
-              </div>
+              </li>
+              <li className="lp-card">
+                <span className="lp-num" aria-hidden="true">3</span>
+                <div>
+                  <h3>Ready for the road</h3>
+                  <p>A booking checklist in route order, a PDF to keep, and a trip page that opens on today and works offline.</p>
+                  <div className="lp-example lp-desk-only">
+                    <div><span>☑ Hanoi · 3 nights</span><span className="lp-accent">Stays</span></div>
+                    <div><span>☐ Flights</span><span className="lp-accent">Flights</span></div>
+                  </div>
+                </div>
+              </li>
+            </ol>
+          </div>
+        </section>
+
+        {/* 3 · Not sure where? (live regions, in season this month, closest to the visitor) */}
+        <section className="lp-wrap lp-section" aria-labelledby="lp-where-h">
+          <div className="lp-row">
+            <div>
+              <h2 id="lp-where-h" className="lp-h2">Not sure where yet?</h2>
+              <p className="lp-sub">
+                At their best in {MONTHS_LONG[month - 1]}, closest to{' '}
+                <label htmlFor="lp-from" className="lp-visually-hidden">Planning from</label>
+                <select id="lp-from" className="lp-select" value={origin.id} onChange={changeOrigin}>
+                  {ORIGINS.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                </select>{' '}first.
+              </p>
+            </div>
+            <a className="lp-link lp-desk-only" href="/explore">See all {ROUTE_COUNT} hand-picked routes →</a>
+          </div>
+          <div className="lp-picks">
+            {picks.map(({ country, hours, route, good }) => (
+              <article key={route.id} className="lp-pick">
+                <CreditedPhoto destination={country} keyword={route.photoQuery} size="card" alt={`${route.name}, ${country}`} style={{ height: 190 }} corner="bottom-right" />
+                <div className="lp-pick-body">
+                  <span className="lp-pick-meta">{country}{hours ? ` · about ${hours} h flight` : ''}{good ? '' : ` · best ${route.bestLabel}`}</span>
+                  <h3>{route.name}</h3>
+                  <span className="lp-pick-line">{routeLine(route)} · {route.days} days</span>
+                  <button type="button" className="lp-link-btn" onClick={() => planRoute(country, route)} aria-label={`Plan ${route.name}, ${country}`}>Plan this route →</button>
+                </div>
+              </article>
             ))}
           </div>
-        </div>
-      </section>
+          <a className="lp-link lp-mob-only" href="/explore">See more routes →</a>
+        </section>
 
-      {/* ── Pricing ── */}
-      {/* Testimonials: removed until there are real ones (Nov 2026) — never invent reviews. */}
-
-      <section className="section" style={{ background: '#0a0f1e' }}>
-        <div className="section-inner">
-          <div className="reveal" ref={addRef}>
-            <div className="section-tag">Pricing</div>
-            <h2 className="section-title">Simple, honest pricing.</h2>
-            <p className="section-sub">Pay per trip — no subscription. Your PDF is yours to keep forever.</p>
+        {/* 4 · How it works */}
+        <section className="lp-band" id="how" aria-labelledby="lp-how-h">
+          <div className="lp-wrap">
+            <h2 id="lp-how-h" className="lp-h2">How it works</h2>
+            <ol className="lp-steps">
+              {STEPS.map(st => (
+                <li key={st.title} className="lp-card lp-step">
+                  <span className="lp-step-label">{st.label}</span>
+                  <h3>{st.title}</h3>
+                  <p className="lp-desk-only">{st.body}</p>
+                </li>
+              ))}
+            </ol>
           </div>
+        </section>
 
-          {/* Same plans and Stripe prices as /pricing (design D) — nothing hard-coded. */}
-          <div className="pricing-grid">
-            {plans.map((plan, i) => (
-              <div key={plan.name} className={`plan-card${plan.featured ? ' plan-card-featured' : ''} reveal${i ? ` reveal-delay-${i}` : ''}`} ref={addRef}>
-                {plan.featured && <div className="plan-badge">No subscription</div>}
-                <div className="plan-name">{plan.name}</div>
-                <div className="plan-price">
-                  {plan.priceParts.main}
-                  {plan.priceParts.code && <span className="plan-price-sub" style={{ marginLeft: 6 }}>{plan.priceParts.code}</span>}
-                </div>
-                <div className="plan-period">{plan.period}</div>
-                <ul className="plan-features">
-                  {plan.features.slice(0, 4).map(f => (
-                    <li key={f}><span className="plan-check">✓</span>{f}</li>
-                  ))}
-                </ul>
-                <button className={`plan-btn ${plan.featured ? 'plan-btn-filled' : 'plan-btn-outline'}`} onClick={() => (plan.buy ? navigate('/pricing') : planRoute())}>
-                  {plan.cta}
-                </button>
+        {/* 5 · Why not Google it or ask a general AI chat? */}
+        <section className="lp-wrap lp-section" aria-labelledby="lp-why-h">
+          <h2 id="lp-why-h" className="lp-h2"><span className="lp-desk-only">Why not just Google it, or ask ChatGPT?</span><span className="lp-mob-only">Why not just Google it?</span></h2>
+          <div className="lp-table-box lp-desk-only">
+            <table className="lp-table">
+              <thead>
+                <tr><td /><th scope="col">Blogs and maps</th><th scope="col">A general AI chat</th><th scope="col" className="lp-accent">WanderZenAI</th></tr>
+              </thead>
+              <tbody>
+                {COMPARE.map(([row, a, b, us]) => (
+                  <tr key={row}><th scope="row">{row}</th><td>{a}</td><td>{b}</td><td className="lp-us">{us}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <ul className="lp-why-list lp-mob-only">
+            <li><b>Minutes, not days of tabs.</b> One plan instead of twenty blogs.</li>
+            <li><b>Places that exist.</b> Matched to real listings, unlike a general AI chat.</li>
+            <li><b>Made for the road.</b> Opens on today and works offline.</li>
+          </ul>
+        </section>
+
+        {/* 6 · Sample */}
+        <section className="lp-band" id="sample" aria-labelledby="lp-sample-h">
+          <div className="lp-wrap">
+            <div className="lp-row">
+              <div>
+                <h2 id="lp-sample-h" className="lp-h2">What a few days look like</h2>
+                <p className="lp-sub">A sample from a 7-day plan for Kyoto.</p>
               </div>
+            </div>
+            <div className="lp-picks lp-desk-only">
+              {SAMPLES.map(sm => (
+                <article key={sm.day} className="lp-pick">
+                  <CreditedPhoto destination="Kyoto" keyword={sm.query} size="card" alt={sm.theme} style={{ height: 170 }} corner="bottom-right" />
+                  <div className="lp-pick-body">
+                    <span className="lp-step-label">Day {sm.day}</span>
+                    <h3>{sm.theme}</h3>
+                    <p className="lp-pick-line">{sm.body}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+            <div className="lp-mob-only lp-sample-mob">
+              <p className="lp-pick-line"><b>Day 1 · {SAMPLES[0].theme}.</b> {SAMPLES[0].body}</p>
+            </div>
+          </div>
+        </section>
+
+        {/* 7 · Pricing (Stripe) */}
+        <section className="lp-wrap lp-section" aria-labelledby="lp-price-h">
+          <h2 id="lp-price-h" className="lp-h2">Try it free. Pay per trip.</h2>
+          <p className="lp-sub">No subscription. The currency is shown with every price.</p>
+          <ul className="lp-prices">
+            {plans.map(p => (
+              <li key={p.name} className={`lp-price${p.featured ? ' lp-price--featured' : ''}`}>
+                <div>
+                  <span className="lp-price-name">{p.name}</span>
+                  <span className="lp-price-note">{p.period}</span>
+                </div>
+                <span className="lp-price-amount">
+                  {p.priceParts.main}{p.priceParts.code && <small> {p.priceParts.code}</small>}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <a className="lp-link" href="/pricing">What’s in each plan →</a>
+        </section>
+
+        {/* 8 · Questions */}
+        <section className="lp-band" aria-labelledby="lp-faq-h">
+          <div className="lp-wrap lp-narrow">
+            <h2 id="lp-faq-h" className="lp-h2">Questions</h2>
+            {FAQ.map(([q, a]) => (
+              <details key={q} className="lp-faq"><summary>{q}</summary><p>{a}</p></details>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ── Final CTA with background image ── */}
-      <section style={{ position: 'relative', overflow: 'hidden', padding: '8rem 2rem', textAlign: 'center' }}>
-        {/* Background image */}
-        <div style={{
-          position: 'absolute', inset: 0, zIndex: 0,
-          backgroundImage: 'url(https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1600&h=800&fit=crop&auto=format)',
-          backgroundSize: 'cover', backgroundPosition: 'center',
-        }} />
-        {/* Dark overlay */}
-        <div style={{ position: 'absolute', inset: 0, zIndex: 1, background: 'rgba(10,15,30,0.82)' }} />
-        {/* Teal glow */}
-        <div style={{ position: 'absolute', inset: 0, zIndex: 1, background: 'radial-gradient(ellipse at center, rgba(0,212,170,0.08) 0%, transparent 70%)' }} />
-
-        <div style={{ position: 'relative', zIndex: 2, maxWidth: 700, margin: '0 auto' }} className="reveal" ref={addRef}>
-          <h2 className="cta-title">
-            Your next adventure<br />starts <em style={{ color: '#00d4aa', fontStyle: 'italic' }}>here.</em>
-          </h2>
-          <p className="cta-sub">
-            No tourist traps. No crowded itineraries. Just you and the real destination.
-          </p>
-          <button className="btn-primary" style={{ fontSize: '1.1rem', padding: '1.1rem 3rem' }} onClick={planRoute}>
-            Plan my trip — free →
-          </button>
-          <div style={{ marginTop: '1.5rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.55)' }}>
-            No credit card · Ready in minutes · PDF yours forever
+        {/* 9 · Close, over a live route's photo */}
+        <section className="lp-close" aria-labelledby="lp-close-h">
+          {LIVE_GUIDES[0] && (
+            <CreditedPhoto destination={LIVE_GUIDES[0].name} keyword={LIVE_GUIDES[0].routes[0].photoQuery} size="hero" alt="" style={{ position: 'absolute', inset: 0 }} corner="bottom-right" />
+          )}
+          <div className="lp-close-inner">
+            <h2 id="lp-close-h" className="lp-h2 lp-close-h">Plan fewer places. Stay longer. Start with Day 1, free.</h2>
+            <button type="button" className="lp-btn" onClick={plan}>Plan my trip, free</button>
           </div>
-        </div>
-      </section>
+        </section>
+      </main>
 
-      {/* ── Footer ── */}
-      <footer className="footer">
-        <div className="footer-inner">
-          <div className="nav-logo">
-            <div className="nav-logo-mark">W</div>
-            <span className="nav-logo-text">Wander<span>Zen</span>AI</span>
-          </div>
-          <div className="footer-links">
+      <footer className="lp-footer">
+        <div className="lp-wrap lp-footer-inner">
+          <div className="lp-footer-links">
+            <a href="/explore">Explore</a>
             <a href="/guides">Guides</a>
             <a href="/blog">Stories</a>
             <a href="/pricing">Pricing</a>
+            <a href="/contact">Contact</a>
             <a href="/contact?type=partnership">For agencies</a>
             <a href="/privacy">Privacy</a>
             <a href="/terms">Terms</a>
-            <a href="/contact">Contact</a>
             <a href="https://instagram.com/wanderzenai">Instagram</a>
           </div>
-          <div className="footer-links" aria-label="Slow travel guides">
-            {GUIDES.map(g => <a key={g.slug} href={`/guides/${g.slug}`}>{g.name}</a>)}
+          <div className="lp-footer-links" aria-label="Slow travel guides">
+            {/* Every guide, live regions first (internal links help search engines find them). */}
+            {[...LIVE_GUIDES, ...GUIDES.filter(g => !LIVE_COUNTRIES.includes(g.name))].map(g => <a key={g.slug} href={`/guides/${g.slug}`}>{g.name}</a>)}
           </div>
-          <div className="footer-copy">© {new Date().getFullYear()} WanderZenAI · Built for slow travellers</div>
+          <div className="lp-footer-copy">© {new Date().getFullYear()} WanderZenAI · Built for slow travellers</div>
         </div>
       </footer>
+
+      {/* Phone only: the one action, always in reach */}
+      <div className="lp-sticky lp-mob-only">
+        <button type="button" className="lp-btn lp-btn--block" onClick={plan}>Plan my trip, free</button>
+      </div>
     </div>
   );
 }
