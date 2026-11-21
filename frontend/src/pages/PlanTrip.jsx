@@ -19,6 +19,8 @@ import { submitItinerary, fetchRoutePlan, fetchEntitlement, savePlanDraft, delet
 import { useAuth } from '../context/AuthContext';
 import { analytics } from '../utils/analytics';
 import { visitorCountry } from '../api/pricing';
+import { usePricing } from '../hooks/usePricing';
+import PriceNote from '../components/plantrip/PriceNote';
 import { homeCity } from '../utils/seasons';
 import { getCurrencyForCountry } from '../utils/countryToCurrency';
 import { validateBudget } from '../utils/validators/budgetValidator';
@@ -105,6 +107,7 @@ export default function PlanTrip() {
     } catch { /* ignore corrupt storage */ }
     return { ...INITIAL_FORM };
   });
+  const pricing = usePricing(); // Stripe prices for the step-1 note and the guest price table
   const [step, setStep] = useState(() => {
     if (location.state?.startStep != null) return location.state.startStep;
     try {
@@ -358,8 +361,11 @@ export default function PlanTrip() {
       status: dest ? `${dest} · ${form.datesFlexible || !form.travelDate ? `${form.days} days` : tripDatesText(form.travelDate, form.travelDateEnd)}` : null,
     });
     content = (
-      <StepBasics form={form} errors={errors} set={set} setDays={setDays} setStartDate={setStartDate} setEndDate={setEndDate}
-        setCurrency={setCurrency} onDestination={onDestination} personalRecs={personalRecs} />
+      <>
+        <PriceNote pricing={pricing} />
+        <StepBasics form={form} errors={errors} set={set} setDays={setDays} setStartDate={setStartDate} setEndDate={setEndDate}
+          setCurrency={setCurrency} onDestination={onDestination} personalRecs={personalRecs} />
+      </>
     );
   } else if (step === STEP_ROUTE) {
     Object.assign(shell, {
@@ -415,7 +421,7 @@ export default function PlanTrip() {
     });
     content = (
       <StepReview form={formForApi(form)} set={set} onEditStep={goToStep} submitError={submitError}
-        accountEmail={currentUser?.email || form.email} signedIn={!!currentUser} entitlement={entitlement}
+        accountEmail={currentUser?.email || form.email} signedIn={!!currentUser} entitlement={entitlement} pricing={pricing}
         onSignIn={() => navigate('/login?next=%2Fplan')} />
     );
   }

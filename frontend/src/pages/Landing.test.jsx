@@ -65,3 +65,9 @@ test('prices from Stripe with the currency; menu opens on phones', () => {
   fireEvent.click(menu);
   expect(menu).toHaveAttribute('aria-expanded', 'true');
 });
+
+test('the hero and the phone top bar show the price, not just "free"', () => {
+  render(<MemoryRouter><Landing /></MemoryRouter>);
+  expect(screen.getByTestId('hero-price')).toHaveTextContent('Full trip A$19 AUD, or 6 trips for A$59 AUD');
+  expect(screen.getAllByRole('link', { name: 'Pricing' }).some(a => a.classList.contains('lp-top-price'))).toBe(true);
+});

@@ -65,3 +65,20 @@ test('signed in: what it uses; none left: told before Submit', async () => {
   render(<StepReview {...base} entitlement={{ allowed: false, code: 'FREE_TIER_EXHAUSTED', remaining: 0 }} />);
   expect(await screen.findByText(/used this month's free itinerary/)).toBeInTheDocument();
 });
+
+const pricing = { loading: false, trip: { plan: 'trip', trips: 1, currency: 'AUD', amount: 19 }, pass: { plan: 'pass', trips: 6, validDays: 365, currency: 'AUD', amount: 59 } };
+
+test('guests see what is free and what it costs before signing up', async () => {
+  render(<StepReview {...base} signedIn={false} onSignIn={jest.fn()} pricing={pricing} />);
+  const table = await screen.findByRole('table', { name: 'What you get' });
+  expect(table).toHaveTextContent('Free now');
+  expect(table).toHaveTextContent('A$19 AUD');
+  expect(table).toHaveTextContent('A$59 AUD');
+  expect(table).toHaveTextContent('Trip Pass: 6 trips · use within 12 months');
+});
+
+test('no price table until Stripe prices load', async () => {
+  render(<StepReview {...base} signedIn={false} onSignIn={jest.fn()} pricing={{ loading: true, trip: null, pass: null }} />);
+  await screen.findByTestId('signin-gate');
+  expect(screen.queryByRole('table', { name: 'What you get' })).toBeNull();
+});

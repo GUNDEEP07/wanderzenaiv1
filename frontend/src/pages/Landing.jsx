@@ -9,7 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import './Landing.css';
 import './Home.css';
 import { usePricing } from '../hooks/usePricing';
-import { plansFrom } from '../utils/plans';
+import { plansFrom, priceLines } from '../utils/plans';
 import GUIDES from '../data/guides.json';
 import { CreditedPhoto } from '../components/PhotoCredit';
 import JsonLd from '../seo/JsonLd';
@@ -72,7 +72,9 @@ export function homePicks(origin, month = currentMonth(), count = 3) {
 export default function Landing() {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const plans = plansFrom(usePricing());
+  const pricing = usePricing();
+  const plans = plansFrom(pricing);
+  const prices = priceLines(pricing);
   const [menuOpen, setMenuOpen] = useState(false);
   const [origin, setOrigin] = useState(() => guessOrigin());
   const month = currentMonth();
@@ -99,6 +101,7 @@ export default function Landing() {
             <span className="lp-logo-mark" aria-hidden="true">W</span>
             WanderZen<span className="lp-accent">AI</span>
           </a>
+          <a className="lp-mob-only lp-top-price" href="/pricing">Pricing</a>
           <button type="button" className="lp-menu-btn" aria-label="Menu" aria-expanded={menuOpen} aria-controls="lp-links" onClick={() => setMenuOpen(o => !o)}>
             <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
           </button>
@@ -130,7 +133,7 @@ export default function Landing() {
             </div>
             <ul className="lp-trust">
               <li>✓ Day 1 free, no card</li>
-              <li>✓ Hand-picked routes, any country</li>
+              {prices ? <li data-testid="hero-price">✓ {prices.hero}</li> : <li>✓ Hand-picked routes, any country</li>}
               <li>✓ Pay per trip, no subscription</li>
             </ul>
           </div>
