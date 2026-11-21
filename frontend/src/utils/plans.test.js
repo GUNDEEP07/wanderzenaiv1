@@ -1,6 +1,6 @@
 import { formatPrice, visitorCountry } from '../api/pricing';
 import { passTerm } from '../hooks/usePricing';
-import { plansFrom } from './plans';
+import { plansFrom, priceLines } from './plans';
 import { entitlementLine } from '../components/plantrip/StepReview';
 jest.mock('../api/itinerary', () => ({ fetchPreview: jest.fn() }));
 
@@ -37,4 +37,14 @@ test('pass term and the Review step line', () => {
   expect(passTerm({ trips: 3, validDays: 180 })).toBe('3 trips · use within 6 months');
   expect(entitlementLine({ allowed: true, source: 'pass', remaining: 4 })).toBe('Uses 1 of the 4 trips on your Trip Pass.');
   expect(entitlementLine({ allowed: true, source: 'pass', remaining: 1 })).toBe('Uses the last trip on your Trip Pass.');
+});
+
+test('price lines for the hero and planner come from Stripe, never invented', () => {
+  expect(priceLines({ trip: null, pass: null })).toBeNull();
+  expect(priceLines()).toBeNull();
+  const p = priceLines({ trip, pass });
+  expect(p.hero).toBe('Full trip A$19 AUD, or 6 trips for A$59 AUD');
+  expect(p.trip).toBe('A$19 AUD');
+  expect(p.passTerm).toBe('6 trips · use within 12 months');
+  expect(priceLines({ trip, pass: null }).hero).toBe('Full trip A$19 AUD');
 });

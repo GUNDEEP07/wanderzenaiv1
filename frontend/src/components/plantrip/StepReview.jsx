@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { fetchPreview } from '../../api/itinerary';
 import { tripDatesText } from '../../utils/tripDates';
+import { priceLines } from '../../utils/plans';
 
 /**
  * Step 5 — Check your trip (Nov 2026 redesign). A summary of every step with an Edit link,
@@ -37,7 +38,33 @@ export function reviewAction({ signedIn, entitlement, submitting }) {
 
 const PACE = { relaxed: 'Relaxed', balanced: 'Balanced', packed: 'Full days' };
 
+/** Guests see exactly what's free and what it costs before they sign up. Prices come from Stripe. */
+function PriceTable({ pricing }) {
+  const p = priceLines(pricing);
+  if (!p) return null;
+  const rows = [
+    ['Free now', 'Your route, Day 1 in full, every day\u2019s theme'],
+    [p.trip, 'Every day, stays, tips and the PDF (unlock any time)'],
+    ...(p.pass ? [[p.pass, `Trip Pass: ${p.passTerm}`]] : []),
+  ];
+  return (
+    <table style={s.priceTable} aria-label="What you get">
+      <tbody>
+        {rows.map(([price, what]) => (
+          <tr key={price}>
+            <th scope="row" style={s.priceCell}>{price}</th>
+            <td style={s.whatCell}>{what}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
 const s = {
+  priceTable: { width: '100%', borderCollapse: 'collapse', margin: '10px 0 4px', fontSize: 14 },
+  priceCell: { textAlign: 'left', verticalAlign: 'top', padding: '6px 12px 6px 0', whiteSpace: 'nowrap', color: '#00d4aa', fontWeight: 800, borderTop: '1px solid rgba(255,255,255,0.08)' },
+  whatCell: { padding: '6px 0', color: 'rgba(255,255,255,0.8)', lineHeight: 1.4, borderTop: '1px solid rgba(255,255,255,0.08)' },
   card: { background: '#111827', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '12px 16px 14px', marginBottom: 10 },
   head: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
   h2: { margin: 0, fontSize: 15, fontWeight: 800 },
@@ -71,7 +98,7 @@ const stopsOf = (route) => {
   return (route?.bases || []).map(b => { const from = day; day += b.days || 0; return { name: b.name, fromDay: from, toDay: day - 1, transferIn: b.transferIn }; });
 };
 
-export default function StepReview({ form, set, onEditStep, submitError, accountEmail, signedIn = true, entitlement = null, onSignIn }) {
+export default function StepReview({ form, set, onEditStep, submitError, accountEmail, signedIn = true, entitlement = null, onSignIn, pricing }) {
   const [preview, setPreview] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
 
@@ -167,6 +194,7 @@ export default function StepReview({ form, set, onEditStep, submitError, account
           <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.75)', lineHeight: 1.5 }}>
             It's free to start: your route, Day 1 written in full and a theme for every other day. Unlock all the days from the trip page whenever you like. Everything you've planned is kept — you'll come straight back here.
           </div>
+          <PriceTable pricing={pricing} />
           <button type="button" style={{ ...s.link, marginTop: 6 }} onClick={onSignIn}>I already have an account</button>
         </div>
       )}

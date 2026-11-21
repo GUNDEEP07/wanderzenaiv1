@@ -43,3 +43,20 @@ export function plansFrom({ trip, pass, loading }) {
     },
   ];
 }
+
+/**
+ * Short price lines for places outside the pricing page (home hero, planner).
+ * Null until Stripe prices load, so nothing shows a made-up or stale number.
+ */
+export function priceLines({ trip, pass } = {}) {
+  if (!trip) return null;
+  const tripPrice = formatPrice(trip.amount, trip.currency);
+  const passPrice = pass ? formatPrice(pass.amount, pass.currency) : '';
+  return {
+    trip: tripPrice,
+    pass: passPrice,
+    passTrips: pass?.trips || null,
+    passTerm: pass ? passTerm(pass) : '',
+    hero: pass ? `Full trip ${tripPrice}, or ${pass.trips} trips for ${passPrice}` : `Full trip ${tripPrice}`,
+  };
+}

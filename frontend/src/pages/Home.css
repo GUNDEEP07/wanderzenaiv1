@@ -20,6 +20,7 @@
 .lp-links { display: flex; align-items: center; gap: 22px; font-size: 15px; }
 .lp-links a { color: rgba(255,255,255,0.82) !important; text-decoration: none; }
 .lp-links a:hover { color: #fff !important; }
+.lp-top-price { margin-left: auto; color: rgba(255,255,255,0.88) !important; text-decoration: none; font-size: 15px; font-weight: 600; padding: 10px 6px; }
 .lp-menu-btn { display: none; width: 44px; height: 44px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.22); background: transparent; color: #fff; align-items: center; justify-content: center; cursor: pointer; }
 
 /* Buttons and links */

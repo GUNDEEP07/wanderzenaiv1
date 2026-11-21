@@ -173,6 +173,10 @@ AI-powered slow-travel itinerary SaaS. Live at wanderzenai.com. Solo-maintained.
 - Visitor location (Nov 22 2026): guessed ONLY from the browser time zone (`utils/seasons.js` guessOrigin/homeCity,
   `api/pricing.js` visitorCountry) for home picks, prices, planner currency and the flights "From" box. No IP
   geolocation service (ipapi.co was removed: wrong behind VPNs, rate-limited, undisclosed third party).
+- Price visibility (Nov 22 2026): the price is shown before anyone plans — home hero line + phone top-bar
+  "Pricing" link (Landing.jsx), a step-1 note (`plantrip/PriceNote.jsx`) and a "What you get" table in the
+  guest sign-up box on the Review step. All use `priceLines()` (utils/plans.js) from GET /pricing and render
+  nothing until Stripe prices load — never a hard-coded number.
 - Free-trip copy: never promise "the full guide" for free — free = route + Day 1 + day themes (see Free trips).
 - Photos: Unsplash only through the backend `GET /photos/search` (key stays server-side, cached);
   every API photo shows its credit via `components/PhotoCredit.jsx` (Unsplash API Guidelines).
