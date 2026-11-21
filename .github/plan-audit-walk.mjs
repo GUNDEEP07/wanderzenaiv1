@@ -36,11 +36,11 @@ async function walk(name, vp, dpr) {
     await p.getByRole('button', { name: /Accept|Decline|Reject/ }).first().click({ timeout: 3000 }).catch(() => L(`[${name}] no cookie banner button`));
     await shot('home');
     // What does "Not sure where yet" show for a Sydney visitor?
-    const from = await p.locator('select.lp-from').first().inputValue().catch(() => 'n/a');
+    const from = await p.locator('#lp-from').first().inputValue().catch(() => 'n/a');
     L(`[${name}] home origin guess: ${from}`);
     // Click the main CTA
     t = Date.now();
-    const cta = p.getByRole('link', { name: /Plan my trip/i }).first();
+    const cta = p.getByRole('button', { name: /Plan my trip, free/i }).filter({ visible: true }).first();
     await cta.click({ timeout: 8000 });
     await p.waitForURL(/\/plan/, { timeout: 15000 });
     await p.waitForSelector('#wz-where', { timeout: 20000 });
