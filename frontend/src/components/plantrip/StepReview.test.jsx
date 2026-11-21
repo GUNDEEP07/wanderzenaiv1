@@ -49,7 +49,10 @@ test('summarises every step, with Edit links back to each', async () => {
 test('guests see the free-account prompt (the footer button signs them up)', async () => {
   const onSignIn = jest.fn();
   render(<StepReview {...base} signedIn={false} onSignIn={onSignIn} />);
-  expect(await screen.findByTestId('signin-gate')).toHaveTextContent(/first itinerary is free/);
+  const gate = await screen.findByTestId('signin-gate');
+  // Free trips unlock Day 1 only (trip-access.js lockItinerary) — never promise the full guide.
+  expect(gate).toHaveTextContent(/Day 1 written in full/);
+  expect(gate).not.toHaveTextContent(/full guide/);
   expect(screen.queryByText(/a@example.com/)).toBeNull();
   fireEvent.click(screen.getByText('I already have an account'));
   expect(onSignIn).toHaveBeenCalled();

@@ -1,5 +1,5 @@
 import GUIDES from '../data/guides.json';
-import { guessOrigin, rankCountries, flightHours, distanceKm, inSeason, ORIGINS, planPrefill, routeLine, LIVE_COUNTRIES, liveRegionLabel } from './seasons';
+import { guessOrigin, rankCountries, flightHours, distanceKm, inSeason, ORIGINS, planPrefill, routeLine, LIVE_COUNTRIES, liveRegionLabel, homeCity } from './seasons';
 
 beforeEach(() => { localStorage.clear(); });
 
@@ -70,4 +70,21 @@ test('regions are data: live countries come from regions.json; another region jo
   const it = rankCountries(GUIDES, { month: 5, origin: sydney, only: ['Italy'] });
   expect(it).toHaveLength(1);
   expect(it[0].hours).toBeGreaterThan(15);
+});
+
+describe('homeCity (flights "From" box)', () => {
+  afterEach(() => localStorage.clear());
+  test('city from the time zone, no network', () => {
+    expect(homeCity('Australia/Sydney')).toBe('Sydney');
+    expect(homeCity('America/Los_Angeles')).toBe('Los Angeles');
+    expect(homeCity('Asia/Kolkata')).toBe('Kolkata');
+  });
+  test('zones that name no city give nothing', () => {
+    expect(homeCity('UTC')).toBe('');
+    expect(homeCity('Etc/GMT+10')).toBe('');
+  });
+  test('a saved "Planning from" choice wins', () => {
+    localStorage.setItem('wz_origin', 'perth');
+    expect(homeCity('America/Phoenix')).toBe('Perth');
+  });
 });

@@ -133,7 +133,7 @@ export default function Signup() {
         <form onSubmit={handleSignup}>
           <div style={s.fieldWrap}>
             <label style={s.label}>Full name *</label>
-            <input style={s.input} type="text" placeholder="Gundeep Singh" value={fullName} onChange={e => setFullName(e.target.value)} required />
+            <input style={s.input} type="text" placeholder="Your name" value={fullName} onChange={e => setFullName(e.target.value)} required />
           </div>
           <div style={s.fieldWrap}>
             <label style={s.label}>Email address *</label>

@@ -13,7 +13,7 @@ import { tripDatesText } from '../../utils/tripDates';
 export function entitlementLine(e) {
   if (!e || !e.allowed) return null;
   const n = Number(e.remaining) || 0;
-  if (e.source === 'free') return 'Uses your free itinerary for this month.';
+  if (e.source === 'free') return 'Uses your free itinerary for this month: Day 1 in full, unlock the other days any time.';
   if (e.source === 'credit') return n <= 1 ? 'Uses your last itinerary credit.' : `Uses 1 of your ${n} itinerary credits.`;
   if (e.source === 'pass') return n <= 1 ? 'Uses the last trip on your Trip Pass.' : `Uses 1 of the ${n} trips on your Trip Pass.`;
   if (e.source === 'monthly') return n <= 1 ? 'Uses your last Wanderer itinerary this month.' : `Uses 1 of the ${n} Wanderer itineraries left this month.`;
@@ -155,7 +155,7 @@ export default function StepReview({ form, set, onEditStep, submitError, account
         {!previewLoading && !preview && <div style={s.muted}>The outline isn't available right now — your itinerary will still be complete.</div>}
         <label style={s.label}>Anything else we should know? (optional)
           <textarea rows={2} maxLength={300} style={s.textarea} value={form.userMustDos || ''} onChange={e => set('userMustDos', e.target.value)}
-            onBlur={() => loadPreview(form)} placeholder="e.g. dinner already booked on day 2; staying at Hoi An Riverside" />
+            onBlur={() => loadPreview(form)} placeholder="e.g. dinner already booked on day 2; we land late on day 1" />
         </label>
       </section>
 
@@ -165,7 +165,7 @@ export default function StepReview({ form, set, onEditStep, submitError, account
         <div style={s.gate} data-testid="signin-gate">
           <div style={{ fontWeight: 800, marginBottom: 4 }}>Create a free account to get this itinerary</div>
           <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.75)', lineHeight: 1.5 }}>
-            Your first itinerary is free, and the full guide is emailed to you. Everything you've planned is kept — you'll come straight back here.
+            It's free to start: your route, Day 1 written in full and a theme for every other day. Unlock all the days from the trip page whenever you like. Everything you've planned is kept — you'll come straight back here.
           </div>
           <button type="button" style={{ ...s.link, marginTop: 6 }} onClick={onSignIn}>I already have an account</button>
         </div>

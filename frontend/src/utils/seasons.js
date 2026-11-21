@@ -84,6 +84,22 @@ export function guessOrigin(timeZone) {
   return { ...ORIGINS.find(o => o.id === id), guessed: true };
 }
 
+/**
+ * A home city for the flights "From" box: the visitor's saved choice, else the city in their
+ * time zone's name ("Australia/Sydney" → "Sydney"). Empty when the zone names no city.
+ */
+export function homeCity(timeZone) {
+  let saved = null;
+  try { saved = typeof localStorage !== 'undefined' ? localStorage.getItem(STORE_KEY) : null; } catch { /* private mode */ }
+  const fromSaved = ORIGINS.find(o => o.id === saved);
+  if (fromSaved) return fromSaved.name;
+  let tz = timeZone;
+  if (!tz) { try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { tz = ''; } }
+  const parts = String(tz || '').split('/');
+  if (parts.length < 2 || !/^(Africa|America|Asia|Atlantic|Australia|Europe|Indian|Pacific)$/.test(parts[0])) return '';
+  return parts[parts.length - 1].replace(/_/g, ' ');
+}
+
 export function saveOrigin(id) {
   try { localStorage.setItem(STORE_KEY, id); } catch { /* private mode: fine */ }
 }

@@ -170,6 +170,10 @@ AI-powered slow-travel itinerary SaaS. Live at wanderzenai.com. Solo-maintained.
   TouristTrip per route on guides. No MCP server or public API yet (step 2 needs Gundeep's approval).
 - Guides: `/guides/<country>` pages come from `curated-routes.js` via `scripts/build-guides.mjs`
   (prebuild; a jest test fails if `src/data/guides*.json` is stale — rerun it after editing routes).
+- Visitor location (Nov 22 2026): guessed ONLY from the browser time zone (`utils/seasons.js` guessOrigin/homeCity,
+  `api/pricing.js` visitorCountry) for home picks, prices, planner currency and the flights "From" box. No IP
+  geolocation service (ipapi.co was removed: wrong behind VPNs, rate-limited, undisclosed third party).
+- Free-trip copy: never promise "the full guide" for free — free = route + Day 1 + day themes (see Free trips).
 - Photos: Unsplash only through the backend `GET /photos/search` (key stays server-side, cached);
   every API photo shows its credit via `components/PhotoCredit.jsx` (Unsplash API Guidelines).
 
