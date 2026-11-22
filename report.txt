@@ -1,0 +1,5 @@
+function: wanderzenai-recommendations-prod
+key: set
+stack param:
+wanderzenai-ci	None
+wanderzenai-prod	****

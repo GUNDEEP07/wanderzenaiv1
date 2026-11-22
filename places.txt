@@ -1,0 +1,45 @@
+{"asked":"Onsen Hot Pools (Queenstown, New Zealand)","err":null,"got":"Onsen Hot Pools & Day Spa","type":"Spa","status":"OPERATIONAL","rating":4.7,"reviews":4411,"addr":"160 Arthurs Point Road, Arthurs Point, Queenstown 9371, New Zealand","hours":"Monday: 9:00 AM – 11:00 PM","photos":10}
+{"asked":"Sherwood (Queenstown, New Zealand)","err":null,"got":"Sherwood Queenstown","type":"Hotel","status":"OPERATIONAL","rating":4.3,"reviews":1230,"addr":"554 Frankton Road, Frankton, Queenstown 9300, New Zealand","hours":"Monday: Open 24 hours","photos":10}
+{"asked":"Bob's Cove Track (Queenstown, New Zealand)","err":null,"got":"Bob’s Cove Track & Nature Walk","type":null,"status":null,"rating":4.9,"reviews":53,"addr":"Bob’s Cove Track & Nature Walk, Mount Creighton 9371, New Zealand","hours":null,"photos":10}
+{"asked":"Glenorchy Cafe (The GY Cafe) (Glenorchy, New Zealand)","err":null,"got":"Mrs Glen's Cafe","type":"Cafe","status":"OPERATIONAL","rating":4.2,"reviews":270,"addr":"25 Argyle Street, Glenorchy 9372, New Zealand","hours":"Monday: 8:00 AM – 8:30 PM","photos":10}
+{"asked":"Sawpit Gully Trail (Arrowtown, New Zealand)","err":null,"got":"Sawpit Gully Track","type":"Hiking Area","status":"OPERATIONAL","rating":4.7,"reviews":35,"addr":"Te Araroa Trail, Arrowtown 9371, New Zealand","hours":"Monday: Open 24 hours","photos":10}
+{"asked":"Arrow River Bridges Trail e-bike hire (Arrowtown, New Zealand)","err":null,"got":"Arrowtown Bike Hire","type":"Services","status":"OPERATIONAL","rating":4.8,"reviews":237,"addr":"59 Buckingham Street, Arrowtown 9302, New Zealand","hours":"Monday: 9:00 AM – 5:00 PM","photos":10}
+{"asked":"Aosta (Arrowtown, New Zealand)","err":null,"got":"Aosta","type":"Italian Restaurant","status":"OPERATIONAL","rating":4.6,"reviews":596,"addr":"18 Buckingham Street, Arrowtown 9302, New Zealand","hours":"Monday: 5:00 – 8:30 PM","photos":10}
+{"asked":"Milford Road Merchant (Te Anau, New Zealand)","err":null,"got":"Milford Road Merchant","type":"Coffee Shop","status":"OPERATIONAL","rating":4.9,"reviews":560,"addr":"225 Milford Road, Te Anau 9600, New Zealand","hours":"Monday: 7:00 AM – 4:00 PM","photos":10}
+{"asked":"Redcliff Cafe (Te Anau, New Zealand)","err":null,"got":"Redcliff Restaurant and bar","type":"Restaurant","status":"OPERATIONAL","rating":4.6,"reviews":1633,"addr":"12 Mokonui St,Te Anau Fiordland, 12 Mokonui Street, Te Anau 9600, New Zealand","hours":"Monday: 4:00 – 11:30 PM","photos":10}
+{"asked":"Miles Better Pies (Te Anau, New Zealand)","err":null,"got":"Miles Better Pies","type":"Cafe","status":"OPERATIONAL","rating":4.5,"reviews":1270,"addr":"17 Town Centre, Te Anau 9600, New Zealand","hours":"Monday: 7:00 AM – 3:00 PM","photos":10}
+{"asked":"Te Anau Glowworm Caves (Te Anau, New Zealand)","err":null,"got":"RealNZ | Te Anau Glowworm Caves","type":"Tourist Attraction","status":"OPERATIONAL","rating":4.6,"reviews":1617,"addr":"85 Lakefront Drive, Te Anau 9679, New Zealand","hours":"Monday: 9:00 AM – 7:00 PM","photos":10}
+{"asked":"Moke Lake (Queenstown, New Zealand)","err":null,"got":"Moke Lake","type":"Lake","status":null,"rating":4.8,"reviews":217,"addr":"Moke Lake, Otago Region 9371, New Zealand","hours":null,"photos":10}
+{"asked":"Lake Hayes walkway (Queenstown, New Zealand)","err":null,"got":"Lake Hayes Walkway","type":null,"status":null,"rating":4.1,"reviews":14,"addr":"Lake Hayes Walkway, Lake Hayes 9371, New Zealand","hours":null,"photos":10}
+{"asked":"Queenstown Gardens (Queenstown, New Zealand)","err":null,"got":"Queenstown Gardens","type":"Park","status":"OPERATIONAL","rating":4.8,"reviews":1678,"addr":"Unnamed Road, Queenstown 9300, New Zealand","hours":"Monday: Open 24 hours","photos":10}
+{"asked":"Kea Cafe (Te Anau, New Zealand)","err":null,"got":"Kea Cafe","type":"Cafe","status":"OPERATIONAL","rating":3.3,"reviews":122,"addr":"63 Town Centre, Te Anau 9600, New Zealand","hours":"Monday: 7:30 AM – 7:00 PM","photos":10}
+{"asked":"Lions Park (Te Anau, New Zealand)","err":null,"got":"Lions' Park","type":"Playground","status":"OPERATIONAL","rating":4.6,"reviews":50,"addr":"96 Te Anau Terrace, Te Anau 9600, New Zealand","hours":"Monday: Open 24 hours","photos":10}
+{"asked":"Henry's Park (Te Anau, New Zealand)","err":null,"got":"Henry Creek Campsite","type":"Campground","status":"OPERATIONAL","rating":4.1,"reviews":194,"addr":"Te Anau Downs 9679, New Zealand","hours":null,"photos":10}
+{"asked":"Te Anau Bird Sanctuary (Te Anau, New Zealand)","err":null,"got":"Punanga Manu o Te Anau / Te Anau Bird Sanctuary","type":"Tourist Attraction","status":"OPERATIONAL","rating":4.4,"reviews":1637,"addr":"RD 162 Manapouri Te Anau Highway, Te Anau 9679, New Zealand","hours":"Monday: Open 24 hours","photos":10}
+{"asked":"Fergbaker (Queenstown, New Zealand)","err":null,"got":"Fergbaker","type":"Bakery","status":"OPERATIONAL","rating":4.6,"reviews":2346,"addr":"40 Shotover Street, Queenstown 9300, New Zealand","hours":"Monday: 6:00 AM – 2:00 AM","photos":10}
+{"asked":"Marble Mountains (Da Nang, Vietnam)","err":null,"got":"The Marble Mountains","type":"Scenic Spot","status":"OPERATIONAL","rating":4.4,"reviews":43772,"addr":"81 Huyền Trân Công Chúa, Hoà Hải, Ngũ Hành Sơn, Đà Nẵng 550000, Vietnam","hours":"Monday: 7:00 AM – 5:30 PM","photos":10}
+== discovery: what Google ranks for slow-travel queries
+-- scenic walks near Queenstown New Zealand
+   Queenstown Hill Walking Track · Hiking Area · 4.8★ (1236) OPERATIONAL
+   Sunshine Bay Track · Hiking Area · 4.8★ (240) OPERATIONAL
+   Tiki Trail- Top Station · Hiking Area · 4.7★ (1487) OPERATIONAL
+   Wye Creek Track · Hiking Area · 4.8★ (142) OPERATIONAL
+   Glenorchy Lagoon Scenic Walkway · Hiking Area · 4.7★ (372) OPERATIONAL
+   Bob's Cove Track · Hiking Area · 4.7★ (507) OPERATIONAL
+-- local cafes Te Anau
+   Sandfly Cafe Te Anau · Cafe · 4.6★ (2432) OPERATIONAL
+   Sprig & Thistle · Cafe · 4.9★ (173) OPERATIONAL
+   Milford Road Merchant · Coffee Shop · 4.9★ (560) OPERATIONAL
+   Wild Crumb by Elsa'sGoodies · Bakery · 4.9★ (89) OPERATIONAL
+   Blak Shak Te Anau · Cafe · 4.6★ (138) OPERATIONAL
+   Olive Tree Cafe Te Anau · Cafe · 4.3★ (771) OPERATIONAL
+-- hidden gems Arrowtown
+   Ayrburn · Restaurant · 4.7★ (2348) OPERATIONAL
+   Feehly Hill Scenic Reserve · Park · 4.9★ (20) OPERATIONAL
+   Dorothy Browns cinema, bar and bookstore · Movie Theater · 4.8★ (305) OPERATIONAL
+   The Woolshed at Ayrburn · Family Restaurant · 4.4★ (339) OPERATIONAL
+   Lakes District Museum & Gallery · Museum · 4.5★ (1243) OPERATIONAL
+   Historic Arrowtown Chinese Settlement · Historical Place · 4.4★ (2634) OPERATIONAL
+== one photo (Onsen Hot Pools): media URL works?
+photo_moke.jpg: JPEG image data, JFIF standard 1.01, aspect ratio, density 1x1, segment length 16, Exif Standard: [TIFF 
+photo by: Kyle Zhou

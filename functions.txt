@@ -1,0 +1,14 @@
+wanderzenai-admin-prod
+wanderzenai-blog-handler-prod
+wanderzenai-destination-insights-prod
+wanderzenai-email-sender-prod
+wanderzenai-form-handler-prod
+wanderzenai-generation-watchdog-prod
+wanderzenai-get-itinerary-prod
+wanderzenai-itinerary-gen-prod
+wanderzenai-pdf-builder-prod
+wanderzenai-profile-prod
+wanderzenai-recommendations-prod
+wanderzenai-stripe-webhook-prod
+wanderzenai-weekly-cache-prod
+wanderzenai-welcome-email-prod
