@@ -48,3 +48,7 @@ test('price lines for the hero and planner come from Stripe, never invented', ()
   expect(p.passTerm).toBe('6 trips · use within 12 months');
   expect(priceLines({ trip, pass: null }).hero).toBe('Full trip A$19 AUD');
 });
+
+test('test accounts are told so on the Review step', () => {
+  expect(entitlementLine({ allowed: true, source: 'test', remaining: null })).toBe('Test account: every day unlocked, nothing is charged.');
+});

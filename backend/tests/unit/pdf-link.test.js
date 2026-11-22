@@ -16,7 +16,7 @@ Module._load = function (request, ...rest) {
   return origLoad.call(this, request, ...rest);
 };
 const { pdfRouteOf, handlePdfLink, downloadName } = require(path.join(__dirname, '../../functions/form-handler/pdf-link.js'));
-const { buildEmailHTML } = require(path.join(__dirname, '../../functions/email-sender/index.js'))._internal;
+const { buildEmailHTML, buildEmailText } = require(path.join(__dirname, '../../functions/email-sender/index.js'))._internal;
 
 const ID = 'wz_abc123_ABCDEFGHIJKLMNOP';
 const deps = (signed = []) => ({
@@ -65,4 +65,19 @@ test('email: main button opens the trip page; the direct link is labelled as sho
   assert.doesNotMatch(html, /<b>/);
   assert.doesNotMatch(html, /expires in 7 days/i);
   assert.match(html, /<table role="presentation"/);
+});
+
+test('plain-text email: links the trip page, never promises days for the raw S3 link', () => {
+  const tripUrl = `https://wanderzenai.com/itinerary/${ID}?download=1`;
+  const t = buildEmailText({ destination: 'Queenstown', days: 5, tripUrl, signedUrl: 'https://s3/x?sig=1' });
+  assert.match(t, /Queenstown \(5 days\) is ready/);
+  assert.ok(t.includes(tripUrl));
+  assert.ok(!t.includes('https://s3/x'), 'no raw S3 link when the trip page exists');
+  assert.doesNotMatch(t, /7 days/);
+  const fallback = buildEmailText({ destination: 'Queenstown', days: 5, tripUrl: null, signedUrl: 'https://s3/x?sig=1' });
+  assert.ok(fallback.includes('https://s3/x?sig=1'));
+  assert.match(fallback, /few hours/);
+  const locked = buildEmailText({ destination: 'Kyoto', days: 7, locked: true, unlockUrl: 'https://w/u', tripUrl, signedUrl: 's' });
+  assert.match(locked, /Day 1 of your WanderZenAI trip for Kyoto is ready/);
+  assert.match(locked, /Unlock every day: https:\/\/w\/u/);
 });

@@ -18,7 +18,8 @@ export function entitlementLine(e) {
   if (e.source === 'credit') return n <= 1 ? 'Uses your last itinerary credit.' : `Uses 1 of your ${n} itinerary credits.`;
   if (e.source === 'pass') return n <= 1 ? 'Uses the last trip on your Trip Pass.' : `Uses 1 of the ${n} trips on your Trip Pass.`;
   if (e.source === 'monthly') return n <= 1 ? 'Uses your last Wanderer itinerary this month.' : `Uses 1 of the ${n} Wanderer itineraries left this month.`;
-  return null; // test accounts
+  if (e.source === 'test') return 'Test account: every day unlocked, nothing is charged.';
+  return null;
 }
 
 /** Why Submit won't work, said before it's pressed. */
