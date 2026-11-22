@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { fetchDestinationInsights } from '../../api/destinationInsights';
 import { searchPlaces, normalizePlace } from '../../api/places';
-import { addDaysIso, todayIso } from '../../utils/tripDates';
+import { stopInsights } from '../../api/stopInsights';
 import { CreditedPhoto } from '../PhotoCredit';
 import './styles/plantrip-mustsee.css';
 
@@ -27,25 +26,12 @@ const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-');
 const rangeLabel = (stop) => (stop.toDay > stop.fromDay ? `Days ${stop.fromDay}–${stop.toDay}` : `Day ${stop.fromDay}`);
 const mapsUrl = (p, stop) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([p.name, p.address || stop.name, stop.country].filter(Boolean).join(', '))}`;
 
-// Ideas per stop survive going back and forth between steps (one request per stop per visit).
-const ideaCache = new Map();
-export function _clearIdeaCache() { ideaCache.clear(); }
-
-function loadIdeas(stop, startDate, travelStyles) {
-  const label = labelOf(stop);
-  const start = startDate ? addDaysIso(startDate, stop.fromDay - 1) : addDaysIso(todayIso(), 30);
-  const end = addDaysIso(start, stop.toDay - stop.fromDay);
-  const key = `${label}|${String(start).slice(0, 7)}|${(travelStyles || []).join(',')}`;
-  if (!ideaCache.has(key)) {
-    const p = fetchDestinationInsights(label, travelStyles, start, end)
-      .then((insights) => (insights?.thingsToDo || []).map((t) => {
-        const place = normalizePlace({ ...t, source: t.verified ? 'foursquare' : 'ai' }, t.category);
-        return place && { ...place, description: t.reason || t.visitorTip || null, tip: t.visitorTip || null, photo: t.unsplashKeyword || t.name };
-      }).filter(Boolean))
-      .catch((e) => { ideaCache.delete(key); throw e; });
-    ideaCache.set(key, p);
-  }
-  return ideaCache.get(key);
+/** Six ideas for a stop from its (shared, cached) destination insights. */
+function loadIdeas(stop, opts) {
+  return stopInsights(stop, opts).then((insights) => (insights?.thingsToDo || []).map((t) => {
+    const place = normalizePlace({ ...t, source: t.verified ? 'foursquare' : 'ai' }, t.category);
+    return place && { ...place, description: t.reason || t.visitorTip || null, tip: t.visitorTip || null, photo: t.unsplashKeyword || t.name };
+  }).filter(Boolean));
 }
 
 /** The route's own day trips as instant ideas. */
@@ -56,21 +42,21 @@ function dayTripIdeas(stop) {
   }));
 }
 
-export default function StepDays({ stops, startDate, travelStyles = [], value, onChange, onSkip }) {
+export default function StepDays({ stops, startDate, travelStyles = [], currency = '', from = '', value, onChange, onSkip }) {
   const picks = useMemo(() => (Array.isArray(value?.picks) ? value.picks : []), [value]);
   const [ideas, setIdeas] = useState({}); // stop label → { loading, error, places }
 
   useEffect(() => {
     let live = true;
-    stops.forEach((stop) => {
+    stops.forEach((stop, index) => {
       const label = labelOf(stop);
       setIdeas((m) => (m[label]?.places ? m : { ...m, [label]: { loading: true } }));
-      loadIdeas(stop, startDate, travelStyles)
+      loadIdeas(stop, { index, startDate, travelStyles, currency, from })
         .then((places) => { if (live) setIdeas((m) => ({ ...m, [label]: { places } })); })
         .catch(() => { if (live) setIdeas((m) => ({ ...m, [label]: { error: true, places: [] } })); });
     });
     return () => { live = false; };
-  }, [stops.map(labelOf).join('|'), startDate, (travelStyles || []).join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [stops.map(labelOf).join('|'), startDate, (travelStyles || []).join(','), currency, from]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = (next) => onChange({ version: 2, picks: next, interests: value?.interests || [] });
   const kept = (p, label) => picks.some((x) => x.destination === label && (keyOf(x) === keyOf(p) || nameKey(x) === nameKey(p)));

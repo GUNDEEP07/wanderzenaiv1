@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
-import StepDays, { daysStatus, _clearIdeaCache } from './StepDays';
+import StepDays, { daysStatus } from './StepDays';
+import { _clearStopInsights } from '../../api/stopInsights';
 import { fetchDestinationInsights } from '../../api/destinationInsights';
 
 jest.mock('../../api/destinationInsights', () => ({ fetchDestinationInsights: jest.fn() }));
@@ -18,7 +19,7 @@ function Harness({ onSel, onSkip = jest.fn(), initial }) {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  _clearIdeaCache();
+  _clearStopInsights();
   fetchDestinationInsights.mockImplementation(async (dest) => ({
     thingsToDo: dest.startsWith('Queenstown')
       ? [{ name: 'Onsen Hot Pools', reason: 'Cedar tubs above the river.', verified: true }, { name: 'Glenorchy', reason: 'dup of the day trip', verified: false }]
