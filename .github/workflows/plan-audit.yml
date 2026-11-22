@@ -40,15 +40,16 @@ jobs:
             [ -n "$NID" ] && curl -s "https://places.googleapis.com/v1/places/$NID" -H "X-Goog-Api-Key: $K" -H "X-Goog-FieldMask: displayName,businessStatus,rating,userRatingCount,regularOpeningHours.weekdayDescriptions,photos.name" | jq -c '{error:.error.status, name:.displayName.text, businessStatus, rating, userRatingCount, hours:(.regularOpeningHours.weekdayDescriptions[0:2]), photos:(.photos|length)}' >> $R
             echo "== referrer/IP restriction hint (call without referer from GitHub IP above)" >> $R
           fi
-          echo; echo "== autocomplete logs, last 14 days" >> $R
-          LG=$(aws logs describe-log-groups --log-group-name-prefix "/aws/lambda/$FN" --query "logGroups[0].logGroupName" --output text)
+          echo "== autocomplete logs, last 14 days" >> $R
+          LG="/aws/lambda/$FN"; echo "log group: $LG" >> $R
           S=$(( ($(date +%s) - 14*86400) * 1000 ))
-          for p in '"Autocomplete request"' '"from cache"' '"from fallback"' '"from Google Places"' '"no results from Google Places"' '"Autocomplete failed"' '"Failed to get place details"'; do
-            c=$(aws logs filter-log-events --log-group-name "$LG" --start-time $S --filter-pattern "$p" --query "length(events)" --output text --max-items 5000 2>/dev/null | head -1)
-            echo "$p: $c" >> $R
-          done
-          aws logs filter-log-events --log-group-name "$LG" --start-time $S --filter-pattern '"Autocomplete failed"' --max-items 3 --query "events[].message" --output text 2>/dev/null | sed -E 's/AIza[A-Za-z0-9_-]+/<key>/g' | cut -c1-400 >> $R
-          aws logs filter-log-events --log-group-name "$LG" --start-time $S --filter-pattern '"no results from Google Places"' --max-items 2 --query "events[].message" --output text 2>/dev/null | sed -E 's/AIza[A-Za-z0-9_-]+/<key>/g' | cut -c1-400 >> $R
+          aws logs filter-log-events --log-group-name "$LG" --start-time $S --filter-pattern "Autocomplete" --output json > out/ac.json 2>out/ac.err
+          echo "events: $(jq '.events|length' out/ac.json) err: $(head -c 200 out/ac.err)" >> $R
+          jq -r '.events[].message' out/ac.json | grep -oE "Autocomplete[A-Za-z ()]+|no results from Google Places|Failed to get place details" | sort | uniq -c >> $R
+          jq -r '.events[].message' out/ac.json | grep -E "failed|Failed" | head -3 | cut -c1-300 >> $R
+          rm -f out/ac.json
+          echo "== all recommendations log lines by path, 14 days" >> $R
+          aws logs filter-log-events --log-group-name "$LG" --start-time $S --filter-pattern "request" --output json 2>/dev/null | jq -r '.events[].message' | grep -oE '"(msg|message)":"[^"]{0,60}' | sort | uniq -c | sort -rn | head -15 >> $R
           sed -i -E 's/AIza[A-Za-z0-9_-]{20,}/<key>/g' $R
       - if: always()
         run: |
