@@ -16,8 +16,9 @@ jobs:
       - name: Check Google Places setup (key never printed)
         run: |
           set +e; mkdir out; R=out/report.txt
-          FN=$(aws lambda list-functions --query "Functions[?contains(FunctionName,'Recommendations')].FunctionName" --output text | tr '\t' '\n' | grep -i prod | head -1)
-          [ -z "$FN" ] && FN=$(aws lambda list-functions --query "Functions[?contains(FunctionName,'Recommendations')].FunctionName" --output text | tr '\t' '\n' | head -1)
+          aws lambda list-functions --query "Functions[].FunctionName" --output text | tr '\t' '\n' | sort > out/functions.txt
+          FN=$(grep -i "recommend" out/functions.txt | grep -i prod | head -1)
+          [ -z "$FN" ] && FN=$(grep -i "recommend" out/functions.txt | head -1)
           echo "function: $FN" >> $R
           K=$(aws lambda get-function-configuration --function-name "$FN" --query "Environment.Variables.GOOGLE_PLACES_API_KEY" --output text 2>/dev/null)
           [ -n "$K" ] && [ "$K" != "None" ] && echo "::add-mask::$K"
