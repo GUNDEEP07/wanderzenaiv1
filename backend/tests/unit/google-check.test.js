@@ -5,6 +5,15 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('path');
+const Module = require('module');
+
+// CI's unit job has no /opt/nodejs (the Lambda layer path): map it to the repo's layer folder.
+const LAYER = path.join(__dirname, '../../layers/shared/nodejs');
+const origLoad = Module._load;
+Module._load = function (request, ...rest) {
+  if (request.startsWith('/opt/nodejs/')) request = path.join(LAYER, request.slice('/opt/nodejs/'.length));
+  return origLoad.call(this, request, ...rest);
+};
 
 process.env.GOOGLE_PLACES_API_KEY = 'test-key';
 const { checkItineraryPlaces, slotsOf, kindOf } = require(path.join(__dirname, '../../functions/itinerary-gen/google-check.js'));
