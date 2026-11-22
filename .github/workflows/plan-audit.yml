@@ -25,34 +25,15 @@ jobs:
           if [ -z "$K" ] || [ "$K" = "None" ]; then echo "key: NOT SET on the function" >> $R; else echo "key: set (length ${#K}, starts ${K:0:4}…)" >> $R; fi
           echo "stack param:" >> $R
           aws cloudformation describe-stacks --query "Stacks[?contains(StackName,'wanderzen')].{n:StackName,p:Parameters[?ParameterKey=='GooglePlacesApiKey'].ParameterValue|[0]}" --output text | sed -E 's/AIza[A-Za-z0-9_-]+/<key>/g' >> $R
-          if [ -n "$K" ] && [ "$K" != "None" ]; then
-            echo; echo "== legacy Places Autocomplete (what the site calls)" >> $R
-            curl -s "https://maps.googleapis.com/maps/api/place/autocomplete/json?input=Queenstown&types=(cities)&key=$K" | jq -c '{status, error_message, n:(.predictions|length), first:.predictions[0].description}' >> $R
-            echo "== legacy Place Details" >> $R
-            PID=$(curl -s "https://maps.googleapis.com/maps/api/place/autocomplete/json?input=Queenstown&types=(cities)&key=$K" | jq -r '.predictions[0].place_id // empty')
-            curl -s "https://maps.googleapis.com/maps/api/place/details/json?place_id=$PID&fields=name,geometry&key=$K" | jq -c '{status, error_message, name:.result.name}' >> $R
-            echo "== Places API (New) autocomplete" >> $R
-            curl -s -X POST https://places.googleapis.com/v1/places:autocomplete -H "Content-Type: application/json" -H "X-Goog-Api-Key: $K" -d '{"input":"Queenstown","includedPrimaryTypes":["locality"]}' | jq -c '{error:.error.status, msg:(.error.message//null|tostring|.[0:160]), n:(.suggestions|length), first:.suggestions[0].placePrediction.text.text}' >> $R
-            echo "== Places API (New) text search, IDs only (free tier SKU)" >> $R
-            curl -s -X POST https://places.googleapis.com/v1/places:searchText -H "Content-Type: application/json" -H "X-Goog-Api-Key: $K" -H "X-Goog-FieldMask: places.id" -d '{"textQuery":"Onsen Hot Pools Queenstown"}' | jq -c '{error:.error.status, msg:(.error.message//null|tostring|.[0:160]), n:(.places|length)}' >> $R
-            echo "== Places API (New) details: status, rating, hours (Enterprise SKU)" >> $R
-            NID=$(curl -s -X POST https://places.googleapis.com/v1/places:searchText -H "Content-Type: application/json" -H "X-Goog-Api-Key: $K" -H "X-Goog-FieldMask: places.id" -d '{"textQuery":"Onsen Hot Pools Queenstown"}' | jq -r '.places[0].id // empty')
-            [ -n "$NID" ] && curl -s "https://places.googleapis.com/v1/places/$NID" -H "X-Goog-Api-Key: $K" -H "X-Goog-FieldMask: displayName,businessStatus,rating,userRatingCount,regularOpeningHours.weekdayDescriptions,photos.name" | jq -c '{error:.error.status, name:.displayName.text, businessStatus, rating, userRatingCount, hours:(.regularOpeningHours.weekdayDescriptions[0:2]), photos:(.photos|length)}' >> $R
-            echo "== referrer/IP restriction hint (call without referer from GitHub IP above)" >> $R
-          fi
-          echo "== autocomplete logs, last 14 days" >> $R
-          LG="/aws/lambda/$FN"; echo "log group: $LG" >> $R
-          S=$(( ($(date +%s) - 14*86400) * 1000 ))
-          aws logs filter-log-events --log-group-name "$LG" --start-time $S --filter-pattern "Autocomplete" --output json > out/ac.json 2>out/ac.err
-          echo "events: $(jq '.events|length' out/ac.json) err: $(head -c 200 out/ac.err)" >> $R
-          jq -r '.events[].message' out/ac.json | grep -oE "Autocomplete[A-Za-z ()]+|no results from Google Places|Failed to get place details" | sort | uniq -c >> $R
-          jq -r '.events[].message' out/ac.json | grep -E "failed|Failed" | head -3 | cut -c1-300 >> $R
-          rm -f out/ac.json
-          echo "== all recommendations log lines by path, 14 days" >> $R
-          aws logs filter-log-events --log-group-name "$LG" --start-time $S --filter-pattern "request" --output json 2>/dev/null | jq -r '.events[].message' | grep -oE '"(msg|message)":"[^"]{0,60}' | sort | uniq -c | sort -rn | head -15 >> $R
-          sed -i -E 's/AIza[A-Za-z0-9_-]{20,}/<key>/g' $R
-      - if: always()
+      - uses: actions/checkout@v4
+        with: { path: src }
+      - name: Places check
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
-          cd out && git init -q -b smoke/plan-audit-results && git add -A
-          git -c user.name=audit -c user.email=audit@users.noreply.github.com commit -qm gp
-          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" smoke/plan-audit-results
+          set +e
+          K=$(aws lambda get-function-configuration --function-name wanderzenai-recommendations-prod --query "Environment.Variables.GOOGLE_PLACES_API_KEY" --output text)
+          echo "::add-mask::$K"; export K
+          cd out && bash ../src/.github/gp-check.sh > places.txt 2>&1
+          sed -i -E 's/AIza[A-Za-z0-9_-]{20,}/<key>/g' places.txt
