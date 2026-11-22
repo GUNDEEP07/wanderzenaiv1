@@ -28,7 +28,7 @@ test('an old 6-step draft resumes at the matching new step (old 2 "route" → ne
 test('a new draft keeps its step', async () => {
   fetchPlanDraft.mockResolvedValue({ ...draft, form: { ...draft.form, planVersion: 3 }, step: 2 });
   render(<ContinuePlan />);
-  expect(await screen.findByText(/Step 3 of 5: Plan your days/)).toBeInTheDocument();
+  expect(await screen.findByText(/Step 3 of 5: Must-sees/)).toBeInTheDocument();
 });
 
 test('discard removes it', async () => {

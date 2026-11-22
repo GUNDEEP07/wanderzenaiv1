@@ -87,6 +87,7 @@ export function stopsOf(form) {
         name: b.name, country: b.country || form.destinations[0]?.country || form.destinations[0]?.name || '',
         lat: b.lat ?? null, lng: b.lng ?? null, fromDay: from, toDay: day - 1,
         stayType: b.stayType || null, why: b.why || null,
+        dayTrips: Array.isArray(b.dayTrips) ? b.dayTrips.slice(0, 4) : [],
       });
     }
   });
@@ -384,15 +385,15 @@ export default function PlanTrip() {
     );
   } else if (step === STEP_DAYS) {
     Object.assign(shell, {
-      title: 'Plan your days',
-      subtitle: "Add places you don't want to miss. We'll build the rest around them.",
+      title: "Anything you don't want to miss?",
+      subtitle: 'Keep the places you care about. We plan every day around them — or skip and we choose.',
       optional: true,
       wide: true,
-      status: daysStatus(form.selected_venues, form.days),
+      status: daysStatus(form.selected_venues),
     });
     content = stops.length ? (
       <StepDays stops={stops} startDate={form.datesFlexible ? '' : form.travelDate} travelStyles={form.travelStyle}
-        value={form.selected_venues} onChange={(sel) => setForm(f => ({ ...f, selected_venues: sel }))} />
+        value={form.selected_venues} onChange={(sel) => setForm(f => ({ ...f, selected_venues: sel }))} onSkip={next} />
     ) : <p>Pick a route first.</p>;
   } else if (step === STEP_STAYS) {
     Object.assign(shell, {

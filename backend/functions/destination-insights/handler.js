@@ -59,12 +59,23 @@ export async function handler(event) {
     };
   }
 
+  if (!ISO_DATE.test(startDate) || !ISO_DATE.test(endDate)) {
+    return {
+      statusCode: 400,
+      headers: CORS_HEADERS,
+      body: JSON.stringify({ error: 'Dates must be YYYY-MM-DD' }),
+    };
+  }
+
   // Sorted lowercase key — e.g. ["Nature","Parks"] → "nature,parks"
   const stylesKey = [...travelStyles].sort().join(',').toLowerCase() || 'general';
+  // Cached per destination + travel MONTH (not exact dates): the planner's step 3 asks for every
+  // stop, and "dates not fixed" trips used a date that moved daily, so the cache never hit.
+  const month = monthOf(startDate);
 
   // ── 1. Cache check (non-fatal) ───────────────────────────────────────────────
   try {
-    const cached = await getFromCache(destination, startDate, endDate, stylesKey);
+    const cached = await getFromCache(destination, month, month, stylesKey);
     if (cached) {
       console.log(`Cache hit: ${destination} [${stylesKey}]`);
       return {
@@ -94,7 +105,7 @@ export async function handler(event) {
       };
     }
     try {
-      insights = await generateFromClaude(destination, travelStyles, startDate, endDate);
+      insights = await generateFromClaude(destination, travelStyles, month);
       console.log(`Claude insights generated for ${destination} [${stylesKey}]`);
     } catch (claudeErr) {
       console.error('Claude generation failed:', claudeErr.message);
@@ -108,7 +119,7 @@ export async function handler(event) {
 
   // ── 4. Save to cache (non-fatal) ─────────────────────────────────────────────
   try {
-    await saveToCache(destination, startDate, endDate, stylesKey, insights);
+    await saveToCache(destination, month, month, stylesKey, insights);
   } catch (saveErr) {
     console.warn('Cache save failed (non-fatal):', saveErr.message);
   }
@@ -134,7 +145,7 @@ async function getFromCache(destination, startDate, endDate, stylesKey) {
   const insights = result.rows[0].insights;
   // Invalidate cache entries created before accommodation field was added, or before
   // things to do were grounded in real places (no placesSource).
-  if (!insights.accommodation || insights.accommodation.length === 0 || !insights.placesSource) {
+  if (!insights.accommodation || insights.accommodation.length === 0 || !insights.placesSource || insights.version !== INSIGHTS_VERSION) {
     console.log(`Cache miss (stale entry): ${destination}`);
     return null;
   }
@@ -154,25 +165,34 @@ async function saveToCache(destination, startDate, endDate, stylesKey, insights)
 
 // ── Claude generation ─────────────────────────────────────────────────────────
 
-async function generateFromClaude(destination, travelStyles, startDate, endDate) {
+// v2 (Nov 22 2026): 6 things to do (the planner's must-see list), cached per travel month.
+const INSIGHTS_VERSION = 2;
+const THINGS_TO_DO = 6;
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+/** "2027-04-06" → "2027-04-01" (the cache key's date). */
+function monthOf(iso) { return `${iso.slice(0, 7)}-01`; }
+
+async function generateFromClaude(destination, travelStyles, month) {
+  const travelMonth = `${MONTHS[Number(month.slice(5, 7)) - 1]} ${month.slice(0, 4)}`;
   const stylesText = travelStyles.length > 0 ? travelStyles.join(', ') : 'general travel';
 
   // Real places first (Foursquare Places API). Empty on any failure — Claude then
   // suggests places itself and they are labelled as AI suggestions.
   const venues = await searchVenues(destination, { limit: 20 });
   const venueRule = venues.length
-    ? `\nthingsToDo: choose exactly 3 from this list of real places, copying "name" exactly as written. Prefer quiet nature, local and slow-travel spots over famous landmarks:\n${formatVenueChoices(venues)}\n`
+    ? `\nthingsToDo: choose ${THINGS_TO_DO} from this list of real places where you can, copying "name" exactly as written; add your own only if the list lacks enough good ones. Prefer quiet nature, local and slow-travel spots over famous landmarks:\n${formatVenueChoices(venues)}\n`
     : '\nthingsToDo: real place names only.\n';
 
   const prompt = `Travel expert. Return ONLY raw JSON, no markdown:
 {"bestMonths":["Jun","Jul"],"seasonalHighlights":"10 words max","weather":"10 words max","crowdLevel":"Peak|High|Moderate|Low","travelTip":"one tip","thingsToDo":[{"name":"Real place","category":"Nature","reason":"one sentence","emoji":"🏛️","visitorTip":"one insider tip","unsplashKeyword":"2-3 words"}],"accommodation":[{"type":"Eco-lodge","style":"homestay","priceRangePerNightUSD":{"low":35,"high":70},"description":"one sentence","searchKeyword":"eco lodge ${destination.toLowerCase()}"}],"budgetEstimateUSD":{"flightsLow":300,"flightsHigh":600,"accommodationPerNightLow":25,"accommodationPerNightHigh":120,"activitiesPerDayLow":20,"activitiesPerDayHigh":60,"cheaperMonths":["Apr","May"]}}
 
-Destination: ${destination}. Travel styles: ${stylesText}. Dates: ${startDate} to ${endDate}.
-Rules: exactly 3 thingsToDo, exactly 4 accommodation (styles: hotel/airbnb/homestay/surprise), all values concise.${venueRule}`;
+Destination: ${destination}. Travel styles: ${stylesText}. Travel month: ${travelMonth}.
+Rules: exactly ${THINGS_TO_DO} thingsToDo — a mix a slow traveller would want (a short walk or trail, a view, a local café or food stop, a nature spot, a local experience, a day trip), good in ${travelMonth}; each "reason" says why it's worth it in under 15 words; exactly 4 accommodation (styles: hotel/airbnb/homestay/surprise), all values concise.${venueRule}`;
 
   const response = await anthropic.messages.create(withEffort({
     model: MODELS.fast,
-    max_tokens: maxTokensFor(MODELS.fast, 2048, { thinkingHeadroom: 1500 }),
+    max_tokens: maxTokensFor(MODELS.fast, 2600, { thinkingHeadroom: 1500 }),
     messages: [{ role: 'user', content: prompt }],
   }, 'low'));
 
@@ -183,7 +203,8 @@ Rules: exactly 3 thingsToDo, exactly 4 accommodation (styles: hotel/airbnb/homes
 
   // Matched back in code: verified places get real name/address/map link; anything
   // Claude invented is kept only as a labelled suggestion.
-  insights.thingsToDo = groundThingsToDo(insights.thingsToDo, venues, 3);
+  insights.thingsToDo = groundThingsToDo(insights.thingsToDo, venues, THINGS_TO_DO);
+  insights.version = INSIGHTS_VERSION;
   insights.placesSource = venues.length ? 'foursquare' : 'ai';
   console.log(JSON.stringify({
     level: 'INFO', msg: 'Insights things to do grounded', destination,

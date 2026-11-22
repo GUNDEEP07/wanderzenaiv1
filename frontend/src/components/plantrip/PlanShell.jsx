@@ -26,7 +26,7 @@ const s = {
   next: (disabled) => ({ minHeight: 48, padding: '0 24px', borderRadius: 12, border: 'none', background: disabled ? 'rgba(0,212,170,0.45)' : '#00d4aa', color: '#06090f', fontFamily: 'inherit', fontSize: 15, fontWeight: 800, cursor: disabled ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }),
 };
 
-export const PLAN_STEP_NAMES = ['Trip basics', 'Your route', 'Plan your days', 'Stays & flights', 'Check your trip'];
+export const PLAN_STEP_NAMES = ['Trip basics', 'Your route', 'Must-sees', 'Stays & flights', 'Check your trip'];
 
 export default function PlanShell({
   step, title, subtitle, optional = false, wide = false, summary, onEditSummary, onJump,

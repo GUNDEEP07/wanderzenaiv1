@@ -27,9 +27,10 @@ AI-powered slow-travel itinerary SaaS. Live at wanderzenai.com. Solo-maintained.
   `pages/`, not `components/`). Open to guests — see "Guest planning" below.
 - Plan flow (5 steps, Nov 2026 redesign): Trip basics (`StepBasics.jsx`: where, days+dates,
   who, pace, budget; "More options" = interests, language, travel between stops, start time)
-  → Your route (`StepRoute.jsx`, POST `/route-plan`) → Plan your days (`StepDays.jsx`: one tab
-  per route stop, day boxes, "Picked for you" / browse by category / search / add your own,
-  via `api/places.js` → `/recommendations/venues`) → Stays & flights (`StepStays.jsx`,
+  → Your route (`StepRoute.jsx`, POST `/route-plan`) → Must-sees (`StepDays.jsx`, Nov 22 2026 must-see
+  list: every stop at once, the route's day trips + 6 ideas from `/destination-insights` (v2: 6 things to do,
+  cached per destination + travel MONTH), Keep / add your own (search via `/recommendations/venues`) / Skip;
+  picks carry `day: null` and the generator places them) → Stays & flights (`StepStays.jsx`,
   optional, route-aware links, no invented prices) → Check your trip (`StepReview.jsx`, no new
   questions; the footer button submits). All share `PlanShell.jsx` (summary bar, progress,
   sticky Back/Continue). Step numbers: `utils/planSteps.js` (never hard-code; `resumeStep()`
