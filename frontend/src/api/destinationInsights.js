@@ -1,10 +1,12 @@
 const API_URL = import.meta.env.VITE_API_URL;
 
-export async function fetchDestinationInsights(destination, travelStyles, startDate, endDate) {
-  if (!destination || !startDate || !endDate) {
-    console.warn('Missing required parameters for destination insights');
-    return null;
-  }
+/**
+ * GET /destination-insights. Cached server-side per destination + travel month (+ currency and
+ * home city when asked for cost estimates). `opts.currency` adds `estimates` (stays per night,
+ * and return flights when `opts.from` is set) in that currency.
+ */
+export async function fetchDestinationInsights(destination, travelStyles, startDate, endDate, opts = {}) {
+  if (!destination || !startDate || !endDate) return null;
 
   const params = new URLSearchParams({
     destination,
@@ -12,6 +14,8 @@ export async function fetchDestinationInsights(destination, travelStyles, startD
     startDate,
     endDate,
   });
+  if (opts.currency) params.set('currency', opts.currency);
+  if (opts.from) params.set('from', String(opts.from).slice(0, 80));
 
   const response = await fetch(`${API_URL}/destination-insights?${params}`, {
     method: 'GET',

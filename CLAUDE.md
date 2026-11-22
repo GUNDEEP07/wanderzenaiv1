@@ -31,7 +31,10 @@ AI-powered slow-travel itinerary SaaS. Live at wanderzenai.com. Solo-maintained.
   list: every stop at once, the route's day trips + 6 ideas from `/destination-insights` (v2: 6 things to do,
   cached per destination + travel MONTH), Keep / add your own (search via `/recommendations/venues`) / Skip;
   picks carry `day: null` and the generator places them) → Stays & flights (`StepStays.jsx`,
-  optional, route-aware links, no invented prices) → Check your trip (`StepReview.jsx`, no new
+  optional, route-aware links; Nov 22 2026 cost ESTIMATE: stay style per stop + cheapest/direct fares from
+  `/destination-insights?currency=&from=` (`estimates`, typical month prices, labelled "not live prices"),
+  totalled against a whole-trip budget by `utils/tripCost.js`; the chosen style becomes the route base's
+  `stayType`. Both steps share one request per stop via `api/stopInsights.js` — home city on the first stop only) → Check your trip (`StepReview.jsx`, no new
   questions; the footer button submits). All share `PlanShell.jsx` (summary bar, progress,
   sticky Back/Continue). Step numbers: `utils/planSteps.js` (never hard-code; `resumeStep()`
   maps old 6-step saved plans). Days ↔ dates: `utils/tripDates.js`.

@@ -46,6 +46,7 @@ const INITIAL_FORM = {
   selected_venues: { version: 2, picks: [], interests: [] }, // set by StepDays
   budgetScope: 'full-trip',
   alreadyBooked: false,
+  stayChoices: {}, flightChoice: 'cheapest', // Stays & flights cost estimate (UI only; the stay style goes to the route)
   tripPrefs: DEFAULT_TRIP_PREFS,
 };
 
@@ -60,7 +61,9 @@ export function travelerTypeOf(prefs = {}) {
 
 /** The form as the API wants it: no dates when they're not fixed; traveller type derived. */
 export function formForApi(form) {
-  const { preferRouteId: _p, ...rest } = form; // a UI hint from Home/Explore, not trip data
+  // UI-only: a route hint from Home/Explore and the cost-estimate choices (the chosen stay style
+  // already travels as the route base's stayType).
+  const { preferRouteId: _p, stayChoices: _s, flightChoice: _f, ...rest } = form;
   return {
     ...rest,
     travelerType: travelerTypeOf(form.tripPrefs),
@@ -393,18 +396,29 @@ export default function PlanTrip() {
     });
     content = stops.length ? (
       <StepDays stops={stops} startDate={form.datesFlexible ? '' : form.travelDate} travelStyles={form.travelStyle}
+        currency={form.currency} from={form.userLocation || ''}
         value={form.selected_venues} onChange={(sel) => setForm(f => ({ ...f, selected_venues: sel }))} onSkip={next} />
     ) : <p>Pick a route first.</p>;
   } else if (step === STEP_STAYS) {
     Object.assign(shell, {
       title: 'Stays & flights',
-      subtitle: 'One stay for each stop on your route. Links open with your town and dates filled in.',
+      subtitle: 'Pick a stay style for each stop and see roughly what flights and stays cost. Book with the links when you’re ready.',
       optional: true,
     });
     content = (
       <StepStays stops={stops} startDate={form.datesFlexible ? '' : form.travelDate} endDate={form.datesFlexible ? '' : form.travelDateEnd} days={form.days}
         adults={prefs.adults || 2} origin={form.userLocation || ''} onOrigin={(v) => set('userLocation', v)}
-        alreadyBooked={form.alreadyBooked} onAlreadyBooked={(v) => set('alreadyBooked', v)} />
+        alreadyBooked={form.alreadyBooked} onAlreadyBooked={(v) => set('alreadyBooked', v)}
+        kids={(prefs.kids || []).length} travelStyles={form.travelStyle} currency={form.currency}
+        budget={form.budget} budgetScope={form.budgetScope}
+        stayChoices={form.stayChoices || {}} flightChoice={form.flightChoice || 'cheapest'}
+        onFlightChoice={(v) => set('flightChoice', v)}
+        onStayChoice={(label, opt) => setForm(f => ({
+          ...f,
+          stayChoices: { ...(f.stayChoices || {}), [label]: opt.style },
+          // The generator follows the route's stay type for that stop.
+          route: f.route ? { ...f.route, bases: (f.route.bases || []).map(b => ([b.name, b.country || f.destinations[0]?.country || f.destinations[0]?.name || ''].filter(Boolean).join(', ') === label ? { ...b, stayType: opt.label } : b)) } : f.route,
+        }))} />
     );
   } else {
     const action = reviewAction({ signedIn: !!currentUser, entitlement, submitting });
