@@ -59,7 +59,7 @@ jobs:
 
       - name: Install backend deps used by the suites
         run: |
-          for dir in backend/layers/shared/nodejs backend/functions/form-handler backend/functions/blog-handler backend/functions/profile backend/functions/pdf-builder; do
+          for dir in backend/layers/shared/nodejs backend/functions/form-handler backend/functions/blog-handler backend/functions/profile backend/functions/pdf-builder backend/functions/recommendations; do
             (cd "$dir" && npm ci --no-audit --no-fund)
           done
 

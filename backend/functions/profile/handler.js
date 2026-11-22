@@ -167,7 +167,7 @@ async function handleGetProfile(db, user) {
     await ensureUnlockColumn(db);
     const [tripsResult, rolesResult] = await Promise.all([
       db.query(
-        `SELECT s.id, s.destination, s.days, s.status, s.created_at, s.plan, s.unlocked_at,
+        `SELECT s.id, s.destination, s.days, s.status, s.created_at, s.plan, s.unlocked_at, s.travel_date,
                 i.id AS itinerary_id
          FROM submissions s
          LEFT JOIN itineraries i ON i.submission_id = s.id
@@ -191,6 +191,8 @@ async function handleGetProfile(db, user) {
         days:         row.days,
         status:       row.status,
         createdAt:    row.created_at,
+        // The owner's own list: the dashboard chat uses it to find the upcoming trip.
+        travelDate:   row.travel_date ? toIsoDate(row.travel_date) : null,
         hasItinerary: !!row.itinerary_id,
         // The PDF link is made per click (GET /itinerary/{id}/pdf); the old pre-signed URL here
         // used the wrong S3 key and never worked.

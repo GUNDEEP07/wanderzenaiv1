@@ -5,7 +5,7 @@
 #
 # Needs: Postgres with SSL on (the shared layer always connects with SSL, as RDS needs),
 #        /opt/nodejs -> backend/layers/shared/nodejs (as in Lambda), and `npm ci` run in
-#        the layer, form-handler, blog-handler, profile and pdf-builder folders.
+#        the layer, form-handler, blog-handler, profile, pdf-builder and recommendations folders.
 # Env:   E2E_DB_HOST (127.0.0.1) E2E_DB_USER (postgres) E2E_DB_PASSWORD ('') E2E_DB_NAME (wz_e2e)
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/../../.." && pwd)
@@ -26,7 +26,7 @@ for f in $(ls "$ROOT"/infra/migrations/*.sql | grep -v '\.down\.sql$' | sort); d
   "${PSQL[@]}" -d "$E2E_DB_NAME" -f "$f" >/dev/null
 done
 
-export NODE_PATH="/opt/nodejs/node_modules:$ROOT/backend/functions/blog-handler/node_modules:$ROOT/backend/functions/profile/node_modules:$ROOT/backend/functions/pdf-builder/node_modules${NODE_PATH:+:$NODE_PATH}"
+export NODE_PATH="/opt/nodejs/node_modules:$ROOT/backend/functions/blog-handler/node_modules:$ROOT/backend/functions/profile/node_modules:$ROOT/backend/functions/pdf-builder/node_modules:$ROOT/backend/functions/recommendations/node_modules${NODE_PATH:+:$NODE_PATH}"
 export PDF_BUCKET=e2e-test-bucket
 # As on Lambda's nodejs24.x runtime: require() of ES modules is off there (Nov 14 2026 outage).
 export NODE_OPTIONS="--no-experimental-require-module${NODE_OPTIONS:+ $NODE_OPTIONS}"
