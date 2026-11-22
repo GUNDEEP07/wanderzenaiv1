@@ -22,7 +22,7 @@ jobs:
           echo "function: $FN" >> $R
           K=$(aws lambda get-function-configuration --function-name "$FN" --query "Environment.Variables.GOOGLE_PLACES_API_KEY" --output text 2>/dev/null)
           [ -n "$K" ] && [ "$K" != "None" ] && echo "::add-mask::$K"
-          if [ -z "$K" ] || [ "$K" = "None" ]; then echo "key: NOT SET on the function" >> $R; else echo "key: set (length ${#K}, starts ${K:0:4}…)" >> $R; fi
+          if [ -z "$K" ] || [ "$K" = "None" ]; then echo "key: NOT SET on the function" >> $R; else echo "key: set" >> $R; fi
           echo "stack param:" >> $R
           aws cloudformation describe-stacks --query "Stacks[?contains(StackName,'wanderzen')].{n:StackName,p:Parameters[?ParameterKey=='GooglePlacesApiKey'].ParameterValue|[0]}" --output text | sed -E 's/AIza[A-Za-z0-9_-]+/<key>/g' >> $R
       - uses: actions/checkout@v4
@@ -37,3 +37,9 @@ jobs:
           echo "::add-mask::$K"; export K
           cd out && bash ../src/.github/gp-check.sh > places.txt 2>&1
           sed -i -E 's/AIza[A-Za-z0-9_-]{20,}/<key>/g' places.txt
+          rm -f photo_moke.jpg.tmp
+      - if: always()
+        run: |
+          cd out && git init -q -b smoke/plan-audit-results && git add -A
+          git -c user.name=audit -c user.email=audit@users.noreply.github.com commit -qm gp
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" smoke/plan-audit-results
