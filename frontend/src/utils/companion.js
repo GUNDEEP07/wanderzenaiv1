@@ -13,21 +13,31 @@ const parse = (v) => {
 };
 const dayStart = (d) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 
-/** Trips from GET /profile (pastTrips: id, destination, days, status, travelDate, createdAt). */
-export function companionTrip(trips, now = new Date()) {
+/**
+ * Every trip the chat can talk about, best first: upcoming/under-way dated trips (soonest first),
+ * then undated trips from the last 120 days (newest first). The first is the default
+ * (the backend's pickCompanionTrip); the rest are offered in the chat's trip picker.
+ * Trips from GET /profile (pastTrips: id, destination, days, status, travelDate, createdAt).
+ */
+export function companionTrips(trips, now = new Date()) {
   const today = dayStart(now);
   const delivered = (Array.isArray(trips) ? trips : []).filter((t) => t && t.status === 'email_sent');
   const dated = delivered
     .map((t) => ({ t, start: parse(t.travelDate) }))
     .filter((x) => x.start && dayStart(x.start) + (Math.max(1, Number(x.t.days) || 1) - 1) * DAY_MS >= today)
-    .sort((a, b) => a.start - b.start);
-  if (dated.length) return dated[0].t;
+    .sort((a, b) => a.start - b.start)
+    .map((x) => x.t);
   const undated = delivered
     .filter((t) => !parse(t.travelDate))
     .map((t) => ({ t, made: parse(t.createdAt) }))
     .filter((x) => x.made && today - dayStart(x.made) <= UNDATED_WINDOW_DAYS * DAY_MS)
-    .sort((a, b) => b.made - a.made);
-  return undated.length ? undated[0].t : null;
+    .sort((a, b) => b.made - a.made)
+    .map((x) => x.t);
+  return [...dated, ...undated].slice(0, 8);
+}
+
+export function companionTrip(trips, now = new Date()) {
+  return companionTrips(trips, now)[0] || null;
 }
 
 /** "Queenstown" from "Queenstown, New Zealand". */
