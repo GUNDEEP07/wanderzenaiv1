@@ -33,7 +33,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { analytics } from '../utils/analytics';
 import { chatTripToPrefill } from '../utils/chatHandoff';
-import { companionTrip, tripPlace, tripSuggestions } from '../utils/companion';
+import { companionTrips, tripPlace, tripSuggestions } from '../utils/companion';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -48,7 +48,9 @@ const SUGGESTIONS = [
 export function TravelChat({ trips = [] }) {
   // Trip companion: with an upcoming trip the chat answers questions about it; "New trip" switches
   // to the planning chat. The backend re-checks the trip belongs to this user.
-  const trip = companionTrip(trips);
+  const choices = companionTrips(trips);
+  const [tripId, setTripId]     = useState(null);
+  const trip = choices.find((t) => t.id === tripId) || choices[0] || null;
   const [mode, setMode]         = useState('trip');
   const tripMode                = !!trip && mode === 'trip';
   const [open, setOpen]         = useState(false);
@@ -176,7 +178,7 @@ export function TravelChat({ trips = [] }) {
         </div>
 
         {trip && (
-          <div role="tablist" aria-label="What to chat about" style={{ display: 'flex', gap: 6, padding: '10px 16px 0', flexShrink: 0 }}>
+          <div role="tablist" aria-label="What to chat about" style={{ display: 'flex', gap: 6, padding: '10px 16px 0', flexShrink: 0, alignItems: 'center', flexWrap: 'wrap' }}>
             {[['trip', `Your ${tripPlace(trip)} trip`], ['plan', 'New trip']].map(([m, label]) => {
               const on = (m === 'trip') === tripMode;
               return (
@@ -187,6 +189,15 @@ export function TravelChat({ trips = [] }) {
                 </button>
               );
             })}
+            {tripMode && choices.length > 1 && (
+              <select aria-label="Which trip" value={trip.id}
+                onChange={(e) => { setTripId(e.target.value); setHistory([]); setPendingTrip(null); }}
+                style={{ marginLeft: 'auto', maxWidth: 150, padding: '5px 8px', borderRadius: 8, background: '#111827', color: '#fff', border: '1px solid rgba(255,255,255,0.15)', fontFamily: 'inherit', fontSize: 12 }}>
+                {choices.map((t) => (
+                  <option key={t.id} value={t.id}>{tripPlace(t)}{t.travelDate ? ` · ${new Date(`${t.travelDate}T00:00:00`).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}` : ''}</option>
+                ))}
+              </select>
+            )}
           </div>
         )}
 
@@ -302,7 +313,7 @@ export function TravelChat({ trips = [] }) {
               ref={inputRef}
               value={input}
               onChange={e => setInput(e.target.value)}
-              placeholder="Ask about any destination…"
+              placeholder={tripMode ? `Ask about your ${tripPlace(trip)} trip…` : 'Ask about any destination…'}
               disabled={loading}
               style={{
                 flex: 1, padding: '10px 14px',
