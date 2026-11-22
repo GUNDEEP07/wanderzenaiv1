@@ -192,6 +192,10 @@ AI-powered slow-travel itinerary SaaS. Live at wanderzenai.com. Solo-maintained.
   food/paid ≥4.2★ from 30+ reviews, free sights only open. Must-sees: GET /places/ideas (live, rate-limited
   `placeIdeas`, browser cache 10 min) + GET /places/photo (302 to a short-lived Google URL, `placePhotos`);
   StepDays falls back to destination insights. Picks keep `placeId` (selected-venues.js).
+  Finished trips: `itinerary-gen/google-check.js` checks every named place (activities + localEats) after the
+  validation repairs and on "Adjust this day" — good → `placeId` added; not found / closed / under the bar → swapped
+  for the best Google place of the same kind near that day's base (text follows, `localName` cleared); no swap →
+  `unverified: true`. Audit in `itinerary.googleCheck`. Best-effort: Google trouble never fails a generation.
   Trip page: GET /places/details?ids= (≤8, live, `placeDetails` limit) → StopRow shows ★ rating, that day's hours,
   credited photo, "Open in Google Maps", closed warnings. PDF/email: exact place links (`query_place_id`) only — no
   Google ratings/hours/photos in anything stored. Terms + Privacy name Google Maps (required by Google's policies).

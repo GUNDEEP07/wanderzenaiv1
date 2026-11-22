@@ -342,6 +342,7 @@ Resources:
         Variables:
           CLAUDE_API_KEY: !Ref ClaudeApiKey
           FOURSQUARE_API_KEY: !Ref FoursquareApiKey
+          GOOGLE_PLACES_API_KEY: !Ref GooglePlacesApiKey
       # No automatic retry: a re-run would pay for a second Opus generation. A crash goes
       # to the watchdog, which fails the trip once, gives the itinerary back and emails.
       EventInvokeConfig:
