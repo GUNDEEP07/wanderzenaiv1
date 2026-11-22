@@ -5,6 +5,7 @@ const { getDB, generateId, getCurrencySymbol, log, fetchFoursquareTips } = requi
 const { searchVenues } = require('/opt/nodejs/venue-enrichment/foursquare');
 const { MODELS, createMessage, firstText, withEffort, maxTokensFor } = require('/opt/nodejs/claude');
 const { findDuplicateVenues, planRepairs, repairRules } = require('./validate');
+const { checkItineraryPlaces } = require('./google-check');
 const { GenerationFailed, handleGenerationFailure } = require('./failure');
 const { progressRecorder, daySummary } = require('/opt/nodejs/progress');
 const dayAdjust = require('/opt/nodejs/day-adjust');
@@ -315,6 +316,33 @@ function buildDayLabel(travelDate, dayIndex) {
   });
 }
 
+/**
+ * Google check (Nov 22 2026): every named place is looked up; closed, invented or under-the-bar
+ * places are swapped for good ones nearby. Best-effort — never fails a generation.
+ */
+async function googleCheck(itinerary, { route, destination, submissionId }) {
+  const bases = route?.bases || [];
+  const baseOf = (day) => bases.find((b) => b.name === day.base) || null;
+  try {
+    const t0 = Date.now();
+    const summary = await checkItineraryPlaces(itinerary, {
+      townOf: (day) => (baseOf(day) ? placeOf(baseOf(day)) : destination),
+      biasOf: (day) => {
+        const b = baseOf(day);
+        return b && Number.isFinite(b.lat) && Number.isFinite(b.lng) ? { lat: b.lat, lng: b.lng } : null;
+      },
+      log,
+    });
+    if (summary) {
+      log.info('Google place check', { submissionId, ms: Date.now() - t0, checked: summary.checked, ok: summary.ok, swapped: summary.swapped, unverified: summary.unverified });
+      return summary;
+    }
+  } catch (err) {
+    log.warn('Google place check skipped', { submissionId, error: err.message });
+  }
+  return null;
+}
+
 /** The generator's view of a submissions row (also used by day adjustments). */
 function submissionFromRow(row) {
   const submission = {
@@ -388,6 +416,7 @@ async function adjustOneDay({ adjustmentId, submissionId }, db) {
     if (planned) { day.base = planned.base.name; day.travelDay = planned.travelDay; }
     // Only when — the note stays in day_adjustments (owner only); share links show the trip.
     day.adjusted = { at: new Date().toISOString() };
+    await googleCheck({ days: [day] }, { route, destination: submission.destination, submissionId });
     attachVenuesToItinerary({ days: [day] }, await searchVenues(place, { limit: 20 }));
 
     itinerary.days[idx] = day;
@@ -633,8 +662,12 @@ async function generate(event, db, ctl) {
       after,
     });
 
-    // Repaired days replace what the progress page showed; then the final touches.
-    if (repaired.length) await progress.setDays(summaries(itinerary.days));
+    // Google: every named place checked; bad ones swapped (only place IDs are kept — Google terms).
+    const google = await googleCheck(itinerary, { route, destination: submission.destination, submissionId });
+    if (google) itinerary.googleCheck = { checked: google.checked, ok: google.ok, swapped: google.swapped, unverified: google.unverified.length };
+
+    // Repaired or swapped days replace what the progress page showed; then the final touches.
+    if (repaired.length || google?.swapped.length) await progress.setDays(summaries(itinerary.days));
     await progress.stage('finishing');
 
     // Attach full venue objects to activities by matching venueName
