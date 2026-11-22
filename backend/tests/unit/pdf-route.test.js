@@ -52,3 +52,13 @@ test('route names are HTML-escaped', () => {
   const html = buildHTML({ route: { bases: [{ name: '<script>x</script>', days: 1 }] }, days: [] }, { ...submission, days: 1 }, '$');
   assert.ok(!html.includes('<script>x'));
 });
+
+test('Google-checked places link to the exact Google place; no Google ratings or hours in the PDF', () => {
+  const d = day(1);
+  d.morningActivity = { time: '9:00', activity: 'Dinner at Aosta', location: 'Aosta', placeId: 'ChIJaostaaaaaaa1', why: 'x' };
+  d.localEats = { name: 'Sprig & Thistle', dish: 'flat white', placeId: 'ChIJsprigsprig01' };
+  const html = buildHTML({ title: 'T', summary: 'S', days: [d] }, submission, '$');
+  assert.match(html, /query=Aosta[^"]*&amp;query_place_id=ChIJaostaaaaaaa1/);
+  assert.match(html, /query_place_id=ChIJsprigsprig01/);
+  assert.doesNotMatch(html, /★/);
+});

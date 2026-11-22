@@ -162,6 +162,7 @@ jobs:
           OPENTRIPMAP_API_KEY: ${{ secrets.OPENTRIPMAP_API_KEY }}
           # Same secret the frontend build used to embed; now only the backend photo proxy sees it.
           UNSPLASH_ACCESS_KEY: ${{ secrets.VITE_UNSPLASH_ACCESS_KEY }}
+          GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
           # Add a repo secret YOUTUBE_API_KEY to switch videos on (empty = no videos).
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
           # Repo variable (Settings → Secrets and variables → Actions → Variables): where ops
@@ -172,6 +173,8 @@ jobs:
           # passed when the secret exists (otherwise the template default '' applies).
           OPTIONAL=()
           [ -n "${UNSPLASH_ACCESS_KEY}" ] && OPTIONAL+=("UnsplashAccessKey=${UNSPLASH_ACCESS_KEY}")
+          # Google Places: until the secret exists the stack keeps its current (hand-set) value.
+          [ -n "${GOOGLE_PLACES_API_KEY}" ] && OPTIONAL+=("GooglePlacesApiKey=${GOOGLE_PLACES_API_KEY}")
           [ -n "${YOUTUBE_API_KEY}" ] && OPTIONAL+=("YoutubeApiKey=${YOUTUBE_API_KEY}")
           [ -n "${ALERT_EMAIL}" ] && OPTIONAL+=("AlertEmail=${ALERT_EMAIL}")
           sam deploy \

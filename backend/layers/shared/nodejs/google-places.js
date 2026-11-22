@@ -66,6 +66,7 @@ function normalize(p) {
     mapsUri: p.googleMapsUri || null,
     address: p.shortFormattedAddress || null,
     location: p.location ? { lat: p.location.latitude, lng: p.location.longitude } : null,
+    hours: p.regularOpeningHours?.weekdayDescriptions || null,
     photo,
   };
 }
@@ -214,6 +215,45 @@ async function photoUri(photoName, { maxWidthPx = 480, fetchImpl = fetch } = {})
   }
 }
 
+// Place Details (New) for the trip page — Enterprise fields (rating, hours) + photos.
+const DETAIL_FIELDS = [
+  'id', 'displayName', 'businessStatus', 'rating', 'userRatingCount',
+  'regularOpeningHours.weekdayDescriptions', 'googleMapsUri', 'photos',
+];
+
+/**
+ * Fresh details for a few place IDs (the trip page's day on screen). Live only — never store.
+ * Returns { [placeId]: { name, status, rating, reviews, hours: [7 weekday lines Mon..Sun], mapsUri, photo } };
+ * IDs Google can't find are left out.
+ */
+async function details(placeIds, { fetchImpl = fetch } = {}) {
+  const key = apiKey();
+  if (!key) throw new Error('GOOGLE_PLACES_API_KEY not set');
+  const ids = [...new Set((placeIds || []).filter((id) => PLACE_ID_RE.test(String(id))))].slice(0, 8);
+  const out = {};
+  await Promise.all(ids.map(async (id) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    try {
+      const res = await fetchImpl(`${BASE}/places/${id}`, {
+        headers: { 'X-Goog-Api-Key': key, 'X-Goog-FieldMask': DETAIL_FIELDS.join(',') }, signal: controller.signal,
+      });
+      if (!res.ok) return;
+      const p = normalize(await res.json());
+      if (!p) return;
+      out[id] = {
+        name: p.name, status: p.status, rating: p.rating, reviews: p.reviews, mapsUri: p.mapsUri, photo: p.photo,
+        hours: Array.isArray(p.hours) ? p.hours : null,
+      };
+    } catch {
+      // one place failing never breaks the others
+    } finally {
+      clearTimeout(timer);
+    }
+  }));
+  return out;
+}
+
 /** Google Maps link for a place we keep only the ID of (the documented URL scheme). */
 function mapsUrlFor(name, placeId) {
   const q = encodeURIComponent(String(name || 'place').slice(0, 120));
@@ -223,7 +263,7 @@ function mapsUrlFor(name, placeId) {
 }
 
 module.exports = {
-  enabled, searchText, checkPlace, ideasNear, photoUri, mapsUrlFor,
+  enabled, searchText, checkPlace, ideasNear, photoUri, mapsUrlFor, details,
   passesBar, barReason, isFreeSight, sameName, normalize,
   PLACE_ID_RE, PHOTO_NAME_RE, MIN_RATING, MIN_REVIEWS, CHECK_FIELDS, IDEA_FIELDS,
 };
