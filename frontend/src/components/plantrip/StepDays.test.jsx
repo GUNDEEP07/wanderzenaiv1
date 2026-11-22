@@ -5,6 +5,11 @@ import { _clearStopInsights } from '../../api/stopInsights';
 import { fetchDestinationInsights } from '../../api/destinationInsights';
 
 jest.mock('../../api/destinationInsights', () => ({ fetchDestinationInsights: jest.fn() }));
+jest.mock('../../api/googlePlaces', () => ({
+  ...jest.requireActual('../../api/googlePlaces'),
+  fetchGoogleIdeas: jest.fn(),
+}));
+import { fetchGoogleIdeas } from '../../api/googlePlaces';
 jest.mock('../PhotoCredit', () => ({ CreditedPhoto: ({ keyword }) => <img alt="" data-q={keyword} /> }));
 
 const STOPS = [
@@ -20,6 +25,7 @@ function Harness({ onSel, onSkip = jest.fn(), initial }) {
 beforeEach(() => {
   jest.clearAllMocks();
   _clearStopInsights();
+  fetchGoogleIdeas.mockRejectedValue(new Error('Google unavailable')); // most tests use the fallback
   fetchDestinationInsights.mockImplementation(async (dest) => ({
     thingsToDo: dest.startsWith('Queenstown')
       ? [{ name: 'Onsen Hot Pools', reason: 'Cedar tubs above the river.', verified: true }, { name: 'Glenorchy', reason: 'dup of the day trip', verified: false }]
@@ -29,7 +35,8 @@ beforeEach(() => {
 
 test('every stop loads its ideas at once (parallel), day trips first, no duplicates', async () => {
   render(<Harness />);
-  expect(fetchDestinationInsights).toHaveBeenCalledTimes(2);
+  expect(fetchGoogleIdeas).toHaveBeenCalledTimes(2); // every stop at once
+  await waitFor(() => expect(fetchDestinationInsights).toHaveBeenCalledTimes(2)); // Google down → fallback
   const q = screen.getByRole('region', { name: 'Queenstown' });
   expect(within(q).getByText('Glenorchy')).toBeInTheDocument(); // instant, from the route
   await within(q).findByText('Onsen Hot Pools');
@@ -94,4 +101,22 @@ test('day trips as the API sends them ({ name, why }) — live crash Nov 22', as
   expect(screen.getByText('Road to Paradise.')).toBeInTheDocument();
   expect(screen.getByText('Arrowtown')).toBeInTheDocument();
   await screen.findByText('Onsen Hot Pools');
+});
+
+test('Google ideas first: rating, credited photo, Google Maps attribution, place ID kept', async () => {
+  fetchGoogleIdeas.mockImplementation(async (stop) => (stop.name === 'Queenstown'
+    ? [{ placeId: 'ChIJqueenstownhill01', name: 'Queenstown Hill Walking Track', typeLabel: 'Hiking area', rating: 4.8, reviews: 1236, mapsUri: 'https://maps.google.com/?cid=1', photo: { name: 'places/ChIJqueenstownhill01/photos/AbCdEfGhIjKlMn', authors: [{ name: 'Kyle Zhou', uri: 'https://maps.google.com/contrib/1' }] }, free: true }]
+    : []));
+  const onSel = jest.fn();
+  render(<Harness onSel={onSel} />);
+  const q = screen.getByRole('region', { name: 'Queenstown' });
+  await within(q).findByText('Queenstown Hill Walking Track');
+  expect(within(q).getByLabelText('Rated 4.8 out of 5 from 1236 Google reviews')).toHaveTextContent('★ 4.8 (1,236)');
+  expect(within(q).getByRole('link', { name: 'Kyle Zhou' })).toHaveAttribute('href', 'https://maps.google.com/contrib/1');
+  expect(within(q).getByText('Places, ratings and photos: Google Maps')).toBeInTheDocument();
+  expect(within(q).getByRole('link', { name: 'Queenstown Hill Walking Track on a map' })).toHaveAttribute('href', 'https://maps.google.com/?cid=1');
+  fireEvent.click(within(q).getByRole('button', { name: 'Keep Queenstown Hill Walking Track' }));
+  expect(onSel.mock.calls.at(-1)[0].picks[0]).toMatchObject({ name: 'Queenstown Hill Walking Track', placeId: 'ChIJqueenstownhill01', source: 'google' });
+  // Te Anau: Google found nothing → falls back to the insights ideas
+  await within(screen.getByRole('region', { name: 'Te Anau' })).findByText('Te Anau Glowworm Caves');
 });

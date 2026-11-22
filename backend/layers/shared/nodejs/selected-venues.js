@@ -6,7 +6,7 @@
  * Wire format (version 2), produced by frontend VenueSelection:
  *   {
  *     version: 2,
- *     picks: [{ name, address?, lat?, lng?, category?, destination?, source?, day? }],
+ *     picks: [{ name, address?, lat?, lng?, category?, destination?, source?, day?, placeId? }],
  *     interests: ["Hiking", "Food", ...]   // generic categories the user ticked
  *   }
  *
@@ -67,6 +67,8 @@ function sanitizeSelectedVenues(raw, totalDays) {
       destination: str(p.destination, 120),
       source: str(p.source, 20),
       day: dayOf(p.day, totalDays),
+      // Google place ID for picks from Google must-sees (the one Google field we may keep).
+      placeId: typeof p.placeId === 'string' && /^[A-Za-z0-9_-]{10,300}$/.test(p.placeId) ? p.placeId : null,
     });
   }
 

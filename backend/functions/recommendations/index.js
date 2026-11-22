@@ -11,6 +11,7 @@ const { pickForUser } = require('/opt/nodejs/picks');
 const { LIVE_COUNTRIES } = require('/opt/nodejs/curated-routes');
 const { ensureUnlockColumn, isLocked } = require('/opt/nodejs/trip-access');
 const { pickCompanionTrip, tripBrief } = require('/opt/nodejs/trip-context');
+const googlePlaces = require('/opt/nodejs/google-places');
 const { searchPhoto, normaliseQuery } = require('./photos');
 const { searchVideos, normaliseVideoQuery } = require('./videos');
 
@@ -76,7 +77,11 @@ exports.handler = async (event) => {
   log.info('Recommendations request', { path, method: event.httpMethod });
 
   try {
-    if (path.includes('/photos/search')) {
+    if (path.includes('/places/ideas')) {
+      return await handlePlaceIdeas(event);
+    } else if (path.includes('/places/photo')) {
+      return await handlePlacePhoto(event);
+    } else if (path.includes('/photos/search')) {
       return await handlePhotoSearch(event);
     } else if (path.includes('/videos/search')) {
       return await handleVideoSearch(event);
@@ -106,6 +111,57 @@ exports.handler = async (event) => {
     };
   }
 };
+
+// ─── Google Places: must-see ideas + photos (shared google-places.js) ─────────
+// Live only: Google's terms forbid storing Places content (place IDs excepted), so nothing here is
+// written to the database; browsers may keep the answer for 10 minutes.
+async function handlePlaceIdeas(event) {
+  const q = event.queryStringParameters || {};
+  const name = String(q.name || '').replace(/\s+/g, ' ').trim();
+  const country = String(q.country || '').replace(/\s+/g, ' ').trim();
+  const lat = q.lat !== undefined ? Number(q.lat) : NaN;
+  const lng = q.lng !== undefined ? Number(q.lng) : NaN;
+  if (!name || name.length > 80 || country.length > 60 || /[<>{}\[\]`$\\"]/.test(name + country)
+    || (q.lat !== undefined && (!Number.isFinite(lat) || Math.abs(lat) > 90))
+    || (q.lng !== undefined && (!Number.isFinite(lng) || Math.abs(lng) > 180))) {
+    return respond(400, { error: 'name (and optional country, lat, lng) required' }, event);
+  }
+  if (!googlePlaces.enabled()) return respond(503, { error: 'Google Places unavailable' }, event);
+
+  const limited = await rateLimitedResponse('placeIdeas', ipSubject(event), event);
+  if (limited) return limited;
+
+  try {
+    const ideas = await googlePlaces.ideasNear({ name, country, lat, lng });
+    return respond(200, {
+      source: 'google',
+      ideas: ideas.map((p) => ({
+        placeId: p.placeId, name: p.name, typeLabel: p.typeLabel, rating: p.rating, reviews: p.reviews,
+        mapsUri: p.mapsUri, address: p.address, photo: p.photo, free: googlePlaces.isFreeSight(p),
+      })),
+    }, event, { 'Cache-Control': 'private, max-age=600' });
+  } catch (err) {
+    log.warn('Google ideas failed', { error: err.message });
+    return respond(502, { error: 'Google Places failed' }, event);
+  }
+}
+
+/** Redirects to a short-lived Google photo URL (the API key stays here). */
+async function handlePlacePhoto(event) {
+  const q = event.queryStringParameters || {};
+  const name = String(q.name || '');
+  if (!googlePlaces.PHOTO_NAME_RE.test(name)) return respond(400, { error: 'bad photo name' }, event);
+  if (!googlePlaces.enabled()) return respond(503, { error: 'Google Places unavailable' }, event);
+  const limited = await rateLimitedResponse('placePhotos', ipSubject(event), event);
+  if (limited) return limited;
+  try {
+    const uri = await googlePlaces.photoUri(name, { maxWidthPx: q.w });
+    return { statusCode: 302, headers: { Location: uri, 'Cache-Control': 'private, max-age=3000' }, body: '' };
+  } catch (err) {
+    log.warn('Google photo failed', { error: err.message });
+    return respond(404, { error: 'photo unavailable' }, event);
+  }
+}
 
 // ─── Unsplash photo search proxy (see photos.js) ─────────────────────────────
 async function handlePhotoSearch(event) {
