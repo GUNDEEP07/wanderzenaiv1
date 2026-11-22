@@ -33,6 +33,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { analytics } from '../utils/analytics';
 import { chatTripToPrefill } from '../utils/chatHandoff';
+import { companionTrip, tripPlace, tripSuggestions } from '../utils/companion';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -44,7 +45,12 @@ const SUGGESTIONS = [
   'Best street food cities in Asia',
 ];
 
-export function TravelChat() {
+export function TravelChat({ trips = [] }) {
+  // Trip companion: with an upcoming trip the chat answers questions about it; "New trip" switches
+  // to the planning chat. The backend re-checks the trip belongs to this user.
+  const trip = companionTrip(trips);
+  const [mode, setMode]         = useState('trip');
+  const tripMode                = !!trip && mode === 'trip';
   const [open, setOpen]         = useState(false);
   const [input, setInput]       = useState('');
   const [history, setHistory]   = useState([]);
@@ -78,7 +84,7 @@ export function TravelChat() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         // Send newHistory (including current message) so Claude has full context
-        body: JSON.stringify({ message: msg, history: newHistory.slice(-10) }),
+        body: JSON.stringify({ message: msg, history: newHistory.slice(-10), ...(tripMode ? { mode: 'trip', tripId: trip.id } : { mode: 'plan' }) }),
       });
       const data = await res.json();
       const fullReply = data.reply || 'Sorry, something went wrong.';
@@ -154,10 +160,10 @@ export function TravelChat() {
         <div style={{ padding: '16px 18px 14px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
           <div style={{ width: 36, height: 36, background: 'linear-gradient(135deg,#00d4aa,#00916a)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, boxShadow: '0 0 12px rgba(0,212,170,0.3)' }}>✦</div>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>AI Travel Advisor</div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>{tripMode ? 'Trip companion' : 'AI Travel Advisor'}</div>
             <div style={{ fontSize: 10, color: '#00d4aa', display: 'flex', alignItems: 'center', gap: 4 }}>
               <span style={{ width: 5, height: 5, background: '#00d4aa', borderRadius: '50%', display: 'inline-block', animation: 'pulse 2s infinite' }} />
-              Knows your travel history
+              {tripMode ? `Knows your ${tripPlace(trip)} trip, day by day` : 'Plans your next trip with you'}
             </div>
           </div>
           <button
@@ -169,15 +175,32 @@ export function TravelChat() {
           </button>
         </div>
 
+        {trip && (
+          <div role="tablist" aria-label="What to chat about" style={{ display: 'flex', gap: 6, padding: '10px 16px 0', flexShrink: 0 }}>
+            {[['trip', `Your ${tripPlace(trip)} trip`], ['plan', 'New trip']].map(([m, label]) => {
+              const on = (m === 'trip') === tripMode;
+              return (
+                <button key={m} type="button" role="tab" aria-selected={on}
+                  onClick={() => { if (!on) { setMode(m); setHistory([]); setPendingTrip(null); } }}
+                  style={{ padding: '6px 12px', borderRadius: 999, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', border: `1px solid ${on ? 'rgba(0,212,170,0.5)' : 'rgba(255,255,255,0.12)'}`, background: on ? 'rgba(0,212,170,0.12)' : 'transparent', color: on ? '#00d4aa' : 'rgba(255,255,255,0.7)' }}>
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* Messages */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12, scrollbarWidth: 'none' }}>
 
           {history.length === 0 && (
             <div>
               <div style={{ textAlign: 'center', marginBottom: 18 }}>
-                <div style={{ fontSize: 32, marginBottom: 8 }}>🌍</div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 4 }}>Your personal travel advisor</div>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>Ask me anything — itineraries, tips,<br />hidden gems, best times to visit</div>
+                <div style={{ fontSize: 32, marginBottom: 8 }}>{tripMode ? '🧭' : '🌍'}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 4 }}>{tripMode ? `Ask anything about your ${tripPlace(trip)} trip` : 'Your personal travel advisor'}</div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>
+                  {tripMode ? <>Packing, getting around, rainy-day swaps,<br />what to book ahead — I know every day you planned.</> : <>Ask me anything — itineraries, tips,<br />hidden gems, best times to visit</>}
+                </div>
               </div>
               <div
                 className="travel-chat-suggestions"
@@ -187,7 +210,7 @@ export function TravelChat() {
                   scrollbarWidth: 'none', paddingBottom: 4,
                 }}
               >
-                {SUGGESTIONS.map((s, i) => (
+                {(tripMode ? tripSuggestions(trip) : SUGGESTIONS).map((s, i) => (
                   <button
                     key={i}
                     type="button"
@@ -303,7 +326,7 @@ export function TravelChat() {
             </button>
           </form>
           <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.55)', textAlign: 'center', marginTop: 8 }}>
-            Powered by Claude · Personalised to your travel history
+            {tripMode ? 'Powered by Claude · Check opening hours and timetables before you go' : 'Powered by Claude · Personalised to your travel history'}
           </div>
         </div>
       </div>

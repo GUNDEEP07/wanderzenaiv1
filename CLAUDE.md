@@ -177,6 +177,11 @@ AI-powered slow-travel itinerary SaaS. Live at wanderzenai.com. Solo-maintained.
   "Pricing" link (Landing.jsx), a step-1 note (`plantrip/PriceNote.jsx`) and a "What you get" table in the
   guest sign-up box on the Review step. All use `priceLines()` (utils/plans.js) from GET /pricing and render
   nothing until Stripe prices load — never a hard-coded number.
+- Trip companion (Nov 22 2026): the dashboard chat (`components/TravelChat.jsx`, POST /recommendations/chat)
+  talks about the user's upcoming trip — `pickCompanionTrip()` / `tripBrief()` in `layers/shared/nodejs/trip-context.js`
+  (frontend twin `utils/companion.js`: keep the rule in step). Trip chosen from the verified email's own
+  delivered submissions only; locked free trips go through `lockItinerary` first, so later days never reach
+  the model. `mode: 'plan'` ("New trip" tab) keeps the old planning chat. GET /profile pastTrips now carry `travelDate`.
 - Free-trip copy: never promise "the full guide" for free — free = route + Day 1 + day themes (see Free trips).
 - Photos: Unsplash only through the backend `GET /photos/search` (key stays server-side, cached);
   every API photo shows its credit via `components/PhotoCredit.jsx` (Unsplash API Guidelines).
