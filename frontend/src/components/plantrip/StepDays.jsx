@@ -34,12 +34,14 @@ function loadIdeas(stop, opts) {
   }).filter(Boolean));
 }
 
-/** The route's own day trips as instant ideas. */
+/** The route's own day trips as instant ideas. The API sends { name, why }; older plans saved plain names. */
 function dayTripIdeas(stop) {
-  return (Array.isArray(stop.dayTrips) ? stop.dayTrips : []).filter(Boolean).map((name) => ({
-    id: `daytrip:${String(name).toLowerCase()}`, name: String(name), category: 'Day trip', source: 'route',
-    description: `A day trip from ${stop.name}`, photo: name,
-  }));
+  return (Array.isArray(stop.dayTrips) ? stop.dayTrips : []).map((t) => {
+    const name = typeof t === 'string' ? t : typeof t?.name === 'string' ? t.name : '';
+    if (!name.trim()) return null;
+    const why = typeof t === 'object' && typeof t.why === 'string' && t.why.trim() ? t.why.trim() : `A day trip from ${stop.name}`;
+    return { id: `daytrip:${name.toLowerCase()}`, name, category: 'Day trip', source: 'route', description: why, photo: name };
+  }).filter(Boolean);
 }
 
 export default function StepDays({ stops, startDate, travelStyles = [], currency = '', from = '', value, onChange, onSkip }) {

@@ -86,3 +86,12 @@ test('footer status', () => {
   expect(daysStatus({ picks: [] })).toMatch(/Optional/);
   expect(daysStatus({ picks: [{ name: 'a' }, { name: 'b' }] })).toBe("2 places kept · we'll plan the rest");
 });
+
+test('day trips as the API sends them ({ name, why }) — live crash Nov 22', async () => {
+  const stops = [{ ...STOPS[0], dayTrips: [{ name: 'Glenorchy', why: 'Road to Paradise.' }, { name: '' }, null, 'Arrowtown'] }];
+  render(<StepDays stops={stops} startDate="" value={{ version: 2, picks: [] }} onChange={jest.fn()} onSkip={jest.fn()} />);
+  expect(screen.getByText('Glenorchy')).toBeInTheDocument();
+  expect(screen.getByText('Road to Paradise.')).toBeInTheDocument();
+  expect(screen.getByText('Arrowtown')).toBeInTheDocument();
+  await screen.findByText('Onsen Hot Pools');
+});
