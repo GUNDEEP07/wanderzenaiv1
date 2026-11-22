@@ -163,6 +163,27 @@ const buildEmailHTML = ({ itineraryTitle, destination, days, downloadUrl, tripUr
 </body>
 </html>`;
 
+/**
+ * Plain-text email body. Links to the trip page (which signs a fresh PDF link on every download)
+ * whenever we have one: the raw S3 link dies with the Lambda's temporary credentials, often within
+ * hours, so it is only a fallback and never promised for days.
+ */
+function buildEmailText({ destination, days, update, locked, unlockUrl, tripUrl, signedUrl }) {
+  const head = update?.unlocked ? `Your full WanderZenAI trip for ${destination} is unlocked.`
+    : update ? `Day ${update.dayNumber} of your WanderZenAI itinerary for ${destination} has been updated.`
+    : locked ? `Day 1 of your WanderZenAI trip for ${destination} is ready.`
+    : `Your WanderZenAI itinerary for ${destination} (${days} days) is ready.`;
+  const lines = [head, ''];
+  if (tripUrl) {
+    lines.push(`Open your trip and download the PDF: ${tripUrl}`, 'This link keeps working; sign in with this email address.');
+  } else {
+    lines.push(`Download the PDF: ${signedUrl}`, 'This download link works for a few hours.');
+  }
+  if (locked && unlockUrl) lines.push('', `Unlock every day: ${unlockUrl}`);
+  lines.push('', 'WanderZenAI — wanderzenai.com');
+  return lines.join('\n');
+}
+
 exports.handler = async (event) => {
   const { itineraryId, submissionId, email, s3Key, destination, days, isPaid, itineraryTitle } = event;
   const locked = event.locked === true;
@@ -209,7 +230,7 @@ exports.handler = async (event) => {
         Body: {
           Html: { Data: htmlBody, Charset: 'UTF-8' },
           Text: {
-            Data: `${update?.unlocked ? `Your full WanderZenAI trip for ${destination} is unlocked.` : update ? `Day ${update.dayNumber} of your WanderZenAI itinerary for ${destination} has been updated.` : locked ? `Day 1 of your WanderZenAI trip for ${destination} is ready. Unlock the full trip: ${unlockUrl}` : `Your WanderZenAI itinerary for ${destination} (${days} days) is ready.`}\n\nDownload it here: ${signedUrl}\n\nThis link expires in 7 days.\n\nWanderZenAI — wanderzenai.com`,
+            Data: buildEmailText({ destination, days, update, locked, unlockUrl, tripUrl, signedUrl }),
             Charset: 'UTF-8',
           },
         },
@@ -226,7 +247,7 @@ exports.handler = async (event) => {
 
     await db.query(
       `INSERT INTO email_log (submission_id, itinerary_id, email, sent_at, signed_url_expires_at)
-       VALUES ($1, $2, $3, NOW(), NOW() + INTERVAL '7 days')`,
+       VALUES ($1, $2, $3, NOW(), NOW() + INTERVAL '24 hours')`, // at most; the Lambda's credentials can end it sooner
       [submissionId, itineraryId, email]
     );
 
@@ -245,4 +266,4 @@ exports.handler = async (event) => {
 };
 
 // Exported for unit tests.
-exports._internal = { buildEmailHTML };
+exports._internal = { buildEmailHTML, buildEmailText };

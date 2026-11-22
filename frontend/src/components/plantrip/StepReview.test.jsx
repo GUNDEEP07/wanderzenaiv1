@@ -16,7 +16,7 @@ test('entitlementLine / limitMessage', () => {
   expect(entitlementLine({ allowed: true, source: 'credit', remaining: 3 })).toBe('Uses 1 of your 3 itinerary credits.');
   expect(entitlementLine({ allowed: true, source: 'credit', remaining: 1 })).toMatch(/last itinerary credit/);
   expect(entitlementLine({ allowed: true, source: 'monthly', remaining: 4 })).toMatch(/4 Wanderer itineraries left/);
-  expect(entitlementLine({ allowed: true, source: 'test', remaining: null })).toBeNull();
+  expect(entitlementLine({ allowed: true, source: 'test', remaining: null })).toMatch(/Test account/);
   expect(entitlementLine(null)).toBeNull();
   expect(limitMessage({ allowed: false, code: 'MONTHLY_LIMIT_REACHED' })).toMatch(/billing date/);
   expect(limitMessage({ allowed: false, code: 'FREE_TIER_EXHAUSTED' })).toMatch(/free itinerary/);
