@@ -94,3 +94,16 @@ test('maps link uses the place ID scheme when we have one', () => {
   assert.equal(gp.mapsUrlFor('Aosta', 'ChIJabcdefghij123'), 'https://www.google.com/maps/search/?api=1&query=Aosta&query_place_id=ChIJabcdefghij123');
   assert.equal(gp.mapsUrlFor('Aosta', 'bad id!'), 'https://www.google.com/maps/search/?api=1&query=Aosta');
 });
+
+test('details: fresh rating, weekday hours, photo per ID; bad IDs dropped; one failure isolated', async () => {
+  const f = fakeFetch((url) => {
+    if (url.includes('ChIJaostaaaaaaa1')) return { id: 'ChIJaostaaaaaaa1', displayName: { text: 'Aosta' }, businessStatus: 'OPERATIONAL', rating: 4.6, userRatingCount: 596, googleMapsUri: 'https://maps.google.com/?cid=1', regularOpeningHours: { weekdayDescriptions: ['Monday: 5:00 – 8:30 PM', 'Tuesday: Closed'] } };
+    throw new Error('boom');
+  });
+  const out = await gp.details(['ChIJaostaaaaaaa1', 'ChIJbrokenbroke2', '../evil'], { fetchImpl: f });
+  assert.deepEqual(Object.keys(out), ['ChIJaostaaaaaaa1']);
+  assert.deepEqual(out.ChIJaostaaaaaaa1.hours, ['Monday: 5:00 – 8:30 PM', 'Tuesday: Closed']);
+  assert.equal(out.ChIJaostaaaaaaa1.rating, 4.6);
+  assert.equal(f.calls.length, 2); // '../evil' never sent
+  assert.match(f.calls[0].opts.headers['X-Goog-FieldMask'], /regularOpeningHours\.weekdayDescriptions/);
+});

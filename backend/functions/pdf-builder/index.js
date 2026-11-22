@@ -59,6 +59,14 @@ const mapsUrl = (name, area, country) => {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 };
 
+// Google-checked places carry a Google place ID (the only Google data we may keep): link to that
+// exact place. Ratings, hours and photos can't go in the PDF (Google terms: no stored content).
+const PLACE_ID_RE = /^[A-Za-z0-9_-]{10,300}$/;
+const placeMapsUrl = (name, area, country, placeId) => {
+  const base = mapsUrl(name, area, country);
+  return placeId && PLACE_ID_RE.test(String(placeId)) ? `${base}&query_place_id=${encodeURIComponent(placeId)}` : base;
+};
+
 
 // ─── Budget ───────────────────────────────────────────────────────────────────
 
@@ -427,7 +435,9 @@ a { color:var(--teal); text-decoration:none; }
         if (!act) return '';
         const periodLabel = period.replace('Activity', '').toUpperCase();
         const place = act.venue?.name || act.location || act.activity;
-        const actMapUrl = act.venue?.mapsUrl && /^https:\/\//i.test(act.venue.mapsUrl) ? act.venue.mapsUrl : mapsUrl(place, day.base, submission.destination);
+        const actMapUrl = act.placeId
+          ? placeMapsUrl(act.location || place, day.base, submission.destination, act.placeId)
+          : act.venue?.mapsUrl && /^https:\/\//i.test(act.venue.mapsUrl) ? act.venue.mapsUrl : mapsUrl(place, day.base, submission.destination);
         return `
         <div class="activity">
           <div class="activity-when">
@@ -456,6 +466,7 @@ a { color:var(--teal); text-decoration:none; }
           <div class="eats-name">${escapeHtml(day.localEats.name || '')}</div>
           <div class="eats-dish">Order: ${escapeHtml(day.localEats.dish || '')}${toAmount(day.localEats.cost) ? ` · ${currencySymbol}${formatAmount(day.localEats.cost)}` : ''}</div>
           <div class="eats-vibe">${escapeHtml(day.localEats.vibe || '')}</div>
+          ${day.localEats.placeId && !day.localEats.venue ? `<a href="${escapeHtml(placeMapsUrl(day.localEats.venueName || day.localEats.name, day.base, submission.destination, day.localEats.placeId))}" class="activity-map">View on map</a>` : ''}
           ${day.localEats.venue ? venueCard(day.localEats.venue) : ''}
         </div>
       </div>` : ''}

@@ -12,6 +12,7 @@ import { openUrl } from '../utils/openUrl';
 import AdjustDay from '../components/itinerary/AdjustDay';
 import LockedDay, { lockedRange, unlockExtras } from '../components/itinerary/LockedDay';
 import StopRow from '../components/itinerary/StopRow';
+import { fetchPlaceDetails } from '../api/googlePlaces';
 import TripOverview from '../components/itinerary/TripOverview';
 import BookingChecklist from '../components/itinerary/BookingChecklist';
 
@@ -260,6 +261,16 @@ export default function ItineraryView() {
 
   const day = useMemo(() => days.find(d => d.dayNumber === selectedDay) || null, [days, selectedDay]);
   const stops = useMemo(() => dayStops(day), [day]);
+  // Google details for the day on screen (rating, hours, photo), fetched fresh — Google's terms
+  // let us keep only place IDs. Nothing shows if Google is unavailable.
+  const placeIds = useMemo(() => stops.map(st => st.act?.placeId || st.eats?.placeId).filter(Boolean), [stops]);
+  const [googleInfo, setGoogleInfo] = useState({});
+  useEffect(() => {
+    let live = true;
+    if (!placeIds.length) { setGoogleInfo({}); return undefined; }
+    fetchPlaceDetails(placeIds).then(m => { if (live) setGoogleInfo(m); }).catch(() => { if (live) setGoogleInfo({}); });
+    return () => { live = false; };
+  }, [placeIds.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
   const isToday = !!day && day.dayNumber === todayNumber;
   const doneToday = useMemo(() => new Set([...done].filter(k => k.startsWith(`${day?.dayNumber}:`)).map(k => k.split(':')[1])), [done, day]);
   const nextStop = isToday ? upNext(stops, new Date(), doneToday) : null;
@@ -411,7 +422,8 @@ export default function ItineraryView() {
                 <ol aria-label={`Day ${day.dayNumber} plan`} style={s.list}>
                   {stops.map(st => (
                     <StopRow key={`${day.dayNumber}-${st.id}`} stop={st} base={day.base} destination={data.destination} currency={currency}
-                      isNext={nextStop?.id === st.id} done={doneToday.has(st.id)} onToggleDone={() => toggleDone(day.dayNumber, st.id)} />
+                      isNext={nextStop?.id === st.id} done={doneToday.has(st.id)} onToggleDone={() => toggleDone(day.dayNumber, st.id)}
+                      google={googleInfo[st.act?.placeId || st.eats?.placeId] || null} date={dateOf(day.dayNumber)} />
                   ))}
                 </ol>
 

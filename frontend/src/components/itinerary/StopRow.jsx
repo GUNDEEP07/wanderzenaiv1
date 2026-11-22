@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { plainText } from '../../utils/plainText';
 import { directionsUrl, formatMoney } from '../../utils/tripPlan';
+import { googlePhotoSrc, hoursOn, ratingText } from '../../api/googlePlaces';
 
 const s = {
   row: { borderTop: '1px solid rgba(255,255,255,0.08)' },
@@ -22,11 +23,52 @@ const s = {
 
 const KIND_COLOR = { eat: '#ff9b9b', gem: '#a78bfa' };
 
+const g = {
+  box: { display: 'flex', gap: 12, alignItems: 'stretch', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: 10 },
+  photo: { position: 'relative', flex: '0 0 96px', height: 80, borderRadius: 8, overflow: 'hidden', background: '#1a2233' },
+  img: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
+  credit: { position: 'absolute', left: 3, right: 3, bottom: 2, fontSize: 9, color: '#fff', textShadow: '0 1px 2px #000', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+  lines: { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3, fontSize: 13, lineHeight: 1.4 },
+  rating: { fontWeight: 800, color: '#fcd34d' },
+  closed: { fontWeight: 700, color: '#fca5a5' },
+  link: { color: '#00d4aa', fontWeight: 700, textDecoration: 'none' },
+  source: { fontSize: 11, color: 'rgba(255,255,255,0.55)' },
+};
+
+/** Fresh Google details for this stop (rating, hours that day, photo) — never stored. */
+function GoogleInfo({ info, date }) {
+  const [photoFailed, setPhotoFailed] = useState(false);
+  if (!info) return null;
+  const hours = hoursOn(info.hours, date);
+  const author = info.photo?.authors?.[0];
+  const closed = info.status === 'CLOSED_PERMANENTLY' ? 'Google lists this as permanently closed'
+    : info.status === 'CLOSED_TEMPORARILY' ? 'Google lists this as temporarily closed' : null;
+  return (
+    <div style={g.box}>
+      {info.photo?.name && !photoFailed && (
+        <span style={g.photo}>
+          <img src={googlePhotoSrc(info.photo.name, 320)} alt="" loading="lazy" decoding="async" style={g.img} onError={() => setPhotoFailed(true)} />
+          {author?.name && <span style={g.credit}>Photo: {author.uri ? <a href={author.uri} target="_blank" rel="noopener noreferrer" style={{ color: '#fff' }}>{author.name}</a> : author.name}</span>}
+        </span>
+      )}
+      <div style={g.lines}>
+        {typeof info.rating === 'number' && (
+          <span style={g.rating} aria-label={`Rated ${info.rating.toFixed(1)} out of 5 from ${info.reviews || 0} Google reviews`}>{ratingText(info.rating, info.reviews)}</span>
+        )}
+        {closed && <span style={g.closed} role="note">{closed}</span>}
+        {hours && <span>{date.toLocaleDateString('en-AU', { weekday: 'short' })}: {hours}</span>}
+        {info.mapsUri && <a href={info.mapsUri} target="_blank" rel="noopener noreferrer" style={g.link}>Open in Google Maps</a>}
+        <span style={g.source}>Google Maps</span>
+      </div>
+    </div>
+  );
+}
+
 /**
  * One stop in the day: a tappable row that opens its details — why, insider tip, local
  * name (big, to show a driver), directions, and "Mark as done" (kept on this device).
  */
-export default function StopRow({ stop, base, destination, currency, isNext, done, onToggleDone }) {
+export default function StopRow({ stop, base, destination, currency, isNext, done, onToggleDone, google = null, date = null }) {
   const [open, setOpen] = useState(isNext);
   const [showLocal, setShowLocal] = useState(false);
   const act = stop.act;
@@ -54,6 +96,7 @@ export default function StopRow({ stop, base, destination, currency, isNext, don
           {stop.kind === 'activity' && (
             <>
               {act.location && <div style={s.place}>{act.location}{act.localName ? ` · ${act.localName}` : ''}</div>}
+              <GoogleInfo info={google} date={date} />
               {act.why && <p style={s.why}>{plainText(act.why)}</p>}
               {act.insiderTip && <div style={s.tip}><strong>Insider tip:</strong> {plainText(act.insiderTip)}</div>}
               {showLocal && act.localName && <div style={s.driverCard} lang="und">{act.localName}</div>}
@@ -73,6 +116,7 @@ export default function StopRow({ stop, base, destination, currency, isNext, don
           )}
           {stop.kind === 'eat' && (
             <>
+              <GoogleInfo info={google} date={date} />
               {stop.eats?.dish && <p style={s.why}>Order: <strong>{stop.eats.dish}</strong></p>}
               {stop.eats?.vibe && <p style={{ ...s.why, color: 'rgba(255,255,255,0.7)' }}>{stop.eats.vibe}</p>}
               <div style={s.actions}>

@@ -79,6 +79,8 @@ exports.handler = async (event) => {
   try {
     if (path.includes('/places/ideas')) {
       return await handlePlaceIdeas(event);
+    } else if (path.includes('/places/details')) {
+      return await handlePlaceDetails(event);
     } else if (path.includes('/places/photo')) {
       return await handlePlacePhoto(event);
     } else if (path.includes('/photos/search')) {
@@ -142,6 +144,25 @@ async function handlePlaceIdeas(event) {
     }, event, { 'Cache-Control': 'private, max-age=600' });
   } catch (err) {
     log.warn('Google ideas failed', { error: err.message });
+    return respond(502, { error: 'Google Places failed' }, event);
+  }
+}
+
+/** Fresh Google details for the place IDs on one trip day (trip page). Live only. */
+async function handlePlaceDetails(event) {
+  const raw = String(event.queryStringParameters?.ids || '');
+  const ids = raw.split(',').map((x) => x.trim()).filter(Boolean);
+  if (!ids.length || ids.length > 8 || !ids.every((id) => googlePlaces.PLACE_ID_RE.test(id))) {
+    return respond(400, { error: 'ids: 1–8 Google place IDs' }, event);
+  }
+  if (!googlePlaces.enabled()) return respond(503, { error: 'Google Places unavailable' }, event);
+  const limited = await rateLimitedResponse('placeDetails', ipSubject(event), event);
+  if (limited) return limited;
+  try {
+    const places = await googlePlaces.details(ids);
+    return respond(200, { places }, event, { 'Cache-Control': 'private, max-age=600' });
+  } catch (err) {
+    log.warn('Google details failed', { error: err.message });
     return respond(502, { error: 'Google Places failed' }, event);
   }
 }

@@ -19,7 +19,7 @@ export default function PrivacyPolicy() {
       <SiteHeader />
       <div style={s.inner}>
         <h1 style={s.h1}>Privacy Policy</h1>
-        <p style={s.updated}>Last updated: 31 May 2026</p>
+        <p style={s.updated}>Last updated: 22 November 2026</p>
 
         <p style={s.p}>WanderZenAI ("we", "us", "our") is committed to protecting your personal information. This policy explains what data we collect, how we use it, and your rights.</p>
 
@@ -48,7 +48,11 @@ export default function PrivacyPolicy() {
           <li style={s.li}><strong>AWS:</strong> Hosting, storage, and email delivery</li>
           <li style={s.li}><strong>Stripe:</strong> Payment processing</li>
           <li style={s.li}><strong>Firebase (Google):</strong> Authentication</li>
+          <li style={s.li}><strong>Google Maps Platform (Places API):</strong> place suggestions, ratings, opening hours and photos. Place names you search for and your device's IP address are sent to Google when these load. Google's use of this data is covered by the <a href="https://policies.google.com/privacy" style={{ color: '#00d4aa' }} target="_blank" rel="noopener noreferrer">Google Privacy Policy</a>.</li>
+          <li style={s.li}><strong>Google Analytics:</strong> anonymous usage statistics (pages visited, planner steps completed) to improve the service</li>
+          <li style={s.li}><strong>Google Fonts:</strong> the site's typefaces are loaded from Google, which receives your IP address</li>
           <li style={s.li}><strong>Foursquare:</strong> Venue recommendations</li>
+          <li style={s.li}><strong>Unsplash:</strong> destination photos (requested through our servers)</li>
         </ul>
 
         <h2 style={s.h2}>4. Data retention</h2>
@@ -58,7 +62,7 @@ export default function PrivacyPolicy() {
         <p style={s.p}>You have the right to access, correct, or delete your personal data at any time. You can manage most data from your Settings page. For other requests, email us at <a href="mailto:travel@wanderzenai.com" style={{ color: '#00d4aa' }}>travel@wanderzenai.com</a>.</p>
 
         <h2 style={s.h2}>6. Cookies</h2>
-        <p style={s.p}>We use essential cookies for authentication and session management. We do not use advertising or tracking cookies. You can disable cookies in your browser settings, but this may affect functionality.</p>
+        <p style={s.p}>We use essential cookies for authentication and session management, and Google Analytics cookies to understand how the site is used. We do not use advertising cookies. You can block cookies in your browser settings; essential cookies are needed to sign in.</p>
 
         <h2 style={s.h2}>7. Security</h2>
         <p style={s.p}>We use industry-standard security measures including HTTPS encryption, AWS security controls, and Firebase Authentication. No method of transmission is 100% secure — we cannot guarantee absolute security.</p>
