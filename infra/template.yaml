@@ -654,6 +654,18 @@ Resources:
             RestApiId: !Ref WanderZenApi
             Path: /photos/search
             Method: GET
+        GetPlaceIdeas:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /places/ideas
+            Method: GET
+        GetPlacePhoto:
+          Type: Api
+          Properties:
+            RestApiId: !Ref WanderZenApi
+            Path: /places/photo
+            Method: GET
         GetVideoSearch:
           Type: Api
           Properties:

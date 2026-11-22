@@ -41,6 +41,9 @@ const DEFAULT_LIMITS = Object.freeze({
   aiVenues:     [{ limit: 60, windowSeconds: 3600 }],
   // Public, Unsplash-backed (cached) — a page can show ~20 photos
   photos:       [{ limit: 300, windowSeconds: 3600 }],
+  // Google Places (billed per call): must-see ideas per stop, and their photos.
+  placeIdeas:   [{ limit: 40, windowSeconds: 3600 }, { limit: 150, windowSeconds: 86400 }],
+  placePhotos:  [{ limit: 300, windowSeconds: 3600 }, { limit: 1000, windowSeconds: 86400 }],
   // Public, YouTube-backed (cached; the API allows ~100 uncached searches a day)
   videos:       [{ limit: 60, windowSeconds: 3600 }],
 });

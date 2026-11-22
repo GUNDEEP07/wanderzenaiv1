@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { searchPlaces, normalizePlace } from '../../api/places';
 import { stopInsights } from '../../api/stopInsights';
+import { fetchGoogleIdeas, googlePhotoSrc, ratingText } from '../../api/googlePlaces';
 import { CreditedPhoto } from '../PhotoCredit';
 import './styles/plantrip-mustsee.css';
 
@@ -26,8 +27,26 @@ const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-');
 const rangeLabel = (stop) => (stop.toDay > stop.fromDay ? `Days ${stop.fromDay}–${stop.toDay}` : `Day ${stop.fromDay}`);
 const mapsUrl = (p, stop) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([p.name, p.address || stop.name, stop.country].filter(Boolean).join(', '))}`;
 
-/** Six ideas for a stop from its (shared, cached) destination insights. */
+/**
+ * Six ideas for a stop. Google Places first (walks, cafés, gems near the stop, quality bar applied
+ * server-side, live — Gundeep's choice Nov 22 2026); the destination-insights ideas if Google is
+ * unavailable or finds nothing.
+ */
 function loadIdeas(stop, opts) {
+  return fetchGoogleIdeas(stop)
+    .then((ideas) => {
+      if (!ideas.length) throw new Error('no Google ideas');
+      return ideas.map((g) => ({
+        id: `g:${g.placeId}`, placeId: g.placeId, name: g.name, address: g.address || null, source: 'google',
+        category: g.typeLabel || null, description: g.typeLabel || null, rating: g.rating, reviews: g.reviews,
+        mapsUri: g.mapsUri || null, googlePhoto: g.photo || null, photo: g.name,
+      }));
+    })
+    .catch(() => loadInsightIdeas(stop, opts));
+}
+
+/** Fallback: ideas from the (shared, cached) destination insights. */
+function loadInsightIdeas(stop, opts) {
   return stopInsights(stop, opts).then((insights) => (insights?.thingsToDo || []).map((t) => {
     const place = normalizePlace({ ...t, source: t.verified ? 'foursquare' : 'ai' }, t.category);
     return place && { ...place, description: t.reason || t.visitorTip || null, tip: t.visitorTip || null, photo: t.unsplashKeyword || t.name };
@@ -72,6 +91,7 @@ export default function StepDays({ stops, startDate, travelStyles = [], currency
       id: p.id || null, name: p.name, address: p.address || null,
       lat: typeof p.lat === 'number' ? p.lat : null, lng: typeof p.lng === 'number' ? p.lng : null,
       category: p.category || null, source: p.source || null, destination: label, day: null,
+      placeId: p.placeId || null,
     }]);
   };
 
@@ -106,15 +126,20 @@ export default function StepDays({ stops, startDate, travelStyles = [], currency
                 const on = kept(p, label);
                 return (
                   <li key={keyOf(p)} className={`ms-card${on ? ' ms-card--on' : ''}`}>
-                    <CreditedPhoto destination={stop.name} keyword={p.photo || p.name} size="thumb" alt="" style={{ height: 110 }} />
+                    {p.googlePhoto?.name
+                      ? <GooglePhoto photo={p.googlePhoto} />
+                      : <CreditedPhoto destination={stop.name} keyword={p.photo || p.name} size="thumb" alt="" style={{ height: 110 }} />}
                     <div className="ms-card__body">
                       <div className="ms-card__name">{p.name}</div>
+                      {p.source === 'google' && typeof p.rating === 'number' && (
+                        <div className="ms-card__rating" aria-label={`Rated ${p.rating.toFixed(1)} out of 5 from ${p.reviews || 0} Google reviews`}>{ratingText(p.rating, p.reviews)}</div>
+                      )}
                       {p.description && <div className="ms-card__why">{p.description}</div>}
                       <div className="ms-card__foot">
-                        <span className={`ms-tag${p.source === 'ai' ? ' ms-tag--ai' : ''}`}>
-                          {p.source === 'route' ? 'Day trip' : p.source === 'ai' ? 'Idea · check first' : 'Real place'}
+                        <span className={`ms-tag${p.source === 'ai' ? ' ms-tag--ai' : ''}${p.source === 'google' ? ' ms-tag--google' : ''}`}>
+                          {p.source === 'route' ? 'Day trip' : p.source === 'ai' ? 'Idea · check first' : p.source === 'google' ? 'Google Maps' : 'Real place'}
                         </span>
-                        <a href={mapsUrl(p, stop)} target="_blank" rel="noopener noreferrer" aria-label={`${p.name} on a map`}>Map</a>
+                        <a href={p.mapsUri || mapsUrl(p, stop)} target="_blank" rel="noopener noreferrer" aria-label={`${p.name} on a map`}>Map</a>
                       </div>
                     </div>
                     <button type="button" className="ms-keep" aria-pressed={on} onClick={() => toggle(p, label)}
@@ -126,6 +151,7 @@ export default function StepDays({ stops, startDate, travelStyles = [], currency
               })}
               {state.loading && [0, 1, 2].map((i) => <li key={`sk${i}`} className="ms-card ms-card--skeleton" aria-hidden="true" />)}
             </ul>
+            {list.some((p) => p.source === 'google') && <p className="ms-attrib">Places, ratings and photos: Google Maps</p>}
             {state.loading && <p className="ms-note" role="status">Finding places in {stop.name}…</p>}
             {state.error && !list.length && <p className="ms-note">Couldn’t load ideas for {stop.name} — add your own below, or skip.</p>}
 
@@ -145,6 +171,23 @@ export default function StepDays({ stops, startDate, travelStyles = [], currency
         );
       })}
     </div>
+  );
+}
+
+/** A Google place photo, credited to its author as Google requires. */
+function GooglePhoto({ photo }) {
+  const [failed, setFailed] = useState(false);
+  const author = photo.authors?.[0];
+  if (failed) return <span className="ms-photo ms-photo--none" aria-hidden="true" />;
+  return (
+    <span className="ms-photo">
+      <img src={googlePhotoSrc(photo.name, 480)} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} />
+      {author?.name && (
+        <span className="ms-photo__credit">
+          Photo: {author.uri ? <a href={author.uri} target="_blank" rel="noopener noreferrer">{author.name}</a> : author.name}
+        </span>
+      )}
+    </span>
   );
 }
 

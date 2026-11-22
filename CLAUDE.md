@@ -186,6 +186,12 @@ AI-powered slow-travel itinerary SaaS. Live at wanderzenai.com. Solo-maintained.
   (frontend twin `utils/companion.js`: keep the rule in step). Trip chosen from the verified email's own
   delivered submissions only; locked free trips go through `lockItinerary` first, so later days never reach
   the model. `mode: 'plan'` ("New trip" tab) keeps the old planning chat. GET /profile pastTrips now carry `travelDate`.
+- Google Places (Nov 22 2026, Gundeep chose "Both" + adjusted plan): `layers/shared/nodejs/google-places.js`
+  (Places API New, key `GOOGLE_PLACES_API_KEY`, header only). TERMS: never store Google content — only the place
+  ID (`placeId`); no Google pins on our MapLibre map; show "Google Maps" attribution and photo authors. Quality bar:
+  food/paid ≥4.2★ from 30+ reviews, free sights only open. Must-sees: GET /places/ideas (live, rate-limited
+  `placeIdeas`, browser cache 10 min) + GET /places/photo (302 to a short-lived Google URL, `placePhotos`);
+  StepDays falls back to destination insights. Picks keep `placeId` (selected-venues.js).
 - Free-trip copy: never promise "the full guide" for free — free = route + Day 1 + day themes (see Free trips).
 - Photos: Unsplash only through the backend `GET /photos/search` (key stays server-side, cached);
   every API photo shows its credit via `components/PhotoCredit.jsx` (Unsplash API Guidelines).
