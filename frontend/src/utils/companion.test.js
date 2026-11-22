@@ -1,4 +1,4 @@
-import { companionTrip, tripPlace, tripSuggestions } from './companion';
+import { companionTrip, companionTrips, tripPlace, tripSuggestions } from './companion';
 
 const NOW = new Date('2026-11-22T03:00:00Z');
 const t = (id, o = {}) => ({ id, status: 'email_sent', days: 5, travelDate: null, createdAt: '2026-11-20T00:00:00Z', destination: 'Queenstown, New Zealand', ...o });
@@ -19,4 +19,9 @@ test('place name and starters', () => {
   expect(tripPlace(t('a'))).toBe('Queenstown');
   expect(tripSuggestions(t('a'))).toContain('What should I pack for this trip?');
   expect(tripSuggestions(t('a', { locked: true }))).toContain('What do I get if I unlock every day?');
+});
+
+test('picker list: dated upcoming first, then recent undated; past trips left out', () => {
+  const list = companionTrips([t('undated'), t('soon', { travelDate: '2026-12-10' }), t('past', { travelDate: '2026-01-01' })], NOW);
+  expect(list.map((x) => x.id)).toEqual(['soon', 'undated']);
 });

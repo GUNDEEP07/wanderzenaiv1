@@ -40,3 +40,15 @@ test('no trips: planning chat, no tabs', () => {
   expect(screen.getByText('AI Travel Advisor')).toBeInTheDocument();
   expect(screen.queryByRole('tab')).toBeNull();
 });
+
+test('several trips: a picker switches which trip the chat is about', async () => {
+  const two = [...trips, { id: 'wz_abc123_bbbbbbbbbbbbbbbb', destination: 'Queenstown', days: 5, status: 'email_sent', travelDate: null, createdAt: new Date().toISOString() }];
+  two[0] = { ...two[0], destination: 'Hoi An, Vietnam' };
+  render(<MemoryRouter><TravelChat trips={two} /></MemoryRouter>);
+  expect(screen.getByRole('tab', { name: 'Your Hoi An trip' })).toBeInTheDocument();
+  fireEvent.change(screen.getByRole('combobox', { name: 'Which trip' }), { target: { value: 'wz_abc123_bbbbbbbbbbbbbbbb' } });
+  expect(screen.getByRole('tab', { name: 'Your Queenstown trip' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'What should I pack for this trip?' }));
+  await waitFor(() => expect(global.fetch).toHaveBeenCalled());
+  expect(JSON.parse(global.fetch.mock.calls[0][1].body).tripId).toBe('wz_abc123_bbbbbbbbbbbbbbbb');
+});
