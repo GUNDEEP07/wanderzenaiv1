@@ -1,0 +1,51 @@
+/* Step 3 — must-see list. One section per stop, photo cards in a grid. */
+.ms { display: flex; flex-direction: column; gap: 22px; }
+.ms-intro { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+.ms-intro p { margin: 0; font-size: 15px; line-height: 1.5; color: rgba(255,255,255,0.82); flex: 1 1 280px; }
+.ms-skip { min-height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid rgba(0,212,170,0.5); background: transparent; color: #00d4aa; font-family: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
+.ms-skip:hover { background: rgba(0,212,170,0.08); }
+
+.ms-stop__head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.ms-stop__head h2 { margin: 0; font-size: 19px; font-weight: 800; }
+.ms-stop__head span { font-size: 13px; color: rgba(255,255,255,0.68); }
+
+.ms-cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr)); }
+.ms-card { position: relative; display: flex; flex-direction: column; background: #111827; border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; overflow: hidden; min-height: 230px; }
+.ms-card--on { border-color: #00d4aa; box-shadow: 0 0 0 1px #00d4aa inset; }
+.ms-card--skeleton { background: linear-gradient(90deg, #111827 0%, #1a2233 50%, #111827 100%); background-size: 200% 100%; animation: ms-shimmer 1.4s infinite; }
+@keyframes ms-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .ms-card--skeleton { animation: none; } }
+.ms-card__body { flex: 1; display: flex; flex-direction: column; gap: 4px; padding: 10px 12px 56px; }
+.ms-card__name { font-size: 15px; font-weight: 800; line-height: 1.3; }
+.ms-card__why { font-size: 13px; line-height: 1.4; color: rgba(255,255,255,0.72); }
+.ms-card__foot { display: flex; align-items: center; gap: 10px; margin-top: auto; padding-top: 6px; font-size: 12px; }
+.ms-card__foot a { color: #00d4aa; text-decoration: none; font-weight: 700; }
+.ms-tag { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: rgba(0,212,170,0.12); color: #7ff0d6; }
+.ms-tag--ai { background: rgba(250,204,21,0.12); color: #fde68a; }
+.ms-keep { position: absolute; left: 12px; right: 12px; bottom: 10px; min-height: 40px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.22); background: rgba(255,255,255,0.04); color: #fff; font-family: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
+.ms-keep[aria-pressed="true"] { background: #00d4aa; border-color: #00d4aa; color: #06090f; }
+
+.ms-note { margin: 8px 0 0; font-size: 13px; color: rgba(255,255,255,0.65); }
+.ms-mine { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.ms-mine li { display: inline-flex; align-items: center; gap: 4px; padding: 4px 4px 4px 12px; border-radius: 999px; background: rgba(0,212,170,0.12); border: 1px solid rgba(0,212,170,0.4); font-size: 13px; }
+.ms-mine button { width: 32px; height: 32px; border-radius: 16px; border: none; background: none; color: #fff; font-size: 18px; cursor: pointer; }
+
+.ms-own { margin-top: 10px; }
+.ms-own__row { display: flex; gap: 8px; }
+.ms-own__row input { flex: 1; min-width: 0; min-height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.15); background: #0a0f1e; color: #fff; font-family: inherit; font-size: 14px; }
+.ms-own__row button, .ms-found button { min-height: 44px; padding: 0 14px; border-radius: 10px; border: none; background: rgba(255,255,255,0.1); color: #fff; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+.ms-own__row button:disabled { opacity: 0.5; cursor: not-allowed; }
+.ms-found { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.ms-found li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 6px 6px 12px; border-radius: 10px; background: #111827; font-size: 14px; }
+
+/* Phones: compact rows (photo left), so a stop's ideas fit in a couple of screens. */
+@media (max-width: 640px) {
+  .ms-cards { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .ms-card { flex-direction: row; min-height: 112px; }
+  .ms-card > span:first-child { flex: 0 0 92px; height: auto !important; min-height: 112px; }
+  .ms-card__body { padding: 8px 10px 52px; gap: 2px; }
+  .ms-card__name { font-size: 14px; }
+  .ms-card__why { font-size: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .ms-card__foot { padding-top: 2px; }
+  .ms-keep { left: 102px; right: 10px; bottom: 8px; min-height: 36px; font-size: 13px; }
+}

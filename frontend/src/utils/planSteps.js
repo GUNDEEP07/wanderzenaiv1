@@ -8,7 +8,7 @@ export const STEP_ROUTE = 1;
 export const STEP_DAYS = 2;
 export const STEP_STAYS = 3;
 export const STEP_REVIEW = 4;
-export const STEP_NAMES = ['Trip basics', 'Your route', 'Plan your days', 'Stays & flights', 'Check your trip'];
+export const STEP_NAMES = ['Trip basics', 'Your route', 'Must-sees', 'Stays & flights', 'Check your trip'];
 export const STEP_STORAGE_KEY = 'wz_plan_step_v3';
 export const FORM_STORAGE_KEY = 'wz_plan_form_v2'; // form shape unchanged
 

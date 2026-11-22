@@ -1,78 +1,87 @@
 import { useState } from 'react';
-import { render, screen, fireEvent, within } from '@testing-library/react';
-import StepDays, { daysStatus } from './StepDays';
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
+import StepDays, { daysStatus, _clearIdeaCache } from './StepDays';
 import { fetchDestinationInsights } from '../../api/destinationInsights';
-import { placesFromResponse } from '../../api/places';
 
 jest.mock('../../api/destinationInsights', () => ({ fetchDestinationInsights: jest.fn() }));
+jest.mock('../PhotoCredit', () => ({ CreditedPhoto: ({ keyword }) => <img alt="" data-q={keyword} /> }));
 
 const STOPS = [
-  { name: 'Da Nang', country: 'Vietnam', lat: 16.05, lng: 108.2, fromDay: 1, toDay: 2 },
-  { name: 'Hoi An', country: 'Vietnam', lat: 15.88, lng: 108.33, fromDay: 3, toDay: 5 },
+  { name: 'Queenstown', country: 'New Zealand', lat: -45.03, lng: 168.66, fromDay: 1, toDay: 3, dayTrips: ['Glenorchy'] },
+  { name: 'Te Anau', country: 'New Zealand', lat: -45.41, lng: 167.71, fromDay: 4, toDay: 5, dayTrips: [] },
 ];
 
-function Harness({ onSel }) {
-  const [sel, setSel] = useState({ version: 2, picks: [], interests: [] });
-  return <StepDays stops={STOPS} startDate="2026-12-25" value={sel} onChange={(v) => { setSel(v); onSel?.(v); }} />;
+function Harness({ onSel, onSkip = jest.fn(), initial }) {
+  const [sel, setSel] = useState(initial || { version: 2, picks: [], interests: [] });
+  return <StepDays stops={STOPS} startDate="" value={sel} onSkip={onSkip} onChange={(v) => { setSel(v); onSel?.(v); }} />;
 }
-
-const venuesResponse = {
-  categories: [
-    { category: 'Restaurants', venues: [{ fsq_id: 'r1', name: 'Bé Mặn', category: 'Seafood Restaurant', address: 'Võ Nguyên Giáp', lat: 16.06, lng: 108.24 }] },
-    { category: 'Cafes', venues: [{ fsq_id: 'c1', name: 'Huế Xưa Cafe' }, { fsq_id: 'r1', name: 'Bé Mặn' }] },
-  ],
-};
 
 beforeEach(() => {
   jest.clearAllMocks();
-  fetchDestinationInsights.mockResolvedValue({ thingsToDo: [{ name: 'Son Tra Peninsula', reason: 'Forest road.', category: 'Nature', verified: true }] });
-  global.fetch = jest.fn(async () => ({ ok: true, status: 200, json: async () => venuesResponse }));
+  _clearIdeaCache();
+  fetchDestinationInsights.mockImplementation(async (dest) => ({
+    thingsToDo: dest.startsWith('Queenstown')
+      ? [{ name: 'Onsen Hot Pools', reason: 'Cedar tubs above the river.', verified: true }, { name: 'Glenorchy', reason: 'dup of the day trip', verified: false }]
+      : [{ name: 'Te Anau Glowworm Caves', reason: 'Boat into the dark.', verified: true }],
+  }));
 });
 
-// The old step matched "Restaurant" against the backend's "Restaurants" and never showed anything.
-test('backend categories are all used (plural names), de-duplicated', () => {
-  expect(placesFromResponse(venuesResponse).map(p => p.name)).toEqual(['Bé Mặn', 'Huế Xưa Cafe']);
-});
-
-test('picked-for-you place goes onto the chosen day, with the stop and coordinates', async () => {
-  const onSel = jest.fn();
-  render(<Harness onSel={onSel} />);
-  expect(screen.getByRole('tab', { name: /Da Nang Days 1–2 · 25–26 Dec/ })).toHaveAttribute('aria-selected', 'true');
-  fireEvent.click(await screen.findByRole('button', { name: 'Add Son Tra Peninsula to day 2' }));
-  const last = onSel.mock.calls.at(-1)[0];
-  expect(last.picks).toEqual([expect.objectContaining({ name: 'Son Tra Peninsula', day: 2, destination: 'Da Nang, Vietnam', source: 'foursquare' })]);
-  expect(within(screen.getByRole('region', { name: 'Days in Da Nang' })).getByText('Son Tra Peninsula')).toBeInTheDocument();
-  expect(daysStatus(last, 5)).toBe('1 place on 1 of 5 days · we\'ll plan the rest');
-});
-
-test('browse by category: Food & drink shows real places and adds them to a day', async () => {
-  const onSel = jest.fn();
-  render(<Harness onSel={onSel} />);
-  fireEvent.click(screen.getByRole('tab', { name: 'Browse by category' }));
-  expect(await screen.findByText('Huế Xưa Cafe')).toBeInTheDocument();
-  expect(global.fetch.mock.calls[0][0]).toMatch(/recommendations\/venues\?.*activity=food/);
-  fireEvent.click(screen.getByRole('button', { name: 'Add Bé Mặn to day 1' }));
-  expect(onSel.mock.calls.at(-1)[0].picks[0]).toEqual(expect.objectContaining({ name: 'Bé Mặn', day: 1, lat: 16.06, address: 'Võ Nguyên Giáp' }));
-  expect(screen.getByRole('button', { name: 'Remove Bé Mặn' })).toBeInTheDocument();
-});
-
-test('search, and the second stop offers only its own days', async () => {
+test('every stop loads its ideas at once (parallel), day trips first, no duplicates', async () => {
   render(<Harness />);
-  fireEvent.click(screen.getByRole('tab', { name: /Hoi An/ }));
-  expect(screen.getByRole('region', { name: 'Days in Hoi An' })).toHaveTextContent('Day 3Sun 27 Dec');
-  fireEvent.change(screen.getByRole('searchbox', { name: 'Search places in Hoi An' }), { target: { value: 'banh mi' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Search' }));
-  expect(await screen.findByText('Results for “banh mi” near Hoi An')).toBeInTheDocument();
-  expect(global.fetch.mock.calls.at(-1)[0]).toMatch(/query=banh\+mi/);
-  expect((await screen.findAllByRole('button', { name: /to day 3$/ })).length).toBeGreaterThan(0);
-  expect(screen.queryByRole('button', { name: /to day 1$/ })).toBeNull();
+  expect(fetchDestinationInsights).toHaveBeenCalledTimes(2);
+  const q = screen.getByRole('region', { name: 'Queenstown' });
+  expect(within(q).getByText('Glenorchy')).toBeInTheDocument(); // instant, from the route
+  await within(q).findByText('Onsen Hot Pools');
+  expect(within(q).getAllByText('Glenorchy')).toHaveLength(1);
+  await within(screen.getByRole('region', { name: 'Te Anau' })).findByText('Te Anau Glowworm Caves');
 });
 
-test('add your own place, any day', () => {
+test('Keep saves a pick for that stop with no day (the generator places it); tap again removes', async () => {
   const onSel = jest.fn();
   render(<Harness onSel={onSel} />);
-  fireEvent.change(screen.getByLabelText("Can't find it? Add your own place"), { target: { value: "Lan's café" } });
-  fireEvent.click(screen.getByRole('button', { name: 'Add' }));
-  expect(onSel.mock.calls.at(-1)[0].picks[0]).toEqual(expect.objectContaining({ name: "Lan's café", day: null, source: 'user', destination: 'Da Nang, Vietnam' }));
-  expect(within(screen.getByRole('region', { name: 'Days in Da Nang' })).getByText('Any day')).toBeInTheDocument();
+  fireEvent.click(await screen.findByRole('button', { name: 'Keep Onsen Hot Pools' }));
+  const sel = onSel.mock.calls.at(-1)[0];
+  expect(sel.version).toBe(2);
+  expect(sel.picks).toEqual([expect.objectContaining({ name: 'Onsen Hot Pools', destination: 'Queenstown, New Zealand', day: null })]);
+  expect(screen.getByText(/Days 1–3 · 1 kept/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Kept Onsen Hot Pools — remove' }));
+  expect(onSel.mock.calls.at(-1)[0].picks).toEqual([]);
+});
+
+test('Skip goes straight on; the label changes once something is kept', async () => {
+  const onSkip = jest.fn();
+  render(<Harness onSkip={onSkip} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Skip — you choose for me' }));
+  expect(onSkip).toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Keep Glenorchy' }));
+  expect(screen.getByRole('button', { name: 'Done — plan the rest for me' })).toBeInTheDocument();
+});
+
+test('add your own: search the stop, or keep the name as written', async () => {
+  global.fetch = jest.fn(async () => ({ ok: true, status: 200, json: async () => ({ categories: [{ category: 'Cafes', venues: [{ fsq_id: 'c1', name: 'Fergbaker' }] }] }) }));
+  const onSel = jest.fn();
+  render(<Harness onSel={onSel} />);
+  const q = screen.getByRole('region', { name: 'Queenstown' });
+  fireEvent.change(within(q).getByRole('searchbox'), { target: { value: 'bakery' } });
+  fireEvent.click(within(q).getByRole('button', { name: 'Find' }));
+  await within(q).findByText('Fergbaker');
+  fireEvent.click(within(q).getAllByRole('button', { name: '+ Keep' })[0]);
+  expect(onSel.mock.calls.at(-1)[0].picks.map((p) => p.name)).toEqual(['Fergbaker']);
+  fireEvent.change(within(q).getByRole('searchbox'), { target: { value: "Aunty's place" } });
+  fireEvent.click(within(q).getByRole('button', { name: 'Find' }));
+  fireEvent.click(await within(q).findByRole('button', { name: /as written/ }));
+  expect(onSel.mock.calls.at(-1)[0].picks.map((p) => p.name)).toEqual(['Fergbaker', "Aunty's place"]);
+  expect(within(q).getByRole('list', { name: 'Your own places in Queenstown' })).toHaveTextContent("Aunty's place");
+});
+
+test('a stop whose ideas fail still offers add-your-own', async () => {
+  fetchDestinationInsights.mockRejectedValue(new Error('500'));
+  render(<Harness />);
+  await waitFor(() => expect(screen.getByText(/Couldn’t load ideas for Te Anau/)).toBeInTheDocument());
+  expect(screen.getByRole('searchbox', { name: 'Add your own place in Te Anau' })).toBeInTheDocument();
+});
+
+test('footer status', () => {
+  expect(daysStatus({ picks: [] })).toMatch(/Optional/);
+  expect(daysStatus({ picks: [{ name: 'a' }, { name: 'b' }] })).toBe("2 places kept · we'll plan the rest");
 });
